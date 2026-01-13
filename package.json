@@ -1,0 +1,14 @@
+{
+  "name": "fitness-coach-website",
+  "version": "1.0.0",
+  "description": "Fitness Coach SPA Prototype",
+  "scripts": {
+    "generate:coach-photos": "node scripts/generate-coach-photos.cjs",
+    "start": "npm run generate:coach-photos && concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "concurrently": "^8.0.0"
+  }
+}

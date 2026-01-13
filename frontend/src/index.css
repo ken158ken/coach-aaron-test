@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Global Styles */
+body {
+  @apply antialiased;
+}
+
+/* Ensure no gradients on backgrounds as per request */
+.no-gradient {
+  background-image: none !important;
+}
