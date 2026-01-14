@@ -80,7 +80,13 @@ app.use((req, res) => {
   res.status(404).json({ error: "找不到該路由" });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📦 Supabase URL: ${process.env.SUPABASE_URL}`);
-});
+// Vercel serverless 環境
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  // 本地開發環境
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📦 Supabase URL: ${process.env.SUPABASE_URL}`);
+  });
+}
