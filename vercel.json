@@ -1,10 +1,28 @@
 {
   "buildCommand": "cd frontend && npm install && npm run build && cd ../backend && npm install",
-  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "/api/server"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/frontend/dist/client/assets/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/api/ssr"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }
