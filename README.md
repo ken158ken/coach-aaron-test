@@ -799,6 +799,7 @@ git commit -m "fix(api): resolve CORS issue"
 #### 🎯 重大更新：前端完整 TypeScript 遷移
 
 **遷移統計**:
+
 - ✅ 37 個檔案從 .jsx 遷移到 .tsx
 - ✅ ~120 個 interface/type 定義
 - ✅ 100% TypeScript 類型覆蓋
@@ -807,7 +808,8 @@ git commit -m "fix(api): resolve CORS issue"
 
 #### 📦 核心元件系統
 
-**UI 元件庫** (9個):
+**UI 元件庫** (9 個):
+
 - StatCard - 統計卡片元件
 - DataTable - 泛型資料表格
 - StatusBadge - 狀態標籤
@@ -818,37 +820,46 @@ git commit -m "fix(api): resolve CORS issue"
 - SearchInput - 搜尋輸入框
 - Toggle - 切換開關
 
-**Layout 元件** (4個):
+**Layout 元件** (4 個):
+
 - Navbar - 響應式導航列
 - Footer - 頁尾
 - Layout - 主要佈局
 - AdminLayout - 後台佈局
 
-**Feature 元件** (3個):
+**Feature 元件** (3 個):
+
 - CourseCard - 課程卡片
 - VideoCard - 影片卡片（支援 Instagram Reels）
 - Hero - 首頁英雄區塊（GSAP 動畫）
 
 #### 🗂️ 頁面遷移
 
-**前台頁面** (9個):
+**前台頁面** (9 個):
+
 - Home, Courses, Videos, Contact
 - Login, Register
 - CoachPhotos, MemberCenter, Dashboard
 
-**後台頁面** (5個):
+**後台頁面** (5 個):
+
 - AdminDashboard, AdminUsers
 - AdminCourses, AdminVideos, AdminWhitelist
 
 #### 🎨 類型系統設計
 
 **核心類型** (@/types):
+
 ```typescript
-- User, AuthResponse, LoginCredentials
-- Course, CourseStatus, CreateCourseDto
-- Video, CreateVideoDto
-- ApiResponse<T>, PaginationParams
-- AdminStats, AdminUser, WhitelistItem
+-User,
+  AuthResponse,
+  LoginCredentials - Course,
+  CourseStatus,
+  CreateCourseDto - Video,
+  CreateVideoDto - ApiResponse<T>,
+  PaginationParams - AdminStats,
+  AdminUser,
+  WhitelistItem;
 ```
 
 #### 🔧 開發體驗提升

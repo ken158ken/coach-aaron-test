@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build && cd ../backend && npm install",
-  "outputDirectory": "frontend/dist/client",
+  "buildCommand": "cd frontend && npm install && npm run build && cd .. && mkdir -p .vercel_build_output && cp -r frontend/dist/client/* .vercel_build_output/ && cp -r frontend/dist/server .vercel_build_output/server && cd backend && npm install",
+  "outputDirectory": ".vercel_build_output",
   "rewrites": [
     {
       "source": "/api/:path*",
