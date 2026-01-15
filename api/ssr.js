@@ -14,10 +14,27 @@ module.exports = async function handler(req, res) {
   try {
     // 在 Vercel 部署時，靜態文件在根目錄
     const templatePath = path.resolve(process.cwd(), "index.html");
-    const serverModulePath = path.resolve(
-      __dirname,
-      "../frontend/dist/server/entry-server.js"
-    );
+
+    // Vercel 部署後的路徑結構
+    const possiblePaths = [
+      path.resolve(__dirname, "../frontend/dist/server/entry-server.js"),
+      path.resolve(process.cwd(), "frontend/dist/server/entry-server.js"),
+      path.resolve(process.cwd(), "dist/server/entry-server.js"),
+    ];
+
+    let serverModulePath = null;
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        serverModulePath = p;
+        break;
+      }
+    }
+
+    if (!serverModulePath) {
+      throw new Error(
+        `Cannot find entry-server.js. Tried: ${possiblePaths.join(", ")}`
+      );
+    }
 
     // 讀取 HTML 模板
     const template = fs.readFileSync(templatePath, "utf-8");
