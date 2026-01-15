@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
     // Vercel 部署時的路徑結構
     // outputDirectory 現在設為 ".vercel_build_output"
     // 包含 client 檔案 + server 子目錄
-    
+
     const templatePath = path.resolve(process.cwd(), "index.html");
 
     // 可能的 entry-server.js 路徑
@@ -37,7 +37,11 @@ module.exports = async function handler(req, res) {
     }
 
     if (!serverModulePath) {
-      const errorMsg = `❌ Cannot find entry-server.js.\nTried paths:\n${possiblePaths.map(p => `  - ${p} (exists: ${fs.existsSync(p)})`).join('\n')}\nCurrent directory: ${process.cwd()}\n__dirname: ${__dirname}`;
+      const errorMsg = `❌ Cannot find entry-server.js.\nTried paths:\n${possiblePaths
+        .map((p) => `  - ${p} (exists: ${fs.existsSync(p)})`)
+        .join(
+          "\n"
+        )}\nCurrent directory: ${process.cwd()}\n__dirname: ${__dirname}`;
       console.error(errorMsg);
       throw new Error(errorMsg);
     }

@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build && cd .. && mkdir -p .vercel_build_output && cp -r frontend/dist/client/* .vercel_build_output/ && cp -r frontend/dist/server .vercel_build_output/server && cd backend && npm install",
+  "buildCommand": "cd frontend && npm install && npm run build && cd .. && node build.js && cd backend && npm install",
   "outputDirectory": ".vercel_build_output",
   "rewrites": [
     {
