@@ -12,9 +12,13 @@ module.exports = async function handler(req, res) {
   const url = req.url;
 
   try {
-    // Vercel 部署時的路徑結構
-    // outputDirectory 現在設為 ".vercel_build_output"
-    // 包含 client 檔案 + server 子目錄
+    console.log(`📥 SSR Request: ${url}`);
+    console.log(`📂 CWD: ${process.cwd()}`);
+    console.log(`📂 __dirname: ${__dirname}`);
+
+    // 列出當前目錄內容以便調試
+    const cwdContents = require("node:fs").readdirSync(process.cwd());
+    console.log(`📋 CWD contents: ${cwdContents.join(", ")}`);
 
     const templatePath = path.resolve(process.cwd(), "index.html");
 
@@ -27,24 +31,35 @@ module.exports = async function handler(req, res) {
       path.resolve(process.cwd(), "frontend/dist/server/entry-server.js"),
     ];
 
+    console.log("🔍 Checking possible paths:");
     let serverModulePath = null;
     for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
+      const exists = fs.existsSync(p);
+      console.log(`  ${exists ? "✓" : "✗"} ${p}`);
+      if (exists && !serverModulePath) {
         serverModulePath = p;
-        console.log(`✓ Found entry-server.js at: ${p}`);
-        break;
       }
     }
 
     if (!serverModulePath) {
+      // 檢查 server 目錄是否存在
+      const serverDir = path.resolve(process.cwd(), "server");
+      const serverExists = fs.existsSync(serverDir);
+      console.error(`❌ server/ directory exists: ${serverExists}`);
+      
+      if (serverExists) {
+        const serverContents = fs.readdirSync(serverDir);
+        console.error(`📋 server/ contents: ${serverContents.join(", ")}`);
+      }
+
       const errorMsg = `❌ Cannot find entry-server.js.\nTried paths:\n${possiblePaths
         .map((p) => `  - ${p} (exists: ${fs.existsSync(p)})`)
-        .join(
-          "\n"
-        )}\nCurrent directory: ${process.cwd()}\n__dirname: ${__dirname}`;
+        .join("\n")}`;
       console.error(errorMsg);
       throw new Error(errorMsg);
     }
+
+    console.log(`✓ Using entry-server.js: ${serverModulePath}`);
 
     // 讀取 HTML 模板
     const template = fs.readFileSync(templatePath, "utf-8");
@@ -58,7 +73,8 @@ module.exports = async function handler(req, res) {
 
     res.status(200).setHeader("Content-Type", "text/html").end(html);
   } catch (e) {
-    console.error("SSR Error:", e);
+    console.error("❌ SSR Error:", e.message);
+    console.error("Stack:", e.stack);
     console.error("__dirname:", __dirname);
     console.error("process.cwd():", process.cwd());
 
@@ -70,7 +86,8 @@ module.exports = async function handler(req, res) {
       );
       res.status(200).setHeader("Content-Type", "text/html").end(template);
     } catch (fallbackError) {
-      res.status(500).end(e.stack);
+      console.error("❌ Fallback also failed:", fallbackError.message);
+      res.status(500).end(`SSR Error: ${e.message}\n\nFallback Error: ${fallbackError.message}\n\nStack:\n${e.stack}`);
     }
   }
 };
