@@ -73,7 +73,9 @@ module.exports = async function handler(req, res) {
 
     if (!render || typeof render !== "function") {
       throw new Error(
-        `entry-server.js does not export a 'render' function. Exports: ${Object.keys(serverModule).join(", ")}`
+        `entry-server.js does not export a 'render' function. Exports: ${Object.keys(
+          serverModule
+        ).join(", ")}`
       );
     }
 

@@ -5,6 +5,6 @@
  * @module api/server
  */
 
-const app = require("../backend/index");
+import app from "../backend/dist/index.js";
 
-module.exports = app;
+export default app;
