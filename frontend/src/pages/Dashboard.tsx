@@ -175,7 +175,7 @@ const CoursesManager: React.FC = (): JSX.Element => {
    *
    * @param {number} id - 課程 ID
    */
-  const handleDelete = async (id: number): Promise<void> => {
+  const handleDelete = async (id: number): Promise<void> => {    if (typeof window === 'undefined') return;    if (typeof window === 'undefined') return;
     if (!window.confirm("確定刪除?")) return;
     try {
       await axios.delete(`/api/courses/${id}`);

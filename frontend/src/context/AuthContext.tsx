@@ -58,9 +58,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   /**
    * 初始化認證狀態
+   * SSR 時跳過，只在客戶端執行
    */
   useEffect(() => {
-    checkAuth();
+    // 只在客戶端執行
+    if (!isServer) {
+      checkAuth();
+    }
   }, [checkAuth]);
 
   /**
