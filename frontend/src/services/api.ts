@@ -41,7 +41,10 @@ apiClient.interceptors.response.use(
     // 統一錯誤處理
     if (error.response?.status === 401) {
       // 未登入或 Token 過期
-      window.location.href = "/login";
+      // SSR 保護：只在客戶端執行重新導向
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
 
     const errorMessage =

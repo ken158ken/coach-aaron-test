@@ -175,7 +175,9 @@ const CoursesManager: React.FC = (): JSX.Element => {
    *
    * @param {number} id - 課程 ID
    */
-  const handleDelete = async (id: number): Promise<void> => {    if (typeof window === 'undefined') return;    if (typeof window === 'undefined') return;
+  const handleDelete = async (id: number): Promise<void> => {
+    // SSR 保護：window.confirm 只在客戶端可用
+    if (typeof window === "undefined") return;
     if (!window.confirm("確定刪除?")) return;
     try {
       await axios.delete(`/api/courses/${id}`);
@@ -336,6 +338,8 @@ const VideosManager: React.FC = (): JSX.Element => {
    * @param {number} id - 影片 ID
    */
   const handleDelete = async (id: number): Promise<void> => {
+    // SSR 保護：window.confirm 只在客戶端可用
+    if (typeof window === "undefined") return;
     if (!window.confirm("確定刪除?")) return;
     try {
       await axios.delete(`/api/videos/${id}`);
