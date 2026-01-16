@@ -81,7 +81,17 @@ module.exports = async function handler(req, res) {
 
     // 渲染 HTML
     console.log("🎨 Rendering HTML...");
-    const { html: appHtml } = render(url);
+    let appHtml;
+    try {
+      const renderResult = render(url);
+      appHtml = renderResult.html;
+    } catch (renderError) {
+      console.error("❌ React render error:", renderError.message);
+      console.error("Falling back to CSR...");
+      // 渲染失敗，返回空的 SSR outlet 讓客戶端渲染接管
+      appHtml = "";
+    }
+
     const html = template.replace("<!--ssr-outlet-->", appHtml);
 
     res.status(200).setHeader("Content-Type", "text/html").end(html);
