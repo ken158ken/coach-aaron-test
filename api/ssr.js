@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
       const serverDir = path.resolve(process.cwd(), "server");
       const serverExists = fs.existsSync(serverDir);
       console.error(`❌ server/ directory exists: ${serverExists}`);
-      
+
       if (serverExists) {
         const serverContents = fs.readdirSync(serverDir);
         console.error(`📋 server/ contents: ${serverContents.join(", ")}`);
@@ -64,10 +64,21 @@ module.exports = async function handler(req, res) {
     // 讀取 HTML 模板
     const template = fs.readFileSync(templatePath, "utf-8");
 
-    // 載入 SSR render 函數
-    const { render } = require(serverModulePath);
+    // 載入 SSR render 函數（使用動態 import 支援 ES modules）
+    console.log("📦 Loading entry-server module...");
+    const serverModule = await import(
+      `file://${serverModulePath.replace(/\\/g, "/")}`
+    );
+    const { render } = serverModule;
+
+    if (!render || typeof render !== "function") {
+      throw new Error(
+        `entry-server.js does not export a 'render' function. Exports: ${Object.keys(serverModule).join(", ")}`
+      );
+    }
 
     // 渲染 HTML
+    console.log("🎨 Rendering HTML...");
     const { html: appHtml } = render(url);
     const html = template.replace("<!--ssr-outlet-->", appHtml);
 
@@ -87,7 +98,11 @@ module.exports = async function handler(req, res) {
       res.status(200).setHeader("Content-Type", "text/html").end(template);
     } catch (fallbackError) {
       console.error("❌ Fallback also failed:", fallbackError.message);
-      res.status(500).end(`SSR Error: ${e.message}\n\nFallback Error: ${fallbackError.message}\n\nStack:\n${e.stack}`);
+      res
+        .status(500)
+        .end(
+          `SSR Error: ${e.message}\n\nFallback Error: ${fallbackError.message}\n\nStack:\n${e.stack}`
+        );
     }
   }
 };
