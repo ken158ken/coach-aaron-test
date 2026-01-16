@@ -1,6 +1,14 @@
 {
-  "buildCommand": "cd frontend && npm ci && npm run build && cd .. && node build.js && cd backend && npm ci && npm run build",
+  "buildCommand": "cd frontend && npm ci && npm run build && cd .. && node build.js && cd backend && npm ci && npm run build && cd ..",
   "outputDirectory": ".vercel_build_output",
+  "functions": {
+    "api/server.js": {
+      "includeFiles": "backend/dist/**"
+    },
+    "api/ssr.js": {
+      "includeFiles": ".vercel_build_output/server/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",

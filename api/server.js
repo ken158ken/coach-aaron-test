@@ -5,6 +5,17 @@
  * @module api/server
  */
 
-import app from "../backend/dist/index.js";
-
-export default app;
+module.exports = async (req, res) => {
+  try {
+    // 動態載入 ES module backend
+    const { default: app } = await import("../backend/dist/index.js");
+    return app(req, res);
+  } catch (error) {
+    console.error("❌ Failed to load backend:", error);
+    res.status(500).json({
+      error: "Internal Server Error",
+      message: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
+  }
+};
