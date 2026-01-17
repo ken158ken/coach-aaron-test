@@ -32,7 +32,8 @@ interface AuthProviderProps {
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // SSR 時應該是 false，避免 hydration mismatch
+  const [loading, setLoading] = useState(isServer ? false : true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   /**
