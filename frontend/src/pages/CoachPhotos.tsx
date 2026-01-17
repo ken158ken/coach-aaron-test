@@ -51,6 +51,7 @@ function shuffleArray(arr: string[]): string[] {
 const CoachPhotos: React.FC = (): JSX.Element => {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  const [bannerPhotos, setBannerPhotos] = useState<string[]>([]);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   /**
@@ -69,12 +70,18 @@ const CoachPhotos: React.FC = (): JSX.Element => {
 
   /**
    * 收集所有照片並隨機選擇 8 張作為輪播橫幅
+   * 只在客戶端執行，避免 SSR hydration mismatch
    */
-  const bannerPhotos = useMemo<string[]>(() => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const allPhotos = albums.flatMap((a) => a.photos);
-    if (allPhotos.length === 0) return [];
+    if (allPhotos.length === 0) {
+      setBannerPhotos([]);
+      return;
+    }
     const shuffled = shuffleArray(allPhotos);
-    return shuffled.slice(0, Math.min(8, shuffled.length));
+    setBannerPhotos(shuffled.slice(0, Math.min(8, shuffled.length)));
   }, [albums]);
 
   /**

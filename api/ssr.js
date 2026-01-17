@@ -94,7 +94,13 @@ module.exports = async function handler(req, res) {
 
     const html = template.replace("<!--ssr-outlet-->", appHtml);
 
-    res.status(200).setHeader("Content-Type", "text/html").end(html);
+    res
+      .status(200)
+      .setHeader("Content-Type", "text/html")
+      .setHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+      .setHeader("Pragma", "no-cache")
+      .setHeader("Expires", "0")
+      .end(html);
   } catch (e) {
     console.error("❌ SSR Error:", e.message);
     console.error("Stack:", e.stack);
