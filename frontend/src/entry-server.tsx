@@ -25,11 +25,11 @@ export function render(url: string): { html: string } {
       <StrictMode>
         <StaticRouter
           location={pathname}
-          future={{ v7_relativeSplatPath: true }}
+          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
         >
           <App />
         </StaticRouter>
-      </StrictMode>
+      </StrictMode>,
     );
 
     console.log(`[SSR] Success: ${html.length} bytes`);

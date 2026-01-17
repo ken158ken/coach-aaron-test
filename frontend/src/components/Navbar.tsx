@@ -18,13 +18,13 @@ const Navbar: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Only run GSAP on client side
-    if (typeof window !== "undefined" && navRef.current) {
+    // GSAP animation - useEffect only runs on client
+    if (navRef.current) {
       import("gsap").then(({ default: gsap }) => {
         gsap.fromTo(
           navRef.current,
           { y: -100, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
+          { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" },
         );
       });
     }

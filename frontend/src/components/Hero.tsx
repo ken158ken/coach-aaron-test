@@ -26,8 +26,6 @@ const Hero: React.FC = () => {
   const btnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     import("gsap").then(({ default: gsap }) => {
       const tl = gsap.timeline();
 
@@ -42,12 +40,12 @@ const Hero: React.FC = () => {
               duration: 0.8,
               stagger: 0.2,
               ease: "power3.out",
-            }
+            },
           )
           .fromTo(
             btnRef.current,
             { scale: 0.8, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }
+            { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" },
           );
       }
     });

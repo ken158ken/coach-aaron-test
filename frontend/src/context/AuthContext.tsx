@@ -20,9 +20,6 @@ import type {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// 檢查是否在伺服器環境
-const isServer = typeof window === "undefined";
-
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -40,10 +37,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    * 檢查認證狀態
    */
   const checkAuth = useCallback(async () => {
-    if (isServer) {
-      return;
-    }
-
     setLoading(true);
     try {
       const response = await authService.checkAuth();
@@ -59,13 +52,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   /**
    * 初始化認證狀態
-   * SSR 時跳過，只在客戶端執行
+   * 只在客戶端執行（useEffect 自動跳過 SSR）
    */
   useEffect(() => {
-    // 只在客戶端執行
-    if (!isServer) {
-      checkAuth();
-    }
+    checkAuth();
   }, [checkAuth]);
 
   /**
@@ -73,10 +63,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const login = useCallback(
     async (email: string, password: string): Promise<void> => {
-      if (isServer) {
-        throw new Error("Cannot login on server");
-      }
-
       try {
         const response = await authService.login({ email, password });
         setUser(response.user);
@@ -86,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
     },
-    [checkAuth]
+    [checkAuth],
   );
 
   /**
@@ -94,10 +80,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const register = useCallback(
     async (data: RegisterFormData): Promise<void> => {
-      if (isServer) {
-        throw new Error("Cannot register on server");
-      }
-
       try {
         // 移除 confirmPassword（後端不需要）
         const { confirmPassword, ...registerData } = data;
@@ -109,15 +91,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
     },
-    [checkAuth]
+    [checkAuth],
   );
 
   /**
    * 登出
    */
   const logout = useCallback(async (): Promise<void> => {
-    if (isServer) return;
-
     try {
       await authService.logout();
       setUser(null);
