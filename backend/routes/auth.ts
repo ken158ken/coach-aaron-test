@@ -21,112 +21,116 @@ const router: Router = express.Router();
  * @param {Response} res - Express 回應物件
  * @returns {Promise<void>} 註冊結果及 JWT Token
  */
-router.post("/register", authLimiter, validateEmail, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { username, email, password, displayName, phoneNumber } = req.body;
+router.post(
+  "/register",
+  authLimiter,
+  validateEmail,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { username, email, password, displayName, phoneNumber } = req.body;
 
-    // 驗證必填欄位
-    if (!username || !email || !password) {
-      res.status(400).json({ error: "請填寫所有必填欄位" });
-      return;
+      // 驗證必填欄位
+      if (!username || !email || !password) {
+        res.status(400).json({ error: "請填寫所有必填欄位" });
+        return;
+      }
+
+      // 檢查 email 是否已存在
+      const { data: existingUser } = await supabaseAdmin
+        .from("users")
+        .select("email")
+        .eq("email", email)
+        .single();
+
+      if (existingUser) {
+        res.status(400).json({ error: "此 Email 已被註冊" });
+        return;
+      }
+
+      // 檢查 username 是否已存在
+      const { data: existingUsername } = await supabaseAdmin
+        .from("users")
+        .select("username")
+        .eq("username", username)
+        .single();
+
+      if (existingUsername) {
+        res.status(400).json({ error: "此使用者名稱已被使用" });
+        return;
+      }
+
+      // 密碼加密
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // 建立使用者
+      const { data: newUser, error } = await supabaseAdmin
+        .from("users")
+        .insert({
+          username,
+          email,
+          password_hash: passwordHash,
+          display_name: displayName || username,
+          phone_number: phoneNumber || null,
+          sex: false,
+        })
+        .select()
+        .single();
+
+      if (error || !newUser) {
+        logger.error("註冊失敗", error as Error, { email });
+        res.status(500).json({ error: "註冊失敗" });
+        return;
+      }
+
+      // 檢查是否為管理員
+      const { data: adminCheck } = await supabaseAdmin
+        .from("admin_whitelist")
+        .select("*")
+        .eq("email", email)
+        .eq("is_active", true)
+        .single();
+
+      // 產生 JWT
+      const token = jwt.sign(
+        {
+          userId: newUser.user_id,
+          username: newUser.username,
+          email: newUser.email,
+          displayName: newUser.display_name,
+          sex: newUser.sex,
+          isAdmin: !!adminCheck,
+        },
+        process.env.JWT_SECRET || "",
+        { expiresIn: "7d" },
+      );
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        domain: process.env.COOKIE_DOMAIN,
+      });
+
+      logger.info("使用者註冊成功", { userId: newUser.user_id, email });
+
+      res.json({
+        success: true,
+        user: {
+          userId: newUser.user_id,
+          username: newUser.username,
+          email: newUser.email,
+          displayName: newUser.display_name,
+          sex: newUser.sex,
+          isAdmin: !!adminCheck,
+        },
+      });
+    } catch (err) {
+      logger.error("註冊伺服器錯誤", err as Error);
+      res.status(500).json({ error: "伺服器錯誤" });
     }
-
-    // 檢查 email 是否已存在
-    const { data: existingUser } = await supabaseAdmin
-      .from("users")
-      .select("email")
-      .eq("email", email)
-      .single();
-
-    if (existingUser) {
-      res.status(400).json({ error: "此 Email 已被註冊" });
-      return;
-    }
-
-    // 檢查 username 是否已存在
-    const { data: existingUsername } = await supabaseAdmin
-      .from("users")
-      .select("username")
-      .eq("username", username)
-      .single();
-
-    if (existingUsername) {
-      res.status(400).json({ error: "此使用者名稱已被使用" });
-      return;
-    }
-
-    // 密碼加密
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // 建立使用者
-    const { data: newUser, error } = await supabaseAdmin
-      .from("users")
-      .insert({
-        username,
-        email,
-        password_hash: passwordHash,
-        display_name: displayName || username,
-        phone_number: phoneNumber || null,
-        sex: false,
-      })
-      .select()
-      .single();
-
-    if (error || !newUser) {
-      logger.error("註冊失敗", error as Error, { email });
-      res.status(500).json({ error: "註冊失敗" });
-      return;
-    }
-
-    // 檢查是否為管理員
-    const { data: adminCheck } = await supabaseAdmin
-      .from("admin_whitelist")
-      .select("*")
-      .eq("email", email)
-      .eq("is_active", true)
-      .single();
-
-    // 產生 JWT
-    const token = jwt.sign(
-      {
-        userId: newUser.user_id,
-        username: newUser.username,
-        email: newUser.email,
-        displayName: newUser.display_name,
-        sex: newUser.sex,
-        isAdmin: !!adminCheck,
-      },
-      process.env.JWT_SECRET || "",
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      domain: process.env.COOKIE_DOMAIN,
-    });
-
-    logger.info("使用者註冊成功", { userId: newUser.user_id, email });
-
-    res.json({
-      success: true,
-      user: {
-        userId: newUser.user_id,
-        username: newUser.username,
-        email: newUser.email,
-        displayName: newUser.display_name,
-        sex: newUser.sex,
-        isAdmin: !!adminCheck,
-      },
-    });
-  } catch (err) {
-    logger.error("註冊伺服器錯誤", err as Error);
-    res.status(500).json({ error: "伺服器錯誤" });
-  }
-});
-});
+  },
+);
 
 /**
  * 使用者登入
@@ -135,94 +139,99 @@ router.post("/register", authLimiter, validateEmail, async (req: Request, res: R
  * @param {Response} res - Express 回應物件
  * @returns {Promise<void>} 登入結果及 JWT Token
  */
-router.post("/login", authLimiter, validateEmail, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body;
+router.post(
+  "/login",
+  authLimiter,
+  validateEmail,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, password } = req.body;
 
-    if (!email || !password) {
-      res.status(400).json({ error: "請填寫 Email 和密碼" });
-      return;
+      if (!email || !password) {
+        res.status(400).json({ error: "請填寫 Email 和密碼" });
+        return;
+      }
+
+      // 查詢使用者
+      const { data: user, error } = await supabaseAdmin
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .single();
+
+      if (error || !user) {
+        logger.warn("登入失敗 - 使用者不存在", { email });
+        res.status(401).json({ error: "Email 或密碼錯誤" });
+        return;
+      }
+
+      // 驗證密碼
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) {
+        logger.warn("登入失敗 - 密碼錯誤", { email });
+        res.status(401).json({ error: "Email 或密碼錯誤" });
+        return;
+      }
+
+      // 更新最後登入時間
+      await supabaseAdmin
+        .from("users")
+        .update({ last_login_at: new Date().toISOString() })
+        .eq("user_id", user.user_id);
+
+      // 檢查是否為管理員
+      const { data: adminCheck } = await supabaseAdmin
+        .from("admin_whitelist")
+        .select("*")
+        .eq("email", email)
+        .eq("is_active", true)
+        .single();
+
+      // 產生 JWT
+      const token = jwt.sign(
+        {
+          userId: user.user_id,
+          username: user.username,
+          email: user.email,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_url,
+          sex: user.sex,
+          isAdmin: !!adminCheck,
+        },
+        process.env.JWT_SECRET || "",
+        { expiresIn: "7d" },
+      );
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: process.env.COOKIE_DOMAIN,
+      });
+
+      logger.info("使用者登入成功", { userId: user.user_id, email });
+
+      res.json({
+        success: true,
+        user: {
+          userId: user.user_id,
+          username: user.username,
+          email: user.email,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_url,
+          sex: user.sex,
+          isAdmin: !!adminCheck,
+        },
+      });
+    } catch (err) {
+      logger.error("登入伺服器錯誤", err as Error);
+      res.status(500).json({ error: "伺服器錯誤" });
     }
-
-    // 查詢使用者
-    const { data: user, error } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .single();
-
-    if (error || !user) {
-      logger.warn("登入失敗 - 使用者不存在", { email });
-      res.status(401).json({ error: "Email 或密碼錯誤" });
-      return;
-    }
-
-    // 驗證密碼
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) {
-      logger.warn("登入失敗 - 密碼錯誤", { email });
-      res.status(401).json({ error: "Email 或密碼錯誤" });
-      return;
-    }
-
-    // 更新最後登入時間
-    await supabaseAdmin
-      .from("users")
-      .update({ last_login_at: new Date().toISOString() })
-      .eq("user_id", user.user_id);
-
-    // 檢查是否為管理員
-    const { data: adminCheck } = await supabaseAdmin
-      .from("admin_whitelist")
-      .select("*")
-      .eq("email", email)
-      .eq("is_active", true)
-      .single();
-
-    // 產生 JWT
-    const token = jwt.sign(
-      {
-        userId: user.user_id,
-        username: user.username,
-        email: user.email,
-        displayName: user.display_name,
-        avatarUrl: user.avatar_url,
-        sex: user.sex,
-        isAdmin: !!adminCheck,
-      },
-      process.env.JWT_SECRET || "",
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      domain: process.env.COOKIE_DOMAIN,
-    });
-
-    logger.info("使用者登入成功", { userId: user.user_id, email });
-
-    res.json({
-      success: true,
-      user: {
-        userId: user.user_id,
-        username: user.username,
-        email: user.email,
-        displayName: user.display_name,
-        avatarUrl: user.avatar_url,
-        sex: user.sex,
-        isAdmin: !!adminCheck,
-      },
-    });
-  } catch (err) {
-    logger.error("登入伺服器錯誤", err as Error);
-    res.status(500).json({ error: "伺服器錯誤" });
-  }
-});
+  },
+);
 
 /**
  * 使用者登出
@@ -257,7 +266,7 @@ router.get(
       const { data: user, error } = await supabaseAdmin
         .from("users")
         .select(
-          "user_id, username, email, display_name, avatar_url, sex, phone_number, created_at"
+          "user_id, username, email, display_name, avatar_url, sex, phone_number, created_at",
         )
         .eq("user_id", req.user?.userId)
         .single();
@@ -289,10 +298,12 @@ router.get(
         },
       });
     } catch (err) {
-      logger.error("取得使用者資訊失敗", err as Error, { userId: req.user?.userId });
+      logger.error("取得使用者資訊失敗", err as Error, {
+        userId: req.user?.userId,
+      });
       res.status(500).json({ error: "伺服器錯誤" });
     }
-  }
+  },
 );
 
 /**
@@ -321,7 +332,9 @@ router.put(
         .single();
 
       if (error) {
-        logger.error("更新個人資料失敗", error as Error, { userId: req.user?.userId });
+        logger.error("更新個人資料失敗", error as Error, {
+          userId: req.user?.userId,
+        });
         res.status(500).json({ error: "更新失敗" });
         return;
       }
@@ -329,10 +342,12 @@ router.put(
       logger.info("更新個人資料成功", { userId: req.user?.userId });
       res.json({ success: true, user: data });
     } catch (err) {
-      logger.error("更新個人資料伺服器錯誤", err as Error, { userId: req.user?.userId });
+      logger.error("更新個人資料伺服器錯誤", err as Error, {
+        userId: req.user?.userId,
+      });
       res.status(500).json({ error: "伺服器錯誤" });
     }
-  }
+  },
 );
 
 export default router;

@@ -29,8 +29,6 @@ dotenv.config();
  */
 const env = validateEnv();
 
-const env = validateEnv();
-
 const app: Express = express();
 const PORT: number = env.PORT;
 

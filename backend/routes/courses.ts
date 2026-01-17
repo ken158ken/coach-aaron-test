@@ -234,7 +234,8 @@ router.put(
 
       fields.forEach((field, index) => {
         if (req.body[field] !== undefined) {
-          updateData[dbFields[index]] = req.body[field];
+          updateData[dbFields[index] as keyof UpdateCourseData] =
+            req.body[field];
         }
       });
 
