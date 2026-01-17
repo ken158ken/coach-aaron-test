@@ -37,3 +37,6 @@ coverage/
 # Temp
 *.tmp
 *.temp
+
+# Vercel Build Output
+.vercel/
