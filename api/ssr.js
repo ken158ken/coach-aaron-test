@@ -20,15 +20,42 @@ module.exports = async function handler(req, res) {
     const cwdContents = require("node:fs").readdirSync(process.cwd());
     console.log(`📋 CWD contents: ${cwdContents.join(", ")}`);
 
-    const templatePath = path.resolve(process.cwd(), "index.html");
+    // Vercel 部署時，index.html 在 .vercel_build_output 目錄
+    // 本地開發時，可能在其他位置
+    const possibleTemplatePaths = [
+      path.resolve(process.cwd(), ".vercel_build_output/index.html"),
+      path.resolve(process.cwd(), "index.html"),
+      path.resolve(__dirname, "../.vercel_build_output/index.html"),
+    ];
+
+    let templatePath = null;
+    for (const p of possibleTemplatePaths) {
+      if (fs.existsSync(p)) {
+        templatePath = p;
+        console.log(`✓ Found template: ${templatePath}`);
+        break;
+      }
+    }
+
+    if (!templatePath) {
+      const errorMsg = `❌ Cannot find index.html.\nTried paths:\n${possibleTemplatePaths
+        .map((p) => `  - ${p} (exists: ${fs.existsSync(p)})`)
+        .join("\n")}`;
+      console.error(errorMsg);
+      throw new Error(errorMsg);
+    }
 
     // 可能的 entry-server.js 路徑
     const possiblePaths = [
-      // Vercel 部署後：outputDirectory 為根，server 在子目錄
+      // Vercel 部署後：includeFiles 複製到函數目錄
+      path.resolve(
+        process.cwd(),
+        ".vercel_build_output/server/entry-server.js",
+      ),
       path.resolve(process.cwd(), "server/entry-server.js"),
       // 本地開發
       path.resolve(__dirname, "../frontend/dist/server/entry-server.js"),
-      path.resolve(process.cwd(), "frontend/dist/server/entry-server.js"),
+      path.resolve(__dirname, "../.vercel_build_output/server/entry-server.js"),
     ];
 
     console.log("🔍 Checking possible paths:");
@@ -74,8 +101,8 @@ module.exports = async function handler(req, res) {
     if (!render || typeof render !== "function") {
       throw new Error(
         `entry-server.js does not export a 'render' function. Exports: ${Object.keys(
-          serverModule
-        ).join(", ")}`
+          serverModule,
+        ).join(", ")}`,
       );
     }
 
@@ -109,17 +136,36 @@ module.exports = async function handler(req, res) {
 
     // 如果 SSR 失敗，返回基礎 HTML 讓 CSR 接管
     try {
-      const template = fs.readFileSync(
+      // 嘗試找到 index.html
+      const fallbackPaths = [
+        path.resolve(process.cwd(), ".vercel_build_output/index.html"),
         path.resolve(process.cwd(), "index.html"),
-        "utf-8"
-      );
-      res.status(200).setHeader("Content-Type", "text/html").end(template);
+      ];
+
+      let fallbackTemplate = null;
+      for (const p of fallbackPaths) {
+        if (fs.existsSync(p)) {
+          fallbackTemplate = fs.readFileSync(p, "utf-8");
+          break;
+        }
+      }
+
+      if (fallbackTemplate) {
+        res
+          .status(200)
+          .setHeader("Content-Type", "text/html")
+          .end(fallbackTemplate);
+      } else {
+        throw new Error(
+          `Cannot find index.html in any fallback paths: ${fallbackPaths.join(", ")}`,
+        );
+      }
     } catch (fallbackError) {
       console.error("❌ Fallback also failed:", fallbackError.message);
       res
         .status(500)
         .end(
-          `SSR Error: ${e.message}\n\nFallback Error: ${fallbackError.message}\n\nStack:\n${e.stack}`
+          `SSR Error: ${e.message}\n\nFallback Error: ${fallbackError.message}\n\nStack:\n${e.stack}`,
         );
     }
   }

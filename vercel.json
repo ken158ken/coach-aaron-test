@@ -6,7 +6,7 @@
       "includeFiles": "backend/dist/**"
     },
     "api/ssr.js": {
-      "includeFiles": ".vercel_build_output/server/**"
+      "includeFiles": ".vercel_build_output/**"
     }
   },
   "rewrites": [
