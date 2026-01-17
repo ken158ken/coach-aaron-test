@@ -15,7 +15,7 @@
       "destination": "/api/server"
     },
     {
-      "source": "/:path*",
+      "source": "/:path((?!assets|vite\\.svg|favicon\\.ico).*)",
       "destination": "/api/ssr"
     }
   ],
