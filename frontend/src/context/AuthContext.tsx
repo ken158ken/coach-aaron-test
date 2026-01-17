@@ -32,8 +32,8 @@ interface AuthProviderProps {
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  // SSR 時應該是 false，避免 hydration mismatch
-  const [loading, setLoading] = useState(isServer ? false : true);
+  // SSR 和 Client 初始狀態必須相同，避免 hydration mismatch
+  const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   /**
@@ -41,10 +41,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const checkAuth = useCallback(async () => {
     if (isServer) {
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
     try {
       const response = await authService.checkAuth();
       setUser(response.user);
