@@ -100,9 +100,15 @@ try {
   // 複製 API handler
   fs.copyFileSync("api/server.js", path.join(apiFuncDir, "index.js"));
 
-  // 複製 backend dist
+  // 複製 backend dist（只複製必要文件，不包含 node_modules）
   const apiBackendDir = path.join(apiFuncDir, "backend");
   copyDir(backendDir, apiBackendDir);
+
+  // 複製 backend package.json（讓 Vercel 安裝依賴）
+  fs.copyFileSync(
+    "backend/package.json",
+    path.join(apiFuncDir, "package.json"),
+  );
 
   // 建立 .vc-config.json for API
   const apiConfig = {
