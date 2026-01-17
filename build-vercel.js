@@ -105,10 +105,11 @@ try {
   copyDir(backendDir, apiBackendDir);
 
   // 複製 backend package.json（讓 Vercel 安裝依賴）
-  fs.copyFileSync(
-    "backend/package.json",
-    path.join(apiFuncDir, "package.json"),
-  );
+  const packageJsonTarget = path.join(apiFuncDir, "package.json");
+  if (fs.existsSync(packageJsonTarget)) {
+    fs.unlinkSync(packageJsonTarget); // 刪除舊檔案（避免 build cache 衝突）
+  }
+  fs.copyFileSync("backend/package.json", packageJsonTarget);
 
   // 建立 .vc-config.json for API
   const apiConfig = {
