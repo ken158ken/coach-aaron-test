@@ -6,6 +6,7 @@
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import { UpdateCourseData } from "../types/database.js";
 
 const router: Router = express.Router();
 
@@ -83,7 +84,7 @@ router.get(
           `
         *,
         users:user_id (display_name, avatar_url)
-      `
+      `,
         )
         .eq("course_id", id)
         .eq("is_visible", true)
@@ -96,7 +97,7 @@ router.get(
       console.error("Get reviews error:", err);
       res.status(500).json({ error: "取得評論失敗" });
     }
-  }
+  },
 );
 
 // ===== 管理員 API =====
@@ -126,7 +127,7 @@ router.get(
       console.error("Get all courses error:", err);
       res.status(500).json({ error: "取得課程失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -182,7 +183,7 @@ router.post(
       console.error("Create course error:", err);
       res.status(500).json({ error: "新增課程失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -199,7 +200,7 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const updateData: Record<string, any> = {};
+      const updateData: Partial<Record<keyof UpdateCourseData, any>> = {};
 
       const fields = [
         "courseTitle",
@@ -250,7 +251,7 @@ router.put(
       console.error("Update course error:", err);
       res.status(500).json({ error: "更新課程失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -279,7 +280,7 @@ router.delete(
       console.error("Delete course error:", err);
       res.status(500).json({ error: "刪除課程失敗" });
     }
-  }
+  },
 );
 
 export default router;

@@ -8,6 +8,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
+import { logger } from "../utils/logger.js";
+import { validateEmail } from "../middleware/sanitize.js";
 
 const router: Router = express.Router();
 
@@ -18,7 +21,7 @@ const router: Router = express.Router();
  * @param {Response} res - Express 回應物件
  * @returns {Promise<void>} 註冊結果及 JWT Token
  */
-router.post("/register", async (req: Request, res: Response): Promise<void> => {
+router.post("/register", authLimiter, validateEmail, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, email, password, displayName, phoneNumber } = req.body;
 
@@ -70,7 +73,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       .single();
 
     if (error || !newUser) {
-      console.error("Register error:", error);
+      logger.error("註冊失敗", error as Error, { email });
       res.status(500).json({ error: "註冊失敗" });
       return;
     }
@@ -99,9 +102,13 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: process.env.COOKIE_DOMAIN,
     });
+
+    logger.info("使用者註冊成功", { userId: newUser.user_id, email });
 
     res.json({
       success: true,
@@ -115,9 +122,10 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (err) {
-    console.error("Register error:", err);
+    logger.error("註冊伺服器錯誤", err as Error);
     res.status(500).json({ error: "伺服器錯誤" });
   }
+});
 });
 
 /**
@@ -127,7 +135,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
  * @param {Response} res - Express 回應物件
  * @returns {Promise<void>} 登入結果及 JWT Token
  */
-router.post("/login", async (req: Request, res: Response): Promise<void> => {
+router.post("/login", authLimiter, validateEmail, async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
@@ -146,6 +154,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
       .single();
 
     if (error || !user) {
+      logger.warn("登入失敗 - 使用者不存在", { email });
       res.status(401).json({ error: "Email 或密碼錯誤" });
       return;
     }
@@ -153,6 +162,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
     // 驗證密碼
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
+      logger.warn("登入失敗 - 密碼錯誤", { email });
       res.status(401).json({ error: "Email 或密碼錯誤" });
       return;
     }
@@ -188,9 +198,13 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      domain: process.env.COOKIE_DOMAIN,
     });
+
+    logger.info("使用者登入成功", { userId: user.user_id, email });
 
     res.json({
       success: true,
@@ -205,7 +219,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (err) {
-    console.error("Login error:", err);
+    logger.error("登入伺服器錯誤", err as Error);
     res.status(500).json({ error: "伺服器錯誤" });
   }
 });
@@ -218,7 +232,13 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
  * @returns {void} 清除 Cookie 並回傳成功訊息
  */
 router.post("/logout", (req: Request, res: Response): void => {
-  res.clearCookie("token");
+  logger.info("使用者登出");
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    domain: process.env.COOKIE_DOMAIN,
+  });
   res.json({ success: true });
 });
 
@@ -269,7 +289,7 @@ router.get(
         },
       });
     } catch (err) {
-      console.error("Get me error:", err);
+      logger.error("取得使用者資訊失敗", err as Error, { userId: req.user?.userId });
       res.status(500).json({ error: "伺服器錯誤" });
     }
   }
@@ -301,13 +321,15 @@ router.put(
         .single();
 
       if (error) {
+        logger.error("更新個人資料失敗", error as Error, { userId: req.user?.userId });
         res.status(500).json({ error: "更新失敗" });
         return;
       }
 
+      logger.info("更新個人資料成功", { userId: req.user?.userId });
       res.json({ success: true, user: data });
     } catch (err) {
-      console.error("Update profile error:", err);
+      logger.error("更新個人資料伺服器錯誤", err as Error, { userId: req.user?.userId });
       res.status(500).json({ error: "伺服器錯誤" });
     }
   }

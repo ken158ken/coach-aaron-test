@@ -13,33 +13,26 @@ import authRoutes from "./routes/auth.js";
 import coursesRoutes from "./routes/courses.js";
 import videosRoutes from "./routes/videos.js";
 import adminRoutes from "./routes/admin.js";
+import { validateEnv } from "./utils/env.js";
+import { logger } from "./utils/logger.js";
+import {
+  sanitizeInput,
+  detectSuspiciousRequest,
+} from "./middleware/sanitize.js";
+import { apiLimiter } from "./middleware/rateLimiter.js";
 
 // 載入環境變數
 dotenv.config();
 
 /**
- * 驗證必要的環境變數
+ * 驗證並取得環境變數
  */
-const requiredEnvVars: string[] = [
-  "SUPABASE_URL",
-  "SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_KEY",
-  "JWT_SECRET",
-];
+const env = validateEnv();
 
-const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
-
-if (missingEnvVars.length > 0) {
-  console.error(
-    "❌ Missing required environment variables:",
-    missingEnvVars.join(", ")
-  );
-  console.error("Please create a .env file based on .env.example");
-  process.exit(1);
-}
+const env = validateEnv();
 
 const app: Express = express();
-const PORT: number = parseInt(process.env.PORT || "5000", 10);
+const PORT: number = env.PORT;
 
 /**
  * 允許的 CORS origins
@@ -47,12 +40,17 @@ const PORT: number = parseInt(process.env.PORT || "5000", 10);
 const allowedOrigins: string[] = [
   "http://localhost:5173",
   "http://localhost:3000",
-  process.env.FRONTEND_URL || "",
+  env.FRONTEND_URL || "",
 ].filter(Boolean);
 
 /**
  * Middleware 設定
  */
+
+// 信任 proxy（Vercel 環境需要）
+app.set("trust proxy", 1);
+
+// CORS 設定
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -62,15 +60,23 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        logger.warn("CORS 拒絕來源", { origin });
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
-  })
+  }),
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+
+// 安全性中介軟體
+app.use(sanitizeInput);
+app.use(detectSuspiciousRequest);
+
+// 全域 Rate Limiting（較寬鬆）
+app.use("/api", apiLimiter);
 
 /**
  * API 路由註冊
@@ -87,22 +93,35 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
+    environment: env.NODE_ENV,
+    version: "1.0.0",
   });
 });
 
 /**
  * 全域錯誤處理
  */
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("❌ Server Error:", err);
-  res.status(500).json({ error: "伺服器錯誤" });
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  logger.error("伺服器錯誤", err, {
+    path: req.path,
+    method: req.method,
+    ip: req.ip,
+  });
+
+  res.status(500).json({
+    error:
+      env.NODE_ENV === "production" ? "伺服器錯誤，請稍後再試" : err.message,
+  });
 });
 
 /**
  * 404 路由處理
  */
-app.use((_req: Request, res: Response) => {
+app.use((req: Request, res: Response) => {
+  logger.warn("404 找不到路由", {
+    path: req.path,
+    method: req.method,
+  });
   res.status(404).json({ error: "找不到該路由" });
 });
 
@@ -113,10 +132,12 @@ app.use((_req: Request, res: Response) => {
 if (!process.env.VERCEL) {
   // 本地開發環境
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📦 Supabase URL: ${process.env.SUPABASE_URL}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`🔐 CORS enabled for: ${allowedOrigins.join(", ")}`);
+    logger.info("🚀 伺服器啟動成功", {
+      port: PORT,
+      environment: env.NODE_ENV,
+      supabaseUrl: env.SUPABASE_URL,
+      corsOrigins: allowedOrigins,
+    });
   });
 }
 

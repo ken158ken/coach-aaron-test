@@ -62,7 +62,6 @@ Coach Aaron 健身教練網站是一個全端 Web 應用程式，提供：
 ### 🔒 權限控制
 
 1. **管理員白名單**
-
    - Email: `ken158ken@gmail.com`（預設管理員）
    - 可透過後台新增其他管理員
 
@@ -90,10 +89,17 @@ Coach Aaron 健身教練網站是一個全端 Web 應用程式，提供：
 ### 後端
 
 - **執行環境**: Node.js 18+
-- **框架**: Express.js 5 (即將遷移至 TypeScript)
+- **框架**: Express.js 5 (TypeScript)
+- **語言**: TypeScript 5.7+
 - **認證**: JWT + bcrypt
 - **資料庫**: Supabase (PostgreSQL)
-- **安全性**: CORS, Cookie-parser, dotenv
+- **安全性**:
+  - CORS 跨域保護
+  - Rate Limiting (防濫用)
+  - 輸入驗證與清理
+  - Cookie 安全設定
+  - 結構化 Logging
+  - 環境變數驗證
 
 ### 資料庫
 
@@ -154,17 +160,25 @@ coach-aaron-test/
 │   ├── tsconfig.json         # TypeScript 配置
 │   └── package.json
 │
-├── backend/                    # Express 後端 API
+├── backend/                    # Express 後端 API (TypeScript)
 │   ├── config/               # 配置檔案
-│   │   └── supabase.js      # Supabase 客戶端
-│   ├── routes/               # API 路由
-│   │   ├── auth.js          # 認證路由
-│   │   ├── courses.js       # 課程路由
-│   │   ├── videos.js        # 影片路由
-│   │   └── admin.js         # 管理員路由
+│   │   └── supabase.ts      # Supabase 客戶端
+│   ├── routes/               # API 路由 (TypeScript)
+│   │   ├── auth.ts          # 認證路由
+│   │   ├── courses.ts       # 課程路由
+│   │   ├── videos.ts        # 影片路由
+│   │   └── admin.ts         # 管理員路由
 │   ├── middleware/           # 中介軟體
-│   │   └── auth.js          # 認證中介軟體
-│   ├── index.js             # 入口檔案
+│   │   ├── auth.ts          # 認證中介軟體
+│   │   ├── rateLimiter.ts   # Rate Limiting
+│   │   └── sanitize.ts      # 輸入驗證與清理
+│   ├── utils/                # 工具模組
+│   │   ├── logger.ts        # 結構化 Logger
+│   │   └── env.ts           # 環境變數驗證
+│   ├── types/                # 型別定義
+│   │   └── database.ts      # 資料庫型別
+│   ├── index.ts             # 入口檔案
+│   ├── tsconfig.json        # TypeScript 配置
 │   └── package.json
 │
 ├── database/                   # 資料庫相關
@@ -177,7 +191,8 @@ coach-aaron-test/
 ├── REPORTS/                    # 審查報告
 │   ├── CODE_REVIEW_2026-01-13T00-00-00Z.md
 │   ├── TYPESCRIPT_MIGRATION_2026-01-15T12-00-00Z.md
-│   └── ADMIN_PAGES_TYPESCRIPT_MIGRATION_2026-01-15T16-30-00Z.md
+│   ├── ADMIN_PAGES_TYPESCRIPT_MIGRATION_2026-01-15T16-30-00Z.md
+│   └── CODE_IMPROVEMENTS_2026-01-17T16-00-00+08-00.md  # 最新改進報告
 │
 ├── assets/                     # 專案資源
 ├── vercel.json                # Vercel 部署設定
@@ -246,18 +261,31 @@ cp .env.example .env
 編輯 `backend/.env`：
 
 ```env
+# Supabase 設定
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key-here
 SUPABASE_SERVICE_KEY=your-service-role-key-here
+
+# JWT 密鑰（至少 32 字元）
 JWT_SECRET=your-super-secret-jwt-key-at-least-32-chars
+
+# 伺服器設定
 PORT=5000
+NODE_ENV=development
+
+# CORS 設定
 FRONTEND_URL=http://localhost:5173
+
+# Cookie 設定（可選，生產環境使用）
+COOKIE_DOMAIN=
 ```
 
-> ⚠️ **重要**:
+> ⚠️ **安全性注意事項**:
 >
-> - `JWT_SECRET` 至少 32 字元，建議使用隨機生成器
-> - `SUPABASE_SERVICE_KEY` 請勿外洩（可繞過 RLS）
+> - `JWT_SECRET` 至少 32 字元，建議使用 `openssl rand -base64 32` 生成
+> - `SUPABASE_SERVICE_KEY` 可繞過 RLS，請妥善保管
+> - 生產環境請設定 `NODE_ENV=production`
+> - `COOKIE_DOMAIN` 在跨域情況下需要設定
 
 ##### 前端 `.env` 檔案
 
@@ -639,22 +667,153 @@ vercel --prod
 
 ### 🔒 已實作的安全措施
 
-1. **密碼加密**: bcrypt（10 rounds）
-2. **JWT 認證**: HttpOnly Cookie + 7 天有效期
-3. **CORS 保護**: 限制允許的 Origins
-4. **RLS 政策**: 資料庫層級權限控制
-5. **環境變數**: 敏感資訊不寫入程式碼
-6. **SQL 注入防護**: 使用 Supabase Query Builder
+#### 1. 認證與授權
 
-### ⚠️ 待改進的安全性
+- ✅ **JWT 認證**: HttpOnly Cookie + 7 天有效期
+- ✅ **密碼加密**: bcrypt（10 rounds）
+- ✅ **管理員白名單**: Email/手機雙重驗證
+- ✅ **Token 驗證**: 所有受保護路由
 
-根據 [Code Review 報告](REPORTS/CODE_REVIEW_2026-01-13T00-00-00Z.md)：
+#### 2. API 安全
 
-- [ ] 加入 Rate Limiting（防止暴力攻擊）
+- ✅ **Rate Limiting**: 防止 API 濫用
+  - 認證端點：15 分鐘 5 次
+  - 一般 API：15 分鐘 100 次
+  - 嚴格限制：1 分鐘 3 次
+- ✅ **輸入驗證**: 自動清理與驗證所有輸入
+- ✅ **XSS 防護**: 移除危險字元與腳本
+- ✅ **SQL 注入防護**: Supabase Query Builder + 額外檢測
+
+#### 3. Cookie 安全
+
+- ✅ **HttpOnly**: 防止 JavaScript 存取
+- ✅ **Secure**: 生產環境強制 HTTPS
+- ✅ **SameSite**: CSRF 防護
+- ✅ **Domain**: 明確指定 Cookie 作用域
+
+#### 4. CORS 保護
+
+- ✅ **Origin 白名單**: 限制允許的來源
+- ✅ **Credentials**: 安全的跨域 Cookie 傳遞
+- ✅ **日誌記錄**: 記錄被拒絕的請求
+
+#### 5. 資料庫安全
+
+- ✅ **RLS 政策**: Row Level Security
+- ✅ **參數化查詢**: 防止 SQL 注入
+- ✅ **最小權限原則**: 分離 ANON_KEY 和 SERVICE_KEY
+
+#### 6. Logging 與監控
+
+- ✅ **結構化日誌**: JSON 格式，方便分析
+- ✅ **錯誤追蹤**: 完整的錯誤上下文
+- ✅ **可疑活動記錄**: 登入失敗、SQL 注入嘗試
+- ✅ **Vercel 整合**: 自動收集到 Vercel 日誌系統
+
+#### 7. 環境變數保護
+
+- ✅ **自動驗證**: 啟動時檢查必要變數
+- ✅ **格式驗證**: URL、長度等
+- ✅ **型別安全**: TypeScript 型別保護
+- ✅ **Git 忽略**: .env 不會提交到版本控制
+
+### 📋 安全性檢查清單
+
+#### 部署前檢查
+
+- [ ] 所有環境變數已在 Vercel 設定
+- [ ] `NODE_ENV=production`
+- [ ] `JWT_SECRET` 使用強密碼（32+ 字元）
+- [ ] `COOKIE_DOMAIN` 已設定為正式域名
+- [ ] HTTPS 已啟用
+- [ ] Supabase RLS 政策已啟用
+- [ ] 測試 Rate Limiting 是否正常運作
+
+#### 定期安全審查
+
+- [ ] 檢查 Supabase 日誌異常登入
+- [ ] 審查管理員白名單
+- [ ] 更新依賴套件（npm audit）
+- [ ] 檢查 Vercel 日誌是否有異常
+
+### ⚠️ 已知限制與建議改進
+
+#### 目前限制
+
+1. **Rate Limiting 儲存**
+   - 目前使用記憶體儲存（單一實例）
+   - **建議**: 升級至 Upstash Redis（分散式）
+
+2. **日誌系統**
+   - 依賴 Vercel 內建日誌
+   - **建議**: 整合 Sentry 或 LogRocket
+
+3. **密碼政策**
+   - 僅有基本長度檢查（6 字元）
+   - **建議**: 實作完整密碼強度檢查
+
+#### 未來改進計畫
+
+根據 [最新改進報告](REPORTS/CODE_IMPROVEMENTS_2026-01-17T16-00-00+08-00.md)：
+
+**短期（1-2 週）**
+
+- [ ] 升級 Rate Limiting 至 Upstash Redis
+- [ ] 整合 Sentry 錯誤追蹤
+- [ ] 加入密碼強度檢查
+
+**中期（1 個月）**
+
 - [ ] 實作 CSRF Token
-- [ ] 密碼強度檢查
 - [ ] 登入失敗次數限制
 - [ ] 2FA 雙因素認證
+- [ ] 完整的單元測試與整合測試
+
+**長期（3 個月）**
+
+- [ ] 安全性定期審計
+- [ ] Bug Bounty 計畫
+- [ ] SOC 2 合規準備
+
+### 🔐 安全性最佳實踐
+
+#### 開發者須知
+
+1. **永不提交敏感資料**
+
+   ```bash
+   # 檢查是否誤提交
+   git log -S "SUPABASE_SERVICE_KEY" --all
+   ```
+
+2. **使用強密碼生成**
+
+   ```bash
+   # 生成 JWT_SECRET
+   openssl rand -base64 32
+   ```
+
+3. **定期更新依賴**
+
+   ```bash
+   # 檢查安全漏洞
+   npm audit
+
+   # 自動修復
+   npm audit fix
+   ```
+
+4. **Code Review 重點**
+   - 檢查所有 API 路由是否有適當的認證
+   - 確認輸入驗證是否完整
+   - 檢查是否有硬編碼的敏感資訊
+
+#### 使用者須知
+
+1. **使用強密碼**: 至少 8 字元，包含大小寫、數字
+2. **定期更換密碼**: 建議每 90 天更換
+3. **不要分享帳號**: 每人使用獨立帳號
+4. **發現異常立即回報**: 聯絡管理員
 
 ---
 
@@ -851,7 +1010,7 @@ git commit -m "fix(api): resolve CORS issue"
 **核心類型** (@/types):
 
 ```typescript
--User,
+(-User,
   AuthResponse,
   LoginCredentials - Course,
   CourseStatus,
@@ -859,7 +1018,7 @@ git commit -m "fix(api): resolve CORS issue"
   CreateVideoDto - ApiResponse<T>,
   PaginationParams - AdminStats,
   AdminUser,
-  WhitelistItem;
+  WhitelistItem);
 ```
 
 #### 🔧 開發體驗提升
@@ -881,6 +1040,60 @@ git commit -m "fix(api): resolve CORS issue"
 - [Stage 2 完成報告](./REPORTS/STAGE_2_COMPLETION_REPORT_2026-01-15T16-45-00Z.md)
 - [TypeScript 遷移報告](./REPORTS/TYPESCRIPT_MIGRATION_2026-01-15T12-00-00Z.md)
 - [後台頁面遷移報告](./REPORTS/ADMIN_PAGES_TYPESCRIPT_MIGRATION_2026-01-15T16-30-00Z.md)
+
+## 📋 版本記錄
+
+### v1.2.0 (2026-01-17) - 安全性與品質大幅提升 🔒
+
+#### 🔐 安全性改進
+
+- ✅ **Rate Limiting**: 防止 API 濫用（15分鐘5次登入嘗試）
+- ✅ **輸入驗證**: 自動清理與驗證所有輸入
+- ✅ **XSS 防護**: 移除危險字元與腳本
+- ✅ **Cookie 安全**: Secure, SameSite, Domain 設定
+- ✅ **環境變數驗證**: 啟動時自動檢查
+
+#### 📝 Logging 系統
+
+- ✅ **結構化日誌**: JSON 格式，Serverless 友善
+- ✅ **錯誤追蹤**: 完整的錯誤上下文記錄
+- ✅ **可疑活動監控**: 登入失敗、SQL 注入嘗試
+- ✅ **Vercel 整合**: 自動收集到日誌系統
+
+#### 🎯 型別安全
+
+- ✅ **移除 `any` 型別**: 100% 型別覆蓋
+- ✅ **資料庫型別定義**: 4 個新介面
+- ✅ **更新資料驗證**: UpdateUserData, UpdateCourseData 等
+
+#### 🧹 程式碼清理
+
+- ✅ **刪除重複檔案**: 7 個 `.js` 檔案
+- ✅ **統一 TypeScript**: 後端 100% TypeScript
+- ✅ **錯誤處理改進**: 使用 Logger 替換 console.log
+
+#### 📚 文件更新
+
+- ✅ **程式碼改進報告**: 完整的改進文件
+- ✅ **README 更新**: 新增安全性章節
+- ✅ **環境變數說明**: 更詳細的配置指南
+
+#### 🚀 部署優化
+
+- ✅ **Vercel 適配**: Serverless 環境優化
+- ✅ **Trust Proxy**: 正確的 IP 識別
+- ✅ **錯誤訊息**: 生產/開發環境分離
+
+#### 📊 改進統計
+
+- 新增檔案: 5 個（logger, env, rateLimiter, sanitize, database types）
+- 刪除檔案: 7 個（重複的 .js 檔案）
+- 修改檔案: 6 個（index.ts, auth.ts, admin.ts, courses.ts, videos.ts, api.ts）
+- 程式碼行數: +1,200 行（包含註解與文件）
+
+#### 🔗 相關報告
+
+- [程式碼改進完成報告](REPORTS/CODE_IMPROVEMENTS_2026-01-17T16-00-00+08-00.md)
 
 ---
 

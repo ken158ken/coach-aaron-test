@@ -29,7 +29,7 @@ apiClient.interceptors.request.use(
   (error: AxiosError) => {
     console.error("請求錯誤:", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -43,8 +43,30 @@ apiClient.interceptors.response.use(
       // 未登入或 Token 過期
       // SSR 保護：只在客戶端執行重新導向
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        // 清除可能存在的過期 cookie（前端無法操作 httpOnly，只記錄狀態）
+        const currentPath = window.location.pathname;
+
+        // 避免在登入頁面重複導向
+        if (!currentPath.includes("/login")) {
+          // 儲存當前路徑以便登入後返回
+          sessionStorage.setItem("redirectAfterLogin", currentPath);
+
+          // 給使用者一個提示
+          if (confirm("登入已過期，是否重新登入？")) {
+            window.location.href = "/login";
+          } else {
+            // 使用者選擇不登入，導向首頁
+            window.location.href = "/";
+          }
+        }
       }
+    } else if (error.response?.status === 403) {
+      // 權限不足
+      console.error("權限不足：", error.response.data?.error);
+    } else if (error.response?.status === 429) {
+      // Rate limit 超過
+      const retryAfter = error.response.headers["retry-after"];
+      console.warn(`請求次數過多，請 ${retryAfter} 秒後再試`);
     }
 
     const errorMessage =
@@ -54,10 +76,11 @@ apiClient.interceptors.response.use(
       status: error.response?.status,
       message: errorMessage,
       url: error.config?.url,
+      method: error.config?.method,
     });
 
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -65,7 +88,7 @@ apiClient.interceptors.response.use(
  */
 export const get = <T = unknown>(
   url: string,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<T> => {
   return apiClient.get<T, T>(url, config);
 };
@@ -76,7 +99,7 @@ export const get = <T = unknown>(
 export const post = <T = unknown, D = unknown>(
   url: string,
   data?: D,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<T> => {
   return apiClient.post<T, T, D>(url, data, config);
 };
@@ -87,7 +110,7 @@ export const post = <T = unknown, D = unknown>(
 export const put = <T = unknown, D = unknown>(
   url: string,
   data?: D,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<T> => {
   return apiClient.put<T, T, D>(url, data, config);
 };
@@ -97,7 +120,7 @@ export const put = <T = unknown, D = unknown>(
  */
 export const del = <T = unknown>(
   url: string,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<T> => {
   return apiClient.delete<T, T>(url, config);
 };
@@ -108,7 +131,7 @@ export const del = <T = unknown>(
 export const patch = <T = unknown, D = unknown>(
   url: string,
   data?: D,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<T> => {
   return apiClient.patch<T, T, D>(url, data, config);
 };

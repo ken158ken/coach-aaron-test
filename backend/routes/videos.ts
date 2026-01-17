@@ -6,6 +6,7 @@
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import { UpdateVideoData } from "../types/database.js";
 
 const router: Router = express.Router();
 
@@ -60,7 +61,7 @@ router.get(
       console.error("Get all videos error:", err);
       res.status(500).json({ error: "取得影片失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -96,7 +97,7 @@ router.post(
       console.error("Create video error:", err);
       res.status(500).json({ error: "新增影片失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -115,7 +116,13 @@ router.put(
       const { id } = req.params;
       const { title, url, type, sortOrder, isVisible } = req.body;
 
-      const updateData: Record<string, any> = {};
+      const updateData: Partial<{
+        title: string;
+        url: string;
+        type: string;
+        sort_order: number;
+        is_visible: boolean;
+      }> = {};
       if (title !== undefined) updateData.title = title;
       if (url !== undefined) updateData.url = url;
       if (type !== undefined) updateData.type = type;
@@ -135,7 +142,7 @@ router.put(
       console.error("Update video error:", err);
       res.status(500).json({ error: "更新影片失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -164,7 +171,7 @@ router.delete(
       console.error("Delete video error:", err);
       res.status(500).json({ error: "刪除影片失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -194,7 +201,7 @@ router.put(
       console.error("Reorder videos error:", err);
       res.status(500).json({ error: "更新排序失敗" });
     }
-  }
+  },
 );
 
 export default router;

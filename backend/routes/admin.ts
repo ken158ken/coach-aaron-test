@@ -6,6 +6,7 @@
 import express, { Request, Response, Router, NextFunction } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import { UpdateUserData, UpdateWhitelistData } from "../types/database.js";
 
 const router: Router = express.Router();
 
@@ -31,7 +32,7 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
       .from("users")
       .select(
         "user_id, username, email, display_name, avatar_url, sex, phone_number, is_active, email_verified, last_login_at, created_at",
-        { count: "exact" }
+        { count: "exact" },
       )
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
@@ -39,7 +40,7 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
 
     if (search) {
       query = query.or(
-        `email.ilike.%${search}%,username.ilike.%${search}%,display_name.ilike.%${search}%`
+        `email.ilike.%${search}%,username.ilike.%${search}%,display_name.ilike.%${search}%`,
       );
     }
 
@@ -84,7 +85,7 @@ router.put("/users/:id", async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { sex, isActive, displayName } = req.body;
 
-    const updateData: Record<string, any> = {};
+    const updateData: UpdateUserData = {};
     if (sex !== undefined) updateData.sex = sex;
     if (isActive !== undefined) updateData.is_active = isActive;
     if (displayName !== undefined) updateData.display_name = displayName;
@@ -128,7 +129,7 @@ router.delete(
       console.error("Delete user error:", err);
       res.status(500).json({ error: "刪除使用者失敗" });
     }
-  }
+  },
 );
 
 // ===== 管理員白名單 =====
@@ -197,7 +198,7 @@ router.post(
       console.error("Add whitelist error:", err);
       res.status(500).json({ error: "新增白名單失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -214,7 +215,7 @@ router.put(
       const { id } = req.params;
       const { email, phoneNumber, note, isActive } = req.body;
 
-      const updateData: Record<string, any> = {};
+      const updateData: UpdateWhitelistData = {};
       if (email !== undefined) updateData.email = email;
       if (phoneNumber !== undefined) updateData.phone_number = phoneNumber;
       if (note !== undefined) updateData.note = note;
@@ -233,7 +234,7 @@ router.put(
       console.error("Update whitelist error:", err);
       res.status(500).json({ error: "更新白名單失敗" });
     }
-  }
+  },
 );
 
 /**
@@ -271,7 +272,7 @@ router.delete(
       console.error("Delete whitelist error:", err);
       res.status(500).json({ error: "刪除白名單失敗" });
     }
-  }
+  },
 );
 
 // ===== 訂單管理 =====
@@ -299,7 +300,7 @@ router.get("/orders", async (req: Request, res: Response): Promise<void> => {
           courses:course_id (course_title)
         )
       `,
-        { count: "exact" }
+        { count: "exact" },
       )
       .order("created_at", { ascending: false })
       .range(offset, offset + Number(limit) - 1);
@@ -338,7 +339,12 @@ router.put(
       const { id } = req.params;
       const { status, notes } = req.body;
 
-      const updateData: Record<string, any> = {};
+      const updateData: Partial<{
+        status: string;
+        paid_at: string;
+        cancelled_at: string;
+        notes: string;
+      }> = {};
       if (status) {
         updateData.status = status;
         if (status === "paid") updateData.paid_at = new Date().toISOString();
@@ -360,7 +366,7 @@ router.put(
       console.error("Update order error:", err);
       res.status(500).json({ error: "更新訂單失敗" });
     }
-  }
+  },
 );
 
 // ===== 統計數據 =====
@@ -405,7 +411,7 @@ router.get("/stats", async (req: Request, res: Response): Promise<void> => {
     const monthlyRevenue =
       monthlyOrders?.reduce(
         (sum, o) => sum + parseFloat(o.total_amount || 0),
-        0
+        0,
       ) || 0;
 
     res.json({
