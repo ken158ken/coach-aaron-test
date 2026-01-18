@@ -45,10 +45,17 @@ try {
 
   console.log(`✓ All source directories found`);
 
-  // 清理舊的輸出
-  if (fs.existsSync(outputDir)) {
-    console.log(`🗑️  Cleaning old output: ${outputDir}`);
-    fs.rmSync(outputDir, { recursive: true, force: true });
+  // 清理舊的輸出（包括可能的 cache 殘留）
+  const outputPaths = [
+    outputDir,              // .vercel/output
+    "/vercel/output",       // Vercel 絕對路徑（如果存在）
+  ];
+  
+  for (const pathToClean of outputPaths) {
+    if (fs.existsSync(pathToClean)) {
+      console.log(`🗑️  Cleaning: ${pathToClean}`);
+      fs.rmSync(pathToClean, { recursive: true, force: true });
+    }
   }
 
   // 建立 .vercel/output 目錄結構
