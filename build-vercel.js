@@ -47,10 +47,10 @@ try {
 
   // 清理舊的輸出（包括可能的 cache 殘留）
   const outputPaths = [
-    outputDir,              // .vercel/output
-    "/vercel/output",       // Vercel 絕對路徑（如果存在）
+    outputDir, // .vercel/output
+    "/vercel/output", // Vercel 絕對路徑（如果存在）
   ];
-  
+
   for (const pathToClean of outputPaths) {
     if (fs.existsSync(pathToClean)) {
       console.log(`🗑️  Cleaning: ${pathToClean}`);
@@ -92,10 +92,11 @@ try {
     launcherType: "Nodejs",
     shouldAddHelpers: true,
   };
-  fs.writeFileSync(
-    path.join(ssrFuncDir, ".vc-config.json"),
-    JSON.stringify(ssrConfig, null, 2),
-  );
+  const ssrConfigPath = path.join(ssrFuncDir, ".vc-config.json");
+  if (fs.existsSync(ssrConfigPath)) {
+    fs.unlinkSync(ssrConfigPath);
+  }
+  fs.writeFileSync(ssrConfigPath, JSON.stringify(ssrConfig, null, 2));
 
   console.log(`✓ SSR function: ${ssrFuncDir}`);
 
@@ -118,10 +119,11 @@ try {
     launcherType: "Nodejs",
     shouldAddHelpers: true,
   };
-  fs.writeFileSync(
-    path.join(apiFuncDir, ".vc-config.json"),
-    JSON.stringify(apiConfig, null, 2),
-  );
+  const apiConfigPath = path.join(apiFuncDir, ".vc-config.json");
+  if (fs.existsSync(apiConfigPath)) {
+    fs.unlinkSync(apiConfigPath);
+  }
+  fs.writeFileSync(apiConfigPath, JSON.stringify(apiConfig, null, 2));
 
   console.log(`✓ API function: ${apiFuncDir}`);
 
