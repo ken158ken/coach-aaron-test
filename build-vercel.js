@@ -85,18 +85,15 @@ try {
     path.join(ssrFuncDir, "index.html"),
   );
 
-  // 建立 .vc-config.json for SSR
-  const ssrConfig = {
-    runtime: "nodejs22.x",
-    handler: "index.js",
-    launcherType: "Nodejs",
-    shouldAddHelpers: true,
+  // 建立 package.json for SSR（讓 Vercel 自動檢測 runtime）
+  const ssrPackageJson = {
+    type: "module",
+    engines: { node: "22.x" },
   };
-  const ssrConfigPath = path.join(ssrFuncDir, ".vc-config.json");
-  if (fs.existsSync(ssrConfigPath)) {
-    fs.unlinkSync(ssrConfigPath);
-  }
-  fs.writeFileSync(ssrConfigPath, JSON.stringify(ssrConfig, null, 2));
+  fs.writeFileSync(
+    path.join(ssrFuncDir, "package.json"),
+    JSON.stringify(ssrPackageJson, null, 2),
+  );
 
   console.log(`✓ SSR function: ${ssrFuncDir}`);
 
@@ -112,18 +109,15 @@ try {
   const apiBackendDir = path.join(apiFuncDir, "backend");
   copyDir(backendDir, apiBackendDir);
 
-  // 建立 .vc-config.json for API（不需要 package.json，依賴已在 backend/dist 編譯好）
-  const apiConfig = {
-    runtime: "nodejs22.x",
-    handler: "index.js",
-    launcherType: "Nodejs",
-    shouldAddHelpers: true,
+  // 建立 package.json for API（讓 Vercel 自動檢測 runtime）
+  const apiPackageJson = {
+    type: "commonjs",
+    engines: { node: "22.x" },
   };
-  const apiConfigPath = path.join(apiFuncDir, ".vc-config.json");
-  if (fs.existsSync(apiConfigPath)) {
-    fs.unlinkSync(apiConfigPath);
-  }
-  fs.writeFileSync(apiConfigPath, JSON.stringify(apiConfig, null, 2));
+  fs.writeFileSync(
+    path.join(apiFuncDir, "package.json"),
+    JSON.stringify(apiPackageJson, null, 2),
+  );
 
   console.log(`✓ API function: ${apiFuncDir}`);
 
