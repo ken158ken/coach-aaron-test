@@ -12,7 +12,7 @@
     },
     "api/ssr.js": {
       "maxDuration": 10,
-      "includeFiles": "frontend/dist/**"
+      "includeFiles": "{frontend/dist/server/**,frontend/dist/client/index.html}"
     }
   }
 }
