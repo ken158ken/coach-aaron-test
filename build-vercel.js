@@ -104,14 +104,7 @@ try {
   const apiBackendDir = path.join(apiFuncDir, "backend");
   copyDir(backendDir, apiBackendDir);
 
-  // 複製 backend package.json（讓 Vercel 安裝依賴）
-  const packageJsonTarget = path.join(apiFuncDir, "package.json");
-  if (fs.existsSync(packageJsonTarget)) {
-    fs.unlinkSync(packageJsonTarget); // 刪除舊檔案（避免 build cache 衝突）
-  }
-  fs.copyFileSync("backend/package.json", packageJsonTarget);
-
-  // 建立 .vc-config.json for API
+  // 建立 .vc-config.json for API（不需要 package.json，依賴已在 backend/dist 編譯好）
   const apiConfig = {
     runtime: "nodejs22.x",
     handler: "index.js",
