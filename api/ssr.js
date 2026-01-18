@@ -20,12 +20,11 @@ module.exports = async function handler(req, res) {
     const cwdContents = require("node:fs").readdirSync(process.cwd());
     console.log(`📋 CWD contents: ${cwdContents.join(", ")}`);
 
-    // Vercel 部署時，index.html 在 .vercel_build_output 目錄
-    // 本地開發時，可能在其他位置
+    // Vercel 傳統 Functions: index.html 應該在根目錄（從 outputDirectory 複製）
     const possibleTemplatePaths = [
-      path.resolve(process.cwd(), ".vercel_build_output/index.html"),
-      path.resolve(process.cwd(), "index.html"),
-      path.resolve(__dirname, "../.vercel_build_output/index.html"),
+      path.resolve(process.cwd(), "index.html"), // Vercel 傳統模式
+      path.resolve(__dirname, "../frontend/dist/client/index.html"), // 本地開發
+      path.resolve(process.cwd(), ".vercel_build_output/index.html"), // 舊的 Build Output API
     ];
 
     let templatePath = null;
@@ -45,16 +44,13 @@ module.exports = async function handler(req, res) {
       throw new Error(errorMsg);
     }
 
-    // 可能的 entry-server.js 路徑
+    // entry-server.js 路徑
     const possiblePaths = [
-      // Vercel 部署後：includeFiles 複製到函數目錄
-      path.resolve(
-        process.cwd(),
-        ".vercel_build_output/server/entry-server.js",
-      ),
+      // Vercel 傳統模式：需要通過 includeFiles 複製
       path.resolve(process.cwd(), "server/entry-server.js"),
       // 本地開發
       path.resolve(__dirname, "../frontend/dist/server/entry-server.js"),
+      // Build Output API 模式
       path.resolve(__dirname, "../.vercel_build_output/server/entry-server.js"),
     ];
 
