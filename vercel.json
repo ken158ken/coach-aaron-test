@@ -1,3 +1,18 @@
 {
-  "buildCommand": "rm -rf .vercel/output; cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build && cd .. && node build-vercel.js"
+  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist/client",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/server" },
+    { "source": "/(.*)", "destination": "/api/ssr" }
+  ],
+  "functions": {
+    "api/server.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/ssr.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 }
