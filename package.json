@@ -1,0 +1,20 @@
+{
+  "name": "coach-aaron-redesign",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Coach Aaron 健身教練網站 - Monorepo",
+  "scripts": {
+    "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm run dev",
+    "build": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "generate:coach-photos": "node scripts/generate-coach-photos.cjs"
+  },
+  "dependencies": {
+    "concurrently": "^8.0.0"
+  },
+  "devDependencies": {}
+}

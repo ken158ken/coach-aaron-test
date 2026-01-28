@@ -1,0 +1,636 @@
+/**
+ * @fileoverview 文章管理路由
+ * 處理公開文章查詢、文章評分、留言及管理員文章 CRUD 操作
+ */
+
+import express, { Request, Response, Router } from "express";
+import { supabaseAdmin } from "../config/supabase.js";
+import {
+  authenticateToken,
+  requireAdmin,
+  optionalAuth,
+} from "../middleware/auth.js";
+import { logger } from "../utils/logger.js";
+
+const router: Router = express.Router();
+
+// ===== 公開 API =====
+
+/**
+ * 取得所有已發布文章
+ * @route GET /api/articles
+ */
+router.get("/", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { page = 1, limit = 10, category, featured } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // 先嘗試簡單查詢，不使用 join（避免外鍵關係問題）
+    let query = supabaseAdmin
+      .from("articles")
+      .select(
+        `
+        article_id,
+        author_id,
+        article_title,
+        article_slug,
+        article_description,
+        article_thumbnail_url,
+        article_category,
+        view_count,
+        rating_average,
+        rating_count,
+        comment_count,
+        is_featured,
+        published_at,
+        created_at
+      `,
+        { count: "exact" },
+      )
+      .eq("status", "published")
+      .is("deleted_at", null)
+      .order("published_at", { ascending: false })
+      .range(offset, offset + Number(limit) - 1);
+
+    if (category) {
+      query = query.eq("article_category", category);
+    }
+
+    if (featured === "true") {
+      query = query.eq("is_featured", true);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      logger.error("Articles query error:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      });
+      throw error;
+    }
+
+    res.json({
+      articles: data || [],
+      total: count || 0,
+      page: Number(page),
+      totalPages: Math.ceil((count || 0) / Number(limit)),
+    });
+  } catch (err) {
+    const error = err as { code?: string; message?: string; details?: string };
+    logger.error("Get articles error:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
+    res.status(500).json({ error: "取得文章失敗" });
+  }
+});
+
+/**
+ * 取得單一文章（依 slug 或 id）
+ * @route GET /api/articles/:identifier
+ */
+router.get(
+  "/:identifier",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const identifier = req.params.identifier as string;
+
+      // 判斷是 id 還是 slug
+      const isNumeric = /^\d+$/.test(identifier);
+      const column = isNumeric ? "article_id" : "article_slug";
+
+      const { data, error } = await supabaseAdmin
+        .from("articles")
+        .select(
+          `
+        *,
+        users:author_id (display_name, avatar_url)
+      `,
+        )
+        .eq(column, identifier)
+        .eq("status", "published")
+        .is("deleted_at", null)
+        .single();
+
+      if (error || !data) {
+        res.status(404).json({ error: "文章不存在" });
+        return;
+      }
+
+      // 增加瀏覽次數
+      await supabaseAdmin
+        .from("articles")
+        .update({ view_count: (data.view_count || 0) + 1 })
+        .eq("article_id", data.article_id);
+
+      res.json(data);
+    } catch (err) {
+      logger.error("Get article error:", err);
+      res.status(500).json({ error: "取得文章失敗" });
+    }
+  },
+);
+
+/**
+ * 取得文章評分
+ * @route GET /api/articles/:id/ratings
+ */
+router.get(
+  "/:id/ratings",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      const { data, error } = await supabaseAdmin
+        .from("article_ratings")
+        .select(
+          `
+        *,
+        users:user_id (display_name, avatar_url)
+      `,
+        )
+        .eq("article_id", id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      logger.error("Get article ratings error:", err);
+      res.status(500).json({ error: "取得評分失敗" });
+    }
+  },
+);
+
+/**
+ * 取得文章留言
+ * @route GET /api/articles/:id/comments
+ */
+router.get(
+  "/:id/comments",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      // 取得頂層留言（不含回覆）
+      const { data, error } = await supabaseAdmin
+        .from("article_comments")
+        .select(
+          `
+        *,
+        users:user_id (display_name, avatar_url)
+      `,
+        )
+        .eq("article_id", id)
+        .eq("is_visible", true)
+        .is("parent_comment_id", null)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // 取得所有回覆
+      const { data: replies, error: repliesError } = await supabaseAdmin
+        .from("article_comments")
+        .select(
+          `
+        *,
+        users:user_id (display_name, avatar_url)
+      `,
+        )
+        .eq("article_id", id)
+        .eq("is_visible", true)
+        .not("parent_comment_id", "is", null)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true });
+
+      if (repliesError) throw repliesError;
+
+      // 組合留言和回覆
+      const commentsWithReplies = data?.map((comment) => ({
+        ...comment,
+        replies:
+          replies?.filter((r) => r.parent_comment_id === comment.comment_id) ||
+          [],
+      }));
+
+      res.json(commentsWithReplies);
+    } catch (err) {
+      logger.error("Get article comments error:", err);
+      res.status(500).json({ error: "取得留言失敗" });
+    }
+  },
+);
+
+// ===== 需登入的 API =====
+
+/**
+ * 新增文章評分
+ * @route POST /api/articles/:id/ratings
+ */
+router.post(
+  "/:id/ratings",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { rating } = req.body;
+      const userId = (req as Request & { user?: { userId: number } }).user
+        ?.userId;
+
+      if (!userId) {
+        res.status(401).json({ error: "請先登入" });
+        return;
+      }
+
+      if (!rating || rating < 1 || rating > 5) {
+        res.status(400).json({ error: "評分必須在 1-5 之間" });
+        return;
+      }
+
+      // 使用 upsert 來處理新增或更新
+      const { data, error } = await supabaseAdmin
+        .from("article_ratings")
+        .upsert(
+          {
+            article_id: Number(id),
+            user_id: userId,
+            rating,
+          },
+          { onConflict: "article_id,user_id" },
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 更新文章平均分和評分數
+      await updateArticleRatingStats(Number(id));
+
+      res.json(data);
+    } catch (err) {
+      logger.error("Create article rating error:", err);
+      res.status(500).json({ error: "評分失敗" });
+    }
+  },
+);
+
+/**
+ * 新增文章留言
+ * @route POST /api/articles/:id/comments
+ */
+router.post(
+  "/:id/comments",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { content, parentCommentId } = req.body;
+      const userId = (req as Request & { user?: { userId: number } }).user
+        ?.userId;
+
+      if (!userId) {
+        res.status(401).json({ error: "請先登入" });
+        return;
+      }
+
+      if (!content?.trim()) {
+        res.status(400).json({ error: "留言內容不可為空" });
+        return;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("article_comments")
+        .insert({
+          article_id: Number(id),
+          user_id: userId,
+          parent_comment_id: parentCommentId || null,
+          content: content.trim(),
+        })
+        .select(
+          `
+        *,
+        users:user_id (display_name, avatar_url)
+      `,
+        )
+        .single();
+
+      if (error) throw error;
+
+      // 更新文章留言數
+      await updateArticleCommentCount(Number(id));
+
+      res.json(data);
+    } catch (err) {
+      logger.error("Create article comment error:", err);
+      res.status(500).json({ error: "留言失敗" });
+    }
+  },
+);
+
+// ===== 管理員 API =====
+
+/**
+ * 取得所有文章（管理員）
+ * @route GET /api/articles/admin/all
+ */
+router.get(
+  "/admin/all",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { page = 1, limit = 20, status, search } = req.query;
+      const offset = (Number(page) - 1) * Number(limit);
+
+      // 簡化查詢，不使用 join（避免外鍵關係問題）
+      let query = supabaseAdmin
+        .from("articles")
+        .select("*", { count: "exact" })
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + Number(limit) - 1);
+
+      if (status && status !== "all") {
+        query = query.eq("status", status);
+      }
+
+      if (search) {
+        query = query.or(
+          `article_title.ilike.%${search}%,article_description.ilike.%${search}%`,
+        );
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        logger.error("Admin articles query error:", {
+          code: error.code,
+          message: error.message,
+        });
+        throw error;
+      }
+
+      res.json({
+        articles: data || [],
+        total: count || 0,
+        page: Number(page),
+        totalPages: Math.ceil((count || 0) / Number(limit)),
+      });
+    } catch (err) {
+      const error = err as { code?: string; message?: string };
+      logger.error("Get all articles error:", {
+        code: error.code,
+        message: error.message,
+      });
+      res.status(500).json({ error: "取得文章失敗" });
+    }
+  },
+);
+
+/**
+ * 建立文章（管理員）
+ * @route POST /api/articles
+ */
+router.post(
+  "/",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        title,
+        slug,
+        description,
+        content,
+        thumbnailUrl,
+        keywords,
+        category,
+        status,
+        isFeatured,
+      } = req.body;
+      const userId = (req as Request & { user?: { userId: number } }).user
+        ?.userId;
+
+      if (!title) {
+        res.status(400).json({ error: "標題為必填" });
+        return;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("articles")
+        .insert({
+          author_id: userId,
+          article_title: title,
+          article_slug: slug || generateSlug(title),
+          article_description: description,
+          article_content: content,
+          article_thumbnail_url: thumbnailUrl,
+          article_keywords: keywords,
+          article_category: category,
+          status: status || "draft",
+          is_featured: isFeatured || false,
+          published_at:
+            status === "published" ? new Date().toISOString() : null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      logger.error("Create article error:", err);
+      res.status(500).json({ error: "建立文章失敗" });
+    }
+  },
+);
+
+/**
+ * 更新文章（管理員）
+ * @route PUT /api/articles/:id
+ */
+router.put(
+  "/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const {
+        title,
+        slug,
+        description,
+        content,
+        thumbnailUrl,
+        keywords,
+        category,
+        status,
+        isFeatured,
+      } = req.body;
+
+      // 取得現有文章狀態
+      const { data: existing } = await supabaseAdmin
+        .from("articles")
+        .select("status, published_at")
+        .eq("article_id", id)
+        .single();
+
+      const updateData: Record<string, unknown> = {};
+
+      if (title !== undefined) updateData.article_title = title;
+      if (slug !== undefined) updateData.article_slug = slug;
+      if (description !== undefined)
+        updateData.article_description = description;
+      if (content !== undefined) updateData.article_content = content;
+      if (thumbnailUrl !== undefined)
+        updateData.article_thumbnail_url = thumbnailUrl;
+      if (keywords !== undefined) updateData.article_keywords = keywords;
+      if (category !== undefined) updateData.article_category = category;
+      if (status !== undefined) updateData.status = status;
+      if (isFeatured !== undefined) updateData.is_featured = isFeatured;
+
+      // 如果狀態從非發布變為發布，設定發布時間
+      if (
+        status === "published" &&
+        existing?.status !== "published" &&
+        !existing?.published_at
+      ) {
+        updateData.published_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("articles")
+        .update(updateData)
+        .eq("article_id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      logger.error("Update article error:", err);
+      res.status(500).json({ error: "更新文章失敗" });
+    }
+  },
+);
+
+/**
+ * 刪除文章（軟刪除，管理員）
+ * @route DELETE /api/articles/:id
+ */
+router.delete(
+  "/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      const { error } = await supabaseAdmin
+        .from("articles")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("article_id", id);
+
+      if (error) throw error;
+      res.json({ message: "文章已刪除" });
+    } catch (err) {
+      logger.error("Delete article error:", err);
+      res.status(500).json({ error: "刪除文章失敗" });
+    }
+  },
+);
+
+/**
+ * 管理留言可見性（管理員）
+ * @route PUT /api/articles/comments/:commentId/visibility
+ */
+router.put(
+  "/comments/:commentId/visibility",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { commentId } = req.params;
+      const { isVisible } = req.body;
+
+      const { data, error } = await supabaseAdmin
+        .from("article_comments")
+        .update({ is_visible: isVisible })
+        .eq("comment_id", commentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 更新文章留言數
+      if (data?.article_id) {
+        await updateArticleCommentCount(data.article_id);
+      }
+
+      res.json(data);
+    } catch (err) {
+      logger.error("Update comment visibility error:", err);
+      res.status(500).json({ error: "更新留言失敗" });
+    }
+  },
+);
+
+// ===== 輔助函數 =====
+
+/**
+ * 更新文章評分統計
+ */
+async function updateArticleRatingStats(articleId: number): Promise<void> {
+  const { data } = await supabaseAdmin
+    .from("article_ratings")
+    .select("rating")
+    .eq("article_id", articleId);
+
+  if (data && data.length > 0) {
+    const sum = data.reduce(
+      (acc: number, r: { rating: number }) => acc + r.rating,
+      0,
+    );
+    const avg = sum / data.length;
+
+    await supabaseAdmin
+      .from("articles")
+      .update({
+        rating_average: Math.round(avg * 100) / 100,
+        rating_count: data.length,
+      })
+      .eq("article_id", articleId);
+  }
+}
+
+/**
+ * 更新文章留言數
+ */
+async function updateArticleCommentCount(articleId: number): Promise<void> {
+  const { count } = await supabaseAdmin
+    .from("article_comments")
+    .select("*", { count: "exact", head: true })
+    .eq("article_id", articleId)
+    .eq("is_visible", true)
+    .is("deleted_at", null);
+
+  await supabaseAdmin
+    .from("articles")
+    .update({ comment_count: count || 0 })
+    .eq("article_id", articleId);
+}
+
+/**
+ * 生成 slug
+ */
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s\u4e00-\u9fff-]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 100);
+}
+
+export default router;
