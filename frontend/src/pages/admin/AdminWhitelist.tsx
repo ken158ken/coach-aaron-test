@@ -1,0 +1,294 @@
+/**
+ * 管理員白名單頁面
+ * @description 提供管理員白名單的新增、編輯、刪除和啟用/停用功能
+ * @module pages/admin/AdminWhitelist
+ */
+
+import React, { useState, useEffect } from "react";
+import {
+  PageHeader,
+  Loading,
+  ConfirmDialog,
+  Toggle,
+  PillButton,
+  Input,
+  Textarea,
+  DataTable,
+} from "@/components/ui";
+import { get, post, del } from "@/services/api";
+import type { WhitelistItem } from "@/types";
+
+interface WhitelistCreateData {
+  email: string;
+  phoneNumber: string;
+  note: string;
+}
+
+/** 後端白名單資料結構 */
+interface AdminWhitelistItem {
+  whitelist_id: number;
+  email: string | null;
+  phone_number: string | null;
+  note: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * AdminWhitelist - 管理員白名單頁面
+ *
+ * @returns {JSX.Element} 管理員白名單頁面
+ */
+const AdminWhitelist: React.FC = () => {
+  const [whitelist, setWhitelist] = useState<WhitelistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<WhitelistItem | null>(null);
+  const [newItem, setNewItem] = useState<WhitelistCreateData>({
+    email: "",
+    phoneNumber: "",
+    note: "",
+  });
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchWhitelist();
+  }, []);
+
+  /**
+   * 取得白名單列表
+   */
+  const fetchWhitelist = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await get<AdminWhitelistItem[]>("/api/admin/whitelist");
+      // ✅ 防禦性編程：API 攔截器返回 response.data
+      if (res && Array.isArray(res)) {
+        setWhitelist(
+          res.map((item) => ({
+            id: String(item.whitelist_id),
+            email: item.email || undefined,
+            phoneNumber: item.phone_number || undefined,
+            note: item.note || "",
+            isActive: item.is_active,
+            createdAt: item.created_at?.split("T")[0] || "",
+          })),
+        );
+      } else {
+        console.error("Failed to fetch whitelist:", res);
+        setWhitelist([]);
+        setError("載入白名單失敗：數據格式錯誤");
+      }
+    } catch (err) {
+      console.error("Failed to fetch whitelist:", err);
+      setWhitelist([]);
+      setError("載入白名單失敗");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * 新增白名單項目
+   */
+  const handleAdd = async () => {
+    try {
+      setError("");
+      if (!newItem.email && !newItem.phoneNumber) {
+        setError("請填寫 Email 或手機號碼");
+        return;
+      }
+
+      const res = await post<AdminWhitelistItem>("/api/admin/whitelist", {
+        email: newItem.email || null,
+        phone_number: newItem.phoneNumber || null,
+        note: newItem.note || null,
+      });
+
+      if (res && res.whitelist_id) {
+        const newEntry: WhitelistItem = {
+          id: String(res.whitelist_id),
+          email: res.email || undefined,
+          phoneNumber: res.phone_number || undefined,
+          note: res.note || "",
+          isActive: res.is_active,
+          createdAt: res.created_at?.split("T")[0] || "",
+        };
+        setWhitelist((prev) => [...prev, newEntry]);
+        setShowAddModal(false);
+        setNewItem({ email: "", phoneNumber: "", note: "" });
+      } else {
+        setError("新增失敗：回應格式錯誤");
+      }
+    } catch (err) {
+      console.error("Failed to add whitelist item:", err);
+      setError("新增失敗");
+    }
+  };
+
+  /**
+   * 刪除白名單項目
+   */
+  const handleDelete = async (item: WhitelistItem) => {
+    try {
+      await del(`/api/admin/whitelist/${item.id}`);
+      setWhitelist((prev) => prev.filter((i) => i.id !== item.id));
+      setDeleteItem(null);
+    } catch (err) {
+      console.error("Failed to delete whitelist item:", err);
+      setError("刪除失敗");
+    }
+  };
+
+  /**
+   * 切換啟用狀態
+   */
+  const handleToggleActive = async (item: WhitelistItem) => {
+    try {
+      await post(`/api/admin/whitelist/${item.id}/toggle`, {});
+      setWhitelist((prev) =>
+        prev.map((i) =>
+          i.id === item.id ? { ...i, isActive: !i.isActive } : i,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to toggle whitelist item:", err);
+      setError("更新失敗");
+    }
+  };
+
+  const columns = [
+    { key: "email" as const, header: "Email" },
+    { key: "phoneNumber" as const, header: "手機號碼" },
+    { key: "note" as const, header: "備註" },
+    {
+      key: "isActive" as const,
+      header: "狀態",
+      render: (item: WhitelistItem) => (
+        <Toggle
+          checked={item.isActive}
+          onChange={() => handleToggleActive(item)}
+        />
+      ),
+    },
+    { key: "createdAt" as const, header: "建立日期" },
+    {
+      key: "actions" as const,
+      header: "操作",
+      render: (item: WhitelistItem) => (
+        <button
+          onClick={() => setDeleteItem(item)}
+          className="text-red-400 hover:text-red-300 transition-colors text-sm"
+        >
+          刪除
+        </button>
+      ),
+    },
+  ];
+
+  if (loading) {
+    return <Loading text="載入中..." />;
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="白名單管理"
+        subtitle="管理可登入後台的用戶白名單"
+        actions={
+          <PillButton onClick={() => setShowAddModal(true)}>
+            新增白名單
+          </PillButton>
+        }
+      />
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Data Table */}
+      <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10">
+        <DataTable<WhitelistItem>
+          data={whitelist}
+          columns={columns}
+          keyExtractor={(item) => item.id}
+        />
+      </div>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => setShowAddModal(false)}
+          />
+          <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-luxe-text mb-4">
+              新增白名單
+            </h3>
+
+            <div className="space-y-4">
+              <Input
+                label="Email"
+                type="email"
+                value={newItem.email}
+                onChange={(e) =>
+                  setNewItem((prev) => ({ ...prev, email: e.target.value }))
+                }
+                placeholder="user@example.com"
+              />
+              <Input
+                label="手機號碼"
+                type="tel"
+                value={newItem.phoneNumber}
+                onChange={(e) =>
+                  setNewItem((prev) => ({
+                    ...prev,
+                    phoneNumber: e.target.value,
+                  }))
+                }
+                placeholder="0912345678"
+              />
+              <Textarea
+                label="備註"
+                value={newItem.note}
+                onChange={(e) =>
+                  setNewItem((prev) => ({ ...prev, note: e.target.value }))
+                }
+                placeholder="角色說明..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text transition-colors"
+                onClick={() => setShowAddModal(false)}
+              >
+                取消
+              </button>
+              <PillButton onClick={handleAdd}>新增</PillButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteItem}
+        title="刪除白名單"
+        message={`確定要刪除 ${deleteItem?.email || deleteItem?.phoneNumber} 嗎？`}
+        onConfirm={() => deleteItem && handleDelete(deleteItem)}
+        onCancel={() => setDeleteItem(null)}
+        confirmText="刪除"
+        danger
+      />
+    </div>
+  );
+};
+
+export default AdminWhitelist;

@@ -1,0 +1,42 @@
+{
+  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist/client",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/server" },
+    { "source": "/(.*)", "destination": "/api/ssr" }
+  ],
+  "functions": {
+    "api/server.js": {
+      "maxDuration": 10,
+      "includeFiles": "backend/dist/**"
+    },
+    "api/ssr.js": {
+      "maxDuration": 10,
+      "includeFiles": "{frontend/dist/server/**,frontend/dist/client/index.html}"
+    }
+  },
+  "headers": [
+    {
+      "source": "/coach-photos/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,387 @@
+/**
+ * 全域樣式與 Tailwind 設定
+ * @description 包含主題變數、動畫和全域樣式
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   CSS 變數定義
+   ======================================== */
+:root {
+  /* ABYSS Theme (深海) */
+  --abyss-black: #000205;
+  --abyss-cyan: #00ffff;
+  --abyss-purple: #7b00ff;
+  --abyss-glass: rgba(0, 5, 10, 0.6);
+  --abyss-text: #e0f7fa;
+  --abyss-text-dim: #80deea;
+
+  /* PRISM Theme (水晶) */
+  --prism-void: #0b001a;
+  --prism-purple: #b388ff;
+  --prism-blue: #82b1ff;
+  --prism-glass: rgba(255, 255, 255, 0.05);
+  --prism-text: #ffffff;
+  --prism-text-dim: #aaaaaa;
+
+  /* LUXE Theme (高端) */
+  --luxe-black: #0a0a0a;
+  --luxe-gold: #d4af37;
+  --luxe-gold-dim: #8a7020;
+  --luxe-text: #e0e0e0;
+  --luxe-text-dim: #888888;
+}
+
+/* ========================================
+   基礎樣式
+   ======================================== */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  /* 隱藏捲軸但保留功能 */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ========================================
+   ABYSS 主題樣式
+   ======================================== */
+@layer components {
+  /* 深海背景效果 */
+  .abyss-bg {
+    background-color: var(--abyss-black);
+    color: var(--abyss-text);
+  }
+
+  /* 海洋雪花效果 */
+  .marine-snow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+");
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 20s linear infinite;
+  }
+
+  /* 深海卡片 */
+  .abyss-card {
+    @apply relative overflow-hidden;
+    background: rgba(5, 10, 20, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 255, 255, 0.1);
+    border-radius: 20px;
+    transition: all 0.5s ease;
+  }
+
+  .abyss-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    border-color: var(--abyss-cyan);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+    background: rgba(10, 20, 30, 0.8);
+  }
+
+  /* 氣泡導航 */
+  .bubble-nav {
+    @apply flex items-center gap-4 cursor-pointer;
+    padding: 15px 20px;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--abyss-text-dim);
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .bubble-nav:hover,
+  .bubble-nav.active {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: var(--abyss-cyan);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    color: #fff;
+    transform: translateX(10px);
+  }
+
+  /* 發光圖標 */
+  .icon-glow {
+    @apply transition-all duration-500;
+    color: rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 0 transparent;
+  }
+
+  .abyss-card:hover .icon-glow {
+    color: var(--abyss-cyan);
+    text-shadow: 0 0 20px var(--abyss-cyan);
+    transform: scale(1.1);
+  }
+}
+
+/* ========================================
+   PRISM 主題樣式
+   ======================================== */
+@layer components {
+  /* 水晶背景 */
+  .prism-bg {
+    background-color: var(--prism-void);
+    color: var(--prism-text);
+  }
+
+  /* 水晶卡片 */
+  .prism-card {
+    @apply relative overflow-hidden;
+    background: var(--prism-glass);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    clip-path: polygon(
+      10px 0,
+      100% 0,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      0 100%,
+      0 10px
+    );
+    transition: all 0.4s ease;
+  }
+
+  .prism-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-5px);
+    border-color: var(--prism-blue);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /* 彩虹光澤效果 */
+  .prism-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+      120deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+    transition: 0.5s;
+  }
+
+  .prism-card:hover::after {
+    left: 100%;
+  }
+
+  /* 篩選藥丸 */
+  .filter-pill {
+    @apply cursor-pointer;
+    padding: 8px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.02);
+    color: #ccc;
+    backdrop-filter: blur(5px);
+    font-size: 0.9rem;
+    transition: 0.3s;
+  }
+
+  .filter-pill:hover,
+  .filter-pill.active {
+    border-color: var(--prism-purple);
+    background: rgba(179, 136, 255, 0.15);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(179, 136, 255, 0.2);
+  }
+
+  /* 寶石圖標 */
+  .icon-gem {
+    @apply transition-all duration-300;
+    background: linear-gradient(135deg, var(--prism-blue), var(--prism-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .prism-card:hover .icon-gem {
+    transform: scale(1.2) rotate(45deg);
+    filter: drop-shadow(0 0 10px var(--prism-purple));
+  }
+}
+
+/* ========================================
+   LUXE 主題樣式
+   ======================================== */
+@layer components {
+  /* 高端背景 */
+  .luxe-bg {
+    background-color: var(--luxe-black);
+    color: var(--luxe-text);
+  }
+
+  /* 高端標題 */
+  .luxe-title {
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+  }
+
+  .luxe-title-highlight {
+    color: var(--luxe-gold);
+    font-style: italic;
+  }
+
+  /* 底線動畫按鈕 */
+  .btn-text-underline {
+    @apply relative;
+    color: var(--luxe-gold);
+    text-decoration: none;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    padding-bottom: 5px;
+  }
+
+  .btn-text-underline::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0%;
+    height: 1px;
+    background: var(--luxe-gold);
+    transition: 0.3s;
+  }
+
+  .btn-text-underline:hover::after {
+    width: 100%;
+  }
+
+  /* 項目卡片 */
+  .luxe-project {
+    @apply grid gap-16 items-center;
+    grid-template-columns: 1.5fr 1fr;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: 0.8s ease;
+  }
+
+  .luxe-project.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .luxe-project-img {
+    @apply relative overflow-hidden;
+    height: 400px;
+    background: #1a1a1a;
+  }
+
+  .luxe-project-img::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #222 0%, #000 100%);
+    transition: transform 0.5s;
+  }
+
+  .luxe-project:hover .luxe-project-img::after {
+    transform: scale(1.05);
+  }
+
+  /* 捲動指示器 */
+  .scroll-indicator {
+    height: 60px;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--luxe-gold), transparent);
+  }
+}
+
+/* ========================================
+   動畫
+   ======================================== */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 100px;
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+  }
+}
+
+/* ========================================
+   工具類
+   ======================================== */
+@layer utilities {
+  /* 動畫延遲 */
+  .animation-delay-200 {
+    animation-delay: 0.2s;
+  }
+  .animation-delay-400 {
+    animation-delay: 0.4s;
+  }
+  .animation-delay-600 {
+    animation-delay: 0.6s;
+  }
+
+  /* 玻璃效果 */
+  .glass-dark {
+    background: rgba(0, 5, 10, 0.6);
+    backdrop-filter: blur(10px);
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+  }
+
+  /* 文字光暈 */
+  .text-glow-cyan {
+    text-shadow: 0 0 20px var(--abyss-cyan);
+  }
+
+  .text-glow-purple {
+    text-shadow: 0 0 10px rgba(123, 0, 255, 0.5);
+  }
+
+  .text-glow-gold {
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  }
+}
