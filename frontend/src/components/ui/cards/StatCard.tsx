@@ -59,21 +59,22 @@ const StatCard: React.FC<StatCardProps> = ({
       className={`
         border
         rounded-lg
-        p-5
+        p-3
+        sm:p-5
         ${styles.card}
         ${className}
       `}
     >
-      <div className="flex items-center justify-between mb-3">
-        {icon && <span className={`text-2xl ${styles.value}`}>{icon}</span>}
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        {icon && <span className={`text-lg sm:text-2xl ${styles.value}`}>{icon}</span>}
         {trend && (
-          <span className={`text-sm ${styles.trend}`}>
+          <span className={`text-[10px] sm:text-sm ${styles.trend}`}>
             {trend.direction === "up" ? "↑" : "↓"} {Math.abs(trend.value)}%
           </span>
         )}
       </div>
-      <p className={`text-3xl font-bold ${styles.value} mb-1`}>{value}</p>
-      <p className={`text-sm ${styles.label}`}>{label}</p>
+      <p className={`text-xl sm:text-3xl font-bold ${styles.value} mb-0.5 sm:mb-1`}>{value}</p>
+      <p className={`text-xs sm:text-sm ${styles.label}`}>{label}</p>
     </div>
   );
 };

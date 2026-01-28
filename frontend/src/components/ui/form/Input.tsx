@@ -49,7 +49,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className={`${styles.container} ${className}`}>
         {label && (
-          <label className={`block text-sm mb-2 ${styles.label}`}>
+          <label className={`block text-xs sm:text-sm mb-1.5 sm:mb-2 ${styles.label}`}>
             {label}
           </label>
         )}
@@ -63,9 +63,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={`
               w-full
-              px-4
-              py-3
-              ${icon ? "pl-10" : ""}
+              px-3
+              sm:px-4
+              py-2.5
+              sm:py-3
+              text-sm
+              sm:text-base
+              ${icon ? "pl-9 sm:pl-10" : ""}
               border
               rounded-lg
               outline-none
@@ -77,7 +81,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
         </div>
-        {error && <p className={`text-sm mt-1 ${styles.error}`}>{error}</p>}
+        {error && <p className={`text-xs sm:text-sm mt-1 ${styles.error}`}>{error}</p>}
       </div>
     );
   },

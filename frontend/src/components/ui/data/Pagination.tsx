@@ -71,15 +71,19 @@ const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <nav className={`flex items-center justify-center gap-1 ${className}`}>
+    <nav className={`flex items-center justify-center gap-0.5 sm:gap-1 ${className}`}>
       {/* Previous */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className={`
-          px-3
-          py-2
+          px-2
+          sm:px-3
+          py-1.5
+          sm:py-2
           rounded
+          text-sm
+          sm:text-base
           transition-colors
           ${currentPage === 1 ? styles.disabled : styles.inactive}
         `}
@@ -94,9 +98,13 @@ const Pagination: React.FC<PaginationProps> = ({
             key={index}
             onClick={() => onPageChange(page)}
             className={`
-              w-10
-              h-10
+              w-8
+              h-8
+              sm:w-10
+              sm:h-10
               rounded
+              text-sm
+              sm:text-base
               transition-colors
               ${currentPage === page ? styles.active : styles.inactive}
             `}
@@ -104,7 +112,7 @@ const Pagination: React.FC<PaginationProps> = ({
             {page}
           </button>
         ) : (
-          <span key={index} className="px-2 text-gray-500">
+          <span key={index} className="px-1 sm:px-2 text-xs sm:text-sm text-gray-500">
             {page}
           </span>
         ),
@@ -115,9 +123,13 @@ const Pagination: React.FC<PaginationProps> = ({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className={`
-          px-3
-          py-2
+          px-2
+          sm:px-3
+          py-1.5
+          sm:py-2
           rounded
+          text-sm
+          sm:text-base
           transition-colors
           ${currentPage === totalPages ? styles.disabled : styles.inactive}
         `}

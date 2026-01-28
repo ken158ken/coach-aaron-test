@@ -45,7 +45,8 @@ const AbyssCard: React.FC<AbyssCardProps> = ({
         rounded-xl
         border
         ${glowBorder[glow]}
-        p-6
+        p-4
+        sm:p-6
         transition-all
         duration-300
         ${hover ? glowColors[glow] : ""}

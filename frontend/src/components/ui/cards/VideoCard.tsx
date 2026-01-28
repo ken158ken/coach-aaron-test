@@ -95,8 +95,10 @@ const VideoCard: React.FC<VideoCardProps> = ({
         >
           <div
             className={`
-              w-14
-              h-14
+              w-10
+              h-10
+              sm:w-14
+              sm:h-14
               rounded-full
               flex
               items-center
@@ -105,7 +107,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
             `}
           >
             <svg
-              className="w-6 h-6 text-white ml-1"
+              className="w-4 h-4 sm:w-6 sm:h-6 text-white ml-0.5 sm:ml-1"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
@@ -119,11 +121,15 @@ const VideoCard: React.FC<VideoCardProps> = ({
           <span
             className="
               absolute
-              bottom-2
-              right-2
-              px-2
+              bottom-1.5
+              sm:bottom-2
+              right-1.5
+              sm:right-2
+              px-1.5
+              sm:px-2
               py-0.5
-              text-xs
+              text-[10px]
+              sm:text-xs
               bg-black/70
               text-white
               rounded
@@ -135,12 +141,12 @@ const VideoCard: React.FC<VideoCardProps> = ({
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <h3 className={`font-medium line-clamp-2 ${styles.title}`}>
+      <div className="p-3 sm:p-4">
+        <h3 className={`text-sm sm:text-base font-medium line-clamp-2 ${styles.title}`}>
           {video.title}
         </h3>
         {video.views !== undefined && (
-          <p className={`text-sm mt-2 ${styles.muted}`}>
+          <p className={`text-xs sm:text-sm mt-1.5 sm:mt-2 ${styles.muted}`}>
             {video.views.toLocaleString()} 次觀看
           </p>
         )}

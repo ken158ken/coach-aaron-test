@@ -76,21 +76,21 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md">
         {/* Logo / Title */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
-            <h1 className="text-4xl font-light text-luxe-gold tracking-widest">
+            <h1 className="text-3xl sm:text-4xl font-light text-luxe-gold tracking-widest">
               AARON
             </h1>
           </Link>
-          <p className="text-luxe-muted mt-2 font-light">建立您的帳號</p>
+          <p className="text-sm sm:text-base text-luxe-muted mt-2 font-light">建立您的帳號</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-luxe-surface p-8 rounded-lg border border-luxe-gold/10">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-luxe-surface p-5 sm:p-8 rounded-lg border border-luxe-gold/10">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <Input
               name="name"
               label="姓名"
@@ -144,7 +144,7 @@ const Register: React.FC = () => {
           </form>
 
           {/* Terms */}
-          <p className="text-center text-luxe-muted text-xs mt-6">
+          <p className="text-center text-luxe-muted text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
             註冊即表示您同意我們的{" "}
             <Link to="/terms" className="text-luxe-gold hover:underline">
               服務條款
@@ -156,14 +156,14 @@ const Register: React.FC = () => {
           </p>
 
           {/* Divider */}
-          <div className="flex items-center gap-4 my-8">
+          <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
             <div className="flex-1 border-t border-luxe-gold/10" />
-            <span className="text-luxe-muted text-sm">或</span>
+            <span className="text-luxe-muted text-xs sm:text-sm">或</span>
             <div className="flex-1 border-t border-luxe-gold/10" />
           </div>
 
           {/* Login Link */}
-          <p className="text-center text-luxe-muted">
+          <p className="text-center text-sm sm:text-base text-luxe-muted">
             已經有帳號？{" "}
             <Link to="/login" className="text-luxe-gold hover:underline">
               立即登入

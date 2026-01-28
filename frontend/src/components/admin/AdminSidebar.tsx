@@ -182,15 +182,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
         border-luxe-gold/10
         transition-all
         duration-300
-        ${isOpen ? "w-64" : "w-20"}
+        ${isOpen ? "w-64 translate-x-0" : "w-20 -translate-x-full lg:translate-x-0"}
       `}
     >
       {/* Logo */}
-      <div className="h-16 flex items-center justify-center border-b border-luxe-gold/10">
-        <Link to="/" className="flex items-center gap-3">
-          <span className="text-luxe-gold text-2xl font-bold">A</span>
+      <div className="h-14 sm:h-16 flex items-center justify-center border-b border-luxe-gold/10">
+        <Link to="/" className="flex items-center gap-2 sm:gap-3">
+          <span className="text-luxe-gold text-xl sm:text-2xl font-bold">A</span>
           {isOpen && (
-            <span className="text-luxe-text font-light tracking-widest">
+            <span className="text-sm sm:text-base text-luxe-text font-light tracking-widest">
               ADMIN
             </span>
           )}
@@ -198,8 +198,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="p-4">
-        <ul className="space-y-2">
+      <nav className="p-3 sm:p-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
+        <ul className="space-y-1.5 sm:space-y-2">
           {navItems.map((item) => (
             <li key={item.path}>
               <Link
@@ -207,11 +207,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
                 className={`
                   flex
                   items-center
-                  gap-3
-                  px-4
-                  py-3
+                  gap-2
+                  sm:gap-3
+                  px-3
+                  sm:px-4
+                  py-2.5
+                  sm:py-3
                   rounded-lg
                   transition-colors
+                  text-sm
+                  sm:text-base
                   ${
                     isActive(item.path)
                       ? "bg-luxe-gold/10 text-luxe-gold"
@@ -219,8 +224,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
                   }
                 `}
               >
-                {item.icon}
-                {isOpen && <span>{item.label}</span>}
+                <span className="flex-shrink-0">{item.icon}</span>
+                {isOpen && <span className="truncate">{item.label}</span>}
               </Link>
             </li>
           ))}
@@ -228,13 +233,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
       </nav>
 
       {/* Bottom Section */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-luxe-gold/10">
+      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 border-t border-luxe-gold/10">
         <Link
           to="/"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-luxe-muted hover:text-luxe-text hover:bg-luxe-gold/5 transition-colors"
+          className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base text-luxe-muted hover:text-luxe-text hover:bg-luxe-gold/5 transition-colors"
         >
           <svg
-            className="w-5 h-5"
+            className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

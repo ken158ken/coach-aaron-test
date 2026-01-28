@@ -174,23 +174,23 @@ const Videos: React.FC = () => {
       {/* Three.js Background */}
       <PrismScene />
 
-      <div className="relative z-10 pt-24 pb-16 px-4">
+      <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
-            <span className="inline-block text-prism-accent text-sm uppercase tracking-widest mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="inline-block text-prism-accent text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
               Videos
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold text-prism-text mb-4">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-prism-text mb-3 sm:mb-4">
               教學影片
             </h1>
-            <p className="text-prism-text/60 max-w-xl mx-auto">
+            <p className="text-sm sm:text-base text-prism-text/60 max-w-xl mx-auto px-2">
               免費的健身知識分享，隨時隨地學習
             </p>
           </div>
 
           {/* Search & Filter */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
             {/* 搜尋框 */}
             <div className="w-full sm:w-auto">
               <Input
@@ -201,7 +201,7 @@ const Videos: React.FC = () => {
                 className="w-full sm:w-64"
                 icon={
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -230,12 +230,12 @@ const Videos: React.FC = () => {
 
           {/* Content */}
           {loading ? (
-            <div className="flex justify-center py-20">
+            <div className="flex justify-center py-12 sm:py-20">
               <Loading theme="prism" text="載入影片中..." />
             </div>
           ) : paginatedVideos.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-prism-text/60">
+            <div className="text-center py-12 sm:py-20">
+              <p className="text-sm sm:text-base text-prism-text/60">
                 {searchTerm
                   ? `找不到符合「${searchTerm}」的影片`
                   : "目前沒有符合條件的影片"}
@@ -243,7 +243,7 @@ const Videos: React.FC = () => {
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="mt-4 text-prism-accent hover:underline"
+                  className="mt-3 sm:mt-4 text-sm sm:text-base text-prism-accent hover:underline"
                 >
                   清除搜尋
                 </button>
@@ -252,12 +252,12 @@ const Videos: React.FC = () => {
           ) : (
             <>
               {/* 結果統計 */}
-              <p className="text-prism-text/50 text-sm text-center mb-6">
+              <p className="text-prism-text/50 text-xs sm:text-sm text-center mb-4 sm:mb-6">
                 共 {filteredVideos.length} 部影片
                 {totalPages > 1 && ` · 第 ${currentPage} / ${totalPages} 頁`}
               </p>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                 {paginatedVideos.map((video) => (
                   <VideoCard key={video.id} video={video} theme="prism" />
                 ))}
@@ -265,7 +265,7 @@ const Videos: React.FC = () => {
 
               {/* 分頁 */}
               {totalPages > 1 && (
-                <div className="mt-10">
+                <div className="mt-8 sm:mt-10">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}

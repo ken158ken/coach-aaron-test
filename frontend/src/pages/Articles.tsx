@@ -92,16 +92,16 @@ const Articles: React.FC = () => {
 
       <PageHeader title="專業知識" subtitle="健身教練的專業分享與訓練心得" />
 
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-8 sm:py-12">
         {/* Category Filter */}
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8 justify-center">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6 sm:mb-8 justify-center">
             <button
               onClick={() => {
                 setSelectedCategory("");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 ${
                 selectedCategory === ""
                   ? "bg-luxe-gold text-luxe-black shadow-lg shadow-luxe-gold/30"
                   : "bg-luxe-surface text-luxe-muted hover:text-luxe-gold hover:border-luxe-gold/50 border border-transparent"
@@ -116,7 +116,7 @@ const Articles: React.FC = () => {
                   setSelectedCategory(cat);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 ${
                   selectedCategory === cat
                     ? "bg-luxe-gold text-luxe-black shadow-lg shadow-luxe-gold/30"
                     : "bg-luxe-surface text-luxe-muted hover:text-luxe-gold hover:border-luxe-gold/50 border border-transparent"
@@ -130,14 +130,14 @@ const Articles: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-8 p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-red-400 text-center">
+          <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-sm sm:text-base text-red-400 text-center">
             {error}
           </div>
         )}
 
         {/* Articles Grid */}
         {articles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {articles.map((article) => (
               <Link
                 key={article.article_id}
@@ -156,45 +156,45 @@ const Articles: React.FC = () => {
                     </div>
                   ) : (
                     <div className="aspect-video bg-luxe-gold/10 flex items-center justify-center">
-                      <span className="text-6xl text-luxe-gold/30">📝</span>
+                      <span className="text-4xl sm:text-6xl text-luxe-gold/30">📝</span>
                     </div>
                   )}
 
                   {/* Content */}
-                  <div className="p-6 flex-1 flex flex-col">
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col">
                     {/* Category & Featured */}
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
                       {article.article_category && (
-                        <span className="text-xs text-luxe-gold">
+                        <span className="text-[10px] sm:text-xs text-luxe-gold">
                           {article.article_category}
                         </span>
                       )}
                       {article.is_featured && (
-                        <span className="text-xs text-yellow-500">★ 精選</span>
+                        <span className="text-[10px] sm:text-xs text-yellow-500">★ 精選</span>
                       )}
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-xl font-light text-luxe-text mb-3 group-hover:text-luxe-gold transition-colors line-clamp-2">
+                    <h2 className="text-base sm:text-xl font-light text-luxe-text mb-2 sm:mb-3 group-hover:text-luxe-gold transition-colors line-clamp-2">
                       {article.article_title}
                     </h2>
 
                     {/* Description */}
                     {article.article_description && (
-                      <p className="text-luxe-muted text-sm mb-4 flex-1 line-clamp-3">
+                      <p className="text-luxe-muted text-xs sm:text-sm mb-3 sm:mb-4 flex-1 line-clamp-2 sm:line-clamp-3">
                         {article.article_description}
                       </p>
                     )}
 
                     {/* Meta */}
-                    <div className="flex items-center justify-between text-xs text-luxe-muted mt-auto">
-                      <span>
+                    <div className="flex items-center justify-between text-[10px] sm:text-xs text-luxe-muted mt-auto gap-2">
+                      <span className="whitespace-nowrap">
                         {formatDate(article.published_at || article.created_at)}
                       </span>
-                      <div className="flex items-center gap-4">
-                        <span>{article.view_count || 0} 次瀏覽</span>
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        <span className="whitespace-nowrap">{article.view_count || 0} 瀏覽</span>
                         {article.rating_count > 0 && (
-                          <span>
+                          <span className="whitespace-nowrap hidden sm:inline">
                             ★ {article.rating_average.toFixed(1)} (
                             {article.rating_count})
                           </span>
@@ -207,28 +207,28 @@ const Articles: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <p className="text-luxe-muted">目前沒有文章</p>
+          <div className="text-center py-12 sm:py-16">
+            <p className="text-sm sm:text-base text-luxe-muted">目前沒有文章</p>
           </div>
         )}
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-12">
+          <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-8 sm:mt-12">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg bg-luxe-surface text-luxe-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxe-gold/20 hover:border-luxe-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-luxe-surface text-sm sm:text-base text-luxe-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxe-gold/20 hover:border-luxe-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
             >
               上一頁
             </button>
-            <span className="px-4 py-2 text-luxe-muted">
+            <span className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-luxe-muted">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg bg-luxe-surface text-luxe-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxe-gold/20 hover:border-luxe-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-luxe-surface text-sm sm:text-base text-luxe-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxe-gold/20 hover:border-luxe-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
             >
               下一頁
             </button>

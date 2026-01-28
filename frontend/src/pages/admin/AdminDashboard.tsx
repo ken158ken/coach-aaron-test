@@ -103,20 +103,20 @@ const AdminDashboard: React.FC = () => {
   return (
     <div>
       {/* Page Title */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-light text-luxe-text">儀表板</h1>
-        <p className="text-luxe-muted">歡迎來到管理後台</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">儀表板</h1>
+        <p className="text-sm sm:text-base text-luxe-muted">歡迎來到管理後台</p>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-red-400">
+        <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-sm sm:text-base text-red-400">
           {error}
         </div>
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
         {displayStats.map((stat) => (
           <StatCard
             key={stat.label}
@@ -129,37 +129,37 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Activities */}
-        <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-6">
-          <h2 className="text-lg text-luxe-text font-light mb-4">最近活動</h2>
-          <div className="space-y-4">
+        <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg text-luxe-text font-light mb-3 sm:mb-4">最近活動</h2>
+          <div className="space-y-3 sm:space-y-4">
             {recentActivities.length > 0 ? (
               recentActivities.map((activity, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-4 pb-4 border-b border-luxe-gold/5 last:border-0 last:pb-0"
+                  className="flex items-center gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-luxe-gold/5 last:border-0 last:pb-0"
                 >
-                  <span className="text-xl">👤</span>
-                  <div className="flex-grow">
-                    <p className="text-luxe-text text-sm">{activity.message}</p>
-                    <p className="text-luxe-muted text-xs">{activity.time}</p>
+                  <span className="text-lg sm:text-xl">👤</span>
+                  <div className="flex-grow min-w-0">
+                    <p className="text-xs sm:text-sm text-luxe-text truncate">{activity.message}</p>
+                    <p className="text-[10px] sm:text-xs text-luxe-muted">{activity.time}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-luxe-muted text-sm">暫無最近活動</p>
+              <p className="text-xs sm:text-sm text-luxe-muted">暫無最近活動</p>
             )}
           </div>
         </div>
 
         {/* Quick Stats Chart Placeholder */}
-        <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-6">
-          <h2 className="text-lg text-luxe-text font-light mb-4">本週流量</h2>
-          <div className="h-64 flex items-center justify-center text-luxe-muted">
+        <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg text-luxe-text font-light mb-3 sm:mb-4">本週流量</h2>
+          <div className="h-48 sm:h-64 flex items-center justify-center text-luxe-muted">
             <div className="text-center">
-              <p className="mb-2">📊</p>
-              <p className="text-sm">圖表區域</p>
+              <p className="mb-2 text-2xl sm:text-3xl">📊</p>
+              <p className="text-xs sm:text-sm">圖表區域</p>
             </div>
           </div>
         </div>

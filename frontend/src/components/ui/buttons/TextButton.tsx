@@ -42,11 +42,13 @@ const TextButton: React.FC<TextButtonProps> = ({
   const baseStyles = `
     inline-flex
     items-center
-    gap-2
+    gap-1.5
+    sm:gap-2
     font-light
     tracking-wider
     uppercase
-    text-sm
+    text-xs
+    sm:text-sm
     transition-colors
     duration-300
     ${themes[theme]}
