@@ -33,11 +33,19 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
 
   return (
     <div className={`flex min-h-screen bg-luxe-bg ${className}`}>
-      {/* Sidebar */}
+      {/* Sidebar - Hidden on mobile by default */}
       <AdminSidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
       />
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-10"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Main Content */}
       <main
@@ -45,19 +53,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
           flex-1
           transition-all
           duration-300
-          ${sidebarOpen ? "ml-64" : "ml-20"}
+          w-full
+          lg:ml-0
+          ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}
         `}
       >
         {/* Top Bar */}
-        <header className="sticky top-0 z-10 bg-luxe-surface border-b border-luxe-gold/10 px-6 py-4">
+        <header className="sticky top-0 z-10 bg-luxe-surface border-b border-luxe-gold/10 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             {/* Toggle Button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 text-luxe-muted hover:text-luxe-gold transition-colors"
+              className="p-1.5 sm:p-2 text-luxe-muted hover:text-luxe-gold transition-colors"
             >
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5 sm:w-6 sm:h-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -72,12 +82,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
             </button>
 
             {/* User Info */}
-            <div className="flex items-center gap-4">
-              <span className="text-luxe-muted text-sm">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="hidden sm:inline text-luxe-muted text-xs sm:text-sm truncate max-w-[150px]">
                 {user?.name || user?.email}
               </span>
-              <div className="w-8 h-8 rounded-full bg-luxe-gold/20 flex items-center justify-center">
-                <span className="text-luxe-gold text-sm font-medium">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-luxe-gold/20 flex items-center justify-center">
+                <span className="text-luxe-gold text-xs sm:text-sm font-medium">
                   {user?.name?.charAt(0) || "A"}
                 </span>
               </div>
@@ -86,7 +96,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
         </header>
 
         {/* Page Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <Outlet />
         </div>
       </main>

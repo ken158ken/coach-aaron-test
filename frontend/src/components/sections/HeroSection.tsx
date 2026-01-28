@@ -72,16 +72,16 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
       `}
     >
       {/* Content */}
-      <div className="relative z-10 max-w-4xl mx-auto">
+      <div className="relative z-10 max-w-4xl mx-auto px-2 sm:px-4">
         {/* Badge */}
-        <span className="inline-block px-4 py-2 mb-6 text-xs uppercase tracking-widest text-abyss-accent border border-abyss-accent/50 rounded-full">
+        <span className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 mb-4 sm:mb-6 text-[10px] sm:text-xs uppercase tracking-widest text-abyss-accent border border-abyss-accent/50 rounded-full">
           專業健身教練
         </span>
 
         {/* Title */}
         <h1
           ref={titleRef}
-          className="text-5xl md:text-7xl font-bold mb-6 text-abyss-text leading-tight"
+          className="text-3xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 text-abyss-text leading-tight"
         >
           打造
           <span className="text-abyss-accent"> 理想體態 </span>
@@ -92,17 +92,18 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
         {/* Subtitle */}
         <p
           ref={subtitleRef}
-          className="text-xl md:text-2xl text-abyss-text/70 mb-10 max-w-2xl mx-auto font-light"
+          className="text-base sm:text-xl md:text-2xl text-abyss-text/70 mb-8 sm:mb-10 max-w-2xl mx-auto font-light"
         >
           專業一對一健身指導，量身打造訓練計畫
-          <br />
+          <br className="hidden sm:block" />
+          <span className="sm:hidden"> · </span>
           科學化訓練 × 飲食規劃 × 心理建設
         </p>
 
         {/* CTA */}
         <div
           ref={ctaRef}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <GlowButton to="/courses" size="lg">
             探索課程

@@ -47,28 +47,28 @@ const MemberCenter: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-bg">
-      <div className="pt-24 pb-16 px-4">
+      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-3xl font-light text-luxe-text mb-2">
+              <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-1 sm:mb-2">
                 會員中心
               </h1>
-              <p className="text-luxe-muted">
+              <p className="text-sm sm:text-base text-luxe-muted truncate max-w-[250px] sm:max-w-none">
                 歡迎回來，{user?.name || user?.email}
               </p>
             </div>
             <button
               onClick={logout}
-              className="text-luxe-muted hover:text-luxe-gold transition-colors text-sm"
+              className="self-start sm:self-auto text-luxe-muted hover:text-luxe-gold transition-colors text-xs sm:text-sm"
             >
               登出
             </button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
             {stats.map((stat) => (
               <StatCard
                 key={stat.label}
@@ -80,16 +80,20 @@ const MemberCenter: React.FC = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-8 border-b border-luxe-gold/10">
+          <div className="flex gap-0.5 sm:gap-1 mb-6 sm:mb-8 border-b border-luxe-gold/10 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`
-                  px-6
-                  py-3
-                  text-sm
+                  px-3
+                  sm:px-6
+                  py-2.5
+                  sm:py-3
+                  text-xs
+                  sm:text-sm
                   transition-colors
+                  whitespace-nowrap
                   ${
                     activeTab === tab.key
                       ? "text-luxe-gold border-b-2 border-luxe-gold"
@@ -103,26 +107,26 @@ const MemberCenter: React.FC = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-6">
+          <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-6">
             {activeTab === "profile" && (
-              <div className="space-y-6">
-                <h2 className="text-xl text-luxe-text font-light mb-6">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl text-luxe-text font-light mb-4 sm:mb-6">
                   個人資料
                 </h2>
-                <div className="flex items-center gap-6 mb-6">
-                  <div className="w-20 h-20 rounded-full bg-luxe-gold/20 flex items-center justify-center">
-                    <span className="text-luxe-gold text-2xl">
+                <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-luxe-gold/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-luxe-gold text-xl sm:text-2xl">
                       {user?.name?.charAt(0) || "U"}
                     </span>
                   </div>
-                  <div>
-                    <p className="text-luxe-text text-lg">
+                  <div className="min-w-0">
+                    <p className="text-base sm:text-lg text-luxe-text truncate">
                       {user?.name || "會員"}
                     </p>
-                    <p className="text-luxe-muted text-sm">{user?.email}</p>
+                    <p className="text-xs sm:text-sm text-luxe-muted truncate">{user?.email}</p>
                   </div>
                 </div>
-                <form className="space-y-4 max-w-md">
+                <form className="space-y-3 sm:space-y-4 max-w-md">
                   <Input
                     label="姓名"
                     defaultValue={user?.name || ""}
@@ -143,11 +147,11 @@ const MemberCenter: React.FC = () => {
 
             {activeTab === "courses" && (
               <div>
-                <h2 className="text-xl text-luxe-text font-light mb-6">
+                <h2 className="text-lg sm:text-xl text-luxe-text font-light mb-4 sm:mb-6">
                   我的課程
                 </h2>
-                <div className="text-center py-12">
-                  <p className="text-luxe-muted mb-4">您尚未購買任何課程</p>
+                <div className="text-center py-8 sm:py-12">
+                  <p className="text-sm sm:text-base text-luxe-muted mb-3 sm:mb-4">您尚未購買任何課程</p>
                   <Link to="/courses">
                     <PillButton theme="luxe" variant="outline">
                       瀏覽課程
@@ -158,11 +162,11 @@ const MemberCenter: React.FC = () => {
             )}
 
             {activeTab === "settings" && (
-              <div className="space-y-6">
-                <h2 className="text-xl text-luxe-text font-light mb-6">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl text-luxe-text font-light mb-4 sm:mb-6">
                   帳號設定
                 </h2>
-                <form className="space-y-4 max-w-md">
+                <form className="space-y-3 sm:space-y-4 max-w-md">
                   <Input
                     type="password"
                     label="目前密碼"

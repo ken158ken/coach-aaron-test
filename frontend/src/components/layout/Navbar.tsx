@@ -57,7 +57,7 @@ const Navbar: React.FC = (): JSX.Element => {
   return (
     <nav
       ref={navRef}
-      className="fixed top-0 left-0 right-0 z-50 px-6 md:px-16 py-6"
+      className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-16 py-4 sm:py-6"
       style={{
         background: "linear-gradient(180deg, rgba(10,10,10,0.9), transparent)",
       }}
@@ -66,7 +66,7 @@ const Navbar: React.FC = (): JSX.Element => {
         {/* Logo */}
         <Link
           to="/"
-          className="text-2xl tracking-widest font-display hover:scale-105 transition-transform duration-300"
+          className="text-xl sm:text-2xl tracking-widest font-display hover:scale-105 transition-transform duration-300"
           style={{ color: "var(--luxe-gold)" }}
         >
           阿倫教官
@@ -152,7 +152,7 @@ const Navbar: React.FC = (): JSX.Element => {
           className="lg:hidden text-luxe-text hover:text-luxe-gold transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          <span className="text-sm tracking-widest border border-white/20 px-4 py-2">
+          <span className="text-xs sm:text-sm tracking-widest border border-white/20 px-3 sm:px-4 py-1.5 sm:py-2">
             {mobileMenuOpen ? "CLOSE" : "MENU"}
           </span>
         </button>
@@ -160,14 +160,14 @@ const Navbar: React.FC = (): JSX.Element => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden mt-6 py-6 border-t border-white/10 bg-luxe-bg/95 backdrop-blur-md rounded-lg -mx-2 px-4">
-          <div className="flex flex-col gap-4">
+        <div className="lg:hidden mt-4 sm:mt-6 py-4 sm:py-6 border-t border-white/10 bg-luxe-bg/95 backdrop-blur-md rounded-lg -mx-2 px-4">
+          <div className="flex flex-col gap-3 sm:gap-4">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`text-lg tracking-wider transition-colors ${
+                className={`text-base sm:text-lg tracking-wider transition-colors py-1 ${
                   location.pathname === link.path
                     ? "text-luxe-gold"
                     : "text-luxe-text hover:text-luxe-gold"
@@ -176,13 +176,13 @@ const Navbar: React.FC = (): JSX.Element => {
                 {link.name}
               </Link>
             ))}
-            <div className="pt-4 border-t border-white/10 flex flex-col gap-4">
+            <div className="pt-3 sm:pt-4 border-t border-white/10 flex flex-col gap-3 sm:gap-4">
               {mounted && user ? (
                 <>
                   <Link
                     to="/member"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-lg tracking-wider text-luxe-text hover:text-luxe-gold"
+                    className="text-base sm:text-lg tracking-wider text-luxe-text hover:text-luxe-gold py-1"
                   >
                     會員中心
                   </Link>
@@ -190,7 +190,7 @@ const Navbar: React.FC = (): JSX.Element => {
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="text-lg tracking-wider text-luxe-gold"
+                      className="text-base sm:text-lg tracking-wider text-luxe-gold py-1"
                     >
                       後台管理
                     </Link>
@@ -200,7 +200,7 @@ const Navbar: React.FC = (): JSX.Element => {
                       logout();
                       setMobileMenuOpen(false);
                     }}
-                    className="text-lg tracking-wider text-left text-red-400"
+                    className="text-base sm:text-lg tracking-wider text-left text-red-400 py-1"
                   >
                     登出
                   </button>
@@ -210,14 +210,14 @@ const Navbar: React.FC = (): JSX.Element => {
                   <Link
                     to="/login"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-lg tracking-wider text-luxe-text hover:text-luxe-gold"
+                    className="text-base sm:text-lg tracking-wider text-luxe-text hover:text-luxe-gold py-1"
                   >
                     登入
                   </Link>
                   <Link
                     to="/register"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-lg tracking-wider text-luxe-gold"
+                    className="text-base sm:text-lg tracking-wider text-luxe-gold py-1"
                   >
                     註冊
                   </Link>

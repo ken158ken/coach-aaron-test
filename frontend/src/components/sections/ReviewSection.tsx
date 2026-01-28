@@ -102,7 +102,9 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
     <section
       ref={sectionRef}
       className={`
-        py-24
+        py-16
+        sm:py-20
+        md:py-24
         px-4
         bg-prism-bg
         ${className}
@@ -110,41 +112,41 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <span className="inline-block text-prism-accent text-sm uppercase tracking-widest mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <span className="inline-block text-prism-accent text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
             Testimonials
           </span>
-          <h2 className="text-4xl font-bold text-prism-text mb-4">學員見證</h2>
-          <p className="text-prism-text/60 max-w-xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-prism-text mb-3 sm:mb-4">學員見證</h2>
+          <p className="text-sm sm:text-base text-prism-text/60 max-w-xl mx-auto px-2">
             聽聽學員們的真實回饋
           </p>
         </div>
 
         {/* Reviews Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           {displayReviews.map((review) => (
             <PrismCard key={review.id} className="review-card">
               <div className="flex flex-col h-full">
                 {/* Stars */}
-                <div className="flex gap-1 mb-4">
+                <div className="flex gap-0.5 sm:gap-1 mb-3 sm:mb-4 text-sm sm:text-base">
                   {renderStars(review.rating)}
                 </div>
 
                 {/* Content */}
-                <p className="text-prism-text/80 mb-4 flex-grow italic">
+                <p className="text-sm sm:text-base text-prism-text/80 mb-3 sm:mb-4 flex-grow italic">
                   "{review.content}"
                 </p>
 
                 {/* Achievement Badge */}
                 {review.achievement && (
-                  <span className="inline-block self-start px-3 py-1 mb-4 text-xs bg-prism-accent/20 text-prism-accent rounded-full">
+                  <span className="inline-block self-start px-2 sm:px-3 py-0.5 sm:py-1 mb-3 sm:mb-4 text-[10px] sm:text-xs bg-prism-accent/20 text-prism-accent rounded-full">
                     {review.achievement}
                   </span>
                 )}
 
                 {/* Author */}
-                <div className="flex items-center gap-3 pt-4 border-t border-prism-accent/20">
-                  <div className="w-10 h-10 rounded-full bg-prism-accent/30 flex items-center justify-center">
+                <div className="flex items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-prism-accent/20">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-prism-accent/30 flex items-center justify-center flex-shrink-0">
                     {review.avatar ? (
                       <img
                         src={review.avatar}
@@ -152,14 +154,14 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      <span className="text-prism-text text-sm">
+                      <span className="text-prism-text text-xs sm:text-sm">
                         {review.name.charAt(0)}
                       </span>
                     )}
                   </div>
-                  <div>
-                    <p className="text-prism-text font-medium">{review.name}</p>
-                    <p className="text-prism-text/50 text-xs">{review.date}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base text-prism-text font-medium truncate">{review.name}</p>
+                    <p className="text-prism-text/50 text-[10px] sm:text-xs">{review.date}</p>
                   </div>
                 </div>
               </div>

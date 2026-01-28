@@ -35,7 +35,8 @@ const PrismCard: React.FC<PrismCardProps> = ({
       className={`
         ${variantStyles[variant]}
         rounded-xl
-        p-6
+        p-4
+        sm:p-6
         transition-all
         duration-300
         ${hover ? "hover:border-prism-accent/60 hover:-translate-y-1" : ""}

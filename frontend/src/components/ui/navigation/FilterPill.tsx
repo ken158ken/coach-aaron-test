@@ -62,7 +62,8 @@ const FilterPill: React.FC<FilterPillProps> = ({
       className={`
         filter-pill
         inline-flex
-        p-1
+        p-0.5
+        sm:p-1
         rounded-full
         border
         ${styles.container}
@@ -74,9 +75,12 @@ const FilterPill: React.FC<FilterPillProps> = ({
           key={option.value}
           onClick={() => onChange(option.value)}
           className={`
-            px-4
-            py-2
-            text-sm
+            px-3
+            sm:px-4
+            py-1.5
+            sm:py-2
+            text-xs
+            sm:text-sm
             rounded-full
             transition-all
             duration-300

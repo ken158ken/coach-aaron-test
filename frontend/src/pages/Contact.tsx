@@ -64,28 +64,28 @@ const Contact: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-bg">
-      <div className="pt-24 pb-16 px-4">
+      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
-            <span className="inline-block text-luxe-gold text-sm uppercase tracking-widest mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="inline-block text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
               Contact
             </span>
-            <h1 className="text-4xl md:text-5xl font-light text-luxe-text mb-4">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-light text-luxe-text mb-3 sm:mb-4">
               聯絡我們
             </h1>
-            <p className="text-luxe-muted max-w-xl mx-auto font-light">
+            <p className="text-sm sm:text-base text-luxe-muted max-w-xl mx-auto font-light px-2">
               有任何問題或諮詢需求，歡迎與我們聯繫
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12">
+          <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12">
             {/* Contact Form */}
             <div>
-              <h2 className="text-xl text-luxe-text mb-6 font-light">
+              <h2 className="text-lg sm:text-xl text-luxe-text mb-4 sm:mb-6 font-light">
                 傳送訊息
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <Input
                   name="name"
                   label="姓名"
@@ -138,39 +138,39 @@ const Contact: React.FC = () => {
 
             {/* Contact Info */}
             <div>
-              <h2 className="text-xl text-luxe-text mb-6 font-light">
+              <h2 className="text-lg sm:text-xl text-luxe-text mb-4 sm:mb-6 font-light">
                 其他聯絡方式
               </h2>
 
               {/* Info Cards */}
-              <div className="space-y-6 mb-8">
-                <div className="p-6 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300">
-                  <h3 className="text-luxe-gold text-sm uppercase tracking-widest mb-2">
+              <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
+                <div className="p-4 sm:p-6 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300">
+                  <h3 className="text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5 sm:mb-2">
                     Email
                   </h3>
-                  <p className="text-luxe-text">contact@coach-aaron.com</p>
+                  <p className="text-sm sm:text-base text-luxe-text break-all">contact@coach-aaron.com</p>
                 </div>
-                <div className="p-6 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300">
-                  <h3 className="text-luxe-gold text-sm uppercase tracking-widest mb-2">
+                <div className="p-4 sm:p-6 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300">
+                  <h3 className="text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5 sm:mb-2">
                     營業時間
                   </h3>
-                  <p className="text-luxe-text">週一至週六 09:00 - 21:00</p>
+                  <p className="text-sm sm:text-base text-luxe-text">週一至週六 09:00 - 21:00</p>
                 </div>
               </div>
 
               {/* Social Links */}
-              <h3 className="text-luxe-text mb-4 font-light">社群媒體</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className="text-sm sm:text-base text-luxe-text mb-3 sm:mb-4 font-light">社群媒體</h3>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {socialItems.map((item) => (
                   <a
                     key={item.name}
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/40 hover:shadow-lg hover:shadow-luxe-gold/10 hover:-translate-y-1 transition-all duration-300"
+                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/40 hover:shadow-lg hover:shadow-luxe-gold/10 hover:-translate-y-1 transition-all duration-300"
                   >
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="text-luxe-text">{item.name}</span>
+                    <span className="text-xl sm:text-2xl">{item.icon}</span>
+                    <span className="text-sm sm:text-base text-luxe-text">{item.name}</span>
                   </a>
                 ))}
               </div>

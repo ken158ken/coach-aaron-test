@@ -84,11 +84,16 @@ const CourseCard: React.FC<CourseCardProps> = ({
           <span
             className={`
               absolute
-              top-3
-              right-3
-              px-3
-              py-1
-              text-xs
+              top-2
+              sm:top-3
+              right-2
+              sm:right-3
+              px-2
+              sm:px-3
+              py-0.5
+              sm:py-1
+              text-[10px]
+              sm:text-xs
               rounded-full
               ${styles.accent}
               bg-black/50
@@ -101,33 +106,37 @@ const CourseCard: React.FC<CourseCardProps> = ({
       </div>
 
       {/* Content */}
-      <div className="p-5">
-        <h3 className={`text-lg font-semibold mb-2 ${styles.title}`}>
+      <div className="p-4 sm:p-5">
+        <h3 className={`text-base sm:text-lg font-semibold mb-1.5 sm:mb-2 line-clamp-2 ${styles.title}`}>
           {course.title}
         </h3>
-        <p className={`text-sm mb-4 line-clamp-2 ${styles.muted}`}>
+        <p className={`text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2 ${styles.muted}`}>
           {course.description}
         </p>
 
         {/* Meta */}
-        <div className={`flex items-center gap-4 mb-4 text-sm ${styles.muted}`}>
+        <div className={`flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm ${styles.muted}`}>
           <span>📚 {course.lessonsCount || 0} 堂課</span>
-          <span>⏱ {course.duration || "未知"}</span>
+          <span className="hidden xs:inline">⏱ {course.duration || "未知"}</span>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between">
-          <span className={`text-xl font-bold ${styles.accent}`}>
+        <div className="flex items-center justify-between gap-2">
+          <span className={`text-base sm:text-xl font-bold ${styles.accent}`}>
             NT$ {course.price?.toLocaleString() || "免費"}
           </span>
           <Link
             to={`/courses/${course.course_id || course.id}`}
             className={`
-              px-4
-              py-2
-              text-sm
+              px-3
+              sm:px-4
+              py-1.5
+              sm:py-2
+              text-xs
+              sm:text-sm
               rounded-lg
               transition-colors
+              whitespace-nowrap
               ${styles.button}
             `}
           >
