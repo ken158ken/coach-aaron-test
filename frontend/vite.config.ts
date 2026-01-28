@@ -24,6 +24,6 @@ export default defineConfig({
   },
   ssr: {
     // SSR 專用設定
-    noExternal: ["react-icons"],
+    noExternal: ["react-icons", "gsap"],
   },
 });
