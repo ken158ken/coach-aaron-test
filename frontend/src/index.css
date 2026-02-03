@@ -8,68 +8,193 @@
 @tailwind utilities;
 
 /* ========================================
-   CSS 變數定義
+   CSS 變數定義 - 深色模式（預設）
    ======================================== */
 :root {
-  /* ABYSS Theme (深海) */
+  /* ABYSS Theme (深海) - 深色 */
   --abyss-black: #000205;
   --abyss-cyan: #00ffff;
   --abyss-purple: #7b00ff;
   --abyss-glass: rgba(0, 5, 10, 0.6);
+  --abyss-bg: #000205;
+  --abyss-surface: #050a14;
   --abyss-text: #e0f7fa;
+  --abyss-muted: #80deea;
   --abyss-text-dim: #80deea;
 
-  /* PRISM Theme (水晶) */
+  /* PRISM Theme (水晶) - 深色 */
   --prism-void: #0b001a;
   --prism-purple: #b388ff;
   --prism-blue: #82b1ff;
   --prism-glass: rgba(255, 255, 255, 0.05);
+  --prism-bg: #0b001a;
+  --prism-surface: #150030;
   --prism-text: #ffffff;
+  --prism-muted: #aaaaaa;
   --prism-text-dim: #aaaaaa;
+  --prism-accent: #b388ff;
 
-  /* LUXE Theme (高端) */
+  /* LUXE Theme (高端) - 深色 */
   --luxe-black: #0a0a0a;
   --luxe-gold: #d4af37;
   --luxe-gold-dim: #8a7020;
+  --luxe-bg: #0a0a0a;
+  --luxe-surface: #141414;
   --luxe-text: #e0e0e0;
+  --luxe-muted: #888888;
   --luxe-text-dim: #888888;
 }
 
 /* ========================================
-   基礎樣式
+   淺色模式 CSS 變數覆蓋
+   使用多個選擇器確保覆蓋
    ======================================== */
-@layer base {
-  html {
-    scroll-behavior: smooth;
-    font-size: 20px; /* 預設 16px + 4px = 20px */
-  }
+[data-color-mode="light"],
+[data-theme="luxe-light"],
+[data-theme="abyss-light"],
+[data-theme="prism-light"],
+html[data-color-mode="light"] {
+  /* LUXE 淺色 */
+  --luxe-black: #fafafa;
+  --luxe-gold: #b8962b;
+  --luxe-gold-dim: #6a5515;
+  --luxe-bg: #ffffff;
+  --luxe-surface: #f8f8f8;
+  --luxe-text: #1a1a1a;
+  --luxe-muted: #555555;
+  --luxe-text-dim: #666666;
 
-  body {
-    @apply antialiased;
-  }
+  /* ABYSS 淺色 */
+  --abyss-black: #fafafa;
+  --abyss-cyan: #00b3b3;
+  --abyss-bg: #ffffff;
+  --abyss-surface: #e8f5f7;
+  --abyss-text: #0a1a1a;
+  --abyss-muted: #4a5568;
+  --abyss-text-dim: #4a5568;
 
-  /* 隱藏捲軸但保留功能 */
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+  /* PRISM 淺色 */
+  --prism-void: #fafafa;
+  --prism-purple: #7c4dff;
+  --prism-bg: #ffffff;
+  --prism-surface: #f8f5ff;
+  --prism-text: #1a0a30;
+  --prism-muted: #5a4a6a;
+  --prism-text-dim: #5a4a6a;
+  --prism-accent: #7c4dff;
+}
+
+/* 淺色模式下的全域文字顏色 */
+[data-color-mode="light"] body {
+  color: #1a1a1a;
+}
+
+/* 淺色模式下強制深色文字 */
+[data-color-mode="light"] .text-luxe-text,
+[data-color-mode="light"] .text-abyss-text,
+[data-color-mode="light"] .text-prism-text {
+  color: var(--luxe-text) !important;
+}
+
+[data-color-mode="light"] .text-luxe-muted,
+[data-color-mode="light"] .text-abyss-muted,
+[data-color-mode="light"] .text-prism-muted {
+  color: var(--luxe-muted) !important;
+}
+
+/* 淺色模式下的背景顏色 */
+[data-color-mode="light"] .bg-luxe-bg,
+[data-color-mode="light"] .bg-abyss-bg,
+[data-color-mode="light"] .bg-prism-bg {
+  background-color: #ffffff !important;
+}
+
+[data-color-mode="light"] .bg-luxe-surface,
+[data-color-mode="light"] .bg-abyss-surface,
+[data-color-mode="light"] .bg-prism-surface {
+  background-color: #f8f8f8 !important;
+}
+
+/* 淺色模式下邊框調整 */
+[data-color-mode="light"] .border-luxe-gold\/10,
+[data-color-mode="light"] .border-luxe-gold\/20 {
+  border-color: rgba(184, 150, 43, 0.3) !important;
+}
+
+/* 淺色模式下的黑色背景處理 */
+[data-color-mode="light"] .bg-luxe-black,
+[data-color-mode="light"] .bg-luxe-black\/50,
+[data-color-mode="light"] .bg-luxe-black\/60,
+[data-color-mode="light"] .bg-luxe-black\/80 {
+  background-color: rgba(248, 248, 248, 0.95) !important;
+}
+
+[data-color-mode="light"] .bg-abyss-black,
+[data-color-mode="light"] .bg-prism-void {
+  background-color: #ffffff !important;
+}
+
+/* 淺色模式下 DaisyUI base-content 繼承 */
+[data-color-mode="light"],
+html[data-color-mode="light"] {
+  --bc: 26 26 26; /* DaisyUI base-content for light mode */
+  color: #1a1a1a;
+}
+
+/* 淺色模式下白色和灰色文字處理 */
+[data-color-mode="light"] .text-white {
+  color: #1a1a1a !important;
+}
+
+[data-color-mode="light"] .text-gray-100,
+[data-color-mode="light"] .text-gray-200,
+[data-color-mode="light"] .text-gray-300,
+[data-color-mode="light"] .text-gray-400,
+[data-color-mode="light"] .text-gray-500 {
+  color: #555555 !important;
+}
+
+/* 保持按鈕上的深色文字不變 */
+[data-color-mode="light"] .bg-luxe-gold .text-black,
+[data-color-mode="light"] .bg-luxe-gold\/90 .text-black,
+[data-color-mode="light"] button.bg-luxe-gold,
+[data-color-mode="light"] a.bg-luxe-gold {
+  color: #0a0a0a !important;
+}
+
+/* 淺色模式下表單元素 */
+[data-color-mode="light"] input,
+[data-color-mode="light"] textarea,
+[data-color-mode="light"] select {
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+[data-color-mode="light"] input::placeholder,
+[data-color-mode="light"] textarea::placeholder {
+  color: #888888;
+}
+
+/* 淺色模式下 Modal 和 Card */
+[data-color-mode="light"] .bg-luxe-bg\/95,
+[data-color-mode="light"] [class*="bg-luxe-bg"],
+[data-color-mode="light"] .modal-content {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+/* 淺色模式下邊框白色處理 */
+[data-color-mode="light"] .border-white\/10,
+[data-color-mode="light"] .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 /* ========================================
    ABYSS 主題樣式
    ======================================== */
 @layer components {
-  /* 深海背景效果 */
-  .abyss-bg {
-    background-color: var(--abyss-black);
-    color: var(--abyss-text);
-  }
-
-  /* 海洋雪花效果 */
-  .marine-snow {
+  /* 深海主題背景噪點 */
+  .abyss-theme::before {
+    content: "";
     position: fixed;
     top: 0;
     left: 0;

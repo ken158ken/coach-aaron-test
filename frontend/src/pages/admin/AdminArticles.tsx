@@ -379,7 +379,7 @@ const AdminArticles: React.FC = () => {
             setStatusFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-black focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-bg [&>option]:text-black"
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
         >
           <option value="all">全部狀態</option>
           <option value="draft">草稿</option>

@@ -238,6 +238,19 @@ CORS_ORIGIN=http://localhost:5173
   - `luxe` ↔ `luxe-light`
   - `abyss` ↔ `abyss-light`
   - `prism` ↔ `prism-light`
+- **CSS 變數系統**: 所有主題顏色通過 CSS 變數控制，支援動態切換
+  - 深色模式: 在 `:root` 中定義預設值
+  - 淺色模式: 通過 `[data-color-mode="light"]` 選擇器覆蓋
+
+### CSS 主題變數一覽
+
+| 變數名稱         | 深色值    | 淺色值    | 用途          |
+| ---------------- | --------- | --------- | ------------- |
+| `--luxe-bg`      | `#0a0a0a` | `#ffffff` | 頁面背景      |
+| `--luxe-surface` | `#141414` | `#f8f8f8` | 卡片/區塊背景 |
+| `--luxe-text`    | `#e0e0e0` | `#1a1a1a` | 主要文字      |
+| `--luxe-muted`   | `#888888` | `#555555` | 次要文字      |
+| `--luxe-gold`    | `#d4af37` | `#b8962b` | 強調色        |
 
 ### 語言切換 (繁體中文 / English)
 
@@ -268,7 +281,7 @@ const { language, toggleLanguage, t } = useLanguage();
 
 ---
 
-**最後更新**: 2025-01-28T23-00-00Z
+**最後更新**: 2026-01-20T14-00-00+08:00
 
 ## 🧱 區塊編輯器 (Block Editor)
 

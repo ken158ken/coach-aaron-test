@@ -61,10 +61,11 @@ const Navbar: React.FC = (): JSX.Element => {
   return (
     <nav
       ref={navRef}
-      className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-16 py-4 sm:py-6"
-      style={{
-        background: "linear-gradient(180deg, rgba(10,10,10,0.9), transparent)",
-      }}
+      className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-16 py-4 sm:py-6 ${
+        isDark
+          ? "bg-gradient-to-b from-[rgba(10,10,10,0.9)] to-transparent"
+          : "bg-gradient-to-b from-[rgba(255,255,255,0.95)] to-transparent shadow-sm"
+      }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
