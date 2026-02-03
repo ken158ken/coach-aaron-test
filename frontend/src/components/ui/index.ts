@@ -23,3 +23,6 @@ export * from "./data";
 
 // Overlay
 export * from "./overlay";
+
+// Editor
+export * from "./editor";

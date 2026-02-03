@@ -40,7 +40,7 @@ const Pagination: React.FC<PaginationProps> = ({
       disabled: "text-prism-text/30 cursor-not-allowed",
     },
     luxe: {
-      active: "bg-luxe-gold text-luxe-bg shadow-lg shadow-luxe-gold/30",
+      active: "bg-luxe-gold text-black shadow-lg shadow-luxe-gold/30",
       inactive:
         "text-luxe-muted hover:text-luxe-gold hover:bg-luxe-gold/10 hover:scale-110 transition-all duration-300",
       disabled: "text-luxe-muted/30 cursor-not-allowed",
@@ -71,7 +71,9 @@ const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <nav className={`flex items-center justify-center gap-0.5 sm:gap-1 ${className}`}>
+    <nav
+      className={`flex items-center justify-center gap-0.5 sm:gap-1 ${className}`}
+    >
       {/* Previous */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
@@ -112,7 +114,10 @@ const Pagination: React.FC<PaginationProps> = ({
             {page}
           </button>
         ) : (
-          <span key={index} className="px-1 sm:px-2 text-xs sm:text-sm text-gray-500">
+          <span
+            key={index}
+            className="px-1 sm:px-2 text-xs sm:text-sm text-gray-500"
+          >
             {page}
           </span>
         ),

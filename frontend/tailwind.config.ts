@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: ["class", '[data-color-mode="dark"]'],
   theme: {
     extend: {
       colors: {
@@ -30,6 +31,10 @@ const config: Config = {
           "gold-dim": "#8a7020",
           text: "#e0e0e0",
           "text-dim": "#888888",
+          // 亮色模式額外顏色
+          bg: "var(--luxe-bg)",
+          surface: "var(--luxe-surface)",
+          muted: "var(--luxe-muted)",
         },
       },
       fontFamily: {
@@ -106,6 +111,52 @@ const config: Config = {
           "base-200": "#141414",
           "base-300": "#1e1e1e",
           info: "#d4af37",
+          success: "#36D399",
+          warning: "#FBBD23",
+          error: "#F87272",
+          "--luxe-bg": "#0a0a0a",
+          "--luxe-surface": "#141414",
+          "--luxe-muted": "#888888",
+        },
+        // 亮色主題
+        "luxe-light": {
+          primary: "#b8962b",
+          secondary: "#6a5515",
+          accent: "#b8962b",
+          neutral: "#f5f5f5",
+          "base-100": "#ffffff",
+          "base-200": "#f8f8f8",
+          "base-300": "#eeeeee",
+          info: "#b8962b",
+          success: "#36D399",
+          warning: "#FBBD23",
+          error: "#F87272",
+          "--luxe-bg": "#ffffff",
+          "--luxe-surface": "#f8f8f8",
+          "--luxe-muted": "#666666",
+        },
+        "abyss-light": {
+          primary: "#00b3b3",
+          secondary: "#5500cc",
+          accent: "#00b3b3",
+          neutral: "#f0f9fa",
+          "base-100": "#ffffff",
+          "base-200": "#e8f5f7",
+          "base-300": "#d0ebef",
+          info: "#00b3b3",
+          success: "#36D399",
+          warning: "#FBBD23",
+          error: "#F87272",
+        },
+        "prism-light": {
+          primary: "#7c4dff",
+          secondary: "#448aff",
+          accent: "#7c4dff",
+          neutral: "#f5f0ff",
+          "base-100": "#ffffff",
+          "base-200": "#f8f5ff",
+          "base-300": "#efe8ff",
+          info: "#448aff",
           success: "#36D399",
           warning: "#FBBD23",
           error: "#F87272",

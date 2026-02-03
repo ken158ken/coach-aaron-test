@@ -435,7 +435,7 @@ const ArticleDetail: React.FC = () => {
                 <button
                   onClick={handleComment}
                   disabled={submitting || !commentText.trim()}
-                  className="mt-3 px-6 py-2 bg-luxe-gold text-luxe-bg rounded-full hover:bg-luxe-gold/80 disabled:opacity-50 transition-colors"
+                  className="mt-3 px-6 py-2 bg-luxe-gold text-black rounded-full hover:bg-luxe-gold/80 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? "送出中..." : "送出留言"}
                 </button>
