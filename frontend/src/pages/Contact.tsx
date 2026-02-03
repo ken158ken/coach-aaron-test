@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/context";
 import { Input, Textarea, PillButton, Toast } from "@/components/ui";
+import { PrismScene } from "@/components/three";
 import { SOCIAL_LINKS } from "@/constants";
 
 /**
@@ -63,8 +64,11 @@ const Contact: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-luxe-bg">
-      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
+    <div className="min-h-screen bg-luxe-bg relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
+      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">
@@ -148,18 +152,24 @@ const Contact: React.FC = () => {
                   <h3 className="text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5 sm:mb-2">
                     Email
                   </h3>
-                  <p className="text-sm sm:text-base text-luxe-text break-all">contact@coach-aaron.com</p>
+                  <p className="text-sm sm:text-base text-luxe-text break-all">
+                    contact@coach-aaron.com
+                  </p>
                 </div>
                 <div className="p-4 sm:p-6 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300">
                   <h3 className="text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5 sm:mb-2">
                     營業時間
                   </h3>
-                  <p className="text-sm sm:text-base text-luxe-text">週一至週六 09:00 - 21:00</p>
+                  <p className="text-sm sm:text-base text-luxe-text">
+                    週一至週六 09:00 - 21:00
+                  </p>
                 </div>
               </div>
 
               {/* Social Links */}
-              <h3 className="text-sm sm:text-base text-luxe-text mb-3 sm:mb-4 font-light">社群媒體</h3>
+              <h3 className="text-sm sm:text-base text-luxe-text mb-3 sm:mb-4 font-light">
+                社群媒體
+              </h3>
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {socialItems.map((item) => (
                   <a
@@ -170,7 +180,9 @@ const Contact: React.FC = () => {
                     className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/40 hover:shadow-lg hover:shadow-luxe-gold/10 hover:-translate-y-1 transition-all duration-300"
                   >
                     <span className="text-xl sm:text-2xl">{item.icon}</span>
-                    <span className="text-sm sm:text-base text-luxe-text">{item.name}</span>
+                    <span className="text-sm sm:text-base text-luxe-text">
+                      {item.name}
+                    </span>
                   </a>
                 ))}
               </div>

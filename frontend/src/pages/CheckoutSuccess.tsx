@@ -10,6 +10,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useTheme } from "@/context";
 import { GlowButton, PillButton } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { PrismScene } from "@/components/three";
 
 /**
  * CheckoutSuccess - 結帳成功頁面
@@ -28,7 +29,10 @@ const CheckoutSuccess: React.FC = () => {
   }, [setTheme]);
 
   return (
-    <div className="min-h-screen bg-luxe-bg pt-20 pb-12 px-4 flex items-center justify-center">
+    <div className="min-h-screen bg-luxe-bg pt-20 pb-12 px-4 flex items-center justify-center relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
       {/* SEO Meta 標籤 */}
       <SEOHead
         title="付款成功"
@@ -36,7 +40,7 @@ const CheckoutSuccess: React.FC = () => {
         url="/checkout/success"
       />
 
-      <div className="max-w-lg mx-auto text-center">
+      <div className="max-w-lg mx-auto text-center relative z-10">
         {/* 成功圖示 */}
         <div className="mb-6">
           <div className="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">

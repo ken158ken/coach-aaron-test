@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { articleService } from "@/services/article.service";
 import { PageHeader, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { PrismScene } from "@/components/three";
 import type { Article } from "@/types";
 
 /**
@@ -81,7 +82,10 @@ const Articles: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-luxe-bg">
+    <div className="min-h-screen bg-luxe-bg relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
       {/* SEO Meta 標籤 */}
       <SEOHead
         title="專業知識"
@@ -92,7 +96,7 @@ const Articles: React.FC = () => {
 
       <PageHeader title="專業知識" subtitle="健身教練的專業分享與訓練心得" />
 
-      <div className="container mx-auto px-4 py-8 sm:py-12">
+      <div className="container mx-auto px-4 py-8 sm:py-12 relative z-10">
         {/* Category Filter */}
         {categories.length > 0 && (
           <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6 sm:mb-8 justify-center">
@@ -156,7 +160,9 @@ const Articles: React.FC = () => {
                     </div>
                   ) : (
                     <div className="aspect-video bg-luxe-gold/10 flex items-center justify-center">
-                      <span className="text-4xl sm:text-6xl text-luxe-gold/30">📝</span>
+                      <span className="text-4xl sm:text-6xl text-luxe-gold/30">
+                        📝
+                      </span>
                     </div>
                   )}
 
@@ -170,7 +176,9 @@ const Articles: React.FC = () => {
                         </span>
                       )}
                       {article.is_featured && (
-                        <span className="text-[10px] sm:text-xs text-yellow-500">★ 精選</span>
+                        <span className="text-[10px] sm:text-xs text-yellow-500">
+                          ★ 精選
+                        </span>
                       )}
                     </div>
 
@@ -192,7 +200,9 @@ const Articles: React.FC = () => {
                         {formatDate(article.published_at || article.created_at)}
                       </span>
                       <div className="flex items-center gap-2 sm:gap-4">
-                        <span className="whitespace-nowrap">{article.view_count || 0} 瀏覽</span>
+                        <span className="whitespace-nowrap">
+                          {article.view_count || 0} 瀏覽
+                        </span>
                         {article.rating_count > 0 && (
                           <span className="whitespace-nowrap hidden sm:inline">
                             ★ {article.rating_average.toFixed(1)} (

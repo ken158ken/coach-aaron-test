@@ -10,6 +10,7 @@ import { articleService } from "@/services/article.service";
 import { useAuth } from "@/context";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { PrismScene } from "@/components/three";
 import type { Article, ArticleComment, ArticleRating } from "@/types";
 
 /**
@@ -268,7 +269,10 @@ const ArticleDetail: React.FC = () => {
   const organizedComments = organizeComments(comments);
 
   return (
-    <div className="min-h-screen bg-luxe-bg">
+    <div className="min-h-screen bg-luxe-bg relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
       {/* SEO Meta 標籤 */}
       <SEOHead
         title={article.article_title}
@@ -289,7 +293,7 @@ const ArticleDetail: React.FC = () => {
       />
 
       {/* Article Header */}
-      <div className="bg-luxe-surface border-b border-luxe-gold/10 py-16">
+      <div className="bg-luxe-surface border-b border-luxe-gold/10 py-16 relative z-10">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
           <div className="mb-6">

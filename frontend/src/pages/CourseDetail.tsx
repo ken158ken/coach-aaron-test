@@ -10,6 +10,7 @@ import { useTheme, useAuth } from "@/context";
 import { courseService } from "@/services";
 import { PillButton, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { PrismScene } from "@/components/three";
 import type { Course, CourseReview } from "@/types";
 
 /**
@@ -101,7 +102,10 @@ const CourseDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-prism-bg">
+    <div className="min-h-screen bg-prism-bg relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
       {/* SEO Meta 標籤 */}
       <SEOHead
         title={course.title}
@@ -113,7 +117,7 @@ const CourseDetail: React.FC = () => {
       />
 
       {/* Course Header */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden z-10">
         {/* Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-prism-bg via-purple-900/20 to-prism-bg" />
 

@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
+import { PrismScene } from "@/components/three";
 
 /**
  * Register - 註冊頁面
@@ -76,8 +77,11 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-8 sm:py-12">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-8 sm:py-12 relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
@@ -85,7 +89,9 @@ const Register: React.FC = () => {
               AARON
             </h1>
           </Link>
-          <p className="text-sm sm:text-base text-luxe-muted mt-2 font-light">建立您的帳號</p>
+          <p className="text-sm sm:text-base text-luxe-muted mt-2 font-light">
+            建立您的帳號
+          </p>
         </div>
 
         {/* Form Card */}

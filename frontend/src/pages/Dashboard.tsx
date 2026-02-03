@@ -8,6 +8,7 @@ import React, { useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton } from "@/components/ui";
+import { PrismScene } from "@/components/three";
 
 /**
  * Dashboard - 用戶儀表板頁面
@@ -55,8 +56,11 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-luxe-bg">
-      <div className="pt-24 pb-16 px-4">
+    <div className="min-h-screen bg-luxe-bg relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
+      <div className="pt-24 pb-16 px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">

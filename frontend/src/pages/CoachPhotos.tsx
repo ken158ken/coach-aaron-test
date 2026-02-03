@@ -16,6 +16,7 @@ import React, {
 import { Link } from "react-router-dom";
 import { useTheme, useAuth } from "@/context";
 import { Modal, Loading, PillButton } from "@/components/ui";
+import { PrismScene } from "@/components/three";
 import coachPhotosManifest from "@/data/coachPhotos.json";
 
 /**
@@ -248,7 +249,10 @@ const CoachPhotos: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-luxe-black">
+    <div className="min-h-screen bg-luxe-black relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
       {/* Carousel Banner */}
       {bannerPhotos.length > 0 && (
         <div className="w-full h-[60vh] relative overflow-hidden bg-luxe-black">

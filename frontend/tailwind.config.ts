@@ -58,6 +58,7 @@ const config: Config = {
       },
       animation: {
         "fade-up": "fadeUp 1s ease forwards",
+        "fade-in": "fadeIn 0.3s ease forwards",
         drift: "drift 20s linear infinite",
         "glow-pulse": "glowPulse 2s ease-in-out infinite",
       },
@@ -65,6 +66,10 @@ const config: Config = {
         fadeUp: {
           "0%": { opacity: "0", transform: "translateY(30px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
         drift: {
           "0%": { backgroundPosition: "0 0" },

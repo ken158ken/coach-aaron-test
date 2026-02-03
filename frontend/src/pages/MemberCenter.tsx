@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton, Input, Toast } from "@/components/ui";
+import { PrismScene } from "@/components/three";
 
 /**
  * MemberCenter - 會員中心頁面
@@ -46,8 +47,11 @@ const MemberCenter: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-luxe-bg">
-      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
+    <div className="min-h-screen bg-luxe-bg relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
+      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
@@ -123,7 +127,9 @@ const MemberCenter: React.FC = () => {
                     <p className="text-base sm:text-lg text-luxe-text truncate">
                       {user?.name || "會員"}
                     </p>
-                    <p className="text-xs sm:text-sm text-luxe-muted truncate">{user?.email}</p>
+                    <p className="text-xs sm:text-sm text-luxe-muted truncate">
+                      {user?.email}
+                    </p>
                   </div>
                 </div>
                 <form className="space-y-3 sm:space-y-4 max-w-md">
@@ -151,7 +157,9 @@ const MemberCenter: React.FC = () => {
                   我的課程
                 </h2>
                 <div className="text-center py-8 sm:py-12">
-                  <p className="text-sm sm:text-base text-luxe-muted mb-3 sm:mb-4">您尚未購買任何課程</p>
+                  <p className="text-sm sm:text-base text-luxe-muted mb-3 sm:mb-4">
+                    您尚未購買任何課程
+                  </p>
                   <Link to="/courses">
                     <PillButton theme="luxe" variant="outline">
                       瀏覽課程

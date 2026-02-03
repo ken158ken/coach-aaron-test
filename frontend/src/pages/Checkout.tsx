@@ -11,6 +11,7 @@ import { useTheme } from "@/context";
 import { useAuth } from "@/context/AuthContext";
 import { GlowButton, PillButton, Input, Loading, Modal } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { PrismScene } from "@/components/three";
 
 /** 支付方式類型 */
 type PaymentMethod =
@@ -248,7 +249,10 @@ const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-luxe-bg pt-20 pb-12 px-4">
+    <div className="min-h-screen bg-luxe-bg pt-20 pb-12 px-4 relative">
+      {/* Three.js Background */}
+      <PrismScene />
+
       {/* SEO Meta 標籤 */}
       <SEOHead
         title={`結帳 - ${selectedPlan.title}`}
@@ -256,7 +260,7 @@ const Checkout: React.FC = () => {
         url="/checkout"
       />
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto relative z-10">
         {/* 頁面標題 */}
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-2">

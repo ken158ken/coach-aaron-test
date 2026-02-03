@@ -256,6 +256,20 @@ html[data-color-mode="light"] {
     text-shadow: 0 0 20px var(--abyss-cyan);
     transform: scale(1.1);
   }
+
+  /* 海洋雪花效果 - 浮游生物背景 */
+  .marine-snow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+");
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 20s linear infinite;
+  }
 }
 
 /* ========================================
