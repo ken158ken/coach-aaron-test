@@ -52,7 +52,7 @@ const PillButton: React.FC<PillButtonProps> = ({
     },
     luxe: {
       filled:
-        "bg-luxe-gold text-luxe-bg hover:bg-luxe-gold/80 hover:shadow-lg hover:shadow-luxe-gold/30 hover:scale-105 active:scale-95",
+        "bg-luxe-gold text-black hover:bg-luxe-gold/80 hover:shadow-lg hover:shadow-luxe-gold/30 hover:scale-105 active:scale-95",
       outline:
         "border-luxe-gold text-luxe-gold hover:bg-luxe-gold/10 hover:shadow-md hover:shadow-luxe-gold/20 hover:scale-105 active:scale-95",
     },

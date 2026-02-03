@@ -6,6 +6,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface NavLink {
   name: string;
@@ -19,6 +21,8 @@ interface NavLink {
  */
 const Navbar: React.FC = (): JSX.Element => {
   const { user, logout, mounted } = useAuth();
+  const { isDark, toggleColorMode } = useTheme();
+  const { language, toggleLanguage, t } = useLanguage();
   const navRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,11 +41,11 @@ const Navbar: React.FC = (): JSX.Element => {
 
   // 基本導航連結
   const baseNavLinks: NavLink[] = [
-    { name: "教練介紹", path: "/" },
-    { name: "線上課程", path: "/courses" },
-    { name: "短影音", path: "/videos" },
-    { name: "專業知識", path: "/articles" },
-    { name: "聯絡我", path: "/contact" },
+    { name: t.nav.home, path: "/" },
+    { name: t.nav.courses, path: "/courses" },
+    { name: t.nav.videos, path: "/videos" },
+    { name: t.nav.articles, path: "/articles" },
+    { name: t.nav.contact, path: "/contact" },
   ];
 
   // 根據用戶權限決定導航連結
@@ -49,7 +53,7 @@ const Navbar: React.FC = (): JSX.Element => {
     mounted && user?.sex
       ? [
           ...baseNavLinks.slice(0, 1),
-          { name: "阿倫私密淫照", path: "/photos" },
+          { name: t.nav.photos, path: "/photos" },
           ...baseNavLinks.slice(1),
         ]
       : baseNavLinks;
@@ -102,7 +106,7 @@ const Navbar: React.FC = (): JSX.Element => {
               to="/login"
               className="text-base tracking-wider px-5 py-2 border border-white/20 hover:border-luxe-gold hover:text-luxe-gold hover:scale-105 transition-all duration-300"
             >
-              登入
+              {t.nav.login}
             </Link>
           ) : user ? (
             <div className="flex items-center gap-6">
@@ -110,7 +114,7 @@ const Navbar: React.FC = (): JSX.Element => {
                 to="/member"
                 className="relative text-base tracking-wider text-luxe-text hover:text-luxe-gold transition-all duration-300 group"
               >
-                會員中心
+                {t.nav.memberCenter}
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-luxe-gold transition-all duration-300 w-0 group-hover:w-full" />
               </Link>
               {user.isAdmin && (
@@ -118,14 +122,14 @@ const Navbar: React.FC = (): JSX.Element => {
                   to="/admin"
                   className="text-base tracking-wider text-luxe-gold hover:scale-105 transition-transform duration-300"
                 >
-                  後台
+                  {t.nav.admin}
                 </Link>
               )}
               <button
                 onClick={logout}
                 className="text-base tracking-wider px-5 py-2 border border-white/20 hover:border-red-500 hover:text-red-500 hover:scale-105 transition-all duration-300"
               >
-                登出
+                {t.nav.logout}
               </button>
             </div>
           ) : (
@@ -134,17 +138,65 @@ const Navbar: React.FC = (): JSX.Element => {
                 to="/login"
                 className="relative text-base tracking-wider text-luxe-text hover:text-luxe-gold transition-all duration-300 group"
               >
-                登入
+                {t.nav.login}
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-luxe-gold transition-all duration-300 w-0 group-hover:w-full" />
               </Link>
               <Link
                 to="/register"
                 className="text-base tracking-wider px-5 py-2 border border-luxe-gold text-luxe-gold hover:bg-luxe-gold hover:text-luxe-black hover:scale-105 transition-all duration-300"
               >
-                註冊
+                {t.nav.register}
               </Link>
             </div>
           )}
+
+          {/* Theme & Language Toggle */}
+          <div className="flex items-center gap-2 ml-4 border-l border-white/20 pl-4">
+            {/* Dark/Light Mode Toggle */}
+            <button
+              onClick={toggleColorMode}
+              title={isDark ? t.theme.light : t.theme.dark}
+              className="p-2 text-luxe-text hover:text-luxe-gold transition-colors"
+            >
+              {isDark ? (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  />
+                </svg>
+              )}
+            </button>
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              title={language === "zh-TW" ? "English" : "中文"}
+              className="px-2 py-1 text-sm text-luxe-text hover:text-luxe-gold transition-colors border border-white/20 rounded"
+            >
+              {language === "zh-TW" ? "EN" : "中"}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu Button */}
@@ -176,6 +228,57 @@ const Navbar: React.FC = (): JSX.Element => {
                 {link.name}
               </Link>
             ))}
+
+            {/* Mobile Theme & Language Toggle */}
+            <div className="flex items-center gap-4 py-2 border-t border-white/10 mt-2 pt-4">
+              <button
+                onClick={toggleColorMode}
+                className="flex items-center gap-2 text-luxe-text hover:text-luxe-gold"
+              >
+                {isDark ? (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                      />
+                    </svg>
+                    <span className="text-sm">{t.theme.light}</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                      />
+                    </svg>
+                    <span className="text-sm">{t.theme.dark}</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={toggleLanguage}
+                className="px-3 py-1 text-sm text-luxe-text hover:text-luxe-gold border border-white/20 rounded"
+              >
+                {language === "zh-TW" ? "English" : "中文"}
+              </button>
+            </div>
+
             <div className="pt-3 sm:pt-4 border-t border-white/10 flex flex-col gap-3 sm:gap-4">
               {mounted && user ? (
                 <>
@@ -184,7 +287,7 @@ const Navbar: React.FC = (): JSX.Element => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-base sm:text-lg tracking-wider text-luxe-text hover:text-luxe-gold py-1"
                   >
-                    會員中心
+                    {t.nav.memberCenter}
                   </Link>
                   {user.isAdmin && (
                     <Link
@@ -192,7 +295,7 @@ const Navbar: React.FC = (): JSX.Element => {
                       onClick={() => setMobileMenuOpen(false)}
                       className="text-base sm:text-lg tracking-wider text-luxe-gold py-1"
                     >
-                      後台管理
+                      {t.nav.admin}
                     </Link>
                   )}
                   <button
@@ -202,7 +305,7 @@ const Navbar: React.FC = (): JSX.Element => {
                     }}
                     className="text-base sm:text-lg tracking-wider text-left text-red-400 py-1"
                   >
-                    登出
+                    {t.nav.logout}
                   </button>
                 </>
               ) : (
@@ -212,14 +315,14 @@ const Navbar: React.FC = (): JSX.Element => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-base sm:text-lg tracking-wider text-luxe-text hover:text-luxe-gold py-1"
                   >
-                    登入
+                    {t.nav.login}
                   </Link>
                   <Link
                     to="/register"
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-base sm:text-lg tracking-wider text-luxe-gold py-1"
                   >
-                    註冊
+                    {t.nav.register}
                   </Link>
                 </>
               )}

@@ -41,6 +41,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    font-size: 20px; /* 預設 16px + 4px = 20px */
   }
 
   body {

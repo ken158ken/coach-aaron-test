@@ -1,5 +1,5 @@
 /**
- * 主題上下文 - 管理視覺主題切換
+ * 主題上下文 - 管理視覺主題與日夜模式
  * @module context/ThemeContext
  */
 
@@ -11,14 +11,25 @@ import React, {
   useEffect,
 } from "react";
 
-/** 主題類型 */
+/** 視覺主題類型 */
 export type ThemeType = "abyss" | "prism" | "luxe";
 
+/** 色彩模式 */
+export type ColorMode = "light" | "dark";
+
 interface ThemeContextType {
-  /** 當前主題 */
+  /** 當前視覺主題 */
   theme: ThemeType;
-  /** 設置主題 */
+  /** 當前色彩模式 */
+  colorMode: ColorMode;
+  /** 是否為深色模式 */
+  isDark: boolean;
+  /** 設置視覺主題 */
   setTheme: (theme: ThemeType) => void;
+  /** 設置色彩模式 */
+  setColorMode: (mode: ColorMode) => void;
+  /** 切換日夜模式 */
+  toggleColorMode: () => void;
   /** 切換到深海主題 */
   setAbyss: () => void;
   /** 切換到水晶主題 */
@@ -28,6 +39,9 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
+
+const THEME_KEY = "app_theme";
+const COLOR_MODE_KEY = "app_color_mode";
 
 interface ThemeProviderProps {
   children: React.ReactNode;
@@ -44,15 +58,52 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   defaultTheme = "luxe",
 }) => {
-  const [theme, setThemeState] = useState<ThemeType>(defaultTheme);
+  const [theme, setThemeState] = useState<ThemeType>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "abyss" || saved === "prism" || saved === "luxe") {
+        return saved;
+      }
+    }
+    return defaultTheme;
+  });
+
+  const [colorMode, setColorModeState] = useState<ColorMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(COLOR_MODE_KEY);
+      if (saved === "light" || saved === "dark") {
+        return saved;
+      }
+      // 檢查系統偏好
+      if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+        return "light";
+      }
+    }
+    return "dark";
+  });
 
   /**
-   * 設置主題並更新 HTML 屬性
+   * 設置視覺主題
    */
   const setTheme = useCallback((newTheme: ThemeType) => {
     setThemeState(newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem(THEME_KEY, newTheme);
   }, []);
+
+  /**
+   * 設置色彩模式
+   */
+  const setColorMode = useCallback((mode: ColorMode) => {
+    setColorModeState(mode);
+    localStorage.setItem(COLOR_MODE_KEY, mode);
+  }, []);
+
+  /**
+   * 切換日夜模式
+   */
+  const toggleColorMode = useCallback(() => {
+    setColorMode(colorMode === "dark" ? "light" : "dark");
+  }, [colorMode, setColorMode]);
 
   /**
    * 快捷方法
@@ -62,15 +113,29 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const setLuxe = useCallback(() => setTheme("luxe"), [setTheme]);
 
   /**
-   * 初始化主題
+   * 更新 HTML 屬性
    */
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    // DaisyUI 使用 data-theme 來切換主題
+    const daisyTheme = colorMode === "light" ? `${theme}-light` : theme;
+    document.documentElement.setAttribute("data-theme", daisyTheme);
+    document.documentElement.setAttribute("data-color-mode", colorMode);
+
+    // 設置 class 用於 Tailwind dark mode
+    if (colorMode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme, colorMode]);
 
   const value: ThemeContextType = {
     theme,
+    colorMode,
+    isDark: colorMode === "dark",
     setTheme,
+    setColorMode,
+    toggleColorMode,
     setAbyss,
     setPrism,
     setLuxe,

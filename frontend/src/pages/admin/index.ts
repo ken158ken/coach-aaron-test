@@ -10,3 +10,7 @@ export { default as AdminVideos } from "./AdminVideos";
 export { default as AdminContent } from "./AdminContent";
 export { default as AdminWhitelist } from "./AdminWhitelist";
 export { default as AdminArticles } from "./AdminArticles";
+
+// 獨立編輯器頁面
+export { default as ArticleEditor } from "./ArticleEditor";
+export { default as CourseEditor } from "./CourseEditor";

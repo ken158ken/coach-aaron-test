@@ -18,9 +18,16 @@ import {
 import { get, post, del } from "@/services/api";
 import type { WhitelistItem } from "@/types";
 
+/** 日誌工具 */
+const logger = {
+  info: (msg: string, data?: unknown) =>
+    console.log(`[AdminWhitelist] ${msg}`, data || ""),
+  error: (msg: string, err?: unknown) =>
+    console.error(`[AdminWhitelist] ${msg}`, err || ""),
+};
+
 interface WhitelistCreateData {
   email: string;
-  phoneNumber: string;
   note: string;
 }
 
@@ -47,7 +54,6 @@ const AdminWhitelist: React.FC = () => {
   const [deleteItem, setDeleteItem] = useState<WhitelistItem | null>(null);
   const [newItem, setNewItem] = useState<WhitelistCreateData>({
     email: "",
-    phoneNumber: "",
     note: "",
   });
   const [error, setError] = useState("");
@@ -64,7 +70,6 @@ const AdminWhitelist: React.FC = () => {
       setLoading(true);
       setError("");
       const res = await get<AdminWhitelistItem[]>("/api/admin/whitelist");
-      // ✅ 防禦性編程：API 攔截器返回 response.data
       if (res && Array.isArray(res)) {
         setWhitelist(
           res.map((item) => ({
@@ -77,12 +82,12 @@ const AdminWhitelist: React.FC = () => {
           })),
         );
       } else {
-        console.error("Failed to fetch whitelist:", res);
+        logger.error("Failed to fetch whitelist", res);
         setWhitelist([]);
         setError("載入白名單失敗：數據格式錯誤");
       }
     } catch (err) {
-      console.error("Failed to fetch whitelist:", err);
+      logger.error("Failed to fetch whitelist", err);
       setWhitelist([]);
       setError("載入白名單失敗");
     } finally {
@@ -91,19 +96,27 @@ const AdminWhitelist: React.FC = () => {
   };
 
   /**
-   * 新增白名單項目
+   * 新增白名單項目 (只需 Email)
    */
   const handleAdd = async () => {
     try {
       setError("");
-      if (!newItem.email && !newItem.phoneNumber) {
-        setError("請填寫 Email 或手機號碼");
+      if (!newItem.email) {
+        setError("請填寫 Email");
         return;
       }
 
+      // Email 格式驗證
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newItem.email)) {
+        setError("請輸入有效的 Email 格式");
+        return;
+      }
+
+      logger.info("Adding whitelist item", { email: newItem.email });
       const res = await post<AdminWhitelistItem>("/api/admin/whitelist", {
-        email: newItem.email || null,
-        phone_number: newItem.phoneNumber || null,
+        email: newItem.email,
+        phone_number: null,
         note: newItem.note || null,
       });
 
@@ -118,12 +131,13 @@ const AdminWhitelist: React.FC = () => {
         };
         setWhitelist((prev) => [...prev, newEntry]);
         setShowAddModal(false);
-        setNewItem({ email: "", phoneNumber: "", note: "" });
+        setNewItem({ email: "", note: "" });
+        logger.info("Whitelist item added successfully");
       } else {
         setError("新增失敗：回應格式錯誤");
       }
     } catch (err) {
-      console.error("Failed to add whitelist item:", err);
+      logger.error("Failed to add whitelist item", err);
       setError("新增失敗");
     }
   };
@@ -133,11 +147,13 @@ const AdminWhitelist: React.FC = () => {
    */
   const handleDelete = async (item: WhitelistItem) => {
     try {
+      logger.info("Deleting whitelist item", { id: item.id });
       await del(`/api/admin/whitelist/${item.id}`);
       setWhitelist((prev) => prev.filter((i) => i.id !== item.id));
       setDeleteItem(null);
+      logger.info("Whitelist item deleted successfully");
     } catch (err) {
-      console.error("Failed to delete whitelist item:", err);
+      logger.error("Failed to delete whitelist item", err);
       setError("刪除失敗");
     }
   };
@@ -147,6 +163,7 @@ const AdminWhitelist: React.FC = () => {
    */
   const handleToggleActive = async (item: WhitelistItem) => {
     try {
+      logger.info("Toggling whitelist item", { id: item.id });
       await post(`/api/admin/whitelist/${item.id}/toggle`, {});
       setWhitelist((prev) =>
         prev.map((i) =>
@@ -154,14 +171,20 @@ const AdminWhitelist: React.FC = () => {
         ),
       );
     } catch (err) {
-      console.error("Failed to toggle whitelist item:", err);
+      logger.error("Failed to toggle whitelist item", err);
       setError("更新失敗");
     }
   };
 
   const columns = [
-    { key: "email" as const, header: "Email" },
-    { key: "phoneNumber" as const, header: "手機號碼" },
+    {
+      key: "email" as const,
+      header: "Email",
+      isPrimary: true,
+      render: (item: WhitelistItem) => (
+        <span className="text-luxe-text">{item.email || "-"}</span>
+      ),
+    },
     { key: "note" as const, header: "備註" },
     {
       key: "isActive" as const,
@@ -233,25 +256,13 @@ const AdminWhitelist: React.FC = () => {
 
             <div className="space-y-4">
               <Input
-                label="Email"
+                label="Email *"
                 type="email"
                 value={newItem.email}
                 onChange={(e) =>
                   setNewItem((prev) => ({ ...prev, email: e.target.value }))
                 }
                 placeholder="user@example.com"
-              />
-              <Input
-                label="手機號碼"
-                type="tel"
-                value={newItem.phoneNumber}
-                onChange={(e) =>
-                  setNewItem((prev) => ({
-                    ...prev,
-                    phoneNumber: e.target.value,
-                  }))
-                }
-                placeholder="0912345678"
               />
               <Textarea
                 label="備註"
@@ -281,7 +292,7 @@ const AdminWhitelist: React.FC = () => {
       <ConfirmDialog
         isOpen={!!deleteItem}
         title="刪除白名單"
-        message={`確定要刪除 ${deleteItem?.email || deleteItem?.phoneNumber} 嗎？`}
+        message={`確定要刪除 ${deleteItem?.email} 嗎？`}
         onConfirm={() => deleteItem && handleDelete(deleteItem)}
         onCancel={() => setDeleteItem(null)}
         confirmText="刪除"

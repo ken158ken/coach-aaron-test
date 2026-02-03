@@ -4,7 +4,8 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   DataTable,
   Pagination,
@@ -13,9 +14,19 @@ import {
   Loading,
   Modal,
   Textarea,
+  TagInput,
+  RichTextEditor,
 } from "@/components/ui";
 import { articleService } from "@/services/article.service";
 import type { Article, ArticleStatus } from "@/types";
+
+/** 日誌工具 */
+const logger = {
+  info: (msg: string, data?: unknown) =>
+    console.log(`[AdminArticles] ${msg}`, data || ""),
+  error: (msg: string, err?: unknown) =>
+    console.error(`[AdminArticles] ${msg}`, err || ""),
+};
 
 /**
  * AdminArticles - 文章管理頁面
@@ -23,6 +34,7 @@ import type { Article, ArticleStatus } from "@/types";
  * @returns {JSX.Element} 文章管理頁面
  */
 const AdminArticles: React.FC = () => {
+  const navigate = useNavigate();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,10 +51,26 @@ const AdminArticles: React.FC = () => {
     slug: "",
     description: "",
     content: "",
-    category: "",
+    category: [] as string[],
+    keywords: [] as string[],
     status: "draft" as ArticleStatus,
     isFeatured: false,
   });
+
+  /** 更新內容回調 */
+  const handleContentChange = useCallback((html: string) => {
+    setFormData((prev) => ({ ...prev, content: html }));
+  }, []);
+
+  /** 更新分類標籤回調 */
+  const handleCategoryChange = useCallback((tags: string[]) => {
+    setFormData((prev) => ({ ...prev, category: tags }));
+  }, []);
+
+  /** 更新關鍵字標籤回調 */
+  const handleKeywordsChange = useCallback((tags: string[]) => {
+    setFormData((prev) => ({ ...prev, keywords: tags }));
+  }, []);
 
   useEffect(() => {
     fetchArticles();
@@ -89,21 +117,24 @@ const AdminArticles: React.FC = () => {
         return;
       }
 
+      logger.info("Creating article", { title: formData.title });
       await articleService.create({
         title: formData.title,
         slug: formData.slug || undefined,
         description: formData.description || undefined,
         content: formData.content || undefined,
-        category: formData.category || undefined,
+        category: formData.category.join(",") || undefined,
+        keywords: formData.keywords.join(",") || undefined,
         status: formData.status,
         isFeatured: formData.isFeatured,
       });
 
+      logger.info("Article created successfully");
       setShowCreateModal(false);
       resetForm();
       fetchArticles();
     } catch (err) {
-      console.error("Failed to create article:", err);
+      logger.error("Failed to create article", err);
       setError("建立文章失敗");
     }
   };
@@ -113,21 +144,24 @@ const AdminArticles: React.FC = () => {
 
     try {
       setError("");
+      logger.info("Updating article", { id: editingArticle.article_id });
       await articleService.update(editingArticle.article_id, {
         title: formData.title,
         slug: formData.slug || undefined,
         description: formData.description || undefined,
         content: formData.content || undefined,
-        category: formData.category || undefined,
+        category: formData.category.join(",") || undefined,
+        keywords: formData.keywords.join(",") || undefined,
         status: formData.status,
         isFeatured: formData.isFeatured,
       });
 
+      logger.info("Article updated successfully");
       setEditingArticle(null);
       resetForm();
       fetchArticles();
     } catch (err) {
-      console.error("Failed to update article:", err);
+      logger.error("Failed to update article", err);
       setError("更新文章失敗");
     }
   };
@@ -146,12 +180,27 @@ const AdminArticles: React.FC = () => {
 
   const openEditModal = (article: Article) => {
     setEditingArticle(article);
+    // 將分類和關鍵字字串轉換為陣列
+    const categoryArray = article.article_category
+      ? article.article_category
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    const keywordsArray = article.keywords
+      ? article.keywords
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+
     setFormData({
       title: article.article_title,
       slug: article.article_slug || "",
       description: article.article_description || "",
       content: article.article_content || "",
-      category: article.article_category || "",
+      category: categoryArray,
+      keywords: keywordsArray,
       status: article.status,
       isFeatured: article.is_featured,
     });
@@ -163,7 +212,8 @@ const AdminArticles: React.FC = () => {
       slug: "",
       description: "",
       content: "",
-      category: "",
+      category: [],
+      keywords: [],
       status: "draft",
       isFeatured: false,
     });
@@ -234,10 +284,18 @@ const AdminArticles: React.FC = () => {
       render: (article: Article) => (
         <div className="flex gap-2">
           <button
-            onClick={() => openEditModal(article)}
+            onClick={() =>
+              navigate(`/admin/articles/${article.article_id}/edit`)
+            }
             className="text-luxe-gold hover:underline text-sm"
           >
             編輯
+          </button>
+          <button
+            onClick={() => openEditModal(article)}
+            className="text-blue-400 hover:underline text-sm"
+          >
+            快速編輯
           </button>
           <button
             onClick={() => handleDelete(article)}
@@ -262,16 +320,25 @@ const AdminArticles: React.FC = () => {
           <h1 className="text-2xl font-light text-luxe-text">文章管理</h1>
           <p className="text-luxe-muted">管理網站文章與部落格內容</p>
         </div>
-        <PillButton
-          theme="luxe"
-          variant="filled"
-          onClick={() => {
-            resetForm();
-            setShowCreateModal(true);
-          }}
-        >
-          新增文章
-        </PillButton>
+        <div className="flex gap-3">
+          <PillButton
+            theme="luxe"
+            variant="outline"
+            onClick={() => {
+              resetForm();
+              setShowCreateModal(true);
+            }}
+          >
+            快速新增
+          </PillButton>
+          <PillButton
+            theme="luxe"
+            variant="filled"
+            onClick={() => navigate("/admin/articles/new")}
+          >
+            新增文章 →
+          </PillButton>
+        </div>
       </div>
 
       {/* Filters */}
@@ -312,7 +379,7 @@ const AdminArticles: React.FC = () => {
             setStatusFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-bg [&>option]:text-luxe-text"
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-black focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-bg [&>option]:text-black"
         >
           <option value="all">全部狀態</option>
           <option value="draft">草稿</option>
@@ -361,32 +428,53 @@ const AdminArticles: React.FC = () => {
         }}
         title={editingArticle ? "編輯文章" : "新增文章"}
         theme="luxe"
-        size="lg"
+        size="xl"
       >
-        <div className="space-y-4">
-          <Input
-            label="標題 *"
-            value={formData.title}
-            onChange={(e) =>
-              setFormData({ ...formData, title: e.target.value })
-            }
-            theme="luxe"
-          />
-          <Input
-            label="Slug (網址識別碼)"
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-            theme="luxe"
-            placeholder="自動生成如留空"
-          />
-          <Input
-            label="分類"
-            value={formData.category}
-            onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
-            }
-            theme="luxe"
-          />
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+          {/* 基本資訊 */}
+          <div className="space-y-4">
+            <Input
+              label="標題 *"
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              theme="luxe"
+            />
+            <Input
+              label="Slug (網址識別碼)"
+              value={formData.slug}
+              onChange={(e) =>
+                setFormData({ ...formData, slug: e.target.value })
+              }
+              theme="luxe"
+              placeholder="自動生成如留空"
+            />
+          </div>
+
+          {/* 分類與關鍵字 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TagInput
+              label="分類"
+              tags={formData.category}
+              onChange={handleCategoryChange}
+              theme="luxe"
+              placeholder="輸入後按 Enter 新增"
+              hint="可新增多個分類"
+              maxTags={5}
+            />
+            <TagInput
+              label="關鍵字 (SEO)"
+              tags={formData.keywords}
+              onChange={handleKeywordsChange}
+              theme="luxe"
+              placeholder="輸入後按 Enter 新增"
+              hint="用於搜尋引擎優化"
+              maxTags={10}
+            />
+          </div>
+
+          {/* 簡介 */}
           <Textarea
             label="簡介 (SEO 描述)"
             value={formData.description}
@@ -396,16 +484,23 @@ const AdminArticles: React.FC = () => {
             theme="luxe"
             rows={2}
           />
-          <Textarea
-            label="內容"
-            value={formData.content}
-            onChange={(e) =>
-              setFormData({ ...formData, content: e.target.value })
-            }
-            theme="luxe"
-            rows={10}
-          />
-          <div className="flex gap-4">
+
+          {/* 內容編輯器 */}
+          <div>
+            <label className="block text-luxe-muted text-sm mb-2">
+              文章內容
+            </label>
+            <RichTextEditor
+              content={formData.content}
+              onChange={handleContentChange}
+              theme="luxe"
+              placeholder="開始撰寫文章內容..."
+              minHeight="350px"
+            />
+          </div>
+
+          {/* 狀態與精選 */}
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label className="block text-luxe-muted text-sm mb-2">狀態</label>
               <select
@@ -438,7 +533,7 @@ const AdminArticles: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-luxe-gold/20">
           <PillButton
             theme="luxe"
             variant="outline"

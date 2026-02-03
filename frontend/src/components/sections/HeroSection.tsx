@@ -73,11 +73,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
     >
       {/* Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-2 sm:px-4">
-        {/* Badge */}
-        <span className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 mb-4 sm:mb-6 text-[10px] sm:text-xs uppercase tracking-widest text-abyss-accent border border-abyss-accent/50 rounded-full">
-          專業健身教練
-        </span>
-
         {/* Title */}
         <h1
           ref={titleRef}

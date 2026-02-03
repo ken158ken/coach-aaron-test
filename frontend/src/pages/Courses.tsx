@@ -1,25 +1,152 @@
 /**
  * Courses 頁面 - 課程列表
  * @module pages/Courses
+ * @description 教練變現實戰力 - 私人教練陪跑系統
  * @theme prism (VOID PRISM 水晶主題)
  */
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/context";
 import { PrismScene } from "@/components/three";
-import {
-  CourseCard,
-  FilterPill,
-  Loading,
-  Input,
-  Pagination,
-} from "@/components/ui";
+import { GlowButton, PillButton, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
-import { courseService } from "@/services";
-import type { Course } from "@/types";
 
-/** 每頁顯示數量 */
-const ITEMS_PER_PAGE = 6;
+/** 階段課程資料 */
+interface PhaseData {
+  phase: string;
+  duration: string;
+  title: string;
+  description: string;
+  features: string[];
+}
+
+/** 單堂課程資料 */
+interface SingleCourse {
+  id: string;
+  title: string;
+  price: number;
+  description: string;
+}
+
+/** 陪跑方案資料 */
+interface CoachingPlan {
+  id: string;
+  duration: string;
+  price: number;
+  sessions: number;
+  description: string;
+  highlight?: boolean;
+}
+
+/** 三階段課程內容 */
+const PHASES: PhaseData[] = [
+  {
+    phase: "第一階段",
+    duration: "0-3 個月",
+    title: "業績衝刺期",
+    description: "新客成交 + 現場開發",
+    features: [
+      "體驗課成交系統",
+      "現場開發實戰",
+      "成交進度追蹤",
+      "每週會議討論",
+    ],
+  },
+  {
+    phase: "第二階段",
+    duration: "3-6 個月",
+    title: "建立長期收入",
+    description: "會員經營與續約技巧",
+    features: ["會員關係心理學", "續約情緒時機", "轉介紹流程", "客戶管理表單"],
+  },
+  {
+    phase: "第三階段",
+    duration: "6-12 個月",
+    title: "個人品牌與自媒體",
+    description: "打造個人商業模式",
+    features: [
+      "自媒體定位",
+      "口播腳本產出",
+      "鏡頭表現力訓練",
+      "打造個人商業模式",
+    ],
+  },
+];
+
+/** 附贈單堂課程 */
+const SINGLE_COURSES: SingleCourse[] = [
+  {
+    id: "expression",
+    title: "表達力心理學",
+    price: 980,
+    description: "提升溝通表達能力，建立專業形象",
+  },
+  {
+    id: "objection",
+    title: "反對問題成交話術",
+    price: 480,
+    description: "掌握常見反對問題的應對技巧",
+  },
+  {
+    id: "trial",
+    title: "體驗課成交全流程",
+    price: 1980,
+    description: "從體驗課到成交的完整系統",
+  },
+  {
+    id: "renewal",
+    title: "私人教練續約必修課",
+    price: 1980,
+    description: "提高會員續約率的關鍵技巧",
+  },
+  {
+    id: "coaching",
+    title: "一對一陪跑訓練",
+    price: 18000,
+    description: "個人化指導，加速成長",
+  },
+  {
+    id: "mindset",
+    title: "心理韌性與職涯定位",
+    price: 18000,
+    description: "建立正確心態，規劃長期職涯",
+  },
+];
+
+/** 陪跑方案 */
+const COACHING_PLANS: CoachingPlan[] = [
+  {
+    id: "3-months",
+    duration: "三個月",
+    price: 32800,
+    sessions: 12,
+    description: "1對1培訓 12次",
+  },
+  {
+    id: "6-months",
+    duration: "六個月",
+    price: 59800,
+    sessions: 24,
+    description: "1對1培訓 24次",
+    highlight: true,
+  },
+  {
+    id: "1-year",
+    duration: "一年",
+    price: 118000,
+    sessions: 48,
+    description: "1對1培訓 48次",
+  },
+];
+
+/** 制度說明 */
+const SYSTEM_FEATURES = [
+  "每周一次視訊會議，進度檢核與行動指導",
+  "指標追蹤（邀約數、成交數、續約率）",
+  "即時訊息 24 小時回復",
+  "每季成果檢核與策略調整",
+];
 
 /**
  * Courses - 課程列表頁面
@@ -28,146 +155,45 @@ const ITEMS_PER_PAGE = 6;
  */
 const Courses: React.FC = () => {
   const { setTheme } = useTheme();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const filterOptions = [
-    { value: "all", label: "全部" },
-    { value: "beginner", label: "初學者" },
-    { value: "intermediate", label: "進階" },
-    { value: "advanced", label: "專家" },
-  ];
 
   useEffect(() => {
     setTheme("prism");
+    // 模擬載入
+    const timer = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(timer);
   }, [setTheme]);
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const data = await courseService.getCourses();
-        setCourses(data);
-      } catch (error) {
-        console.error("Failed to fetch courses:", error);
-        // Demo data (正規化後的格式)
-        setCourses([
-          {
-            course_id: 1,
-            id: 1,
-            course_title: "初學者健身入門",
-            title: "初學者健身入門",
-            course_slug: "beginner-fitness",
-            course_description:
-              "從零開始的健身之路，建立正確訓練觀念與基礎動作。",
-            description: "從零開始的健身之路，建立正確訓練觀念與基礎動作。",
-            course_level: "beginner",
-            level: "beginner",
-            lessons_count: 12,
-            lessonsCount: 12,
-            duration_minutes: 360,
-            duration: "6 週",
-            price: 2999,
-            status: "published",
-            course_thumbnail_url: "/images/course-1.jpg",
-            thumbnail: "/images/course-1.jpg",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            course_id: 2,
-            id: 2,
-            course_title: "增肌實戰計畫",
-            title: "增肌實戰計畫",
-            course_slug: "muscle-building",
-            course_description: "科學化肌肥大訓練，配合營養規劃達成增肌目標。",
-            description: "科學化肌肥大訓練，配合營養規劃達成增肌目標。",
-            course_level: "intermediate",
-            level: "intermediate",
-            lessons_count: 16,
-            lessonsCount: 16,
-            duration_minutes: 480,
-            duration: "8 週",
-            price: 4999,
-            status: "published",
-            course_thumbnail_url: "/images/course-2.jpg",
-            thumbnail: "/images/course-2.jpg",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            course_id: 3,
-            id: 3,
-            course_title: "進階體態雕塑",
-            title: "進階體態雕塑",
-            course_slug: "advanced-sculpting",
-            course_description: "針對有經驗者的細節雕塑課程，打造完美線條。",
-            description: "針對有經驗者的細節雕塑課程，打造完美線條。",
-            course_level: "advanced",
-            level: "advanced",
-            lessons_count: 20,
-            lessonsCount: 20,
-            duration_minutes: 720,
-            duration: "12 週",
-            price: 6999,
-            status: "published",
-            course_thumbnail_url: "/images/course-3.jpg",
-            thumbnail: "/images/course-3.jpg",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ] as Course[]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  /** 計算附贈總值 */
+  const bonusTotal = SINGLE_COURSES.reduce((sum, c) => sum + c.price, 0);
 
-    fetchCourses();
-  }, []);
+  /** 處理購買點擊 */
+  const handlePurchase = (planId: string) => {
+    navigate(`/checkout?plan=${planId}`);
+  };
 
-  // 篩選與搜尋邏輯
-  const filteredCourses = useMemo(() => {
-    let result = courses;
-
-    // 依等級篩選
-    if (filter !== "all") {
-      result = result.filter((c) => c.level === filter);
-    }
-
-    // 依關鍵字搜尋
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.title?.toLowerCase().includes(term) ||
-          c.description?.toLowerCase().includes(term),
-      );
-    }
-
-    return result;
-  }, [courses, filter, searchTerm]);
-
-  // 分頁邏輯
-  const totalPages = Math.ceil(filteredCourses.length / ITEMS_PER_PAGE);
-  const paginatedCourses = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredCourses.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredCourses, currentPage]);
-
-  // 當篩選或搜尋變更時，重置頁碼
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filter, searchTerm]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-prism-bg flex items-center justify-center">
+        <Loading theme="prism" text="載入中..." />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-prism-bg">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title="專業課程"
-        description="系統化的健身訓練課程，從基礎到進階，帶你達成健身目標。提供初學者入門、增肌實戰、體態雕塑等多元課程。"
-        keywords={["健身課程", "線上課程", "健身訓練", "增肌", "減脂"]}
+        title="教練變現實戰力 | 私人教練陪跑系統"
+        description="從銷售、經營到自媒體的陪跑系統，讓你從教練變成經營者。系統化的業績成長路徑，累積穩定客群。"
+        keywords={[
+          "教練變現",
+          "私人教練",
+          "健身教練培訓",
+          "陪跑系統",
+          "教練創業",
+        ]}
         url="/courses"
       />
 
@@ -176,106 +202,234 @@ const Courses: React.FC = () => {
 
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8 sm:mb-12">
+          {/* Hero Section */}
+          <section className="text-center mb-16 sm:mb-20">
             <span className="inline-block text-prism-accent text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
-              Courses
+              教練變現實戰力
             </span>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-prism-text mb-3 sm:mb-4">
-              專業課程
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-prism-text mb-4 sm:mb-6">
+              專業變現，打造穩定收入系統
             </h1>
-            <p className="text-sm sm:text-base text-prism-text/60 max-w-xl mx-auto px-2">
-              系統化的訓練課程，從基礎到進階，帶你達成健身目標
+            <p className="text-base sm:text-lg text-prism-text/70 max-w-2xl mx-auto mb-6">
+              這是一個從銷售、經營到自媒體的陪跑系統
+              <br />
+              讓你從教練變成經營者
             </p>
-          </div>
 
-          {/* Search & Filter */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
-            {/* 搜尋框 */}
-            <div className="w-full sm:w-auto">
-              <Input
-                placeholder="搜尋課程..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                theme="prism"
-                className="w-full sm:w-64"
-                icon={
-                  <svg
-                    className="w-4 h-4 sm:w-5 sm:h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                }
-              />
-            </div>
-            {/* 篩選膠囊 - 手機上可滾動 */}
-            <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-              <FilterPill
-                options={filterOptions}
-                value={filter}
-                onChange={setFilter}
-                theme="prism"
-                className="whitespace-nowrap"
-              />
-            </div>
-          </div>
-
-          {/* Content */}
-          {loading ? (
-            <div className="flex justify-center py-12 sm:py-20">
-              <Loading theme="prism" text="載入課程中..." />
-            </div>
-          ) : paginatedCourses.length === 0 ? (
-            <div className="text-center py-12 sm:py-20">
-              <p className="text-sm sm:text-base text-prism-text/60">
-                {searchTerm
-                  ? `找不到符合「${searchTerm}」的課程`
-                  : "目前沒有符合條件的課程"}
+            {/* 痛點列表 */}
+            <div className="bg-prism-bg/50 backdrop-blur-sm border border-prism-accent/20 rounded-2xl p-6 sm:p-8 max-w-3xl mx-auto mb-8">
+              <h3 className="text-lg font-semibold text-prism-text mb-4">
+                你是否遇到這些問題？
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-3 text-left text-prism-text/80 text-sm sm:text-base">
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400">•</span>
+                  <span>有專業，但不擅長銷售</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400">•</span>
+                  <span>時間投入多，沒對應報酬</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400">•</span>
+                  <span>談單亂槍打鳥，沒有系統</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400">•</span>
+                  <span>客戶說有效果，卻不買單</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400">•</span>
+                  <span>不擅長破冰做現場開發</span>
+                </div>
+              </div>
+              <p className="mt-4 text-prism-accent font-medium">
+                大部分的教練缺一個「專業變現」系統
               </p>
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="mt-3 sm:mt-4 text-sm sm:text-base text-prism-accent hover:underline"
+            </div>
+
+            {/* 核心理念 */}
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              <div className="bg-gradient-to-br from-prism-accent/20 to-prism-accent/5 border border-prism-accent/30 rounded-xl px-6 py-4">
+                <span className="text-prism-text font-medium">心理韌性</span>
+              </div>
+              <div className="bg-gradient-to-br from-prism-accent/20 to-prism-accent/5 border border-prism-accent/30 rounded-xl px-6 py-4">
+                <span className="text-prism-text font-medium">變現系統</span>
+              </div>
+              <div className="bg-gradient-to-br from-prism-accent/20 to-prism-accent/5 border border-prism-accent/30 rounded-xl px-6 py-4">
+                <span className="text-prism-text font-medium">職涯規劃</span>
+              </div>
+            </div>
+          </section>
+
+          {/* 三階段課程 */}
+          <section className="mb-16 sm:mb-20">
+            <h2 className="text-2xl sm:text-3xl font-bold text-prism-text text-center mb-8 sm:mb-12">
+              系統化三階段培訓
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {PHASES.map((phase, index) => (
+                <div
+                  key={phase.phase}
+                  className="bg-luxe-black/80 border border-prism-accent/30 rounded-2xl p-6 sm:p-8 hover:border-prism-accent/60 transition-all duration-300"
                 >
-                  清除搜尋
-                </button>
-              )}
+                  <div className="text-prism-accent text-sm mb-2">
+                    {phase.duration}
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-prism-text mb-2">
+                    {phase.phase}
+                  </h3>
+                  <h4 className="text-lg text-prism-text/90 mb-1">
+                    {phase.title}
+                  </h4>
+                  <p className="text-sm text-prism-text/60 mb-4">
+                    {phase.description}
+                  </p>
+                  <ul className="space-y-2">
+                    {phase.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-2 text-prism-text/80 text-sm"
+                      >
+                        <span className="w-1.5 h-1.5 bg-prism-accent rounded-full" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-          ) : (
-            <>
-              {/* 結果統計 */}
-              <p className="text-prism-text/50 text-xs sm:text-sm text-center mb-4 sm:mb-6">
-                共 {filteredCourses.length} 個課程
-                {totalPages > 1 && ` · 第 ${currentPage} / ${totalPages} 頁`}
-              </p>
+          </section>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {paginatedCourses.map((course) => (
-                  <CourseCard key={course.id} course={course} theme="prism" />
+          {/* 制度說明 */}
+          <section className="mb-16 sm:mb-20">
+            <div className="bg-prism-bg/30 backdrop-blur-sm border border-prism-accent/20 rounded-2xl p-6 sm:p-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-prism-text text-center mb-8">
+                制度說明
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+                {SYSTEM_FEATURES.map((feature) => (
+                  <div
+                    key={feature}
+                    className="flex items-center gap-3 text-prism-text/80"
+                  >
+                    <svg
+                      className="w-5 h-5 text-prism-accent flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{feature}</span>
+                  </div>
                 ))}
               </div>
+            </div>
+          </section>
 
-              {/* 分頁 */}
-              {totalPages > 1 && (
-                <div className="mt-8 sm:mt-10">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    theme="prism"
-                  />
+          {/* 陪跑方案價格 */}
+          <section className="mb-16 sm:mb-20">
+            <h2 className="text-2xl sm:text-3xl font-bold text-prism-text text-center mb-4">
+              現場陪跑價格
+            </h2>
+            <p className="text-center text-prism-text/60 mb-8 sm:mb-12">
+              成交只是第一步，能讓教練穩定賺錢的，是系統化的業績成長路徑
+            </p>
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {COACHING_PLANS.map((plan) => (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:scale-105 ${
+                    plan.highlight
+                      ? "bg-gradient-to-br from-prism-accent/30 to-prism-accent/10 border-2 border-prism-accent"
+                      : "bg-luxe-black/60 border border-prism-accent/30"
+                  }`}
+                >
+                  {plan.highlight && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-prism-accent text-prism-bg text-xs font-bold px-4 py-1 rounded-full">
+                      推薦方案
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-prism-text mb-2">
+                      {plan.duration}
+                    </h3>
+                    <div className="text-3xl sm:text-4xl font-bold text-prism-accent mb-2">
+                      NT$ {plan.price.toLocaleString()}
+                    </div>
+                    <p className="text-prism-text/60 mb-6">
+                      {plan.description}
+                    </p>
+                    <GlowButton
+                      onClick={() => handlePurchase(plan.id)}
+                      size="md"
+                      className="w-full"
+                    >
+                      立即報名
+                    </GlowButton>
+                  </div>
                 </div>
-              )}
-            </>
-          )}
+              ))}
+            </div>
+          </section>
+
+          {/* 附贈單堂課程 */}
+          <section className="mb-16 sm:mb-20">
+            <div className="bg-gradient-to-br from-luxe-gold/10 to-luxe-gold/5 border border-luxe-gold/30 rounded-2xl p-6 sm:p-10">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-prism-text mb-2">
+                  額外附贈
+                </h2>
+                <p className="text-luxe-gold text-xl font-semibold">
+                  總值 NT$ {bonusTotal.toLocaleString()} 元
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {SINGLE_COURSES.map((course) => (
+                  <div
+                    key={course.id}
+                    className="bg-luxe-black/50 rounded-xl p-4 border border-luxe-gold/20"
+                  >
+                    <h4 className="text-prism-text font-medium mb-1">
+                      {course.title}
+                    </h4>
+                    <p className="text-luxe-gold text-sm mb-2">
+                      NT$ {course.price.toLocaleString()}
+                    </p>
+                    <p className="text-prism-text/60 text-sm">
+                      {course.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* CTA */}
+          <section className="text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-prism-text mb-4">
+              準備好開始你的教練變現之路了嗎？
+            </h2>
+            <p className="text-prism-text/70 mb-8">
+              累積穩定客群，讓教練職涯越做越輕鬆
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <GlowButton onClick={() => handlePurchase("6-months")} size="lg">
+                立即報名
+              </GlowButton>
+              <PillButton
+                theme="prism"
+                variant="outline"
+                onClick={() => navigate("/contact")}
+              >
+                預約諮詢
+              </PillButton>
+            </div>
+          </section>
         </div>
       </div>
     </div>
