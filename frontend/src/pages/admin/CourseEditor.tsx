@@ -17,6 +17,7 @@ import Youtube from "@tiptap/extension-youtube";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useAuth } from "@/context";
 import { Loading } from "@/components/ui";
+import { courseService } from "@/services/course.service";
 
 /** 課程資料結構 */
 interface CourseData {
@@ -302,7 +303,7 @@ const CourseEditor: React.FC = () => {
     }
   }, [course]);
 
-  /** 發布課程 (TODO: 連接 API) */
+  /** 發布課程 */
   const handlePublish = useCallback(async () => {
     if (!course.title.trim()) {
       alert("請輸入課程標題");
@@ -311,28 +312,43 @@ const CourseEditor: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const slug = course.slug || generateSlug(course.title);
       const payload = {
-        ...course,
-        status: "published" as const,
-        slug: course.slug || generateSlug(course.title),
+        courseTitle: course.title,
+        courseSlug: slug,
+        courseDescription: course.description,
+        courseContent: course.content,
+        courseVideoUrl: course.videoUrl,
+        courseThumbnailUrl: course.coverImage,
+        courseKeywords: course.tags,
+        courseCategory: course.category,
+        price: course.price || 0,
+        currency: "TWD",
+        status: "published",
       };
 
       logger.info("發布課程:", payload);
 
-      // TODO: 呼叫 API 發布到資料庫
-      await new Promise((r) => setTimeout(r, 1000));
+      if (isNew) {
+        // 建立新課程
+        await courseService.create(payload);
+      } else {
+        // 更新現有課程
+        await courseService.update(Number(id), payload);
+      }
 
       // 清除 localStorage 草稿
       localStorage.removeItem(STORAGE_KEY);
       setHasChanges(false);
       alert("✅ 課程已發布！");
+      navigate("/admin/courses");
     } catch (error) {
       logger.error("發布失敗:", error);
       alert("❌ 發布失敗，請稍後再試");
     } finally {
       setIsSaving(false);
     }
-  }, [course, generateSlug]);
+  }, [course, generateSlug, isNew, id, navigate]);
 
   /** 新增分類 */
   const handleAddCategory = useCallback(() => {
