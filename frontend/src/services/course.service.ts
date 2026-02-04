@@ -69,6 +69,24 @@ export const courseService = {
   },
 
   /**
+   * 新增或更新課程評論
+   * @param courseId 課程 ID
+   * @param rating 評分 (1-5)
+   * @param comment 評論內容 (可選)
+   * @returns 評論資料
+   */
+  addReview: async (
+    courseId: number,
+    rating: number,
+    comment?: string,
+  ): Promise<CourseReview> => {
+    return post<CourseReview>(`/api/courses/${courseId}/reviews`, {
+      rating,
+      comment,
+    });
+  },
+
+  /**
    * 建立課程（管理員）
    */
   create: async (data: Partial<AdminCourse>): Promise<AdminCourse> => {

@@ -20,11 +20,16 @@ import type { Course, CourseReview } from "@/types";
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { setTheme } = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // 評分與評論狀態
+  const [userRating, setUserRating] = useState<number>(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [hoverRating, setHoverRating] = useState<number>(0);
 
   useEffect(() => {
     setTheme("prism");
@@ -44,6 +49,17 @@ const CourseDetail: React.FC = () => {
         try {
           const reviewsData = await courseService.getReviews(Number(id));
           setReviews(reviewsData || []);
+
+          // 檢查用戶是否已評論過
+          if (user && reviewsData) {
+            const existingReview = reviewsData.find(
+              (r: CourseReview) => r.user_id === user.user_id,
+            );
+            if (existingReview) {
+              setUserRating(existingReview.rating);
+              setReviewComment(existingReview.comment || "");
+            }
+          }
         } catch {
           // 評論載入失敗不影響主要內容
           setReviews([]);
@@ -57,11 +73,33 @@ const CourseDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     fetchCourse();
   }, [fetchCourse]);
+
+  /**
+   * 提交評分與評論
+   */
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated || !course || userRating === 0) return;
+
+    try {
+      setSubmitting(true);
+      await courseService.addReview(
+        course.course_id!,
+        userRating,
+        reviewComment.trim() || undefined,
+      );
+      // 重新載入課程和評論
+      await fetchCourse();
+    } catch (err) {
+      console.error("Failed to submit review:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const formatPrice = (price?: number) => {
     if (!price) return "免費";
@@ -99,6 +137,10 @@ const CourseDetail: React.FC = () => {
       </div>
     );
   }
+
+  // 檢查用戶是否已評論過
+  const hasReviewed =
+    user && reviews.some((r) => r.user_id === user.user_id);
 
   return (
     <div className="min-h-screen bg-prism-bg">
@@ -251,6 +293,75 @@ const CourseDetail: React.FC = () => {
               學員評價 ({reviews.length})
             </h2>
 
+            {/* 評分表單 */}
+            <div className="bg-prism-accent/10 rounded-xl p-6 mb-8">
+              <h3 className="text-lg font-medium text-prism-text mb-4">
+                {hasReviewed ? "更新你的評價" : "為此課程評分"}
+              </h3>
+
+              {isAuthenticated ? (
+                <div className="space-y-4">
+                  {/* 星星評分 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-prism-text/70 text-sm mr-2">
+                      評分：
+                    </span>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setUserRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className={`text-3xl transition-colors ${
+                          star <= (hoverRating || userRating)
+                            ? "text-yellow-500"
+                            : "text-prism-text/20 hover:text-yellow-500/50"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                    {userRating > 0 && (
+                      <span className="ml-2 text-prism-text/70 text-sm">
+                        {userRating} / 5
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 評論輸入 */}
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="分享你對這門課程的看法（可選）..."
+                    className="w-full bg-prism-bg border border-prism-accent/20 rounded-lg px-4 py-3 text-prism-text focus:outline-none focus:border-prism-accent/50 resize-none"
+                    rows={3}
+                  />
+
+                  {/* 提交按鈕 */}
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={submitting || userRating === 0}
+                    className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {submitting
+                      ? "送出中..."
+                      : hasReviewed
+                        ? "更新評價"
+                        : "送出評價"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-prism-text/60">
+                  <Link to="/login" className="text-prism-accent hover:underline">
+                    登入
+                  </Link>{" "}
+                  後即可評分
+                </p>
+              )}
+            </div>
+
+            {/* 評論列表 */}
             {reviews.length > 0 ? (
               <div className="space-y-4">
                 {reviews.map((review) => (
@@ -292,7 +403,9 @@ const CourseDetail: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    <p className="text-prism-text/70">{review.comment}</p>
+                    {review.comment && (
+                      <p className="text-prism-text/70">{review.comment}</p>
+                    )}
                     <span className="text-prism-text/40 text-sm mt-2 block">
                       {formatDate(review.created_at)}
                     </span>
