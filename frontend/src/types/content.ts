@@ -19,6 +19,7 @@ export interface Course {
   course_content?: string;
   course_thumbnail_url?: string;
   course_keywords?: string[];
+  course_category?: string;
   course_level?: CourseLevel;
   lessons_count?: number;
   duration_minutes?: number;
@@ -37,6 +38,7 @@ export interface Course {
   content?: string;
   thumbnail?: string;
   keywords?: string[];
+  category?: string;
   level?: CourseLevel;
   lessonsCount?: number;
   duration?: string;
