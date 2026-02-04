@@ -5,8 +5,9 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useTheme, useAuth } from "@/context";
+import { useUser } from "@/hooks";
 import { courseService } from "@/services";
 import { PillButton, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -21,6 +22,8 @@ const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { setTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
+  const { hasPurchasedCourse, isAdmin, loadingPurchases } = useUser();
+  const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,8 +142,7 @@ const CourseDetail: React.FC = () => {
   }
 
   // 檢查用戶是否已評論過
-  const hasReviewed =
-    user && reviews.some((r) => r.user_id === user.user_id);
+  const hasReviewed = user && reviews.some((r) => r.user_id === user.user_id);
 
   return (
     <div className="min-h-screen bg-prism-bg">
@@ -293,71 +295,98 @@ const CourseDetail: React.FC = () => {
               學員評價 ({reviews.length})
             </h2>
 
-            {/* 評分表單 */}
+            {/* 評分表單 - 根據購買狀態顯示不同 UI */}
             <div className="bg-prism-accent/10 rounded-xl p-6 mb-8">
-              <h3 className="text-lg font-medium text-prism-text mb-4">
-                {hasReviewed ? "更新你的評價" : "為此課程評分"}
-              </h3>
-
-              {isAuthenticated ? (
-                <div className="space-y-4">
-                  {/* 星星評分 */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-prism-text/70 text-sm mr-2">
-                      評分：
-                    </span>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setUserRating(star)}
-                        onMouseEnter={() => setHoverRating(star)}
-                        onMouseLeave={() => setHoverRating(0)}
-                        className={`text-3xl transition-colors ${
-                          star <= (hoverRating || userRating)
-                            ? "text-yellow-500"
-                            : "text-prism-text/20 hover:text-yellow-500/50"
-                        }`}
-                      >
-                        ★
-                      </button>
-                    ))}
-                    {userRating > 0 && (
-                      <span className="ml-2 text-prism-text/70 text-sm">
-                        {userRating} / 5
-                      </span>
-                    )}
-                  </div>
-
-                  {/* 評論輸入 */}
-                  <textarea
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                    placeholder="分享你對這門課程的看法（可選）..."
-                    className="w-full bg-prism-bg border border-prism-accent/20 rounded-lg px-4 py-3 text-prism-text focus:outline-none focus:border-prism-accent/50 resize-none"
-                    rows={3}
-                  />
-
-                  {/* 提交按鈕 */}
-                  <button
-                    onClick={handleSubmitReview}
-                    disabled={submitting || userRating === 0}
-                    className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              {loadingPurchases ? (
+                <div className="text-center py-4">
+                  <span className="text-prism-text/60">載入中...</span>
+                </div>
+              ) : !isAuthenticated ? (
+                // 未登入
+                <div className="text-center py-4">
+                  <p className="text-prism-text/60 mb-4">
+                    登入後購買此課程即可留下評價
+                  </p>
+                  <Link
+                    to="/login"
+                    className="inline-block px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 transition-colors"
                   >
-                    {submitting
-                      ? "送出中..."
-                      : hasReviewed
-                        ? "更新評價"
-                        : "送出評價"}
+                    登入
+                  </Link>
+                </div>
+              ) : !hasPurchasedCourse(course.course_id!) && !isAdmin ? (
+                // 已登入但未購買
+                <div className="text-center py-4">
+                  <p className="text-prism-text/60 mb-4">
+                    購買此課程後即可留下評價
+                  </p>
+                  <button
+                    onClick={() =>
+                      navigate(`/checkout?course=${course.course_id}`)
+                    }
+                    className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 transition-colors"
+                  >
+                    立即購買
                   </button>
                 </div>
               ) : (
-                <p className="text-prism-text/60">
-                  <Link to="/login" className="text-prism-accent hover:underline">
-                    登入
-                  </Link>{" "}
-                  後即可評分
-                </p>
+                // 已購買或管理員
+                <div>
+                  <h3 className="text-lg font-medium text-prism-text mb-4">
+                    {hasReviewed ? "更新你的評價" : "為此課程評分"}
+                  </h3>
+                  <div className="space-y-4">
+                    {/* 星星評分 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-prism-text/70 text-sm mr-2">
+                        評分：
+                      </span>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setUserRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className={`text-3xl transition-colors ${
+                            star <= (hoverRating || userRating)
+                              ? "text-yellow-500"
+                              : "text-prism-text/20 hover:text-yellow-500/50"
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                      {userRating > 0 && (
+                        <span className="ml-2 text-prism-text/70 text-sm">
+                          {userRating} / 5
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 評論輸入 */}
+                    <textarea
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      placeholder="分享你對這門課程的看法（可選）..."
+                      className="w-full bg-prism-bg border border-prism-accent/20 rounded-lg px-4 py-3 text-prism-text focus:outline-none focus:border-prism-accent/50 resize-none"
+                      rows={3}
+                    />
+
+                    {/* 提交按鈕 */}
+                    <button
+                      onClick={handleSubmitReview}
+                      disabled={submitting || userRating === 0}
+                      className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {submitting
+                        ? "送出中..."
+                        : hasReviewed
+                          ? "更新評價"
+                          : "送出評價"}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

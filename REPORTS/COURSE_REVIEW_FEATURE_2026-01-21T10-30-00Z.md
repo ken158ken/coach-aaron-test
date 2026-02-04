@@ -90,14 +90,14 @@ addReview: async (
 
 利用現有 `course_reviews` 表：
 
-| 欄位 | 類型 | 說明 |
-|------|------|------|
-| review_id | SERIAL | 主鍵 |
-| course_id | INTEGER | 課程 ID |
-| user_id | UUID | 用戶 ID |
-| rating | INTEGER | 評分 1-5 |
-| comment | TEXT | 評論內容 |
-| is_visible | BOOLEAN | 是否顯示 |
+| 欄位       | 類型      | 說明     |
+| ---------- | --------- | -------- |
+| review_id  | SERIAL    | 主鍵     |
+| course_id  | INTEGER   | 課程 ID  |
+| user_id    | UUID      | 用戶 ID  |
+| rating     | INTEGER   | 評分 1-5 |
+| comment    | TEXT      | 評論內容 |
+| is_visible | BOOLEAN   | 是否顯示 |
 | created_at | TIMESTAMP | 建立時間 |
 
 ---
@@ -105,6 +105,7 @@ addReview: async (
 ## 🎨 UI 設計
 
 評分表單使用 Prism 主題：
+
 - 背景：`bg-prism-accent/10`
 - 圓角：`rounded-xl`
 - 星星：黃色高亮 `text-yellow-500`

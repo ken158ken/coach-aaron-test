@@ -17,6 +17,7 @@ import coursesRoutes from "./routes/courses.js";
 import videosRoutes from "./routes/videos.js";
 import adminRoutes from "./routes/admin.js";
 import articlesRoutes from "./routes/articles.js";
+import userRoutes from "./routes/user.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
 import {
@@ -93,6 +94,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/courses", coursesRoutes);
 app.use("/api/videos", videosRoutes);
 app.use("/api/articles", articlesRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 
 /**

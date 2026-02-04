@@ -13,3 +13,5 @@ export {
 } from "./useMediaQuery";
 export { useCourses } from "./useCourses";
 export { useVideos } from "./useVideos";
+export { useUser } from "./useUser";
+export type { UserCourse, UseUserReturn } from "./useUser";

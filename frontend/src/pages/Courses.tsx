@@ -1,152 +1,18 @@
 /**
  * Courses 頁面 - 課程列表
  * @module pages/Courses
- * @description 教練變現實戰力 - 私人教練陪跑系統
+ * @description 展示所有已發布的課程，支援購買與評論
  * @theme prism (VOID PRISM 水晶主題)
  */
 
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/context";
+import { courseService } from "@/services";
 import { PrismScene } from "@/components/three";
-import { GlowButton, PillButton, Loading } from "@/components/ui";
+import { PillButton, Loading, PageHeader } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
-
-/** 階段課程資料 */
-interface PhaseData {
-  phase: string;
-  duration: string;
-  title: string;
-  description: string;
-  features: string[];
-}
-
-/** 單堂課程資料 */
-interface SingleCourse {
-  id: string;
-  title: string;
-  price: number;
-  description: string;
-}
-
-/** 陪跑方案資料 */
-interface CoachingPlan {
-  id: string;
-  duration: string;
-  price: number;
-  sessions: number;
-  description: string;
-  highlight?: boolean;
-}
-
-/** 三階段課程內容 */
-const PHASES: PhaseData[] = [
-  {
-    phase: "第一階段",
-    duration: "0-3 個月",
-    title: "業績衝刺期",
-    description: "新客成交 + 現場開發",
-    features: [
-      "體驗課成交系統",
-      "現場開發實戰",
-      "成交進度追蹤",
-      "每週會議討論",
-    ],
-  },
-  {
-    phase: "第二階段",
-    duration: "3-6 個月",
-    title: "建立長期收入",
-    description: "會員經營與續約技巧",
-    features: ["會員關係心理學", "續約情緒時機", "轉介紹流程", "客戶管理表單"],
-  },
-  {
-    phase: "第三階段",
-    duration: "6-12 個月",
-    title: "個人品牌與自媒體",
-    description: "打造個人商業模式",
-    features: [
-      "自媒體定位",
-      "口播腳本產出",
-      "鏡頭表現力訓練",
-      "打造個人商業模式",
-    ],
-  },
-];
-
-/** 附贈單堂課程 */
-const SINGLE_COURSES: SingleCourse[] = [
-  {
-    id: "expression",
-    title: "表達力心理學",
-    price: 980,
-    description: "提升溝通表達能力，建立專業形象",
-  },
-  {
-    id: "objection",
-    title: "反對問題成交話術",
-    price: 480,
-    description: "掌握常見反對問題的應對技巧",
-  },
-  {
-    id: "trial",
-    title: "體驗課成交全流程",
-    price: 1980,
-    description: "從體驗課到成交的完整系統",
-  },
-  {
-    id: "renewal",
-    title: "私人教練續約必修課",
-    price: 1980,
-    description: "提高會員續約率的關鍵技巧",
-  },
-  {
-    id: "coaching",
-    title: "一對一陪跑訓練",
-    price: 18000,
-    description: "個人化指導，加速成長",
-  },
-  {
-    id: "mindset",
-    title: "心理韌性與職涯定位",
-    price: 18000,
-    description: "建立正確心態，規劃長期職涯",
-  },
-];
-
-/** 陪跑方案 */
-const COACHING_PLANS: CoachingPlan[] = [
-  {
-    id: "3-months",
-    duration: "三個月",
-    price: 32800,
-    sessions: 12,
-    description: "1對1培訓 12次",
-  },
-  {
-    id: "6-months",
-    duration: "六個月",
-    price: 59800,
-    sessions: 24,
-    description: "1對1培訓 24次",
-    highlight: true,
-  },
-  {
-    id: "1-year",
-    duration: "一年",
-    price: 118000,
-    sessions: 48,
-    description: "1對1培訓 48次",
-  },
-];
-
-/** 制度說明 */
-const SYSTEM_FEATURES = [
-  "每周一次視訊會議，進度檢核與行動指導",
-  "指標追蹤（邀約數、成交數、續約率）",
-  "即時訊息 24 小時回復",
-  "每季成果檢核與策略調整",
-];
+import type { Course } from "@/types";
 
 /**
  * Courses - 課程列表頁面
@@ -156,21 +22,47 @@ const SYSTEM_FEATURES = [
 const Courses: React.FC = () => {
   const { setTheme } = useTheme();
   const navigate = useNavigate();
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setTheme("prism");
-    // 模擬載入
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
+    fetchCourses();
   }, [setTheme]);
 
-  /** 計算附贈總值 */
-  const bonusTotal = SINGLE_COURSES.reduce((sum, c) => sum + c.price, 0);
+  /**
+   * 取得所有課程
+   */
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await courseService.getAll();
+      setCourses(data || []);
+    } catch (err) {
+      console.error("Failed to fetch courses:", err);
+      setError("載入課程失敗");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  /** 處理購買點擊 */
-  const handlePurchase = (planId: string) => {
-    navigate(`/checkout?plan=${planId}`);
+  /**
+   * 格式化價格
+   */
+  const formatPrice = (price?: number): string => {
+    if (!price || price === 0) return "免費";
+    return `NT$ ${price.toLocaleString()}`;
+  };
+
+  /**
+   * 課程難度標籤
+   */
+  const levelLabels: Record<string, string> = {
+    beginner: "初學者",
+    intermediate: "進階",
+    advanced: "專家",
   };
 
   if (loading) {
@@ -185,245 +77,152 @@ const Courses: React.FC = () => {
     <div className="relative min-h-screen bg-prism-bg">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title="教練變現實戰力 | 私人教練陪跑系統"
-        description="從銷售、經營到自媒體的陪跑系統，讓你從教練變成經營者。系統化的業績成長路徑，累積穩定客群。"
-        keywords={[
-          "教練變現",
-          "私人教練",
-          "健身教練培訓",
-          "陪跑系統",
-          "教練創業",
-        ]}
+        title="課程中心"
+        description="探索專業健身課程，從初學者到進階訓練，找到適合你的課程"
+        keywords={["健身課程", "訓練課程", "教練課程", "線上學習"]}
         url="/courses"
       />
 
       {/* Three.js Background */}
       <PrismScene />
 
-      <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Hero Section */}
-          <section className="text-center mb-16 sm:mb-20">
-            <span className="inline-block text-prism-accent text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
-              教練變現實戰力
-            </span>
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-prism-text mb-4 sm:mb-6">
-              專業變現，打造穩定收入系統
-            </h1>
-            <p className="text-base sm:text-lg text-prism-text/70 max-w-2xl mx-auto mb-6">
-              這是一個從銷售、經營到自媒體的陪跑系統
-              <br />
-              讓你從教練變成經營者
-            </p>
+      <div className="relative z-10">
+        <PageHeader
+          title="課程中心"
+          subtitle="探索專業健身課程，開啟你的訓練旅程"
+        />
 
-            {/* 痛點列表 */}
-            <div className="bg-prism-bg/50 backdrop-blur-sm border border-prism-accent/20 rounded-2xl p-6 sm:p-8 max-w-3xl mx-auto mb-8">
-              <h3 className="text-lg font-semibold text-prism-text mb-4">
-                你是否遇到這些問題？
-              </h3>
-              <div className="grid sm:grid-cols-2 gap-3 text-left text-prism-text/80 text-sm sm:text-base">
-                <div className="flex items-start gap-2">
-                  <span className="text-red-400">•</span>
-                  <span>有專業，但不擅長銷售</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-red-400">•</span>
-                  <span>時間投入多，沒對應報酬</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-red-400">•</span>
-                  <span>談單亂槍打鳥，沒有系統</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-red-400">•</span>
-                  <span>客戶說有效果，卻不買單</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-red-400">•</span>
-                  <span>不擅長破冰做現場開發</span>
-                </div>
-              </div>
-              <p className="mt-4 text-prism-accent font-medium">
-                大部分的教練缺一個「專業變現」系統
+        <div className="container mx-auto px-4 py-8 sm:py-12">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-sm sm:text-base text-red-400 text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Courses Grid */}
+          {courses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {courses.map((course) => (
+                <Link
+                  key={course.course_id}
+                  to={`/courses/${course.course_id}`}
+                  className="group"
+                >
+                  <article className="bg-prism-bg/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-prism-accent/20 hover:border-prism-accent/50 hover:shadow-xl hover:shadow-prism-accent/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                    {/* Thumbnail */}
+                    {course.course_thumbnail_url ? (
+                      <div className="aspect-video overflow-hidden">
+                        <img
+                          src={course.course_thumbnail_url}
+                          alt={course.course_title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-prism-accent/10 flex items-center justify-center">
+                        <span className="text-4xl sm:text-6xl text-prism-accent/30">
+                          📚
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="p-4 sm:p-6 flex-1 flex flex-col">
+                      {/* Level & Category */}
+                      <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                        {course.course_level && (
+                          <span className="px-2 py-1 bg-prism-accent/20 text-prism-accent text-xs rounded-full">
+                            {levelLabels[course.course_level] ||
+                              course.course_level}
+                          </span>
+                        )}
+                        {course.course_category && (
+                          <span className="text-xs text-prism-text/50">
+                            {course.course_category}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h2 className="text-lg sm:text-xl font-medium text-prism-text mb-2 sm:mb-3 group-hover:text-prism-accent transition-colors line-clamp-2">
+                        {course.course_title}
+                      </h2>
+
+                      {/* Description */}
+                      {course.course_description && (
+                        <p className="text-prism-text/60 text-sm mb-3 sm:mb-4 flex-1 line-clamp-2 sm:line-clamp-3">
+                          {course.course_description}
+                        </p>
+                      )}
+
+                      {/* Meta */}
+                      <div className="flex items-center justify-between text-xs sm:text-sm text-prism-text/50 mt-auto gap-2">
+                        <div className="flex items-center gap-2 sm:gap-4">
+                          {course.lessons_count && (
+                            <span className="whitespace-nowrap">
+                              📖 {course.lessons_count} 堂課
+                            </span>
+                          )}
+                          {course.rating_count !== undefined &&
+                            course.rating_count > 0 && (
+                              <span className="whitespace-nowrap">
+                                ⭐ {(course.rating_average ?? 0).toFixed(1)} (
+                                {course.rating_count})
+                              </span>
+                            )}
+                        </div>
+                        {course.total_enrolled !== undefined && (
+                          <span className="whitespace-nowrap">
+                            👥 {course.total_enrolled}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Price */}
+                      <div className="mt-4 pt-4 border-t border-prism-accent/10 flex items-center justify-between">
+                        <span className="text-lg sm:text-xl font-semibold text-prism-accent">
+                          {formatPrice(course.price)}
+                        </span>
+                        <PillButton
+                          theme="prism"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigate(`/courses/${course.course_id}`);
+                          }}
+                        >
+                          查看詳情
+                        </PillButton>
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <span className="text-6xl mb-4 block">📚</span>
+              <p className="text-prism-text/60 mb-4">目前沒有可用的課程</p>
+              <p className="text-prism-text/40 text-sm">
+                課程即將推出，敬請期待！
               </p>
             </div>
+          )}
 
-            {/* 核心理念 */}
-            <div className="flex flex-wrap justify-center gap-4 mb-8">
-              <div className="bg-gradient-to-br from-prism-accent/20 to-prism-accent/5 border border-prism-accent/30 rounded-xl px-6 py-4">
-                <span className="text-prism-text font-medium">心理韌性</span>
-              </div>
-              <div className="bg-gradient-to-br from-prism-accent/20 to-prism-accent/5 border border-prism-accent/30 rounded-xl px-6 py-4">
-                <span className="text-prism-text font-medium">變現系統</span>
-              </div>
-              <div className="bg-gradient-to-br from-prism-accent/20 to-prism-accent/5 border border-prism-accent/30 rounded-xl px-6 py-4">
-                <span className="text-prism-text font-medium">職涯規劃</span>
-              </div>
-            </div>
-          </section>
-
-          {/* 三階段課程 */}
-          <section className="mb-16 sm:mb-20">
-            <h2 className="text-2xl sm:text-3xl font-bold text-prism-text text-center mb-8 sm:mb-12">
-              系統化三階段培訓
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {PHASES.map((phase, index) => (
-                <div
-                  key={phase.phase}
-                  className="bg-luxe-black/80 border border-prism-accent/30 rounded-2xl p-6 sm:p-8 hover:border-prism-accent/60 transition-all duration-300"
-                >
-                  <div className="text-prism-accent text-sm mb-2">
-                    {phase.duration}
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-prism-text mb-2">
-                    {phase.phase}
-                  </h3>
-                  <h4 className="text-lg text-prism-text/90 mb-1">
-                    {phase.title}
-                  </h4>
-                  <p className="text-sm text-prism-text/60 mb-4">
-                    {phase.description}
-                  </p>
-                  <ul className="space-y-2">
-                    {phase.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-center gap-2 text-prism-text/80 text-sm"
-                      >
-                        <span className="w-1.5 h-1.5 bg-prism-accent rounded-full" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* 制度說明 */}
-          <section className="mb-16 sm:mb-20">
-            <div className="bg-prism-bg/30 backdrop-blur-sm border border-prism-accent/20 rounded-2xl p-6 sm:p-8">
-              <h2 className="text-2xl sm:text-3xl font-bold text-prism-text text-center mb-8">
-                制度說明
+          {/* Contact CTA */}
+          <section className="mt-16 sm:mt-20 text-center">
+            <div className="bg-prism-bg/30 backdrop-blur-sm border border-prism-accent/20 rounded-2xl p-8 sm:p-12 max-w-2xl mx-auto">
+              <h2 className="text-2xl sm:text-3xl font-bold text-prism-text mb-4">
+                需要客製化訓練計畫？
               </h2>
-              <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
-                {SYSTEM_FEATURES.map((feature) => (
-                  <div
-                    key={feature}
-                    className="flex items-center gap-3 text-prism-text/80"
-                  >
-                    <svg
-                      className="w-5 h-5 text-prism-accent flex-shrink-0"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* 陪跑方案價格 */}
-          <section className="mb-16 sm:mb-20">
-            <h2 className="text-2xl sm:text-3xl font-bold text-prism-text text-center mb-4">
-              現場陪跑價格
-            </h2>
-            <p className="text-center text-prism-text/60 mb-8 sm:mb-12">
-              成交只是第一步，能讓教練穩定賺錢的，是系統化的業績成長路徑
-            </p>
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {COACHING_PLANS.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:scale-105 ${
-                    plan.highlight
-                      ? "bg-gradient-to-br from-prism-accent/30 to-prism-accent/10 border-2 border-prism-accent"
-                      : "bg-luxe-black/60 border border-prism-accent/30"
-                  }`}
-                >
-                  {plan.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-prism-accent text-prism-bg text-xs font-bold px-4 py-1 rounded-full">
-                      推薦方案
-                    </div>
-                  )}
-                  <div className="text-center">
-                    <h3 className="text-xl font-bold text-prism-text mb-2">
-                      {plan.duration}
-                    </h3>
-                    <div className="text-3xl sm:text-4xl font-bold text-prism-accent mb-2">
-                      NT$ {plan.price.toLocaleString()}
-                    </div>
-                    <p className="text-prism-text/60 mb-6">
-                      {plan.description}
-                    </p>
-                    <GlowButton
-                      onClick={() => handlePurchase(plan.id)}
-                      size="md"
-                      className="w-full"
-                    >
-                      立即報名
-                    </GlowButton>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* 附贈單堂課程 */}
-          <section className="mb-16 sm:mb-20">
-            <div className="bg-gradient-to-br from-luxe-gold/10 to-luxe-gold/5 border border-luxe-gold/30 rounded-2xl p-6 sm:p-10">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl sm:text-3xl font-bold text-prism-text mb-2">
-                  額外附贈
-                </h2>
-                <p className="text-luxe-gold text-xl font-semibold">
-                  總值 NT$ {bonusTotal.toLocaleString()} 元
-                </p>
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {SINGLE_COURSES.map((course) => (
-                  <div
-                    key={course.id}
-                    className="bg-luxe-black/50 rounded-xl p-4 border border-luxe-gold/20"
-                  >
-                    <h4 className="text-prism-text font-medium mb-1">
-                      {course.title}
-                    </h4>
-                    <p className="text-luxe-gold text-sm mb-2">
-                      NT$ {course.price.toLocaleString()}
-                    </p>
-                    <p className="text-prism-text/60 text-sm">
-                      {course.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* CTA */}
-          <section className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-prism-text mb-4">
-              準備好開始你的教練變現之路了嗎？
-            </h2>
-            <p className="text-prism-text/70 mb-8">
-              累積穩定客群，讓教練職涯越做越輕鬆
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <GlowButton onClick={() => handlePurchase("6-months")} size="lg">
-                立即報名
-              </GlowButton>
+              <p className="text-prism-text/70 mb-8">
+                我們提供一對一諮詢服務，根據你的目標制定專屬訓練方案
+              </p>
               <PillButton
                 theme="prism"
-                variant="outline"
+                variant="filled"
+                size="lg"
                 onClick={() => navigate("/contact")}
               >
                 預約諮詢
