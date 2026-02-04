@@ -91,6 +91,123 @@ router.get(
   },
 );
 
+/**
+ * 新增課程評論
+ * @route POST /api/courses/:id/reviews
+ */
+router.post(
+  "/:id/reviews",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { rating, comment } = req.body;
+      const userId = (req as any).user?.userId;
+
+      if (!userId) {
+        res.status(401).json({ error: "未授權" });
+        return;
+      }
+
+      // 驗證評分範圍
+      if (!rating || rating < 1 || rating > 5) {
+        res.status(400).json({ error: "評分必須在 1-5 之間" });
+        return;
+      }
+
+      // 檢查用戶是否已評論過此課程
+      const { data: existingReview } = await supabaseAdmin
+        .from("course_reviews")
+        .select("review_id")
+        .eq("course_id", id)
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .single();
+
+      if (existingReview) {
+        // 更新現有評論
+        const { data, error } = await supabaseAdmin
+          .from("course_reviews")
+          .update({
+            rating,
+            comment: comment || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("review_id", existingReview.review_id)
+          .select(
+            `
+            *,
+            users:user_id (display_name, avatar_url)
+          `,
+          )
+          .single();
+
+        if (error) throw error;
+        res.json(data);
+      } else {
+        // 新增評論
+        const { data, error } = await supabaseAdmin
+          .from("course_reviews")
+          .insert({
+            course_id: Number(id),
+            user_id: userId,
+            rating,
+            comment: comment || null,
+            is_visible: true,
+          })
+          .select(
+            `
+            *,
+            users:user_id (display_name, avatar_url)
+          `,
+          )
+          .single();
+
+        if (error) throw error;
+
+        // 更新課程評分統計
+        await updateCourseRatingStats(Number(id));
+
+        res.json(data);
+      }
+    } catch (err) {
+      console.error("Add review error:", err);
+      res.status(500).json({ error: "新增評論失敗" });
+    }
+  },
+);
+
+/**
+ * 更新課程評分統計
+ * @param courseId 課程 ID
+ */
+async function updateCourseRatingStats(courseId: number): Promise<void> {
+  try {
+    // 計算平均評分和評論數
+    const { data: reviews } = await supabaseAdmin
+      .from("course_reviews")
+      .select("rating")
+      .eq("course_id", courseId)
+      .eq("is_visible", true)
+      .is("deleted_at", null);
+
+    if (reviews && reviews.length > 0) {
+      const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+      const avgRating = totalRating / reviews.length;
+
+      await supabaseAdmin
+        .from("courses")
+        .update({
+          rating_average: Math.round(avgRating * 10) / 10,
+          rating_count: reviews.length,
+        })
+        .eq("course_id", courseId);
+    }
+  } catch (err) {
+    console.error("Update course rating stats error:", err);
+  }
+}
+
 // ===== 管理員 API =====
 
 /**
