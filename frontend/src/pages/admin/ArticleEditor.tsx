@@ -17,6 +17,7 @@ import Youtube from "@tiptap/extension-youtube";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useAuth } from "@/context";
 import { Loading } from "@/components/ui";
+import { articleService } from "@/services/article.service";
 
 /** 文章資料結構 */
 interface ArticleData {
@@ -295,7 +296,7 @@ const ArticleEditor: React.FC = () => {
     }
   }, [article]);
 
-  /** 發布文章 (TODO: 連接 API) */
+  /** 發布文章 */
   const handlePublish = useCallback(async () => {
     if (!article.title.trim()) {
       alert("請輸入文章標題");
@@ -304,28 +305,41 @@ const ArticleEditor: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const slug = article.slug || generateSlug(article.title);
       const payload = {
-        ...article,
-        status: "published" as const,
-        slug: article.slug || generateSlug(article.title),
+        title: article.title,
+        slug,
+        description: article.excerpt,
+        content: article.content,
+        thumbnailUrl: article.coverImage,
+        keywords: article.tags,
+        category: article.category,
+        status: "published",
+        isFeatured: false,
       };
 
       logger.info("發布文章:", payload);
 
-      // TODO: 呼叫 API 發布到資料庫
-      await new Promise((r) => setTimeout(r, 1000));
+      if (isNew) {
+        // 建立新文章
+        await articleService.create(payload);
+      } else {
+        // 更新現有文章
+        await articleService.update(Number(id), payload);
+      }
 
       // 清除 localStorage 草稿
       localStorage.removeItem(STORAGE_KEY);
       setHasChanges(false);
       alert("✅ 文章已發布！");
+      navigate("/admin/articles");
     } catch (error) {
       logger.error("發布失敗:", error);
       alert("❌ 發布失敗，請稍後再試");
     } finally {
       setIsSaving(false);
     }
-  }, [article, generateSlug]);
+  }, [article, generateSlug, isNew, id, navigate]);
 
   /** 新增分類 */
   const handleAddCategory = useCallback(() => {

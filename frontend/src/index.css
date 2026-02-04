@@ -36,16 +36,36 @@
 }
 
 /* ========================================
+   日夜模式 - 保持背景深色以保護動畫
+   ======================================== */
+[data-color-mode="light"] {
+  /* Light 模式下只增加內容對比度，背景保持透明/深色 */
+  --content-bg: rgba(255, 255, 255, 0.08);
+  --content-border: rgba(255, 255, 255, 0.15);
+  --card-bg: rgba(255, 255, 255, 0.1);
+}
+
+[data-color-mode="dark"] {
+  --content-bg: rgba(0, 0, 0, 0.3);
+  --content-border: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(0, 0, 0, 0.4);
+}
+
+/* ========================================
    基礎樣式
    ======================================== */
 @layer base {
   html {
     scroll-behavior: smooth;
     font-size: 20px; /* 預設 16px + 4px = 20px */
+    /* 確保背景始終深色 */
+    background-color: #000205;
   }
 
   body {
     @apply antialiased;
+    /* 確保 body 背景透明，讓 Three.js 可見 */
+    background-color: transparent;
   }
 
   /* 隱藏捲軸但保留功能 */
