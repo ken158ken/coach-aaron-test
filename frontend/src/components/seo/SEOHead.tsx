@@ -83,8 +83,11 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     ? `${title} | ${DEFAULT_SITE_NAME}`
     : DEFAULT_SITE_NAME;
 
-  // 確保圖片是完整 URL
-  const fullImage = image.startsWith("http") ? image : `${DEFAULT_URL}${image}`;
+  // 確保圖片是完整 URL（處理 null/undefined）
+  const imageUrl = image || DEFAULT_IMAGE;
+  const fullImage = imageUrl.startsWith("http")
+    ? imageUrl
+    : `${DEFAULT_URL}${imageUrl}`;
 
   // 確保 URL 是完整的
   const fullUrl = url?.startsWith("http") ? url : `${DEFAULT_URL}${url || ""}`;

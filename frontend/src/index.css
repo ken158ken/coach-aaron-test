@@ -8,193 +8,88 @@
 @tailwind utilities;
 
 /* ========================================
-   CSS 變數定義 - 深色模式（預設）
+   CSS 變數定義
    ======================================== */
 :root {
-  /* ABYSS Theme (深海) - 深色 */
+  /* ABYSS Theme (深海) */
   --abyss-black: #000205;
   --abyss-cyan: #00ffff;
   --abyss-purple: #7b00ff;
   --abyss-glass: rgba(0, 5, 10, 0.6);
-  --abyss-bg: #000205;
-  --abyss-surface: #050a14;
   --abyss-text: #e0f7fa;
-  --abyss-muted: #80deea;
   --abyss-text-dim: #80deea;
 
-  /* PRISM Theme (水晶) - 深色 */
+  /* PRISM Theme (水晶) */
   --prism-void: #0b001a;
   --prism-purple: #b388ff;
   --prism-blue: #82b1ff;
   --prism-glass: rgba(255, 255, 255, 0.05);
-  --prism-bg: #0b001a;
-  --prism-surface: #150030;
   --prism-text: #ffffff;
-  --prism-muted: #aaaaaa;
   --prism-text-dim: #aaaaaa;
-  --prism-accent: #b388ff;
 
-  /* LUXE Theme (高端) - 深色 */
+  /* LUXE Theme (高端) */
   --luxe-black: #0a0a0a;
   --luxe-gold: #d4af37;
   --luxe-gold-dim: #8a7020;
-  --luxe-bg: #0a0a0a;
-  --luxe-surface: #141414;
   --luxe-text: #e0e0e0;
-  --luxe-muted: #888888;
   --luxe-text-dim: #888888;
 }
 
 /* ========================================
-   淺色模式 CSS 變數覆蓋
-   使用多個選擇器確保覆蓋
+   日夜模式 - 保持背景深色以保護動畫
    ======================================== */
-[data-color-mode="light"],
-[data-theme="luxe-light"],
-[data-theme="abyss-light"],
-[data-theme="prism-light"],
-html[data-color-mode="light"] {
-  /* LUXE 淺色 */
-  --luxe-black: #fafafa;
-  --luxe-gold: #b8962b;
-  --luxe-gold-dim: #6a5515;
-  --luxe-bg: #ffffff;
-  --luxe-surface: #f8f8f8;
-  --luxe-text: #1a1a1a;
-  --luxe-muted: #555555;
-  --luxe-text-dim: #666666;
-
-  /* ABYSS 淺色 */
-  --abyss-black: #fafafa;
-  --abyss-cyan: #00b3b3;
-  --abyss-bg: #ffffff;
-  --abyss-surface: #e8f5f7;
-  --abyss-text: #0a1a1a;
-  --abyss-muted: #4a5568;
-  --abyss-text-dim: #4a5568;
-
-  /* PRISM 淺色 */
-  --prism-void: #fafafa;
-  --prism-purple: #7c4dff;
-  --prism-bg: #ffffff;
-  --prism-surface: #f8f5ff;
-  --prism-text: #1a0a30;
-  --prism-muted: #5a4a6a;
-  --prism-text-dim: #5a4a6a;
-  --prism-accent: #7c4dff;
+[data-color-mode="light"] {
+  /* Light 模式下只增加內容對比度，背景保持透明/深色 */
+  --content-bg: rgba(255, 255, 255, 0.08);
+  --content-border: rgba(255, 255, 255, 0.15);
+  --card-bg: rgba(255, 255, 255, 0.1);
 }
 
-/* 淺色模式下的全域文字顏色 */
-[data-color-mode="light"] body {
-  color: #1a1a1a;
+[data-color-mode="dark"] {
+  --content-bg: rgba(0, 0, 0, 0.3);
+  --content-border: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(0, 0, 0, 0.4);
 }
 
-/* 淺色模式下強制深色文字 */
-[data-color-mode="light"] .text-luxe-text,
-[data-color-mode="light"] .text-abyss-text,
-[data-color-mode="light"] .text-prism-text {
-  color: var(--luxe-text) !important;
-}
+/* ========================================
+   基礎樣式
+   ======================================== */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-size: 20px; /* 預設 16px + 4px = 20px */
+    /* 確保背景始終深色 */
+    background-color: #000205;
+  }
 
-[data-color-mode="light"] .text-luxe-muted,
-[data-color-mode="light"] .text-abyss-muted,
-[data-color-mode="light"] .text-prism-muted {
-  color: var(--luxe-muted) !important;
-}
+  body {
+    @apply antialiased;
+    /* 確保 body 背景透明，讓 Three.js 可見 */
+    background-color: transparent;
+  }
 
-/* 淺色模式下的背景顏色 */
-[data-color-mode="light"] .bg-luxe-bg,
-[data-color-mode="light"] .bg-abyss-bg,
-[data-color-mode="light"] .bg-prism-bg {
-  background-color: #ffffff !important;
-}
-
-[data-color-mode="light"] .bg-luxe-surface,
-[data-color-mode="light"] .bg-abyss-surface,
-[data-color-mode="light"] .bg-prism-surface {
-  background-color: #f8f8f8 !important;
-}
-
-/* 淺色模式下邊框調整 */
-[data-color-mode="light"] .border-luxe-gold\/10,
-[data-color-mode="light"] .border-luxe-gold\/20 {
-  border-color: rgba(184, 150, 43, 0.3) !important;
-}
-
-/* 淺色模式下的黑色背景處理 */
-[data-color-mode="light"] .bg-luxe-black,
-[data-color-mode="light"] .bg-luxe-black\/50,
-[data-color-mode="light"] .bg-luxe-black\/60,
-[data-color-mode="light"] .bg-luxe-black\/80 {
-  background-color: rgba(248, 248, 248, 0.95) !important;
-}
-
-[data-color-mode="light"] .bg-abyss-black,
-[data-color-mode="light"] .bg-prism-void {
-  background-color: #ffffff !important;
-}
-
-/* 淺色模式下 DaisyUI base-content 繼承 */
-[data-color-mode="light"],
-html[data-color-mode="light"] {
-  --bc: 26 26 26; /* DaisyUI base-content for light mode */
-  color: #1a1a1a;
-}
-
-/* 淺色模式下白色和灰色文字處理 */
-[data-color-mode="light"] .text-white {
-  color: #1a1a1a !important;
-}
-
-[data-color-mode="light"] .text-gray-100,
-[data-color-mode="light"] .text-gray-200,
-[data-color-mode="light"] .text-gray-300,
-[data-color-mode="light"] .text-gray-400,
-[data-color-mode="light"] .text-gray-500 {
-  color: #555555 !important;
-}
-
-/* 保持按鈕上的深色文字不變 */
-[data-color-mode="light"] .bg-luxe-gold .text-black,
-[data-color-mode="light"] .bg-luxe-gold\/90 .text-black,
-[data-color-mode="light"] button.bg-luxe-gold,
-[data-color-mode="light"] a.bg-luxe-gold {
-  color: #0a0a0a !important;
-}
-
-/* 淺色模式下表單元素 */
-[data-color-mode="light"] input,
-[data-color-mode="light"] textarea,
-[data-color-mode="light"] select {
-  color: #1a1a1a;
-  background-color: #ffffff;
-}
-
-[data-color-mode="light"] input::placeholder,
-[data-color-mode="light"] textarea::placeholder {
-  color: #888888;
-}
-
-/* 淺色模式下 Modal 和 Card */
-[data-color-mode="light"] .bg-luxe-bg\/95,
-[data-color-mode="light"] [class*="bg-luxe-bg"],
-[data-color-mode="light"] .modal-content {
-  background-color: rgba(255, 255, 255, 0.98) !important;
-}
-
-/* 淺色模式下邊框白色處理 */
-[data-color-mode="light"] .border-white\/10,
-[data-color-mode="light"] .border-white\/20 {
-  border-color: rgba(0, 0, 0, 0.1) !important;
+  /* 隱藏捲軸但保留功能 */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* ========================================
    ABYSS 主題樣式
    ======================================== */
 @layer components {
-  /* 深海主題背景噪點 */
-  .abyss-theme::before {
-    content: "";
+  /* 深海背景效果 */
+  .abyss-bg {
+    background-color: var(--abyss-black);
+    color: var(--abyss-text);
+  }
+
+  /* 海洋雪花效果 */
+  .marine-snow {
     position: fixed;
     top: 0;
     left: 0;
@@ -255,20 +150,6 @@ html[data-color-mode="light"] {
     color: var(--abyss-cyan);
     text-shadow: 0 0 20px var(--abyss-cyan);
     transform: scale(1.1);
-  }
-
-  /* 海洋雪花效果 - 浮游生物背景 */
-  .marine-snow {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+");
-    opacity: 0.3;
-    pointer-events: none;
-    z-index: 0;
-    animation: drift 20s linear infinite;
   }
 }
 
@@ -524,4 +405,208 @@ html[data-color-mode="light"] {
   .text-glow-gold {
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
   }
+}
+
+/* ========================================
+   Tiptap 編輯器樣式
+   ======================================== */
+.ProseMirror {
+  outline: none;
+  min-height: 350px;
+}
+
+/* 標題樣式 - 即時渲染大小 */
+.ProseMirror h1 {
+  font-size: 2.25rem; /* 36px */
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--luxe-gold, #d4af37);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.75rem; /* 28px */
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--luxe-text, #e0e0e0);
+}
+
+.ProseMirror h3 {
+  font-size: 1.375rem; /* 22px */
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--luxe-text-dim, #888888);
+}
+
+/* 段落 */
+.ProseMirror p {
+  font-size: 1rem;
+  line-height: 1.75;
+  margin-bottom: 0.75rem;
+}
+
+/* 列表 */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.25rem;
+}
+
+/* 連結 */
+.ProseMirror a {
+  color: var(--luxe-gold, #d4af37);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ProseMirror a:hover {
+  opacity: 0.8;
+}
+
+/* 引用區塊 */
+.ProseMirror blockquote {
+  border-left: 3px solid var(--luxe-gold, #d4af37);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 0.75rem;
+  font-style: italic;
+  color: var(--luxe-text-dim, #888888);
+}
+
+/* 程式碼區塊 */
+.ProseMirror code {
+  background: rgba(212, 175, 55, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+}
+
+.ProseMirror pre {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* 水平線 */
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  margin: 1.5rem 0;
+}
+
+/* 佔位符 */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--luxe-text-dim, #888888);
+  pointer-events: none;
+  height: 0;
+}
+
+/* 表格樣式 */
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+  overflow: hidden;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.ProseMirror table td,
+.ProseMirror table th {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  position: relative;
+}
+
+.ProseMirror table th {
+  background-color: rgba(212, 175, 55, 0.1);
+  font-weight: 600;
+  text-align: left;
+}
+
+.ProseMirror table .selectedCell {
+  background-color: rgba(212, 175, 55, 0.2);
+}
+
+/* 待辦清單樣式 */
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 0.25rem;
+  user-select: none;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--luxe-gold, #d4af37);
+}
+
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* 刪除線 */
+.ProseMirror s {
+  text-decoration: line-through;
+}
+
+/* 上標下標 */
+.ProseMirror sub {
+  font-size: 0.75em;
+  vertical-align: sub;
+}
+
+.ProseMirror sup {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+/* 螢光筆樣式 */
+.ProseMirror mark {
+  border-radius: 0.125rem;
+  padding: 0.125rem 0.25rem;
 }

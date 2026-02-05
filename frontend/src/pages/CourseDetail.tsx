@@ -2,11 +2,18 @@
  * CourseDetail 頁面 - 課程詳細內容
  * @module pages/CourseDetail
  * @theme prism (VOID PRISM 水晶主題)
+ * @security 實施前端輸入消毒與驗證
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useTheme, useAuth } from "@/context";
+import {
+  useUser,
+  useSafeInput,
+  useRatingInput,
+  renderSafeContent,
+} from "@/hooks";
 import { courseService } from "@/services";
 import { PillButton, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -21,11 +28,38 @@ import type { Course, CourseReview } from "@/types";
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { setTheme } = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { hasPurchasedCourse, loadingPurchases } = useUser();
+  const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // 使用安全輸入 Hook 處理評論
+  const {
+    value: reviewComment,
+    setValue: setReviewComment,
+    handleChange: handleCommentChange,
+    validation: commentValidation,
+    getSanitizedValue: getSanitizedComment,
+    reset: resetComment,
+  } = useSafeInput("", {
+    maxLength: 2000,
+    allowNewlines: true,
+    strictMode: true,
+  });
+
+  // 使用安全評分 Hook
+  const {
+    rating: userRating,
+    setRating: setUserRating,
+    hoverRating,
+    setHoverRating,
+    isValid: isRatingValid,
+    reset: resetRating,
+  } = useRatingInput(0);
 
   useEffect(() => {
     setTheme("prism");
@@ -45,6 +79,22 @@ const CourseDetail: React.FC = () => {
         try {
           const reviewsData = await courseService.getReviews(Number(id));
           setReviews(reviewsData || []);
+
+          // 檢查用戶是否已評論過
+          if (user && reviewsData) {
+            const existingReview = reviewsData.find(
+              (r: CourseReview) => r.user_id === user.user_id,
+            );
+            if (existingReview) {
+              setUserRating(existingReview.rating);
+              // 安全設定現有評論內容
+              setReviewComment(existingReview.comment || "");
+            } else {
+              // 重置評論狀態
+              resetRating();
+              resetComment();
+            }
+          }
         } catch {
           // 評論載入失敗不影響主要內容
           setReviews([]);
@@ -58,11 +108,42 @@ const CourseDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     fetchCourse();
   }, [fetchCourse]);
+
+  /**
+   * 提交評分與評論
+   * @security 使用消毒後的內容提交
+   */
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated || !course || !isRatingValid) return;
+
+    // 前端驗證
+    if (!commentValidation.isValid && reviewComment.trim()) {
+      console.warn("Review validation failed:", commentValidation.errorMessage);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      // 使用消毒後的內容
+      const sanitizedComment = getSanitizedComment();
+      await courseService.addReview(
+        course.course_id!,
+        userRating,
+        sanitizedComment || undefined,
+      );
+      // 重新載入課程和評論
+      await fetchCourse();
+    } catch (err) {
+      console.error("Failed to submit review:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const formatPrice = (price?: number) => {
     if (!price) return "免費";
@@ -100,6 +181,9 @@ const CourseDetail: React.FC = () => {
       </div>
     );
   }
+
+  // 檢查用戶是否已評論過
+  const hasReviewed = user && reviews.some((r) => r.user_id === user.user_id);
 
   return (
     <div className="min-h-screen bg-prism-bg relative">
@@ -255,6 +339,136 @@ const CourseDetail: React.FC = () => {
               學員評價 ({reviews.length})
             </h2>
 
+            {/* 評分表單 - 根據購買狀態顯示不同 UI */}
+            <div className="bg-prism-accent/10 rounded-xl p-6 mb-8">
+              {loadingPurchases ? (
+                <div className="text-center py-4">
+                  <span className="text-prism-text/60">載入中...</span>
+                </div>
+              ) : !isAuthenticated ? (
+                // 未登入
+                <div className="text-center py-4">
+                  <p className="text-prism-text/60 mb-4">
+                    登入後購買此課程即可留下評價
+                  </p>
+                  <Link
+                    to="/login"
+                    className="inline-block px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 transition-colors"
+                  >
+                    登入
+                  </Link>
+                </div>
+              ) : !hasPurchasedCourse(course.course_id!) ? (
+                // 已登入但未購買（管理員也需要購買才能評論）
+                <div className="text-center py-4">
+                  <p className="text-prism-text/60 mb-4">
+                    購買此課程後即可留下評價
+                  </p>
+                  <button
+                    onClick={() =>
+                      navigate(`/checkout?course=${course.course_id}`)
+                    }
+                    className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 transition-colors"
+                  >
+                    立即購買
+                  </button>
+                </div>
+              ) : (
+                // 已購買或管理員
+                <div>
+                  <h3 className="text-lg font-medium text-prism-text mb-4">
+                    {hasReviewed ? "更新你的評價" : "為此課程評分"}
+                  </h3>
+                  <div className="space-y-4">
+                    {/* 星星評分 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-prism-text/70 text-sm mr-2">
+                        評分：
+                      </span>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setUserRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className={`text-3xl transition-colors ${
+                            star <= (hoverRating || userRating)
+                              ? "text-yellow-500"
+                              : "text-prism-text/20 hover:text-yellow-500/50"
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                      {userRating > 0 && (
+                        <span className="ml-2 text-prism-text/70 text-sm">
+                          {userRating} / 5
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 評論輸入 - 使用安全輸入 Hook */}
+                    <div className="space-y-2">
+                      <textarea
+                        value={reviewComment}
+                        onChange={handleCommentChange}
+                        placeholder="分享你對這門課程的看法（可選）..."
+                        className={`w-full bg-prism-bg border rounded-lg px-4 py-3 text-prism-text focus:outline-none resize-none transition-colors ${
+                          !commentValidation.isValid && reviewComment
+                            ? "border-red-500/50 focus:border-red-500"
+                            : "border-prism-accent/20 focus:border-prism-accent/50"
+                        }`}
+                        rows={3}
+                        maxLength={2000}
+                      />
+                      <div className="flex justify-between items-center text-xs">
+                        <span
+                          className={`${
+                            !commentValidation.isValid && reviewComment
+                              ? "text-red-400"
+                              : "text-prism-text/40"
+                          }`}
+                        >
+                          {!commentValidation.isValid && reviewComment
+                            ? commentValidation.errorMessage
+                            : ""}
+                        </span>
+                        <span
+                          className={`${
+                            commentValidation.remainingChars < 100
+                              ? "text-yellow-500"
+                              : "text-prism-text/40"
+                          }`}
+                        >
+                          {commentValidation.charCount} / 2000
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 提交按鈕 */}
+                    <button
+                      onClick={handleSubmitReview}
+                      disabled={
+                        submitting ||
+                        !isRatingValid ||
+                        (!commentValidation.isValid &&
+                          reviewComment.trim() !== "")
+                      }
+                      className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {submitting
+                        ? "送出中..."
+                        : hasReviewed
+                          ? "更新評價"
+                          : "送出評價"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 評論列表 */}
             {reviews.length > 0 ? (
               <div className="space-y-4">
                 {reviews.map((review) => (
@@ -296,7 +510,11 @@ const CourseDetail: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    <p className="text-prism-text/70">{review.comment}</p>
+                    {review.comment && (
+                      <p className="text-prism-text/70">
+                        {renderSafeContent(review.comment)}
+                      </p>
+                    )}
                     <span className="text-prism-text/40 text-sm mt-2 block">
                       {formatDate(review.created_at)}
                     </span>

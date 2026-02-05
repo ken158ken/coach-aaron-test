@@ -3,11 +3,12 @@
  * @module components/layout/Navbar
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { GlobalSearch, SearchButton } from "@/components/ui/GlobalSearch";
 
 interface NavLink {
   name: string;
@@ -26,6 +27,20 @@ const Navbar: React.FC = (): JSX.Element => {
   const navRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // 全域快捷鍵 Ctrl+K / Cmd+K
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      e.preventDefault();
+      setSearchOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   useEffect(() => {
     if (navRef.current) {
@@ -153,6 +168,9 @@ const Navbar: React.FC = (): JSX.Element => {
 
           {/* Theme & Language Toggle */}
           <div className="flex items-center gap-2 ml-4 border-l border-white/20 pl-4">
+            {/* Global Search Button */}
+            <SearchButton onClick={() => setSearchOpen(true)} />
+
             {/* Dark/Light Mode Toggle */}
             <button
               onClick={toggleColorMode}
@@ -232,6 +250,29 @@ const Navbar: React.FC = (): JSX.Element => {
 
             {/* Mobile Theme & Language Toggle */}
             <div className="flex items-center gap-4 py-2 border-t border-white/10 mt-2 pt-4">
+              {/* Mobile Search Button */}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setSearchOpen(true);
+                }}
+                className="flex items-center gap-2 text-luxe-text hover:text-luxe-gold"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <span className="text-sm">搜尋</span>
+              </button>
               <button
                 onClick={toggleColorMode}
                 className="flex items-center gap-2 text-luxe-text hover:text-luxe-gold"
@@ -331,6 +372,9 @@ const Navbar: React.FC = (): JSX.Element => {
           </div>
         </div>
       )}
+
+      {/* 全域搜尋 Modal */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </nav>
   );
 };

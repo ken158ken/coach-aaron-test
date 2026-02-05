@@ -2,12 +2,14 @@
  * ArticleDetail 頁面 - 文章詳細內容
  * @module pages/ArticleDetail
  * @theme luxe (LUXE 高端主題)
+ * @security 實施前端輸入消毒與驗證
  */
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { articleService } from "@/services/article.service";
 import { useAuth } from "@/context";
+import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { PrismScene } from "@/components/three";
@@ -24,13 +26,41 @@ const ArticleDetail: React.FC = () => {
   const [article, setArticle] = useState<Article | null>(null);
   const [comments, setComments] = useState<ArticleComment[]>([]);
   const [, setRatings] = useState<ArticleRating[]>([]);
-  const [userRating, setUserRating] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
-  const [replyText, setReplyText] = useState("");
+
+  // 使用安全評分 Hook
+  const { rating: userRating, setRating: setUserRating } = useRatingInput(0);
+
+  // 使用安全輸入 Hook 處理留言
+  const {
+    value: commentText,
+    handleChange: handleCommentChange,
+    validation: commentValidation,
+    getSanitizedValue: getSanitizedComment,
+    reset: resetComment,
+  } = useSafeInput("", {
+    maxLength: 2000,
+    minLength: 1,
+    allowNewlines: true,
+    strictMode: true,
+  });
+
+  // 使用安全輸入 Hook 處理回覆
+  const {
+    value: replyText,
+    handleChange: handleReplyChange,
+    validation: replyValidation,
+    getSanitizedValue: getSanitizedReply,
+    reset: resetReply,
+  } = useSafeInput("", {
+    maxLength: 1000,
+    minLength: 1,
+    allowNewlines: true,
+    strictMode: true,
+  });
 
   const fetchArticle = useCallback(async () => {
     if (!slug) return;
@@ -87,13 +117,28 @@ const ArticleDetail: React.FC = () => {
     }
   };
 
+  /**
+   * 提交留言
+   * @security 使用消毒後的內容提交
+   */
   const handleComment = async () => {
-    if (!isAuthenticated || !article || !commentText.trim()) return;
+    if (!isAuthenticated || !article) return;
+
+    // 前端驗證
+    if (!commentValidation.isValid) {
+      console.warn(
+        "Comment validation failed:",
+        commentValidation.errorMessage,
+      );
+      return;
+    }
 
     try {
       setSubmitting(true);
-      await articleService.addComment(article.article_id, commentText.trim());
-      setCommentText("");
+      // 使用消毒後的內容
+      const sanitizedComment = getSanitizedComment();
+      await articleService.addComment(article.article_id, sanitizedComment);
+      resetComment();
       // 重新載入留言
       const commentsData = await articleService.getComments(article.article_id);
       setComments(commentsData || []);
@@ -104,17 +149,29 @@ const ArticleDetail: React.FC = () => {
     }
   };
 
+  /**
+   * 提交回覆
+   * @security 使用消毒後的內容提交
+   */
   const handleReply = async (parentId: number) => {
-    if (!isAuthenticated || !article || !replyText.trim()) return;
+    if (!isAuthenticated || !article) return;
+
+    // 前端驗證
+    if (!replyValidation.isValid) {
+      console.warn("Reply validation failed:", replyValidation.errorMessage);
+      return;
+    }
 
     try {
       setSubmitting(true);
+      // 使用消毒後的內容
+      const sanitizedReply = getSanitizedReply();
       await articleService.addComment(
         article.article_id,
-        replyText.trim(),
+        sanitizedReply,
         parentId,
       );
-      setReplyText("");
+      resetReply();
       setReplyingTo(null);
       // 重新載入留言
       const commentsData = await articleService.getComments(article.article_id);
@@ -202,9 +259,9 @@ const ArticleDetail: React.FC = () => {
             </span>
           </div>
 
-          {/* Comment Content */}
+          {/* Comment Content - 使用安全渲染 */}
           <p className="text-luxe-text/80 text-sm whitespace-pre-wrap">
-            {comment.content}
+            {renderSafeContent(comment.content)}
           </p>
 
           {/* Reply Button */}
@@ -221,23 +278,41 @@ const ArticleDetail: React.FC = () => {
             </button>
           )}
 
-          {/* Reply Input */}
+          {/* Reply Input - 使用安全輸入 Hook */}
           {replyingTo === comment.comment_id && (
-            <div className="mt-3">
+            <div className="mt-3 space-y-2">
               <textarea
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
+                onChange={handleReplyChange}
                 placeholder="輸入回覆..."
-                className="w-full bg-luxe-bg border border-luxe-gold/20 rounded-lg px-4 py-2 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50"
+                className={`w-full bg-luxe-bg border rounded-lg px-4 py-2 text-luxe-text text-sm focus:outline-none transition-colors ${
+                  !replyValidation.isValid && replyText
+                    ? "border-red-500/50 focus:border-red-500"
+                    : "border-luxe-gold/20 focus:border-luxe-gold/50"
+                }`}
                 rows={2}
+                maxLength={1000}
               />
-              <button
-                onClick={() => handleReply(comment.comment_id)}
-                disabled={submitting || !replyText.trim()}
-                className="mt-2 px-4 py-1 bg-luxe-gold/20 text-luxe-gold text-sm rounded-lg hover:bg-luxe-gold/30 disabled:opacity-50"
-              >
-                {submitting ? "送出中..." : "送出回覆"}
-              </button>
+              <div className="flex justify-between items-center">
+                <span
+                  className={`text-xs ${
+                    !replyValidation.isValid && replyText
+                      ? "text-red-400"
+                      : "text-luxe-muted"
+                  }`}
+                >
+                  {!replyValidation.isValid && replyText
+                    ? replyValidation.errorMessage
+                    : `${replyValidation.charCount} / 1000`}
+                </span>
+                <button
+                  onClick={() => handleReply(comment.comment_id)}
+                  disabled={submitting || !replyValidation.isValid}
+                  className="px-4 py-1 bg-luxe-gold/20 text-luxe-gold text-sm rounded-lg hover:bg-luxe-gold/30 disabled:opacity-50"
+                >
+                  {submitting ? "送出中..." : "送出回覆"}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -277,7 +352,11 @@ const ArticleDetail: React.FC = () => {
       <SEOHead
         title={article.article_title}
         description={article.article_description || article.article_title}
-        keywords={article.article_keywords || []}
+        keywords={
+          article.article_keywords
+            ? article.article_keywords.split(",").map((k) => k.trim())
+            : []
+        }
         image={article.article_thumbnail_url}
         url={`/articles/${article.article_slug || article.article_id}`}
         type="article"
@@ -369,15 +448,15 @@ const ArticleDetail: React.FC = () => {
           />
 
           {/* Keywords */}
-          {article.article_keywords && article.article_keywords.length > 0 && (
+          {article.article_keywords && article.article_keywords.trim() && (
             <div className="mt-8 pt-8 border-t border-luxe-gold/10">
               <div className="flex flex-wrap gap-2">
-                {article.article_keywords.map((keyword, idx) => (
+                {article.article_keywords.split(",").map((keyword, idx) => (
                   <span
                     key={idx}
                     className="px-3 py-1 bg-luxe-gold/10 text-luxe-gold text-sm rounded-full"
                   >
-                    #{keyword}
+                    #{keyword.trim()}
                   </span>
                 ))}
               </div>
@@ -426,20 +505,47 @@ const ArticleDetail: React.FC = () => {
               留言 ({comments.filter((c) => c.is_visible).length})
             </h3>
 
-            {/* Add Comment */}
+            {/* Add Comment - 使用安全輸入 Hook */}
             {isAuthenticated ? (
-              <div className="mb-8">
+              <div className="mb-8 space-y-2">
                 <textarea
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
+                  onChange={handleCommentChange}
                   placeholder="分享你的想法..."
-                  className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50"
+                  className={`w-full bg-luxe-surface border rounded-lg px-4 py-3 text-luxe-text focus:outline-none transition-colors ${
+                    !commentValidation.isValid && commentText
+                      ? "border-red-500/50 focus:border-red-500"
+                      : "border-luxe-gold/20 focus:border-luxe-gold/50"
+                  }`}
                   rows={3}
+                  maxLength={2000}
                 />
+                <div className="flex justify-between items-center">
+                  <span
+                    className={`text-xs ${
+                      !commentValidation.isValid && commentText
+                        ? "text-red-400"
+                        : "text-luxe-muted"
+                    }`}
+                  >
+                    {!commentValidation.isValid && commentText
+                      ? commentValidation.errorMessage
+                      : ""}
+                  </span>
+                  <span
+                    className={`text-xs ${
+                      commentValidation.remainingChars < 100
+                        ? "text-yellow-500"
+                        : "text-luxe-muted"
+                    }`}
+                  >
+                    {commentValidation.charCount} / 2000
+                  </span>
+                </div>
                 <button
                   onClick={handleComment}
-                  disabled={submitting || !commentText.trim()}
-                  className="mt-3 px-6 py-2 bg-luxe-gold text-black rounded-full hover:bg-luxe-gold/80 disabled:opacity-50 transition-colors"
+                  disabled={submitting || !commentValidation.isValid}
+                  className="px-6 py-2 bg-luxe-gold text-black rounded-full hover:bg-luxe-gold/80 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? "送出中..." : "送出留言"}
                 </button>

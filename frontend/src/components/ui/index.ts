@@ -26,3 +26,16 @@ export * from "./overlay";
 
 // Editor
 export * from "./editor";
+
+// Dialog
+export {
+  Modal,
+  PromptDialog,
+  ConfirmDialog,
+  AlertDialog,
+  DialogProvider,
+  useDialog,
+} from "./Dialog";
+
+// Search
+export { GlobalSearch, SearchButton } from "./GlobalSearch";

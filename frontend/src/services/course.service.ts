@@ -21,7 +21,9 @@ const normalizeCourse = (data: Partial<Course>): Course => {
     description: data.course_description,
     content: data.course_content,
     thumbnail: data.course_thumbnail_url,
-    keywords: data.course_keywords,
+    keywords: data.course_keywords
+      ? data.course_keywords.split(",").map((k) => k.trim())
+      : [],
     level: data.course_level,
     lessonsCount: data.lessons_count,
     duration: data.duration_minutes
@@ -66,6 +68,24 @@ export const courseService = {
    */
   getReviews: async (courseId: number): Promise<CourseReview[]> => {
     return get<CourseReview[]>(`/api/courses/${courseId}/reviews`);
+  },
+
+  /**
+   * 新增或更新課程評論
+   * @param courseId 課程 ID
+   * @param rating 評分 (1-5)
+   * @param comment 評論內容 (可選)
+   * @returns 評論資料
+   */
+  addReview: async (
+    courseId: number,
+    rating: number,
+    comment?: string,
+  ): Promise<CourseReview> => {
+    return post<CourseReview>(`/api/courses/${courseId}/reviews`, {
+      rating,
+      comment,
+    });
   },
 
   /**

@@ -1,6 +1,8 @@
 /**
  * @fileoverview 文章管理路由
  * 處理公開文章查詢、文章評分、留言及管理員文章 CRUD 操作
+ *
+ * @security 實施多層輸入驗證與消毒機制
  */
 
 import express, { Request, Response, Router } from "express";
@@ -11,6 +13,14 @@ import {
   optionalAuth,
 } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
+import {
+  sanitizeComment,
+  sanitizeRating,
+  sanitizeId,
+  sanitizeApiResponse,
+  sanitizeApiResponseArray,
+  logSecurityEvent,
+} from "../utils/sanitizer.js";
 
 const router: Router = express.Router();
 
@@ -167,12 +177,22 @@ router.get(
 /**
  * 取得文章留言
  * @route GET /api/articles/:id/comments
+ * @security 輸出內容經過消毒處理
  */
 router.get(
   "/:id/comments",
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+
+      // 驗證 ID 格式
+      const idValidation = sanitizeId(id, "article_id");
+      if (!idValidation.isValid) {
+        res.status(400).json({ error: idValidation.errorMessage });
+        return;
+      }
+
+      const articleId = idValidation.numericValue;
 
       // 取得頂層留言（不含回覆）
       const { data, error } = await supabaseAdmin
@@ -183,7 +203,7 @@ router.get(
         users:user_id (display_name, avatar_url)
       `,
         )
-        .eq("article_id", id)
+        .eq("article_id", articleId)
         .eq("is_visible", true)
         .is("parent_comment_id", null)
         .is("deleted_at", null)
@@ -200,7 +220,7 @@ router.get(
         users:user_id (display_name, avatar_url)
       `,
         )
-        .eq("article_id", id)
+        .eq("article_id", articleId)
         .eq("is_visible", true)
         .not("parent_comment_id", "is", null)
         .is("deleted_at", null)
@@ -208,13 +228,28 @@ router.get(
 
       if (repliesError) throw repliesError;
 
-      // 組合留言和回覆
-      const commentsWithReplies = data?.map((comment) => ({
-        ...comment,
-        replies:
-          replies?.filter((r) => r.parent_comment_id === comment.comment_id) ||
-          [],
-      }));
+      // 消毒回覆內容
+      const sanitizedReplies = replies
+        ? sanitizeApiResponseArray(replies as Record<string, unknown>[], [
+            "content",
+          ])
+        : [];
+
+      // 組合留言和回覆，並消毒內容
+      const commentsWithReplies = data?.map((comment) => {
+        const sanitizedComment = sanitizeApiResponse(
+          comment as Record<string, unknown>,
+          ["content"],
+        );
+        return {
+          ...sanitizedComment,
+          replies:
+            sanitizedReplies.filter(
+              (r: Record<string, unknown>) =>
+                r.parent_comment_id === comment.comment_id,
+            ) || [],
+        };
+      });
 
       res.json(commentsWithReplies);
     } catch (err) {
@@ -229,6 +264,7 @@ router.get(
 /**
  * 新增文章評分
  * @route POST /api/articles/:id/ratings
+ * @security 多層輸入驗證
  */
 router.post(
   "/:id/ratings",
@@ -239,25 +275,53 @@ router.post(
       const { rating } = req.body;
       const userId = (req as Request & { user?: { userId: number } }).user
         ?.userId;
+      const userIp = req.ip || req.socket.remoteAddress || "unknown";
 
       if (!userId) {
         res.status(401).json({ error: "請先登入" });
         return;
       }
 
-      if (!rating || rating < 1 || rating > 5) {
-        res.status(400).json({ error: "評分必須在 1-5 之間" });
+      // ===== 安全驗證層 =====
+
+      // 1. 驗證文章 ID
+      const idValidation = sanitizeId(id, "article_id");
+      if (!idValidation.isValid) {
+        logSecurityEvent("INVALID_ARTICLE_ID", {
+          userId,
+          ip: userIp,
+          providedId: id,
+          reason: idValidation.errorMessage,
+        });
+        res.status(400).json({ error: idValidation.errorMessage });
         return;
       }
+
+      // 2. 驗證評分
+      const ratingValidation = sanitizeRating(rating, "評分");
+      if (!ratingValidation.isValid) {
+        logSecurityEvent("INVALID_RATING", {
+          userId,
+          ip: userIp,
+          articleId: idValidation.numericValue,
+          providedRating: rating,
+          reason: ratingValidation.errorMessage,
+        });
+        res.status(400).json({ error: ratingValidation.errorMessage });
+        return;
+      }
+
+      const articleId = idValidation.numericValue;
+      const validatedRating = Number(ratingValidation.sanitizedValue);
 
       // 使用 upsert 來處理新增或更新
       const { data, error } = await supabaseAdmin
         .from("article_ratings")
         .upsert(
           {
-            article_id: Number(id),
+            article_id: articleId,
             user_id: userId,
-            rating,
+            rating: validatedRating,
           },
           { onConflict: "article_id,user_id" },
         )
@@ -267,7 +331,13 @@ router.post(
       if (error) throw error;
 
       // 更新文章平均分和評分數
-      await updateArticleRatingStats(Number(id));
+      await updateArticleRatingStats(articleId);
+
+      logger.info("Article rating updated", {
+        userId,
+        articleId,
+        rating: validatedRating,
+      });
 
       res.json(data);
     } catch (err) {
@@ -280,6 +350,10 @@ router.post(
 /**
  * 新增文章留言
  * @route POST /api/articles/:id/comments
+ * @security 多層輸入驗證與消毒
+ * - ID 格式驗證
+ * - 留言內容 XSS/注入防護
+ * - 父留言 ID 驗證
  */
 router.post(
   "/:id/comments",
@@ -290,24 +364,88 @@ router.post(
       const { content, parentCommentId } = req.body;
       const userId = (req as Request & { user?: { userId: number } }).user
         ?.userId;
+      const userIp = req.ip || req.socket.remoteAddress || "unknown";
 
       if (!userId) {
         res.status(401).json({ error: "請先登入" });
         return;
       }
 
-      if (!content?.trim()) {
-        res.status(400).json({ error: "留言內容不可為空" });
+      // ===== 安全驗證層 =====
+
+      // 1. 驗證文章 ID
+      const idValidation = sanitizeId(id, "article_id");
+      if (!idValidation.isValid) {
+        logSecurityEvent("INVALID_ARTICLE_ID", {
+          userId,
+          ip: userIp,
+          providedId: id,
+          reason: idValidation.errorMessage,
+        });
+        res.status(400).json({ error: idValidation.errorMessage });
         return;
       }
+
+      // 2. 驗證父留言 ID（如果有提供）
+      let validatedParentId: number | null = null;
+      if (parentCommentId !== undefined && parentCommentId !== null) {
+        const parentIdValidation = sanitizeId(
+          parentCommentId,
+          "parent_comment_id",
+        );
+        if (!parentIdValidation.isValid) {
+          logSecurityEvent("INVALID_PARENT_COMMENT_ID", {
+            userId,
+            ip: userIp,
+            articleId: idValidation.numericValue,
+            providedParentId: parentCommentId,
+            reason: parentIdValidation.errorMessage,
+          });
+          res.status(400).json({ error: parentIdValidation.errorMessage });
+          return;
+        }
+        validatedParentId = parentIdValidation.numericValue;
+      }
+
+      // 3. 驗證並消毒留言內容
+      const contentValidation = sanitizeComment(content, {
+        maxLength: 2000,
+        minLength: 1,
+        allowNewlines: true,
+        strictMode: true,
+        fieldName: "留言內容",
+      });
+
+      if (!contentValidation.isValid) {
+        // 如果偵測到潛在攻擊，記錄安全事件
+        if (contentValidation.threatDetected) {
+          logSecurityEvent("COMMENT_THREAT_DETECTED", {
+            userId,
+            ip: userIp,
+            articleId: idValidation.numericValue,
+            threatType: contentValidation.threatType,
+            inputPreview:
+              typeof content === "string"
+                ? content.substring(0, 100)
+                : "[non-string]",
+          });
+        }
+        res.status(400).json({ error: contentValidation.errorMessage });
+        return;
+      }
+
+      // ===== 業務邏輯 =====
+
+      const articleId = idValidation.numericValue;
+      const sanitizedContent = contentValidation.sanitizedValue;
 
       const { data, error } = await supabaseAdmin
         .from("article_comments")
         .insert({
-          article_id: Number(id),
+          article_id: articleId,
           user_id: userId,
-          parent_comment_id: parentCommentId || null,
-          content: content.trim(),
+          parent_comment_id: validatedParentId,
+          content: sanitizedContent,
         })
         .select(
           `
@@ -320,7 +458,14 @@ router.post(
       if (error) throw error;
 
       // 更新文章留言數
-      await updateArticleCommentCount(Number(id));
+      await updateArticleCommentCount(articleId);
+
+      logger.info("Article comment created", {
+        userId,
+        articleId,
+        commentId: (data as any)?.comment_id,
+        isReply: validatedParentId !== null,
+      });
 
       res.json(data);
     } catch (err) {
