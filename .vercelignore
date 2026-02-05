@@ -16,30 +16,29 @@ node_modules/
 **/*.spec.ts
 **/*.spec.tsx
 
-# 文件（太大）
+# 文件（太大，但保留 README.md）
 REPORTS/
-*.md
-!README.md
+DEPLOYMENT-CHECKLIST.md
+GIT_PUSH_GUIDE.md
+IMAGE_OPTIMIZATION_GUIDE.md
+SSR-CHECK-REPORT.md
+VERCEL_DEPLOYMENT_GUIDE.md
+ADMIN_PAGES_MIGRATION_SUMMARY.md
 
-# 前端原始碼（已經構建完成）
-frontend/src/
-frontend/public/
-
-# 後端原始碼（已經構建完成）
-backend/src/
-backend/routes/
-backend/controllers/
-backend/middleware/
-backend/config/
-backend/utils/
-backend/types/
-
-# 資料庫檔案
+# 資料庫檔案（不需要部署）
 database/
 
-# 腳本
+# 腳本（不需要部署）
 scripts/
 
-# 其他專案檔案
+# 其他專案檔案（如果存在）
 舊專案前端參考/
 參考/
+私人教練陪跑/
+
+# 前端開發用檔案（構建後不需要）
+frontend/public/*.md
+
+# 編輯器配置
+.vscode/
+.idea/
