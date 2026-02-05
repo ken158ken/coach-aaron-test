@@ -16,73 +16,45 @@ module.exports = async function handler(req, res) {
     console.log(`📂 CWD: ${process.cwd()}`);
     console.log(`📂 __dirname: ${__dirname}`);
 
-    // 列出當前目錄內容以便調試
-    const cwdContents = fs.readdirSync(process.cwd());
-    console.log(`📋 CWD contents: ${cwdContents.join(", ")}`);
+    // Vercel 上，frontend/dist/server 會被 includeFiles 複製到函數目錄
+    const serverDir = path.resolve(__dirname, "../frontend/dist/server");
+    const clientDir = path.resolve(__dirname, "../frontend/dist/client");
+    
+    console.log(`📂 Server dir: ${serverDir}`);
+    console.log(`📂 Client dir: ${clientDir}`);
 
-    // Vercel 傳統 Functions: index.html 應該在根目錄（從 outputDirectory 複製）
-    const possibleTemplatePaths = [
-      path.resolve(process.cwd(), "index.html"), // Vercel 傳統模式
-      path.resolve(__dirname, "../frontend/dist/client/index.html"), // 本地開發
-      path.resolve(process.cwd(), ".vercel_build_output/index.html"), // 舊的 Build Output API
-    ];
-
-    let templatePath = null;
-    for (const p of possibleTemplatePaths) {
-      if (fs.existsSync(p)) {
-        templatePath = p;
-        console.log(`✓ Found template: ${templatePath}`);
-        break;
-      }
+    // 檢查目錄是否存在
+    if (fs.existsSync(serverDir)) {
+      const serverContents = fs.readdirSync(serverDir);
+      console.log(`📋 Server contents: ${serverContents.join(", ")}`);
+    } else {
+      console.error(`❌ Server directory not found: ${serverDir}`);
     }
 
-    if (!templatePath) {
-      const errorMsg = `❌ Cannot find index.html.\nTried paths:\n${possibleTemplatePaths
-        .map((p) => `  - ${p} (exists: ${fs.existsSync(p)})`)
-        .join("\n")}`;
-      console.error(errorMsg);
-      throw new Error(errorMsg);
+    if (fs.existsSync(clientDir)) {
+      const clientContents = fs.readdirSync(clientDir);
+      console.log(`📋 Client contents: ${clientContents.slice(0, 10).join(", ")}...`);
+    } else {
+      console.error(`❌ Client directory not found: ${clientDir}`);
     }
 
-    // entry-server.js 路徑
-    const possiblePaths = [
-      // Vercel 傳統模式：需要通過 includeFiles 複製
-      path.resolve(process.cwd(), "server/entry-server.js"),
-      // 本地開發
-      path.resolve(__dirname, "../frontend/dist/server/entry-server.js"),
-      // Build Output API 模式
-      path.resolve(__dirname, "../.vercel_build_output/server/entry-server.js"),
-    ];
-
-    console.log("🔍 Checking possible paths:");
-    let serverModulePath = null;
-    for (const p of possiblePaths) {
-      const exists = fs.existsSync(p);
-      console.log(`  ${exists ? "✓" : "✗"} ${p}`);
-      if (exists && !serverModulePath) {
-        serverModulePath = p;
-      }
+    // 找 index.html
+    const templatePath = path.resolve(clientDir, "index.html");
+    
+    if (!fs.existsSync(templatePath)) {
+      throw new Error(`❌ Cannot find index.html at ${templatePath}`);
     }
+    
+    console.log(`✓ Found template: ${templatePath}`);
 
-    if (!serverModulePath) {
-      // 檢查 server 目錄是否存在
-      const serverDir = path.resolve(process.cwd(), "server");
-      const serverExists = fs.existsSync(serverDir);
-      console.error(`❌ server/ directory exists: ${serverExists}`);
-
-      if (serverExists) {
-        const serverContents = fs.readdirSync(serverDir);
-        console.error(`📋 server/ contents: ${serverContents.join(", ")}`);
-      }
-
-      const errorMsg = `❌ Cannot find entry-server.js.\nTried paths:\n${possiblePaths
-        .map((p) => `  - ${p} (exists: ${fs.existsSync(p)})`)
-        .join("\n")}`;
-      console.error(errorMsg);
-      throw new Error(errorMsg);
+    // 找 entry-server.js
+    const serverModulePath = path.resolve(serverDir, "entry-server.js");
+    
+    if (!fs.existsSync(serverModulePath)) {
+      throw new Error(`❌ Cannot find entry-server.js at ${serverModulePath}`);
     }
-
-    console.log(`✓ Using entry-server.js: ${serverModulePath}`);
+    
+    console.log(`✓ Found entry-server.js: ${serverModulePath}`);
 
     // 讀取 HTML 模板
     const template = fs.readFileSync(templatePath, "utf-8");
