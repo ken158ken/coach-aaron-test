@@ -19,14 +19,14 @@ module.exports = async function handler(req, res) {
     // Vercel 架構：
     // - outputDirectory (frontend/dist/client) → 自動提供給所有 functions
     // - includeFiles (frontend/dist/server/entry-server.js) → 複製到函數目錄
-    
+
     // HTML 模板來自 outputDirectory (自動可用)
     const templatePath = path.resolve(process.cwd(), "index.html");
-    
+
     // SSR bundle 來自 includeFiles
     const serverModulePath = path.resolve(
       __dirname,
-      "../frontend/dist/server/entry-server.js"
+      "../frontend/dist/server/entry-server.js",
     );
 
     console.log(`📂 Template path: ${templatePath}`);
