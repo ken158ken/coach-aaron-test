@@ -103,6 +103,9 @@ coach-aaron-redesign/
 │   ├── routes/            # API 路由
 │   ├── middleware/        # 中介軟體
 │   ├── utils/             # 工具函數
+│   │   ├── logger.ts      # 日誌工具
+│   │   ├── env.ts         # 環境變數
+│   │   └── sanitizer.ts   # 🔐 輸入消毒與安全驗證
 │   └── dist/              # 編譯輸出
 │
 ├── database/               # 💾 SQL 腳本
@@ -112,6 +115,83 @@ coach-aaron-redesign/
 │
 └── REPORTS/                # 📊 報告文件
 ```
+
+## 🔐 安全性設計
+
+### 評論系統注入防護 (2026-02-04)
+
+本專案對評論系統（課程評論、文章留言）實施多層防護機制：
+
+#### 防護架構
+
+```
+前端 (useSafeInput) → 後端 (sanitizer.ts) → 資料庫 → 輸出消毒
+```
+
+#### 防護的攻擊類型
+
+| 攻擊類型  | 防護措施                |
+| --------- | ----------------------- |
+| XSS       | HTML 實體編碼、標籤移除 |
+| HTML 注入 | 所有 HTML 標籤移除      |
+| SQL 注入  | 參數化查詢 + 關鍵字偵測 |
+| 命令注入  | 危險模式偵測與拒絕      |
+| 模板注入  | 模板語法偵測與拒絕      |
+
+#### 安全工具
+
+**後端** (`backend/utils/sanitizer.ts`):
+
+- `sanitizeComment()` - 評論內容消毒
+- `sanitizeRating()` - 評分驗證
+- `sanitizeId()` - ID 格式驗證
+- `logSecurityEvent()` - 安全事件記錄
+
+**前端** (`frontend/src/hooks/useSafeInput.ts`):
+
+- `useSafeInput()` - 安全文字輸入 Hook
+- `useRatingInput()` - 安全評分輸入 Hook
+- `renderSafeContent()` - 安全渲染用戶生成內容
+
+詳細資訊請參考: [REPORTS/SECURITY_INPUT_SANITIZATION_2026-02-04T12-00-00Z.md](./REPORTS/SECURITY_INPUT_SANITIZATION_2026-02-04T12-00-00Z.md)
+
+## 🔍 全域搜尋功能 (2026-02-04 新增)
+
+### 功能特點
+
+- **快捷鍵啟動**: `Ctrl+K` (Windows) / `Cmd+K` (Mac)
+- **即時搜尋**: 300ms debounce，輸入即搜尋
+- **搜尋範圍**: 課程、文章、評論、評價
+- **鍵盤導航**: ↑↓ 選擇結果，Enter 跳轉
+
+### 搜尋 API
+
+```
+GET /api/search?q=關鍵字
+```
+
+**回傳格式：**
+
+```json
+{
+  "results": [
+    {
+      "id": "1",
+      "type": "course",
+      "title": "課程標題",
+      "description": "課程描述...",
+      "url": "/courses/1"
+    }
+  ],
+  "total": 10
+}
+```
+
+### 安全措施
+
+- 輸入經過 `sanitizeSearchQuery()` 消毒
+- 移除 SQL 通配符、HTML 標籤、危險字元
+- 最大搜尋長度限制 100 字元
 
 ## 🎯 頁面路由
 
@@ -149,30 +229,127 @@ coach-aaron-redesign/
 | `/admin/courses/new`       | 新增課程 |
 | `/admin/courses/:id/edit`  | 編輯課程 |
 
-## 📝 編輯器功能 (2025-01-21 更新)
+## 📝 編輯器功能 (2026-02-04 更新)
 
 ### 文章/課程編輯器特色
 
 - **Tiptap 富文本編輯器** - 簡潔好用，類似 Word 操作
 - **localStorage 自動暫存** - 每 30 秒自動儲存，防止意外遺失
 - **分類管理功能** - 可直接在編輯器中新增/刪除分類
+- **美化對話框** - 使用 `Dialog` 元件取代原生 prompt/alert
+- **🆕 可調整大小媒體** - 圖片和 YouTube 影片支援拖曳調整尺寸
+- **🆕 嚴格媒體驗證** - 只允許 Cloudinary 圖片和 YouTube 影片
+- **🆕 即時媒體預覽** - 插入前預覽圖片和 YouTube 影片
+- **🆕 自動 Slug 生成** - 網址代稱從標題自動產生
+- **🆕 全寬螢幕編輯** - 側邊欄可收合，最大化編輯空間
+- **🆕 發布前預覽** - 使用 Modal 預覽文章最終呈現效果
 - **使用說明模態框** - 點擊問號 (?) 圖示查看詳細操作說明
-- **標籤系統** - 支援快速新增和移除標籤
+- **標籤系統** - 支援快速新增和移除標籤（按 Enter 新增）
 - **離開提醒** - 有未儲存變更時會提醒使用者
 
-### 工具列功能
+### 媒體來源限制
 
-| 按鈕     | 功能     | 說明                   |
-| -------- | -------- | ---------------------- |
-| **B**    | 粗體     | 讓文字變粗，強調重點   |
-| _I_      | 斜體     | 讓文字傾斜，常用於引用 |
-| <u>U</u> | 底線     | 在文字下方加線         |
-| H1/H2/H3 | 標題     | H1 最大，H3 最小       |
-| • 列表   | 項目符號 | 用圓點條列重點         |
-| 1. 列表  | 編號列表 | 用數字條列步驟         |
-| 🖼️       | 圖片     | 貼上圖片網址插入       |
-| 🎬       | 影片     | 貼上 YouTube 網址嵌入  |
-| 🔗       | 連結     | 將文字轉換成可點擊連結 |
+| 媒體類型 | 允許來源   | 說明                                                            |
+| -------- | ---------- | --------------------------------------------------------------- |
+| 圖片     | Cloudinary | 只接受 `https://res.cloudinary.com/...` 開頭的網址              |
+| 影片     | YouTube    | 支援 `youtube.com/watch?v=`、`youtu.be/`、`youtube.com/shorts/` |
+
+### 可調整大小功能
+
+- **拖曳調整** - 滑鼠移至媒體右下角，出現金色手柄後拖曳調整
+- **圖片尺寸** - 最小 100px，最大 800px
+- **影片尺寸** - 最小 280px，最大 960px，自動維持 16:9 比例
+- **即時顯示** - 選中媒體時顯示當前尺寸
+
+### 工具列功能 (全功能版)
+
+#### 基本格式
+
+| 按鈕     | 功能   | 說明                   |
+| -------- | ------ | ---------------------- |
+| **B**    | 粗體   | 讓文字變粗，強調重點   |
+| _I_      | 斜體   | 讓文字傾斜，常用於引用 |
+| <u>U</u> | 底線   | 在文字下方加線         |
+| ~~S~~    | 刪除線 | 在文字中間加橫線       |
+| X₂       | 下標   | 化學式如 H₂O           |
+| X²       | 上標   | 數學次方如 E=mc²       |
+
+#### 文字樣式
+
+| 按鈕 | 功能     | 說明            |
+| ---- | -------- | --------------- |
+| 🔴A▼ | 文字顏色 | 10 種顏色可選   |
+| █H▼  | 螢光標記 | 10 種螢光色可選 |
+
+#### 標題與段落
+
+| 按鈕     | 功能 | 說明             |
+| -------- | ---- | ---------------- |
+| H1/H2/H3 | 標題 | H1 最大，H3 最小 |
+| ⬅ ⬛ ➡   | 對齊 | 左中右對齊       |
+
+#### 列表與區塊
+
+| 按鈕     | 功能     | 說明               |
+| -------- | -------- | ------------------ |
+| • 列表   | 項目符號 | 用圓點條列重點     |
+| 1. 列表  | 編號列表 | 用數字條列步驟     |
+| ☑ 待辦   | 待辦清單 | 可勾選的核取方塊   |
+| ❝ 引言   | 區塊引用 | 縮排引用樣式       |
+| </> 程式 | 程式碼塊 | 等寬字型顯示程式碼 |
+| ― 分隔線 | 水平線   | 插入水平分隔線     |
+
+#### 表格功能
+
+| 按鈕    | 功能     | 說明               |
+| ------- | -------- | ------------------ |
+| ⊞▼ 表格 | 表格選單 | 新增表格、增刪行列 |
+
+#### 媒體與連結
+
+| 按鈕 | 功能 | 說明                     |
+| ---- | ---- | ------------------------ |
+| 🖼️   | 圖片 | 貼上 Cloudinary 網址插入 |
+| 🎬   | 影片 | 貼上 YouTube 網址嵌入    |
+| 🔗   | 連結 | 將文字轉換成可點擊連結   |
+
+### Tiptap 擴展列表
+
+本專案使用以下 Tiptap 擴展：
+
+**基礎套件** (StarterKit 內建)
+
+- Bold, Italic, Strike, Code
+- Heading, Paragraph, Text
+- BulletList, OrderedList, ListItem
+- Blockquote, CodeBlock, HorizontalRule
+- Document, HardBreak
+- Dropcursor, Gapcursor, UndoRedo
+
+**額外安裝的擴展**
+
+- `@tiptap/extension-underline` - 底線
+- `@tiptap/extension-text-align` - 文字對齊
+- `@tiptap/extension-link` - 超連結
+- `@tiptap/extension-placeholder` - 佔位文字
+- `@tiptap/extension-text-style` - 文字樣式基礎
+- `@tiptap/extension-color` - 文字顏色
+- `@tiptap/extension-highlight` - 螢光標記 (多色)
+- `@tiptap/extension-subscript` - 下標
+- `@tiptap/extension-superscript` - 上標
+- `@tiptap/extension-table` - 表格
+- `@tiptap/extension-table-row` - 表格列
+- `@tiptap/extension-table-cell` - 表格儲存格
+- `@tiptap/extension-table-header` - 表格標頭
+- `@tiptap/extension-task-list` - 待辦清單
+- `@tiptap/extension-task-item` - 待辦項目
+- `@tiptap/extension-character-count` - 字數統計
+- `@tiptap/extension-typography` - 排版自動修正
+
+**自訂擴展**
+
+- `ResizableImage` - 可調整大小的圖片
+- `ResizableYoutube` - 可調整大小的 YouTube 影片
 
 ### 購物流程
 
@@ -382,6 +559,56 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-06 - 資料庫 Migration 後前端修正
+
+#### 🐛 問題修復
+
+- **資料庫型別變更**: 執行 migration 002 後，`course_keywords`, `article_keywords`, `course_category`, `article_category` 從 `TEXT[]` 改為 `TEXT`（逗號分隔）
+- **Type 定義修正**: 更新 `content.ts` 中 Course 和 Article 介面，將 keywords 和 category 改為 `string`
+- **Service 層轉換**: `course.service.ts` 將 `course_keywords` 自動 split 成陣列給前端別名 `keywords`
+- **ArticleDetail 修正**: SEOHead 和 keywords 顯示改用 `split()` 處理逗號分隔字串
+- **管理後台修正**: AdminCourses 和 AdminArticles 的 `openEditModal` 正確處理資料庫欄位
+
+#### 📄 相關文件
+
+- 完整報告：[REPORTS/DATABASE_MIGRATION_FIX_2026-02-06T18-00-00+08-00.md](REPORTS/DATABASE_MIGRATION_FIX_2026-02-06T18-00-00+08-00.md)
+
+---
+
+### 2026-02-04 - Tiptap 編輯器全功能升級
+
+#### 🎨 新增 Tiptap 擴展
+
+安裝並整合 17 個新擴展，大幅增強文字編輯能力：
+
+| 擴展類型 | 功能                                          |
+| -------- | --------------------------------------------- |
+| 文字樣式 | TextStyle, Color (10色), Highlight (多色螢光) |
+| 文字格式 | Strike, Subscript, Superscript                |
+| 區塊元素 | Blockquote, CodeBlock, HorizontalRule         |
+| 表格功能 | Table, TableRow, TableCell, TableHeader       |
+| 待辦清單 | TaskList, TaskItem (支援巢狀)                 |
+| 輔助功能 | CharacterCount, Typography                    |
+
+#### 🖼️ 全寬螢幕編輯介面
+
+- **可收合側邊欄**: 點擊按鈕收起右側表單區域，最大化編輯空間
+- **響應式工具列**: 工具按鈕分群組排列，所有按鈕都有 title 懸停提示
+
+#### 📋 發布前預覽功能
+
+- **新增 ArticlePreviewModal 元件**: 使用 React Portal 實現模態框
+- **dangerouslySetInnerHTML 渲染**: 預覽最終 HTML 輸出效果
+- **預覽資訊包含**: 標題、分類、摘要、封面圖、完整內容
+
+#### 🔧 SSR 相容性修正
+
+- **具名匯入修正**: 將 default import 改為 named import
+- **immediatelyRender: false**: 解決 Tiptap SSR hydration 問題
+- **StarterKit 整合**: 使用內建擴展減少重複配置
+
+---
+
 ### 2026-02-02 - 區塊編輯器權限保護與導航優化
 
 #### 🔒 安全性增強
@@ -558,3 +785,43 @@ npm install react-moveable moveable @scena/react-guides uuid
 #### Select 下拉選單修復
 
 - **AdminArticles**: 修復 option 背景色為 `bg-luxe-bg`
+
+---
+
+## 📝 更新日誌
+
+### 2026-02-06 - 課程管理功能對齊修正
+
+#### 資料庫 Schema 修正
+
+- **新增欄位**:
+  - `courses.course_level` (課程難度: beginner/intermediate/advanced)
+  - `courses.lessons_count` (課堂數)
+- **型態修正**:
+  - `course_keywords`: TEXT[] → TEXT (逗號分隔)
+  - `article_keywords`: TEXT[] → TEXT (逗號分隔)
+  - `course_category`: VARCHAR(100) → TEXT
+  - `article_category`: VARCHAR(100) → TEXT
+
+#### 後端 API 修正
+
+- **統一命名**: POST/PUT `/api/courses` 使用底線命名（course_title, course_slug 等）
+- **新增欄位支援**: course_level 欄位處理
+- **別名支援**: category/keywords 自動映射到 course_category/course_keywords
+
+#### 前端修正
+
+- **AdminCourses**: 修正 API 請求欄位名稱，與後端對齊
+- **Modal 版面**: 確認使用 `size="xl"` 與 AdminArticles 一致
+- **共用元件**: 確認 RichTextEditor 為共用元件（已從 `@/components/ui` 導出）
+
+#### Migration 檔案
+
+- 新增 `database/migrations/002_add_course_level_and_fix_keywords.sql`
+- 自動轉換現有 TEXT[] 資料為 TEXT 格式
+
+#### 完整報告
+
+- 詳見 `REPORTS/COURSE_MANAGEMENT_ALIGNMENT_2026-02-06T14-30-00+08-00.md`
+
+---

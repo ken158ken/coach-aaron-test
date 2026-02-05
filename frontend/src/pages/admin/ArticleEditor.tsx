@@ -1,8 +1,8 @@
 /**
  * 文章編輯器頁面
  * @module pages/admin/ArticleEditor
- * @description 簡潔的文章編輯頁面，使用 Tiptap 富文本編輯器
- * @features localStorage 自動暫存、分類管理、使用說明
+ * @description 全螢幕文章編輯頁面，使用 Tiptap 富文本編輯器
+ * @features localStorage 自動暫存、分類管理、使用說明、發布前預覽
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -11,13 +11,58 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
-import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
-import Youtube from "@tiptap/extension-youtube";
 import Placeholder from "@tiptap/extension-placeholder";
+// 新增擴展 - 使用具名匯入 (named imports)
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Superscript } from "@tiptap/extension-superscript";
+import { CodeBlock } from "@tiptap/extension-code-block";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TaskList } from "@tiptap/extension-task-list";
+import { TaskItem } from "@tiptap/extension-task-item";
+import { CharacterCount } from "@tiptap/extension-character-count";
+import { Typography } from "@tiptap/extension-typography";
+import { Dropcursor } from "@tiptap/extension-dropcursor";
+import { Gapcursor } from "@tiptap/extension-gapcursor";
+
 import { useAuth } from "@/context";
 import { Loading } from "@/components/ui";
+import { useDialog } from "@/components/ui/Dialog";
+import { ResizableImage, ResizableYoutube } from "@/components/editor";
 import { articleService } from "@/services/article.service";
+import ArticlePreviewModal from "@/components/admin/ArticlePreviewModal";
+
+/**
+ * 驗證 Cloudinary 圖片網址
+ */
+const isValidCloudinaryUrl = (url: string): boolean => {
+  return /^https?:\/\/res\.cloudinary\.com\/.+/.test(url);
+};
+
+/**
+ * 驗證 YouTube 網址
+ */
+const isValidYouTubeUrl = (url: string): boolean => {
+  return /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|shorts\/)|youtu\.be\/).+/.test(
+    url,
+  );
+};
+
+/**
+ * 提取 YouTube 影片 ID
+ */
+const extractYouTubeId = (url: string): string | null => {
+  const regex =
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
 
 /** 文章資料結構 */
 interface ArticleData {
@@ -91,6 +136,12 @@ const ArticleEditor: React.FC = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
+  // 預覽 Modal
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // 側邊欄收合狀態
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   // 使用說明 Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
 
@@ -103,31 +154,58 @@ const ArticleEditor: React.FC = () => {
       .slice(0, 50);
   }, []);
 
-  // Tiptap 編輯器
+  // Tiptap 編輯器 - 完整功能版
   const editor = useEditor({
+    // SSR 相容性設定
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // StarterKit 已包含：bold, italic, strike, blockquote, codeBlock,
+        // horizontalRule, bulletList, orderedList, dropcursor, gapcursor
+        dropcursor: {
+          color: "#d4af37",
+          width: 2,
+        },
       }),
+      // 基本格式 (StarterKit 沒有的)
       Underline,
+      Subscript,
+      Superscript,
+      // 文字樣式
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      // 對齊
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
-      Image.configure({
-        HTMLAttributes: {
-          class: "max-w-full rounded-lg",
-        },
+      // 表格
+      Table.configure({
+        resizable: true,
       }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      // 待辦清單
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      // 媒體
+      ResizableImage,
       Link.configure({
         openOnClick: false,
       }),
-      Youtube.configure({
-        width: 640,
-        height: 360,
-      }),
+      ResizableYoutube,
+      // 功能性
       Placeholder.configure({
         placeholder: "開始撰寫文章內容...",
       }),
+      CharacterCount.configure({
+        limit: 50000,
+      }),
+      Typography,
     ],
     content: article.content,
     onUpdate: ({ editor }) => {
@@ -254,29 +332,129 @@ const ArticleEditor: React.FC = () => {
     setHasChanges(true);
   }, []);
 
-  /** 插入圖片 */
-  const handleInsertImage = useCallback(() => {
-    const url = prompt("請輸入圖片網址 (建議使用 Cloudinary):");
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  }, [editor]);
+  // 使用美化對話框
+  const dialog = useDialog();
 
-  /** 插入 YouTube */
-  const handleInsertYoutube = useCallback(() => {
-    const url = prompt("請輸入 YouTube 網址:");
+  /** 插入圖片（強制 Cloudinary 驗證） */
+  const handleInsertImage = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入圖片",
+      message: "請輸入 Cloudinary 圖片網址：",
+      placeholder: "https://res.cloudinary.com/...",
+      validation: (value) => {
+        if (!isValidCloudinaryUrl(value)) {
+          return "❌ 只能使用 Cloudinary 圖片網址！\n請確保網址以 https://res.cloudinary.com/ 開頭";
+        }
+        return null;
+      },
+      renderPreview: (value) =>
+        isValidCloudinaryUrl(value) ? (
+          <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
+            <img
+              src={value}
+              alt="圖片預覽"
+              className="max-h-48 mx-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        ) : null,
+    });
+
     if (url && editor) {
-      editor.chain().focus().setYoutubeVideo({ src: url }).run();
+      // 二次驗證（防護措施）
+      if (!isValidCloudinaryUrl(url)) {
+        await dialog.alert({
+          type: "error",
+          title: "無效的圖片網址",
+          message: "只能使用 Cloudinary 圖片網址！",
+        });
+        return;
+      }
+      // 使用可調整大小的圖片擴展
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "resizableImage",
+          attrs: { src: url },
+        })
+        .run();
     }
-  }, [editor]);
+  }, [editor, dialog]);
+
+  /** 插入 YouTube（強制 YouTube 驗證 + 即時預覽） */
+  const handleInsertYoutube = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入 YouTube 影片",
+      message: "請輸入 YouTube 影片網址：",
+      placeholder: "https://www.youtube.com/watch?v=...",
+      validation: (value) => {
+        if (!isValidYouTubeUrl(value)) {
+          return "❌ 只能使用 YouTube 影片網址！\n支援格式：youtube.com/watch?v=, youtu.be/, youtube.com/shorts/";
+        }
+        return null;
+      },
+      renderPreview: (value) => {
+        const videoId = extractYouTubeId(value);
+        return videoId ? (
+          <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube 預覽"
+              className="w-full aspect-video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        ) : null;
+      },
+    });
+
+    if (url && editor) {
+      // 二次驗證（防護措施）
+      if (!isValidYouTubeUrl(url)) {
+        await dialog.alert({
+          type: "error",
+          title: "無效的影片網址",
+          message: "只能使用 YouTube 影片網址！",
+        });
+        return;
+      }
+      // 使用可調整大小的 YouTube 擴展
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "resizableYoutube",
+          attrs: { src: url, width: 640, height: 360 },
+        })
+        .run();
+    }
+  }, [editor, dialog]);
 
   /** 插入連結 */
-  const handleInsertLink = useCallback(() => {
-    const url = prompt("請輸入連結網址:");
+  const handleInsertLink = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入連結",
+      message: "請輸入網址：",
+      placeholder: "https://...",
+      validation: (value) => {
+        try {
+          new URL(value);
+          return null;
+        } catch {
+          return "請輸入有效的網址";
+        }
+      },
+    });
+
     if (url && editor) {
       editor.chain().focus().setLink({ href: url }).run();
     }
-  }, [editor]);
+  }, [editor, dialog]);
 
   /** 手動儲存草稿到 localStorage */
   const handleSaveDraft = useCallback(() => {
@@ -296,8 +474,17 @@ const ArticleEditor: React.FC = () => {
     }
   }, [article]);
 
-  /** 發布文章 */
-  const handlePublish = useCallback(async () => {
+  /** 顯示預覽（發布前確認） */
+  const handleShowPreview = useCallback(() => {
+    if (!article.title.trim()) {
+      alert("請輸入文章標題");
+      return;
+    }
+    setShowPreviewModal(true);
+  }, [article.title]);
+
+  /** 確認發布文章 */
+  const handleConfirmPublish = useCallback(async () => {
     if (!article.title.trim()) {
       alert("請輸入文章標題");
       return;
@@ -331,6 +518,7 @@ const ArticleEditor: React.FC = () => {
       // 清除 localStorage 草稿
       localStorage.removeItem(STORAGE_KEY);
       setHasChanges(false);
+      setShowPreviewModal(false);
       alert("✅ 文章已發布！");
       navigate("/admin/articles");
     } catch (error) {
@@ -462,38 +650,54 @@ const ArticleEditor: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* 字數統計 */}
+            {editor && (
+              <span className="text-xs text-gray-500">
+                {editor.storage.characterCount?.characters() || 0} 字
+              </span>
+            )}
             <button
               type="button"
               onClick={handleSaveDraft}
               disabled={isSaving}
+              title="儲存草稿到瀏覽器"
               className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50"
             >
               {isSaving ? "儲存中..." : "儲存草稿"}
             </button>
             <button
               type="button"
-              onClick={handlePublish}
+              onClick={handleShowPreview}
               disabled={isSaving}
+              title="預覽文章並確認發布"
               className="px-4 py-2 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg disabled:opacity-50 font-medium"
             >
-              發布文章
+              預覽並發布
             </button>
           </div>
         </div>
       </header>
 
-      {/* 主要內容 */}
-      <main className="max-w-5xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 左側：文章內容 */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* 主要內容 - 全寬佈局 */}
+      <main className="h-[calc(100vh-64px)] flex overflow-hidden">
+        {/* 左側：文章編輯區（全寬） */}
+        <div
+          className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${sidebarCollapsed ? "" : "mr-80"}`}
+        >
+          <div className="max-w-4xl mx-auto space-y-6">
             {/* 標題 */}
             <div>
               <input
                 type="text"
                 value={article.title}
                 onChange={(e) => {
-                  setArticle((prev) => ({ ...prev, title: e.target.value }));
+                  const newTitle = e.target.value;
+                  setArticle((prev) => ({
+                    ...prev,
+                    title: newTitle,
+                    // 自動產生 slug
+                    slug: generateSlug(newTitle),
+                  }));
                   setHasChanges(true);
                 }}
                 placeholder="文章標題"
@@ -503,11 +707,11 @@ const ArticleEditor: React.FC = () => {
 
             {/* 編輯器工具列 */}
             <div className="flex flex-wrap gap-1 p-2 bg-luxe-surface rounded-lg border border-luxe-gold/20">
-              {/* 文字格式 */}
+              {/* 文字格式 - 第一行 */}
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleBold().run()}
-                title="粗體 - 讓文字變粗，強調重點"
+                title="粗體 (Ctrl+B) - 讓文字變粗，強調重點"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("bold") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
                 <strong>B</strong>
@@ -515,7 +719,7 @@ const ArticleEditor: React.FC = () => {
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleItalic().run()}
-                title="斜體 - 讓文字傾斜，常用於引用或強調"
+                title="斜體 (Ctrl+I) - 讓文字傾斜，常用於引用或強調"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("italic") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
                 <em>I</em>
@@ -523,11 +727,131 @@ const ArticleEditor: React.FC = () => {
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleUnderline().run()}
-                title="底線 - 在文字下方加線"
+                title="底線 (Ctrl+U) - 在文字下方加線"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("underline") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
                 <u>U</u>
               </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleStrike().run()}
+                title="刪除線 - 在文字中間畫線，表示刪除或更正"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("strike") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+              >
+                <s>S</s>
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleSubscript().run()}
+                title="下標 - 文字縮小並下移，如 H₂O"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("subscript") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+              >
+                X<sub>2</sub>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().toggleSuperscript().run()
+                }
+                title="上標 - 文字縮小並上移，如 X²"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("superscript") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+              >
+                X<sup>2</sup>
+              </button>
+
+              <span className="w-px bg-luxe-gold/30 mx-1" />
+
+              {/* 文字顏色 */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  title="文字顏色 - 改變選取文字的顏色"
+                  className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
+                >
+                  <span className="text-red-500">A</span>
+                  <span className="text-[10px]">▼</span>
+                </button>
+                <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:grid grid-cols-5 gap-1 z-50 min-w-[140px]">
+                  {[
+                    "#ef4444",
+                    "#f97316",
+                    "#eab308",
+                    "#22c55e",
+                    "#06b6d4",
+                    "#3b82f6",
+                    "#8b5cf6",
+                    "#ec4899",
+                    "#ffffff",
+                    "#000000",
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() =>
+                        editor?.chain().focus().setColor(color).run()
+                      }
+                      title={`設定文字顏色: ${color}`}
+                      className="w-6 h-6 rounded border border-luxe-gold/20 hover:scale-110 transition-transform"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().unsetColor().run()}
+                    title="清除文字顏色"
+                    className="col-span-5 text-xs text-gray-400 hover:text-white py-1"
+                  >
+                    清除顏色
+                  </button>
+                </div>
+              </div>
+
+              {/* 螢光筆 */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  title="螢光筆 - 為文字加上背景色標記"
+                  className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor?.isActive("highlight") ? "bg-luxe-gold text-black" : ""}`}
+                >
+                  <span className="bg-yellow-300 text-black px-1">H</span>
+                  <span className="text-[10px]">▼</span>
+                </button>
+                <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:grid grid-cols-5 gap-1 z-50 min-w-[140px]">
+                  {[
+                    "#fef08a",
+                    "#fed7aa",
+                    "#bbf7d0",
+                    "#a5f3fc",
+                    "#c4b5fd",
+                    "#fbcfe8",
+                    "#fecaca",
+                    "#e5e5e5",
+                    "#fde047",
+                    "#4ade80",
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() =>
+                        editor?.chain().focus().toggleHighlight({ color }).run()
+                      }
+                      title={`設定螢光筆顏色: ${color}`}
+                      className="w-6 h-6 rounded border border-luxe-gold/20 hover:scale-110 transition-transform"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      editor?.chain().focus().unsetHighlight().run()
+                    }
+                    title="清除螢光筆"
+                    className="col-span-5 text-xs text-gray-400 hover:text-white py-1"
+                  >
+                    清除螢光筆
+                  </button>
+                </div>
+              </div>
 
               <span className="w-px bg-luxe-gold/30 mx-1" />
 
@@ -537,7 +861,7 @@ const ArticleEditor: React.FC = () => {
                 onClick={() =>
                   editor?.chain().focus().toggleHeading({ level: 1 }).run()
                 }
-                title="大標題 - 文章主標題，字體最大"
+                title="大標題 (H1) - 文章主標題，字體最大，每篇文章建議只用一次"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("heading", { level: 1 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
                 H1
@@ -547,7 +871,7 @@ const ArticleEditor: React.FC = () => {
                 onClick={() =>
                   editor?.chain().focus().toggleHeading({ level: 2 }).run()
                 }
-                title="中標題 - 段落標題，字體中等"
+                title="中標題 (H2) - 段落標題，字體中等，用於劃分主要段落"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("heading", { level: 2 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
                 H2
@@ -557,7 +881,7 @@ const ArticleEditor: React.FC = () => {
                 onClick={() =>
                   editor?.chain().focus().toggleHeading({ level: 3 }).run()
                 }
-                title="小標題 - 子段落標題，字體較小"
+                title="小標題 (H3) - 子段落標題，字體較小，用於細分內容"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("heading", { level: 3 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
                 H3
@@ -572,7 +896,7 @@ const ArticleEditor: React.FC = () => {
                 title="項目符號列表 - 用圓點條列重點，適合無順序的清單"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("bulletList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
-                • 列表
+                •
               </button>
               <button
                 type="button"
@@ -582,7 +906,45 @@ const ArticleEditor: React.FC = () => {
                 title="編號列表 - 用數字條列步驟，適合有順序的清單"
                 className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("orderedList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
-                1. 列表
+                1.
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleTaskList().run()}
+                title="待辦清單 - 可勾選的任務清單"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("taskList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+              >
+                ☑
+              </button>
+
+              <span className="w-px bg-luxe-gold/30 mx-1" />
+
+              {/* 區塊 */}
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+                title="引用區塊 - 引用他人的話或重要內容"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("blockquote") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+              >
+                ❝
+              </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+                title="程式碼區塊 - 顯示程式碼，保留格式"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("codeBlock") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+              >
+                {"</>"}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editor?.chain().focus().setHorizontalRule().run()
+                }
+                title="水平分隔線 - 在段落之間加入分隔線"
+                className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+              >
+                ―
               </button>
 
               <span className="w-px bg-luxe-gold/30 mx-1" />
@@ -621,78 +983,168 @@ const ArticleEditor: React.FC = () => {
 
               <span className="w-px bg-luxe-gold/30 mx-1" />
 
-              {/* 插入 */}
+              {/* 表格 */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  title="表格 - 插入或編輯表格"
+                  className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor?.isActive("table") ? "bg-luxe-gold text-black" : ""}`}
+                >
+                  ⊞<span className="text-[10px]">▼</span>
+                </button>
+                <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:block z-50 min-w-[160px]">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      editor
+                        ?.chain()
+                        .focus()
+                        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                        .run()
+                    }
+                    title="插入 3x3 表格"
+                    className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+                  >
+                    📊 插入表格 (3x3)
+                  </button>
+                  {editor?.isActive("table") && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().addColumnAfter().run()
+                        }
+                        title="在右側新增一欄"
+                        className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+                      >
+                        ➕ 新增欄
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().addRowAfter().run()
+                        }
+                        title="在下方新增一列"
+                        className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+                      >
+                        ➕ 新增列
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().deleteColumn().run()
+                        }
+                        title="刪除當前欄"
+                        className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
+                      >
+                        ➖ 刪除欄
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().deleteRow().run()
+                        }
+                        title="刪除當前列"
+                        className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
+                      >
+                        ➖ 刪除列
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().deleteTable().run()
+                        }
+                        title="刪除整個表格"
+                        className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
+                      >
+                        🗑️ 刪除表格
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <span className="w-px bg-luxe-gold/30 mx-1" />
+
+              {/* 插入媒體 */}
               <button
                 type="button"
                 onClick={handleInsertImage}
-                title="插入圖片 - 貼上圖片網址即可插入圖片（建議使用 Cloudinary）"
+                title="插入圖片 - 貼上 Cloudinary 圖片網址（僅支援 Cloudinary）"
                 className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
               >
-                🖼️ 圖片
+                🖼️
               </button>
               <button
                 type="button"
                 onClick={handleInsertYoutube}
-                title="插入 YouTube 影片 - 貼上 YouTube 網址即可嵌入影片"
+                title="插入 YouTube 影片 - 貼上 YouTube 網址（僅支援 YouTube）"
                 className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
               >
-                🎬 影片
+                🎬
               </button>
               <button
                 type="button"
                 onClick={handleInsertLink}
                 title="插入連結 - 將文字轉換成可點擊的連結"
-                className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("link") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
               >
-                🔗 連結
+                🔗
               </button>
+              {editor?.isActive("link") && (
+                <button
+                  type="button"
+                  onClick={() => editor?.chain().focus().unsetLink().run()}
+                  title="移除連結"
+                  className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            {/* 編輯器內容 */}
-            <div className="min-h-[400px] p-4 bg-luxe-surface rounded-lg border border-luxe-gold/20">
+            {/* 編輯器內容 - 更大的編輯區域 */}
+            <div className="min-h-[600px] p-6 bg-luxe-surface rounded-lg border border-luxe-gold/20">
               <EditorContent
                 editor={editor}
-                className="prose prose-invert max-w-none min-h-[350px] [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[350px]"
+                className="prose prose-invert max-w-none min-h-[550px] [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[550px]"
               />
             </div>
           </div>
+        </div>
 
-          {/* 右側：文章資訊 */}
-          <div className="space-y-6">
+        {/* 右側：可收合的側邊欄 */}
+        <div
+          className={`fixed right-0 top-16 h-[calc(100vh-64px)] w-80 bg-luxe-bg border-l border-luxe-gold/20 overflow-y-auto transition-transform duration-300 ${sidebarCollapsed ? "translate-x-full" : "translate-x-0"}`}
+        >
+          {/* 收合按鈕 */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? "展開側邊欄" : "收合側邊欄"}
+            className="absolute -left-10 top-4 w-10 h-10 flex items-center justify-center bg-luxe-surface border border-luxe-gold/20 rounded-l-lg text-luxe-gold hover:bg-luxe-gold/10"
+          >
+            {sidebarCollapsed ? "◀" : "▶"}
+          </button>
+
+          <div className="p-4 space-y-6">
             <div className="p-4 bg-luxe-surface rounded-lg border border-luxe-gold/20">
               <h2 className="text-sm font-medium text-luxe-gold mb-4">
                 文章資訊
               </h2>
 
               <div className="space-y-4">
-                {/* Slug */}
+                {/* Slug（自動產生，唯讀） */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
                     網址代稱
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setArticle((prev) => ({
-                          ...prev,
-                          slug: generateSlug(prev.title),
-                        }));
-                        setHasChanges(true);
-                      }}
-                      className="ml-2 text-luxe-gold hover:underline"
-                    >
-                      自動產生
-                    </button>
+                    <span className="ml-2 text-gray-500">（自動產生）</span>
                   </label>
-                  <input
-                    type="text"
-                    value={article.slug}
-                    onChange={(e) => {
-                      setArticle((prev) => ({ ...prev, slug: e.target.value }));
-                      setHasChanges(true);
-                    }}
-                    placeholder="article-url-slug"
-                    className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
-                  />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-luxe-black/50 border border-luxe-gold/20 rounded-lg text-sm text-gray-400">
+                    <span>/articles/</span>
+                    <span className="text-luxe-text truncate">
+                      {article.slug || "尚未輸入標題"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* 摘要 */}
@@ -758,7 +1210,7 @@ const ArticleEditor: React.FC = () => {
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && handleAddTag()}
-                      placeholder="輸入標籤..."
+                      placeholder="輸入標籤按 enter 新增"
                       className="flex-1 px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
                     />
                     <button
@@ -1087,6 +1539,15 @@ const ArticleEditor: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 預覽 Modal */}
+      <ArticlePreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        onConfirm={handleConfirmPublish}
+        article={article}
+        isSubmitting={isSaving}
+      />
     </div>
   );
 };

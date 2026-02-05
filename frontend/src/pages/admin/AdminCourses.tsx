@@ -168,18 +168,15 @@ const AdminCourses: React.FC = () => {
   /** 打開編輯 Modal */
   const openEditModal = (course: Course) => {
     setEditingCourse(course);
-    const categoryArray = course.category
-      ? course.category
+    // category 是 string，需要 split
+    const categoryArray = course.course_category
+      ? course.course_category
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
-    const keywordsArray = course.keywords
-      ? course.keywords
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+    // keywords 已經是 array（由 service 轉換）
+    const keywordsArray = course.keywords || [];
 
     setFormData({
       title: course.course_title || course.title || "",
@@ -213,10 +210,10 @@ const AdminCourses: React.FC = () => {
         course_slug: formData.slug || undefined,
         course_description: formData.description || undefined,
         course_content: formData.content || undefined,
-        price: Number(formData.price),
         course_level: formData.level,
         category: formData.category.join(",") || undefined,
         keywords: formData.keywords.join(",") || undefined,
+        price: Number(formData.price),
         status: formData.status,
       });
 
@@ -242,10 +239,10 @@ const AdminCourses: React.FC = () => {
         course_slug: formData.slug || undefined,
         course_description: formData.description || undefined,
         course_content: formData.content || undefined,
-        price: Number(formData.price),
         course_level: formData.level,
         category: formData.category.join(",") || undefined,
         keywords: formData.keywords.join(",") || undefined,
+        price: Number(formData.price),
         status: formData.status,
       });
 

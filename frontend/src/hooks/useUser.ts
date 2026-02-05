@@ -91,20 +91,18 @@ export const useUser = (): UseUserReturn => {
 
   /**
    * 檢查用戶是否已購買指定課程
+   * 注意：管理員也需要購買才能評論，沒有特權
    *
    * @param courseId 課程 ID
    * @returns 是否已購買
    */
   const hasPurchasedCourse = useCallback(
     (courseId: number): boolean => {
-      // 管理員預設可以評論所有課程
-      if (isAdmin) return true;
-
       return purchasedCourses.some(
         (uc) => uc.course_id === courseId && uc.is_active,
       );
     },
-    [purchasedCourses, isAdmin],
+    [purchasedCourses],
   );
 
   /**
