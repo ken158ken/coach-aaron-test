@@ -18,7 +18,7 @@ export interface Course {
   course_description?: string;
   course_content?: string;
   course_thumbnail_url?: string;
-  course_keywords?: string[];
+  course_keywords?: string;
   course_category?: string;
   course_level?: CourseLevel;
   lessons_count?: number;
@@ -124,7 +124,7 @@ export interface Article {
   article_description?: string;
   article_content?: string;
   article_thumbnail_url?: string;
-  article_keywords?: string[];
+  article_keywords?: string;
   article_category?: string;
   status: ArticleStatus;
   view_count: number;

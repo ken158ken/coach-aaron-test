@@ -21,7 +21,9 @@ const normalizeCourse = (data: Partial<Course>): Course => {
     description: data.course_description,
     content: data.course_content,
     thumbnail: data.course_thumbnail_url,
-    keywords: data.course_keywords,
+    keywords: data.course_keywords
+      ? data.course_keywords.split(",").map((k) => k.trim())
+      : [],
     level: data.course_level,
     lessonsCount: data.lessons_count,
     duration: data.duration_minutes

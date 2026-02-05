@@ -2,12 +2,18 @@
  * CourseDetail 頁面 - 課程詳細內容
  * @module pages/CourseDetail
  * @theme prism (VOID PRISM 水晶主題)
+ * @security 實施前端輸入消毒與驗證
  */
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useTheme, useAuth } from "@/context";
-import { useUser } from "@/hooks";
+import {
+  useUser,
+  useSafeInput,
+  useRatingInput,
+  renderSafeContent,
+} from "@/hooks";
 import { courseService } from "@/services";
 import { PillButton, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -22,17 +28,37 @@ const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { setTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
-  const { hasPurchasedCourse, isAdmin, loadingPurchases } = useUser();
+  const { hasPurchasedCourse, loadingPurchases } = useUser();
   const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // 評分與評論狀態
-  const [userRating, setUserRating] = useState<number>(0);
-  const [reviewComment, setReviewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [hoverRating, setHoverRating] = useState<number>(0);
+
+  // 使用安全輸入 Hook 處理評論
+  const {
+    value: reviewComment,
+    setValue: setReviewComment,
+    handleChange: handleCommentChange,
+    validation: commentValidation,
+    getSanitizedValue: getSanitizedComment,
+    reset: resetComment,
+  } = useSafeInput("", {
+    maxLength: 2000,
+    allowNewlines: true,
+    strictMode: true,
+  });
+
+  // 使用安全評分 Hook
+  const {
+    rating: userRating,
+    setRating: setUserRating,
+    hoverRating,
+    setHoverRating,
+    isValid: isRatingValid,
+    reset: resetRating,
+  } = useRatingInput(0);
 
   useEffect(() => {
     setTheme("prism");
@@ -60,7 +86,12 @@ const CourseDetail: React.FC = () => {
             );
             if (existingReview) {
               setUserRating(existingReview.rating);
+              // 安全設定現有評論內容
               setReviewComment(existingReview.comment || "");
+            } else {
+              // 重置評論狀態
+              resetRating();
+              resetComment();
             }
           }
         } catch {
@@ -84,16 +115,25 @@ const CourseDetail: React.FC = () => {
 
   /**
    * 提交評分與評論
+   * @security 使用消毒後的內容提交
    */
   const handleSubmitReview = async () => {
-    if (!isAuthenticated || !course || userRating === 0) return;
+    if (!isAuthenticated || !course || !isRatingValid) return;
+
+    // 前端驗證
+    if (!commentValidation.isValid && reviewComment.trim()) {
+      console.warn("Review validation failed:", commentValidation.errorMessage);
+      return;
+    }
 
     try {
       setSubmitting(true);
+      // 使用消毒後的內容
+      const sanitizedComment = getSanitizedComment();
       await courseService.addReview(
         course.course_id!,
         userRating,
-        reviewComment.trim() || undefined,
+        sanitizedComment || undefined,
       );
       // 重新載入課程和評論
       await fetchCourse();
@@ -314,8 +354,8 @@ const CourseDetail: React.FC = () => {
                     登入
                   </Link>
                 </div>
-              ) : !hasPurchasedCourse(course.course_id!) && !isAdmin ? (
-                // 已登入但未購買
+              ) : !hasPurchasedCourse(course.course_id!) ? (
+                // 已登入但未購買（管理員也需要購買才能評論）
                 <div className="text-center py-4">
                   <p className="text-prism-text/60 mb-4">
                     購買此課程後即可留下評價
@@ -364,19 +404,53 @@ const CourseDetail: React.FC = () => {
                       )}
                     </div>
 
-                    {/* 評論輸入 */}
-                    <textarea
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      placeholder="分享你對這門課程的看法（可選）..."
-                      className="w-full bg-prism-bg border border-prism-accent/20 rounded-lg px-4 py-3 text-prism-text focus:outline-none focus:border-prism-accent/50 resize-none"
-                      rows={3}
-                    />
+                    {/* 評論輸入 - 使用安全輸入 Hook */}
+                    <div className="space-y-2">
+                      <textarea
+                        value={reviewComment}
+                        onChange={handleCommentChange}
+                        placeholder="分享你對這門課程的看法（可選）..."
+                        className={`w-full bg-prism-bg border rounded-lg px-4 py-3 text-prism-text focus:outline-none resize-none transition-colors ${
+                          !commentValidation.isValid && reviewComment
+                            ? "border-red-500/50 focus:border-red-500"
+                            : "border-prism-accent/20 focus:border-prism-accent/50"
+                        }`}
+                        rows={3}
+                        maxLength={2000}
+                      />
+                      <div className="flex justify-between items-center text-xs">
+                        <span
+                          className={`${
+                            !commentValidation.isValid && reviewComment
+                              ? "text-red-400"
+                              : "text-prism-text/40"
+                          }`}
+                        >
+                          {!commentValidation.isValid && reviewComment
+                            ? commentValidation.errorMessage
+                            : ""}
+                        </span>
+                        <span
+                          className={`${
+                            commentValidation.remainingChars < 100
+                              ? "text-yellow-500"
+                              : "text-prism-text/40"
+                          }`}
+                        >
+                          {commentValidation.charCount} / 2000
+                        </span>
+                      </div>
+                    </div>
 
                     {/* 提交按鈕 */}
                     <button
                       onClick={handleSubmitReview}
-                      disabled={submitting || userRating === 0}
+                      disabled={
+                        submitting ||
+                        !isRatingValid ||
+                        (!commentValidation.isValid &&
+                          reviewComment.trim() !== "")
+                      }
                       className="px-6 py-2 bg-prism-accent text-prism-bg rounded-full hover:bg-prism-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {submitting
@@ -433,7 +507,9 @@ const CourseDetail: React.FC = () => {
                       </div>
                     </div>
                     {review.comment && (
-                      <p className="text-prism-text/70">{review.comment}</p>
+                      <p className="text-prism-text/70">
+                        {renderSafeContent(review.comment)}
+                      </p>
                     )}
                     <span className="text-prism-text/40 text-sm mt-2 block">
                       {formatDate(review.created_at)}

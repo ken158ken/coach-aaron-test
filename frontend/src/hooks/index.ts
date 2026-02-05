@@ -15,3 +15,12 @@ export { useCourses } from "./useCourses";
 export { useVideos } from "./useVideos";
 export { useUser } from "./useUser";
 export type { UserCourse, UseUserReturn } from "./useUser";
+
+// 安全輸入 Hooks
+export {
+  useSafeInput,
+  useRatingInput,
+  safeDisplayContent,
+  renderSafeContent,
+  splitSafeContentLines,
+} from "./useSafeInput";

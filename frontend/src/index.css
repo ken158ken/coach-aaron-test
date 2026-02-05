@@ -406,3 +406,207 @@
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
   }
 }
+
+/* ========================================
+   Tiptap 編輯器樣式
+   ======================================== */
+.ProseMirror {
+  outline: none;
+  min-height: 350px;
+}
+
+/* 標題樣式 - 即時渲染大小 */
+.ProseMirror h1 {
+  font-size: 2.25rem; /* 36px */
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--luxe-gold, #d4af37);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.75rem; /* 28px */
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--luxe-text, #e0e0e0);
+}
+
+.ProseMirror h3 {
+  font-size: 1.375rem; /* 22px */
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--luxe-text-dim, #888888);
+}
+
+/* 段落 */
+.ProseMirror p {
+  font-size: 1rem;
+  line-height: 1.75;
+  margin-bottom: 0.75rem;
+}
+
+/* 列表 */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.25rem;
+}
+
+/* 連結 */
+.ProseMirror a {
+  color: var(--luxe-gold, #d4af37);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ProseMirror a:hover {
+  opacity: 0.8;
+}
+
+/* 引用區塊 */
+.ProseMirror blockquote {
+  border-left: 3px solid var(--luxe-gold, #d4af37);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 0.75rem;
+  font-style: italic;
+  color: var(--luxe-text-dim, #888888);
+}
+
+/* 程式碼區塊 */
+.ProseMirror code {
+  background: rgba(212, 175, 55, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+}
+
+.ProseMirror pre {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* 水平線 */
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  margin: 1.5rem 0;
+}
+
+/* 佔位符 */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--luxe-text-dim, #888888);
+  pointer-events: none;
+  height: 0;
+}
+
+/* 表格樣式 */
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+  overflow: hidden;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.ProseMirror table td,
+.ProseMirror table th {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  position: relative;
+}
+
+.ProseMirror table th {
+  background-color: rgba(212, 175, 55, 0.1);
+  font-weight: 600;
+  text-align: left;
+}
+
+.ProseMirror table .selectedCell {
+  background-color: rgba(212, 175, 55, 0.2);
+}
+
+/* 待辦清單樣式 */
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 0.25rem;
+  user-select: none;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--luxe-gold, #d4af37);
+}
+
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* 刪除線 */
+.ProseMirror s {
+  text-decoration: line-through;
+}
+
+/* 上標下標 */
+.ProseMirror sub {
+  font-size: 0.75em;
+  vertical-align: sub;
+}
+
+.ProseMirror sup {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+/* 螢光筆樣式 */
+.ProseMirror mark {
+  border-radius: 0.125rem;
+  padding: 0.125rem 0.25rem;
+}

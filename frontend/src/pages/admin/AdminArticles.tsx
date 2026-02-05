@@ -187,8 +187,8 @@ const AdminArticles: React.FC = () => {
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
-    const keywordsArray = article.keywords
-      ? article.keywords
+    const keywordsArray = article.article_keywords
+      ? article.article_keywords
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean)
