@@ -16,44 +16,39 @@ module.exports = async function handler(req, res) {
     console.log(`📂 CWD: ${process.cwd()}`);
     console.log(`📂 __dirname: ${__dirname}`);
 
-    // Vercel 上，frontend/dist/server 會被 includeFiles 複製到函數目錄
-    const serverDir = path.resolve(__dirname, "../frontend/dist/server");
-    const clientDir = path.resolve(__dirname, "../frontend/dist/client");
+    // Vercel 架構：
+    // - outputDirectory (frontend/dist/client) → 自動提供給所有 functions
+    // - includeFiles (frontend/dist/server/entry-server.js) → 複製到函數目錄
     
-    console.log(`📂 Server dir: ${serverDir}`);
-    console.log(`📂 Client dir: ${clientDir}`);
-
-    // 檢查目錄是否存在
-    if (fs.existsSync(serverDir)) {
-      const serverContents = fs.readdirSync(serverDir);
-      console.log(`📋 Server contents: ${serverContents.join(", ")}`);
-    } else {
-      console.error(`❌ Server directory not found: ${serverDir}`);
-    }
-
-    if (fs.existsSync(clientDir)) {
-      const clientContents = fs.readdirSync(clientDir);
-      console.log(`📋 Client contents: ${clientContents.slice(0, 10).join(", ")}...`);
-    } else {
-      console.error(`❌ Client directory not found: ${clientDir}`);
-    }
-
-    // 找 index.html
-    const templatePath = path.resolve(clientDir, "index.html");
+    // HTML 模板來自 outputDirectory (自動可用)
+    const templatePath = path.resolve(process.cwd(), "index.html");
     
+    // SSR bundle 來自 includeFiles
+    const serverModulePath = path.resolve(
+      __dirname,
+      "../frontend/dist/server/entry-server.js"
+    );
+
+    console.log(`📂 Template path: ${templatePath}`);
+    console.log(`📂 Server module path: ${serverModulePath}`);
+
+    // 檢查檔案
     if (!fs.existsSync(templatePath)) {
-      throw new Error(`❌ Cannot find index.html at ${templatePath}`);
+      console.error(`❌ Template not found at ${templatePath}`);
+      console.log(`📋 Available files in CWD:`, fs.readdirSync(process.cwd()));
+      throw new Error(`Cannot find index.html at ${templatePath}`);
     }
-    
-    console.log(`✓ Found template: ${templatePath}`);
 
-    // 找 entry-server.js
-    const serverModulePath = path.resolve(serverDir, "entry-server.js");
-    
     if (!fs.existsSync(serverModulePath)) {
-      throw new Error(`❌ Cannot find entry-server.js at ${serverModulePath}`);
+      console.error(`❌ Server module not found at ${serverModulePath}`);
+      const parentDir = path.dirname(serverModulePath);
+      if (fs.existsSync(parentDir)) {
+        console.log(`📋 Files in ${parentDir}:`, fs.readdirSync(parentDir));
+      }
+      throw new Error(`Cannot find entry-server.js at ${serverModulePath}`);
     }
-    
+
+    console.log(`✓ Found template: ${templatePath}`);
     console.log(`✓ Found entry-server.js: ${serverModulePath}`);
 
     // 讀取 HTML 模板

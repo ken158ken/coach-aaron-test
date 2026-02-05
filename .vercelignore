@@ -1,0 +1,45 @@
+# Vercel 部署時忽略的檔案
+
+# Node modules - Vercel 會自動安裝
+node_modules/
+
+# 開發檔案
+*.log
+.DS_Store
+.env.local
+.env.*.local
+
+# 測試檔案
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# 文件（太大）
+REPORTS/
+*.md
+!README.md
+
+# 前端原始碼（已經構建完成）
+frontend/src/
+frontend/public/
+
+# 後端原始碼（已經構建完成）
+backend/src/
+backend/routes/
+backend/controllers/
+backend/middleware/
+backend/config/
+backend/utils/
+backend/types/
+
+# 資料庫檔案
+database/
+
+# 腳本
+scripts/
+
+# 其他專案檔案
+舊專案前端參考/
+參考/
