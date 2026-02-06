@@ -229,7 +229,7 @@ GET /api/search?q=關鍵字
 | `/admin/courses/new`       | 新增課程 |
 | `/admin/courses/:id/edit`  | 編輯課程 |
 
-## 📝 編輯器功能 (2026-02-04 更新)
+## 📝 編輯器功能 (2026-02-06 更新)
 
 ### 文章/課程編輯器特色
 
@@ -243,6 +243,12 @@ GET /api/search?q=關鍵字
 - **🆕 自動 Slug 生成** - 網址代稱從標題自動產生
 - **🆕 全寬螢幕編輯** - 側邊欄可收合，最大化編輯空間
 - **🆕 發布前預覽** - 使用 Modal 預覽文章最終呈現效果
+- **🆕 BubbleMenu 浮動工具列** - 選取文字時自動彈出快速格式化工具
+- **🆕 FloatingMenu 空行工具** - 空行時彈出快捷插入工具
+- **🆕 @提及功能** - 輸入 @ 可提及 Aaron 教練、營養師等
+- **🆕 程式碼語法高亮** - 支援多種程式語言語法著色
+- **🆕 字體選擇** - 支援多種中英文字體切換
+- **🆕 焦點追蹤** - 編輯區域焦點視覺提示
 - **使用說明模態框** - 點擊問號 (?) 圖示查看詳細操作說明
 - **標籤系統** - 支援快速新增和移除標籤（按 Enter 新增）
 - **離開提醒** - 有未儲存變更時會提醒使用者
@@ -276,10 +282,11 @@ GET /api/search?q=關鍵字
 
 #### 文字樣式
 
-| 按鈕 | 功能     | 說明            |
-| ---- | -------- | --------------- |
-| 🔴A▼ | 文字顏色 | 10 種顏色可選   |
-| █H▼  | 螢光標記 | 10 種螢光色可選 |
+| 按鈕     | 功能     | 說明                                    |
+| -------- | -------- | --------------------------------------- |
+| 🔴A▼     | 文字顏色 | 10 種顏色可選                           |
+| █H▼      | 螢光標記 | 10 種螢光色可選                         |
+| 字體▼   | 字體選擇 | 微軟正黑體、標楷體、Arial、Georgia 等 |
 
 #### 標題與段落
 
@@ -296,7 +303,7 @@ GET /api/search?q=關鍵字
 | 1. 列表  | 編號列表 | 用數字條列步驟     |
 | ☑ 待辦   | 待辦清單 | 可勾選的核取方塊   |
 | ❝ 引言   | 區塊引用 | 縮排引用樣式       |
-| </> 程式 | 程式碼塊 | 等寬字型顯示程式碼 |
+| </> 程式 | 程式碼塊 | 等寬字型 + 語法高亮 |
 | ― 分隔線 | 水平線   | 插入水平分隔線     |
 
 #### 表格功能
@@ -313,20 +320,47 @@ GET /api/search?q=關鍵字
 | 🎬   | 影片 | 貼上 YouTube 網址嵌入    |
 | 🔗   | 連結 | 將文字轉換成可點擊連結   |
 
-### Tiptap 擴展列表
+### 🎯 智慧輔助工具
 
-本專案使用以下 Tiptap 擴展：
+#### BubbleMenu (選取浮動工具列)
+
+當選取文字時，會自動彈出快速格式化工具：
+- **粗體 (B)** - 一鍵設定粗體
+- **斜體 (I)** - 快速斜體化
+- **底線 (U)** - 加入底線
+- **刪除線 (S)** - 劃掉文字
+- **螢光筆 (H)** - 背景高亮
+
+#### FloatingMenu (空行快捷工具)
+
+在空行時自動顯示，快速插入：
+- **大標題 (H1)** - 插入一級標題
+- **中標題 (H2)** - 插入二級標題
+- **項目符號 (•)** - 開始無序列表
+- **編號列表 (1.)** - 開始有序列表
+- **引言 (❝)** - 插入引用區塊
+
+#### @提及建議
+
+輸入 `@` 時彈出建議選單：
+- Aaron 教練
+- 營養師
+- 學員
+- 健身房
+- 教練團隊
+
+### Tiptap 擴展列表 (完整免費版)
 
 **基礎套件** (StarterKit 內建)
 
 - Bold, Italic, Strike, Code
 - Heading, Paragraph, Text
 - BulletList, OrderedList, ListItem
-- Blockquote, CodeBlock, HorizontalRule
+- Blockquote, HorizontalRule
 - Document, HardBreak
-- Dropcursor, Gapcursor, UndoRedo
+- History (Undo/Redo)
 
-**額外安裝的擴展**
+**新增的免費擴展**
 
 - `@tiptap/extension-underline` - 底線
 - `@tiptap/extension-text-align` - 文字對齊
@@ -343,8 +377,17 @@ GET /api/search?q=關鍵字
 - `@tiptap/extension-table-header` - 表格標頭
 - `@tiptap/extension-task-list` - 待辦清單
 - `@tiptap/extension-task-item` - 待辦項目
-- `@tiptap/extension-character-count` - 字數統計
+- `@tiptap/extension-character-count` - 字數統計 (最多 50,000 字)
 - `@tiptap/extension-typography` - 排版自動修正
+- `@tiptap/extension-dropcursor` - 拖曳游標提示
+- `@tiptap/extension-gapcursor` - 間隙游標
+- `@tiptap/extension-mention` - @提及功能
+- `@tiptap/extension-bubble-menu` - 選取浮動工具列
+- `@tiptap/extension-floating-menu` - 空行快捷工具
+- `@tiptap/extension-focus` - 焦點追蹤
+- `@tiptap/extension-font-family` - 字體選擇
+- `@tiptap/extension-code-block-lowlight` - 程式碼語法高亮
+- `lowlight` - 語法高亮引擎
 
 **自訂擴展**
 
