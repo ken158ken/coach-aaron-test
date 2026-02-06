@@ -28,6 +28,12 @@ const Navbar: React.FC = (): JSX.Element => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
+
+  // 確保主題在客戶端渲染後才顯示，避免 SSR hydration mismatch
+  useEffect(() => {
+    setThemeReady(true);
+  }, []);
 
   // 全域快捷鍵 Ctrl+K / Cmd+K
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -177,7 +183,22 @@ const Navbar: React.FC = (): JSX.Element => {
               title={isDark ? t.theme.light : t.theme.dark}
               className="p-2 text-luxe-text hover:text-luxe-gold transition-colors"
             >
-              {isDark ? (
+              {!themeReady ? (
+                // SSR fallback: 使用固定圖示避免 hydration mismatch
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  />
+                </svg>
+              ) : isDark ? (
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -277,7 +298,25 @@ const Navbar: React.FC = (): JSX.Element => {
                 onClick={toggleColorMode}
                 className="flex items-center gap-2 text-luxe-text hover:text-luxe-gold"
               >
-                {isDark ? (
+                {!themeReady ? (
+                  // SSR fallback
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                      />
+                    </svg>
+                    <span className="text-sm">{t.theme.dark}</span>
+                  </>
+                ) : isDark ? (
                   <>
                     <svg
                       className="w-5 h-5"
