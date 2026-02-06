@@ -7,7 +7,12 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { useEditor, EditorContent } from "@tiptap/react";
+import {
+  useEditor,
+  EditorContent,
+  BubbleMenu,
+  FloatingMenu,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
@@ -19,7 +24,8 @@ import { Color } from "@tiptap/extension-color";
 import { Highlight } from "@tiptap/extension-highlight";
 import { Subscript } from "@tiptap/extension-subscript";
 import { Superscript } from "@tiptap/extension-superscript";
-import { CodeBlock } from "@tiptap/extension-code-block";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -30,6 +36,12 @@ import { CharacterCount } from "@tiptap/extension-character-count";
 import { Typography } from "@tiptap/extension-typography";
 import { Dropcursor } from "@tiptap/extension-dropcursor";
 import { Gapcursor } from "@tiptap/extension-gapcursor";
+import Mention from "@tiptap/extension-mention";
+import Focus from "@tiptap/extension-focus";
+import FontFamily from "@tiptap/extension-font-family";
+
+// 初始化 lowlight 語法高亮
+const lowlight = createLowlight(common);
 
 import { useAuth } from "@/context";
 import { Loading } from "@/components/ui";
@@ -161,12 +173,19 @@ const ArticleEditor: React.FC = () => {
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-        // StarterKit 已包含：bold, italic, strike, blockquote, codeBlock,
+        // 停用預設 codeBlock，使用 lowlight 版本
+        codeBlock: false,
+        // StarterKit 已包含：bold, italic, strike, blockquote,
         // horizontalRule, bulletList, orderedList, dropcursor, gapcursor
         dropcursor: {
           color: "#d4af37",
           width: 2,
         },
+      }),
+      // 程式碼語法高亮
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: "javascript",
       }),
       // 基本格式 (StarterKit 沒有的)
       Underline,
@@ -176,6 +195,9 @@ const ArticleEditor: React.FC = () => {
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
+      FontFamily.configure({
+        types: ["textStyle"],
+      }),
       // 對齊
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -192,6 +214,77 @@ const ArticleEditor: React.FC = () => {
       TaskItem.configure({
         nested: true,
       }),
+      // @提及功能
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention",
+        },
+        suggestion: {
+          items: ({ query }) => {
+            return ["Aaron 教練", "營養師", "學員", "健身房", "教練團隊"]
+              .filter((item) =>
+                item.toLowerCase().startsWith(query.toLowerCase()),
+              )
+              .slice(0, 5);
+          },
+          render: () => {
+            let component: any;
+            let popup: any;
+
+            return {
+              onStart: (props: any) => {
+                component = document.createElement("div");
+                component.className = "mention-suggestions";
+
+                if (props.items.length > 0) {
+                  popup = document.createElement("div");
+                  popup.className =
+                    "bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl p-1 max-h-60 overflow-auto";
+                  props.items.forEach((item: string, index: number) => {
+                    const button = document.createElement("button");
+                    button.className =
+                      "w-full text-left px-3 py-2 text-sm rounded hover:bg-luxe-gold/20 transition-colors";
+                    button.textContent = item;
+                    button.onclick = () => props.command({ id: item });
+                    if (index === props.selectedIndex) {
+                      button.classList.add("bg-luxe-gold/10");
+                    }
+                    popup.appendChild(button);
+                  });
+                  component.appendChild(popup);
+                  document.body.appendChild(component);
+                }
+              },
+              onUpdate: (props: any) => {
+                if (popup && props.items.length > 0) {
+                  popup.innerHTML = "";
+                  props.items.forEach((item: string, index: number) => {
+                    const button = document.createElement("button");
+                    button.className =
+                      "w-full text-left px-3 py-2 text-sm rounded hover:bg-luxe-gold/20 transition-colors";
+                    button.textContent = item;
+                    button.onclick = () => props.command({ id: item });
+                    if (index === props.selectedIndex) {
+                      button.classList.add("bg-luxe-gold/10");
+                    }
+                    popup.appendChild(button);
+                  });
+                }
+              },
+              onExit: () => {
+                if (component) {
+                  component.remove();
+                }
+              },
+            };
+          },
+        },
+      }),
+      // 焦點追蹤
+      Focus.configure({
+        className: "has-focus",
+        mode: "all",
+      }),
       // 媒體
       ResizableImage,
       Link.configure({
@@ -200,7 +293,7 @@ const ArticleEditor: React.FC = () => {
       ResizableYoutube,
       // 功能性
       Placeholder.configure({
-        placeholder: "開始撰寫文章內容...",
+        placeholder: "開始撰寫文章內容...（輸入 @ 可提及他人）",
       }),
       CharacterCount.configure({
         limit: 50000,
@@ -853,6 +946,49 @@ const ArticleEditor: React.FC = () => {
                 </div>
               </div>
 
+              {/* 字體選擇 */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  title="字體 - 選擇文字字體"
+                  className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
+                >
+                  <span>字體</span>
+                  <span className="text-[10px]">▼</span>
+                </button>
+                <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:block z-50 min-w-[160px]">
+                  {[
+                    { name: "預設", value: "" },
+                    { name: "微軟正黑體", value: "Microsoft JhengHei" },
+                    { name: "新細明體", value: "PMingLiU" },
+                    { name: "標楷體", value: "DFKai-SB" },
+                    { name: "Arial", value: "Arial" },
+                    { name: "Times New Roman", value: "Times New Roman" },
+                    { name: "Courier New", value: "Courier New" },
+                    { name: "Georgia", value: "Georgia" },
+                  ].map((font) => (
+                    <button
+                      key={font.value}
+                      type="button"
+                      onClick={() =>
+                        font.value
+                          ? editor
+                              ?.chain()
+                              .focus()
+                              .setFontFamily(font.value)
+                              .run()
+                          : editor?.chain().focus().unsetFontFamily().run()
+                      }
+                      title={`設定字體: ${font.name}`}
+                      className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+                      style={{ fontFamily: font.value || "inherit" }}
+                    >
+                      {font.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <span className="w-px bg-luxe-gold/30 mx-1" />
 
               {/* 標題 */}
@@ -1105,6 +1241,114 @@ const ArticleEditor: React.FC = () => {
 
             {/* 編輯器內容 - 更大的編輯區域 */}
             <div className="min-h-[600px] p-6 bg-luxe-surface rounded-lg border border-luxe-gold/20">
+              {editor && (
+                <>
+                  {/* BubbleMenu - 選取文字時彈出的快速工具列 */}
+                  <BubbleMenu
+                    editor={editor}
+                    tippyOptions={{ duration: 100 }}
+                    className="flex gap-1 p-1 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl"
+                  >
+                    <button
+                      onClick={() => editor.chain().focus().toggleBold().run()}
+                      className={`px-2 py-1 text-sm rounded ${editor.isActive("bold") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+                      title="粗體"
+                    >
+                      <strong>B</strong>
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleItalic().run()
+                      }
+                      className={`px-2 py-1 text-sm rounded ${editor.isActive("italic") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+                      title="斜體"
+                    >
+                      <em>I</em>
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleUnderline().run()
+                      }
+                      className={`px-2 py-1 text-sm rounded ${editor.isActive("underline") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+                      title="底線"
+                    >
+                      <u>U</u>
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleStrike().run()
+                      }
+                      className={`px-2 py-1 text-sm rounded ${editor.isActive("strike") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+                      title="刪除線"
+                    >
+                      <s>S</s>
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleHighlight().run()
+                      }
+                      className={`px-2 py-1 text-sm rounded ${editor.isActive("highlight") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+                      title="螢光筆"
+                    >
+                      <span className="bg-yellow-300 text-black px-1">H</span>
+                    </button>
+                  </BubbleMenu>
+
+                  {/* FloatingMenu - 空行時彈出的工具選單 */}
+                  <FloatingMenu
+                    editor={editor}
+                    tippyOptions={{ duration: 100 }}
+                    className="flex gap-1 p-1 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl"
+                  >
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleHeading({ level: 1 }).run()
+                      }
+                      className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
+                      title="插入大標題"
+                    >
+                      H1
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleHeading({ level: 2 }).run()
+                      }
+                      className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
+                      title="插入中標題"
+                    >
+                      H2
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleBulletList().run()
+                      }
+                      className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
+                      title="插入項目符號列表"
+                    >
+                      •
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleOrderedList().run()
+                      }
+                      className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
+                      title="插入編號列表"
+                    >
+                      1.
+                    </button>
+                    <button
+                      onClick={() =>
+                        editor.chain().focus().toggleBlockquote().run()
+                      }
+                      className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
+                      title="插入引用區塊"
+                    >
+                      ❝
+                    </button>
+                  </FloatingMenu>
+                </>
+              )}
+
               <EditorContent
                 editor={editor}
                 className="prose prose-invert max-w-none min-h-[550px] [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[550px]"
