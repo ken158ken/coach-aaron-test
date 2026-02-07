@@ -32,12 +32,17 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 搜尋 API
   const performSearch = useCallback(async (searchQuery: string) => {
@@ -93,12 +98,18 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
       setResults([]);
       setSelectedIndex(0);
       setTimeout(() => inputRef.current?.focus(), 100);
-      document.body.style.overflow = "hidden";
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "hidden";
+      }
     } else {
-      document.body.style.overflow = "";
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "";
+      }
     }
     return () => {
-      document.body.style.overflow = "";
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "";
+      }
     };
   }, [isOpen]);
 
@@ -155,7 +166,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  // 只在客戶端掛載後才渲染，避免 SSR 水合問題
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   return createPortal(
     <div

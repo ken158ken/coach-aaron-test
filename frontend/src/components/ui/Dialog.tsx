@@ -45,19 +45,30 @@ export const Modal: React.FC<ModalProps> = ({
   size = "md",
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ESC 關閉
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    if (isOpen) {
+    if (isOpen && typeof window !== "undefined") {
       window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "hidden";
+      }
     }
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      if (typeof window !== "undefined") {
+        window.removeEventListener("keydown", handleKeyDown);
+      }
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "";
+      }
     };
   }, [isOpen, onClose]);
 
@@ -66,7 +77,8 @@ export const Modal: React.FC<ModalProps> = ({
     if (e.target === e.currentTarget) onClose();
   };
 
-  if (!isOpen) return null;
+  // 只在客戶端掛載後才渲染，避免 SSR 水合問題
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const sizeClasses = {
     sm: "max-w-sm",

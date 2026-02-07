@@ -290,9 +290,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         setEditImageWidth(currentWidth);
 
         const rect = img.getBoundingClientRect();
+        const maxX =
+          typeof window !== "undefined" ? window.innerWidth - 150 : 800;
+        const maxY =
+          typeof window !== "undefined" ? window.innerHeight - 200 : 600;
         setEditPanelPosition({
-          x: Math.min(rect.left + rect.width / 2, window.innerWidth - 150),
-          y: Math.min(rect.bottom + 10, window.innerHeight - 200),
+          x: Math.min(rect.left + rect.width / 2, maxX),
+          y: Math.min(rect.bottom + 10, maxY),
         });
         setShowEditPanel(true);
         return;
@@ -309,9 +313,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         setEditVideoHeight(iframe.height ? parseInt(iframe.height) : 360);
 
         const rect = iframe.getBoundingClientRect();
+        const maxX =
+          typeof window !== "undefined" ? window.innerWidth - 150 : 800;
+        const maxY =
+          typeof window !== "undefined" ? window.innerHeight - 200 : 600;
         setEditPanelPosition({
-          x: Math.min(rect.left + rect.width / 2, window.innerWidth - 150),
-          y: Math.min(rect.bottom + 10, window.innerHeight - 200),
+          x: Math.min(rect.left + rect.width / 2, maxX),
+          y: Math.min(rect.bottom + 10, maxY),
         });
         setShowEditPanel(true);
         return;

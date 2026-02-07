@@ -849,6 +849,50 @@ npm install react-moveable moveable @scena/react-guides uuid
 
 ## 📝 更新日誌
 
+### 2026-02-07 - SSR 水合問題全面修復
+
+#### 問題描述
+
+- 手機版水合正常，桌面版出現水合不匹配
+- 視窗尺寸切換時出現異常行為
+- 典型的 SSR (Server-Side Rendering) 水合問題
+
+#### 根本原因
+
+1. **createPortal** 直接使用 `document.body` 沒有 SSR 檢查
+2. **window API** 直接調用 `window.innerWidth/innerHeight`
+3. **document.body.style** 修改缺少環境檢查
+4. **Tiptap 3.x** BubbleMenu/FloatingMenu API 變更
+
+#### 修復方案
+
+1. **所有 Portal 組件** 添加 `mounted` 狀態防護
+2. **window API** 使用前檢查 `typeof window !== "undefined"`
+3. **document 操作** 添加環境檢查
+4. **舊版 RichTextEditor** 移除不兼容的 BubbleMenu/FloatingMenu
+
+#### 修改文件 (7 個)
+
+- `components/admin/ArticlePreviewModal.tsx` - createPortal + mounted 防護
+- `components/ui/GlobalSearch.tsx` - createPortal + mounted + document 檢查
+- `components/ui/Dialog.tsx` - createPortal + mounted + window/document 檢查
+- `components/ui/editor/RichTextEditor.tsx` - window API 防護
+- `components/editor/RichTextEditor.tsx` - 移除 BubbleMenu/FloatingMenu
+- `hooks/useRichTextEditor.ts` - 修正 import
+
+#### 測試驗證
+
+- ✅ 無 Hydration mismatch 警告
+- ✅ 桌面/手機切換正常
+- ✅ 所有 Modal/Dialog 正常運作
+- ✅ 零 TypeScript 編譯錯誤
+
+#### 詳細報告
+
+- 詳見 `REPORTS/HYDRATION_FIX_2026-02-07T20-00-00+08-00.md`
+
+---
+
 ### 2026-02-06 - 課程管理功能對齊修正
 
 #### 資料庫 Schema 修正

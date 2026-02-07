@@ -25,8 +25,8 @@ import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
 import { CharacterCount } from "@tiptap/extension-character-count";
 import { Typography } from "@tiptap/extension-typography";
-import { Dropcursor } from "@tiptap/extension-dropcursor";
-import { Gapcursor } from "@tiptap/extension-gapcursor";
+// import { Dropcursor } from "@tiptap/extension-dropcursor"; // 已包含在 StarterKit 中
+// import { Gapcursor } from "@tiptap/extension-gapcursor"; // 已包含在 StarterKit 中
 import Mention from "@tiptap/extension-mention";
 import Focus from "@tiptap/extension-focus";
 import FontFamily from "@tiptap/extension-font-family";

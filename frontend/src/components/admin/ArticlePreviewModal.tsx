@@ -4,7 +4,7 @@
  * @description 發布前預覽文章，使用與文章詳情頁相同的樣式
  */
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 interface ArticlePreviewModalProps {
@@ -34,7 +34,25 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
   article,
   isSubmitting = false,
 }) => {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && typeof document !== "undefined") {
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "";
+      }
+    };
+  }, [isOpen]);
+
+  // 只在客戶端掛載後才渲染，避免 SSR 水合問題
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const modalContent = (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/80 backdrop-blur-sm">

@@ -2,12 +2,12 @@
  * 富文本編輯器元件
  * @module components/editor/RichTextEditor
  * @description 共用的 Tiptap 編輯器，支援完整的格式化功能
+ *
+ * 注意：此元件已棄用，建議使用 components/ui/editor/RichTextEditor
  */
 
 import React from "react";
 import { Editor, EditorContent } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/extension-bubble-menu";
-import { FloatingMenu } from "@tiptap/extension-floating-menu";
 
 interface RichTextEditorProps {
   editor: Editor | null;
@@ -451,95 +451,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
       {/* 編輯器內容區域 */}
       <div className="min-h-[600px] p-6 bg-luxe-surface rounded-lg border border-luxe-gold/20">
-        {/* BubbleMenu - 選取文字時彈出的快速工具列 */}
-        <BubbleMenu
-          editor={editor}
-          tippyOptions={{ duration: 100 }}
-          className="flex gap-1 p-1 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl"
-        >
-          <button
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`px-2 py-1 text-sm rounded ${editor.isActive("bold") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-            title="粗體"
-          >
-            <strong>B</strong>
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`px-2 py-1 text-sm rounded ${editor.isActive("italic") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-            title="斜體"
-          >
-            <em>I</em>
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            className={`px-2 py-1 text-sm rounded ${editor.isActive("underline") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-            title="底線"
-          >
-            <u>U</u>
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={`px-2 py-1 text-sm rounded ${editor.isActive("strike") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-            title="刪除線"
-          >
-            <s>S</s>
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            className={`px-2 py-1 text-sm rounded ${editor.isActive("highlight") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-            title="螢光筆"
-          >
-            <span className="bg-yellow-300 text-black px-1">H</span>
-          </button>
-        </BubbleMenu>
-
-        {/* FloatingMenu - 空行時彈出的工具選單 */}
-        <FloatingMenu
-          editor={editor}
-          tippyOptions={{ duration: 100 }}
-          className="flex gap-1 p-1 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl"
-        >
-          <button
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
-            }
-            className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
-            title="插入大標題"
-          >
-            H1
-          </button>
-          <button
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
-            className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
-            title="插入中標題"
-          >
-            H2
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
-            title="插入項目符號列表"
-          >
-            •
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
-            title="插入編號列表"
-          >
-            1.
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className="px-2 py-1 text-sm rounded hover:bg-luxe-gold/20"
-            title="插入引用區塊"
-          >
-            ❝
-          </button>
-        </FloatingMenu>
+        {/* 注意：BubbleMenu 和 FloatingMenu 已移除，因為 Tiptap 3.x API 變更 */}
+        {/* 建議使用新版 components/ui/editor/RichTextEditor */}
 
         <EditorContent
           editor={editor}
