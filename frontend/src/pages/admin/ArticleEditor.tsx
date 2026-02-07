@@ -7,12 +7,9 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import {
-  useEditor,
-  EditorContent,
-  BubbleMenu,
-  FloatingMenu,
-} from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/extension-bubble-menu";
+import { FloatingMenu } from "@tiptap/extension-floating-menu";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
@@ -285,6 +282,9 @@ const ArticleEditor: React.FC = () => {
         className: "has-focus",
         mode: "all",
       }),
+      // 浮動工具列
+      BubbleMenu,
+      FloatingMenu,
       // 媒體
       ResizableImage,
       Link.configure({
