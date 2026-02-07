@@ -87,7 +87,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
    */
   const setTheme = useCallback((newTheme: ThemeType) => {
     setThemeState(newTheme);
-    localStorage.setItem(THEME_KEY, newTheme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(THEME_KEY, newTheme);
+    }
   }, []);
 
   /**
@@ -95,7 +97,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
    */
   const setColorMode = useCallback((mode: ColorMode) => {
     setColorModeState(mode);
-    localStorage.setItem(COLOR_MODE_KEY, mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(COLOR_MODE_KEY, mode);
+    }
   }, []);
 
   /**

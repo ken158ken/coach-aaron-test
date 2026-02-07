@@ -34,6 +34,8 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
+  theme?: "abyss" | "prism" | "luxe";
+  className?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -265,40 +267,48 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
 
 interface ConfirmDialogProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  onCancel?: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "danger";
+  danger?: boolean;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title,
   message,
   confirmText = "確定",
   cancelText = "取消",
-  variant = "default",
+  variant,
+  danger,
 }) => {
+  // 向後兼容：onCancel 作為 onClose 的別名，danger 作為 variant 的別名
+  const handleClose = onClose || onCancel || (() => {});
+  const resolvedVariant = variant || (danger ? "danger" : "default");
+
   const handleConfirm = () => {
     onConfirm();
-    onClose();
+    handleClose();
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={title}
       footer={
         <>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
           >
             {cancelText}
@@ -307,7 +317,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             onClick={handleConfirm}
             className={`px-4 py-2 text-sm rounded-lg font-medium ${
-              variant === "danger"
+              resolvedVariant === "danger"
                 ? "bg-red-500 hover:bg-red-600 text-white"
                 : "bg-luxe-gold hover:bg-luxe-gold/90 text-black"
             }`}
@@ -370,7 +380,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
 
 interface DialogContextType {
   prompt: (
-    options: Omit<PromptDialogProps, "isOpen" | "onClose">,
+    options: Omit<PromptDialogProps, "isOpen" | "onClose" | "onConfirm">,
   ) => Promise<string | null>;
   confirm: (
     options: Omit<ConfirmDialogProps, "isOpen" | "onClose" | "onConfirm">,
@@ -402,7 +412,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const prompt = useCallback(
-    (options: Omit<PromptDialogProps, "isOpen" | "onClose">) => {
+    (options: Omit<PromptDialogProps, "isOpen" | "onClose" | "onConfirm">) => {
       return new Promise<string | null>((resolve) => {
         setDialog({
           type: "prompt",

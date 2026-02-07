@@ -7,18 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { DataTable, Pagination, PillButton, Input } from "@/components/ui";
 import { get } from "@/services/api";
-import type { Video } from "@/types";
-
-/** 後端影片資料結構 */
-interface AdminVideo {
-  video_id: number;
-  title: string;
-  url: string;
-  type: string;
-  is_visible: boolean;
-  sort_order: number;
-  created_at: string;
-}
+import type { Video, AdminVideo } from "@/types";
 
 /**
  * AdminVideos - 影片管理頁面

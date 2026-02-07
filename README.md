@@ -849,6 +849,89 @@ npm install react-moveable moveable @scena/react-guides uuid
 
 ## 📝 更新日誌
 
+### 2026-02-08T18-00-00+08:00 - 全專案 TypeScript 編譯錯誤 + SSR 水合問題全面修復
+
+#### 問題描述
+
+- 全專案 `npx tsc --noEmit` 存在 **20 項** TypeScript 編譯錯誤
+- 多個元件存在 SSR 水合風險（`document`/`window`/`localStorage` 未加防護）
+- `@/components/ui` barrel export 中 `Modal` 和 `ConfirmDialog` 名稱衝突
+
+#### 根本原因分析
+
+| 類別             | 問題                                                                                                                                         | 影響範圍                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Export 衝突**  | `ui/index.ts` 同時從 `overlay/` 和 `Dialog.tsx` 導出同名 `Modal`/`ConfirmDialog`，Dialog.tsx 版本覆蓋了原版，但缺少 `theme`/`className` 屬性 | AdminArticles、AdminCourses、AdminUsers、CoachPhotos         |
+| **本地重複型別** | AdminUsers/AdminVideos 自行定義簡陋的本地 interface，缺少 API 回傳的欄位                                                                     | AdminUsers(6 處)、AdminVideos(1 處)                          |
+| **Props 不相容** | ConfirmDialog 兩版 interface 屬性不同（`onCancel` vs `onClose`、`danger` vs `variant`）                                                      | AdminWhitelist                                               |
+| **型別不匹配**   | `keywords` 應傳 `string[]` 卻傳了 `string`；`isLoading` 不存在於 AuthContextType                                                             | AdminArticles(2 處)、Checkout                                |
+| **SSR 無防護**   | `document.body.style`、`localStorage`、`matchMedia` 在非 useEffect 中未加 typeof 檢查                                                        | overlay/Modal、overlay/Drawer、ThemeContext、LanguageContext |
+
+#### 修復方案
+
+**TypeScript 型別錯誤修復 (12 個檔案)：**
+
+1. **Dialog.tsx** — `ModalProps` 新增 `theme`/`className` 屬性；`ConfirmDialogProps` 新增 `onCancel`/`danger` 向後兼容別名
+2. **AdminSidebar.tsx** — 移除未使用的 `NavItem` interface
+3. **AdminArticles.tsx** — `keywords` 從 `.join(",")` 改為直接傳陣列 `string[]`
+4. **AdminUsers.tsx** — 移除本地 `AdminUser`/`PaginatedUsersResponse` 定義，改用 `@/types` 導入；移除 Toggle 不存在的 `theme` prop
+5. **AdminVideos.tsx** — 移除本地 `AdminVideo` 定義，改用 `@/types` 導入
+6. **AdminWhitelist.tsx** — 透過 Dialog.tsx 兼容修復，`onCancel`/`danger` 直接支援
+7. **Checkout.tsx** — 移除未使用的 `useMemo`/`Input` import；`isLoading` 改為 `loading`
+8. **CoachPhotos.tsx** — 透過 Dialog.tsx Modal 修復 `theme` 屬性
+
+**SSR 水合問題修復 (4 個檔案)：**
+
+9. **overlay/Modal.tsx** — `useEffect` 內 `document`/`window` 加入 `typeof` 防護
+10. **overlay/Drawer.tsx** — 同上
+11. **ThemeContext.tsx** — `setTheme`/`setColorMode` 中 `localStorage` 加入 `typeof window` 防護
+12. **LanguageContext.tsx** — `setLanguage` 中 `localStorage`/`document` 加入防護；`useEffect` 初始化也加防護
+
+#### 測試驗證
+
+- ✅ `npx tsc --noEmit` 零錯誤零警告
+- ✅ 所有 20 項編譯錯誤已消除
+- ✅ SSR 環境下不會存取 `window`/`document`/`localStorage`
+- ✅ Dialog.tsx Modal 完全兼容 overlay/Modal.tsx 的 API
+
+---
+
+### 2026-02-08 - CourseEditor 語法與型別錯誤修復
+
+#### 問題描述
+
+- CourseEditor.tsx 存在多項語法與型別錯誤，導致 TypeScript 編譯失敗
+- 主要錯誤集中在括號不匹配、介面缺少屬性、型別不一致
+
+#### 根本原因
+
+1. **`handleRemoveTag` 缺少閉合括號** `}, []);` — 導致整個元件的括號層級錯位，引發連鎖的 `')' expected` 和 `'}' expected` 錯誤
+2. **`CourseData` 介面缺少 `videoUrl` 屬性** — payload 引用了 `course.videoUrl` 但介面未定義
+3. **`price` 型別不匹配** — `CourseData.price` 為 `string`，但 `courseService.create/update` 期待 `number`
+4. **`Dialog.prompt` 型別定義錯誤** — `onConfirm` 由 hook 內部注入，但 Omit 未排除該屬性
+5. **`status` 字面型別推斷** — payload 中 `status: "published"` 被推斷為 `string` 而非字面型別
+
+#### 修復方案
+
+1. 在 `handleRemoveTag` 回調末尾補上 `}, []);` 閉合
+2. `CourseData` 介面新增 `videoUrl: string` 並在初始化物件中設定預設值
+3. payload 中的 `price` 改為 `Number(course.price) || 0`
+4. Dialog.tsx 的 `prompt` 方法型別改為 `Omit<PromptDialogProps, "isOpen" | "onClose" | "onConfirm">`
+5. payload 中的 `status` 使用 `as const` 確保字面型別推斷
+
+#### 修改文件 (2 個)
+
+- `frontend/src/pages/admin/CourseEditor.tsx` — 括號修復、介面補全、型別轉換
+- `frontend/src/components/ui/Dialog.tsx` — prompt 方法型別定義修正
+
+#### 測試驗證
+
+- ✅ 零 TypeScript 編譯錯誤
+- ✅ 所有 Dialog.prompt 呼叫型別正確
+- ✅ courseService.create/update 參數型別匹配
+
+---
+
 ### 2026-02-07 - SSR 水合問題全面修復
 
 #### 問題描述

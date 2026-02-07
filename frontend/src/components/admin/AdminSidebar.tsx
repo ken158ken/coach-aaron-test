@@ -7,21 +7,6 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/context";
 
-interface NavItem {
-  path: string;
-  labelKey: keyof typeof import("@/context/LanguageContext").default extends never
-    ? never
-    :
-        | "dashboard"
-        | "users"
-        | "courses"
-        | "videos"
-        | "articles"
-        | "whitelist"
-        | "content";
-  icon: React.ReactNode;
-}
-
 interface AdminSidebarProps {
   isOpen: boolean;
   onToggle: () => void;

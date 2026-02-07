@@ -49,6 +49,7 @@ interface CourseData {
   category: string;
   tags: string[];
   coverImage: string;
+  videoUrl: string;
   content: string;
   price: string;
   duration: string;
@@ -102,6 +103,7 @@ const CourseEditor: React.FC = () => {
     category: "",
     tags: [],
     coverImage: "",
+    videoUrl: "",
     content: "",
     price: "",
     duration: "",
@@ -257,6 +259,8 @@ const CourseEditor: React.FC = () => {
       tags: prev.tags.filter((t) => t !== tag),
     }));
     setHasChanges(true);
+  }, []);
+
   // 使用美化對話框
   const dialog = useDialog();
 
@@ -414,9 +418,9 @@ const CourseEditor: React.FC = () => {
         courseThumbnailUrl: course.coverImage,
         courseKeywords: course.tags,
         courseCategory: course.category,
-        price: course.price || 0,
+        price: Number(course.price) || 0,
         currency: "TWD",
-        status: "published",
+        status: "published" as const,
       };
 
       logger.info("發布課程:", payload);

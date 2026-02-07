@@ -31,11 +31,14 @@ const Drawer: React.FC<DrawerProps> = ({
   className = "",
 }) => {
   useEffect(() => {
+    if (typeof document === "undefined") return;
     if (isOpen) {
       document.body.style.overflow = "hidden";
     }
     return () => {
-      document.body.style.overflow = "unset";
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "unset";
+      }
     };
   }, [isOpen]);
 

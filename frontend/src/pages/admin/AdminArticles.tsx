@@ -124,7 +124,7 @@ const AdminArticles: React.FC = () => {
         description: formData.description || undefined,
         content: formData.content || undefined,
         category: formData.category.join(",") || undefined,
-        keywords: formData.keywords.join(",") || undefined,
+        keywords: formData.keywords.length > 0 ? formData.keywords : undefined,
         status: formData.status,
         isFeatured: formData.isFeatured,
       });
@@ -151,7 +151,7 @@ const AdminArticles: React.FC = () => {
         description: formData.description || undefined,
         content: formData.content || undefined,
         category: formData.category.join(",") || undefined,
-        keywords: formData.keywords.join(",") || undefined,
+        keywords: formData.keywords.length > 0 ? formData.keywords : undefined,
         status: formData.status,
         isFeatured: formData.isFeatured,
       });

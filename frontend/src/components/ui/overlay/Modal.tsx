@@ -31,15 +31,19 @@ const Modal: React.FC<ModalProps> = ({
   className = "",
 }) => {
   useEffect(() => {
+    if (typeof document === "undefined") return;
     if (isOpen) {
       document.body.style.overflow = "hidden";
     }
     return () => {
-      document.body.style.overflow = "unset";
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "unset";
+      }
     };
   }, [isOpen]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };

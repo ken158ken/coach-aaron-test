@@ -14,27 +14,7 @@ import {
   Toggle,
 } from "@/components/ui";
 import { get, put } from "@/services/api";
-import type { User } from "@/types";
-
-/** 後端用戶資料結構 */
-interface AdminUser {
-  user_id: number;
-  email: string;
-  name: string | null;
-  sex: string | null;
-  role: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/** 分頁回應結構 */
-interface PaginatedUsersResponse {
-  users: AdminUser[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+import type { User, PaginatedUsersResponse } from "@/types";
 
 /**
  * AdminUsers - 用戶管理頁面
@@ -151,7 +131,6 @@ const AdminUsers: React.FC = () => {
         <Toggle
           checked={user.sex ?? false}
           onChange={() => handleToggleSex(user)}
-          theme="luxe"
         />
       ),
     },

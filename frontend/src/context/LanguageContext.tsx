@@ -336,8 +336,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
    */
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem(STORAGE_KEY, lang);
-    document.documentElement.setAttribute("lang", lang);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, lang);
+    }
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("lang", lang);
+    }
   }, []);
 
   /**
@@ -351,7 +355,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
    * 初始化語言設定
    */
   useEffect(() => {
-    document.documentElement.setAttribute("lang", language);
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("lang", language);
+    }
   }, [language]);
 
   const value: LanguageContextType = {

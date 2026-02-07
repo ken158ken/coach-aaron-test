@@ -5,11 +5,11 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useTheme } from "@/context";
 import { useAuth } from "@/context/AuthContext";
-import { GlowButton, PillButton, Input, Loading, Modal } from "@/components/ui";
+import { GlowButton, PillButton, Loading, Modal } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { PrismScene } from "@/components/three";
 
@@ -122,7 +122,7 @@ const COACHING_PLANS: Record<string, CoachingPlan> = {
  */
 const Checkout: React.FC = () => {
   const { setTheme } = useTheme();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
