@@ -28,6 +28,7 @@
 **擴展**: `@tiptap/extension-code-block-lowlight` + `lowlight`
 
 **功能**:
+
 - 支援多種程式語言語法著色
 - 使用 VS Code Dark+ 配色主題
 - 自動識別 JavaScript、Python、HTML、CSS 等常見語言
@@ -45,12 +46,14 @@ console.log(greeting);
 **擴展**: `@tiptap/extension-mention`
 
 **功能**:
+
 - 輸入 `@` 觸發建議選單
 - 預設建議: Aaron 教練、營養師、學員、健身房、教練團隊
 - 金色高亮顯示提及對象
 - 支援鍵盤上下選擇
 
 **樣式**:
+
 ```css
 .mention {
   background: rgba(212, 175, 55, 0.15);
@@ -64,6 +67,7 @@ console.log(greeting);
 **擴展**: `@tiptap/extension-bubble-menu`
 
 **功能**:
+
 - 選取文字時自動彈出
 - 提供快速格式化工具
 - 包含: 粗體、斜體、底線、刪除線、螢光筆
@@ -75,6 +79,7 @@ console.log(greeting);
 **擴展**: `@tiptap/extension-floating-menu`
 
 **功能**:
+
 - 游標在空行時自動顯示
 - 快速插入常用元素
 - 包含: H1、H2、項目符號、編號列表、引言
@@ -86,10 +91,12 @@ console.log(greeting);
 **擴展**: `@tiptap/extension-focus`
 
 **功能**:
+
 - 追蹤當前編輯焦點
 - 視覺化高亮當前區塊
 
 **樣式**:
+
 ```css
 .has-focus {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
@@ -101,11 +108,13 @@ console.log(greeting);
 **擴展**: `@tiptap/extension-font-family`
 
 **功能**:
+
 - 支援多種中英文字體
 - 包含: 微軟正黑體、標楷體、新細明體、Arial、Times New Roman 等
 - 下拉選單即時預覽
 
 **字體列表**:
+
 - 預設
 - 微軟正黑體 (Microsoft JhengHei)
 - 新細明體 (PMingLiU)
@@ -145,6 +154,7 @@ console.log(greeting);
 ### 新增 CSS (frontend/src/index.css)
 
 #### @提及樣式
+
 ```css
 .mention {
   background: rgba(212, 175, 55, 0.15);
@@ -162,6 +172,7 @@ console.log(greeting);
 ```
 
 #### 焦點樣式
+
 ```css
 .ProseMirror .has-focus {
   border-radius: 0.25rem;
@@ -170,6 +181,7 @@ console.log(greeting);
 ```
 
 #### 語法高亮 (VS Code Dark+ 主題)
+
 - 註解: #6a9955 (綠色)
 - 關鍵字: #569cd6 (藍色)
 - 字串: #ce9178 (橘色)
@@ -190,21 +202,24 @@ console.log(greeting);
 #### 主要修改:
 
 1. **匯入新擴展**
+
 ```typescript
 import { BubbleMenu, FloatingMenu } from "@tiptap/react";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { common, createLowlight } from 'lowlight';
+import { common, createLowlight } from "lowlight";
 import Mention from "@tiptap/extension-mention";
 import Focus from "@tiptap/extension-focus";
 import FontFamily from "@tiptap/extension-font-family";
 ```
 
 2. **初始化 lowlight**
+
 ```typescript
 const lowlight = createLowlight(common);
 ```
 
 3. **更新編輯器配置**
+
 ```typescript
 extensions: [
   StarterKit.configure({
@@ -212,44 +227,42 @@ extensions: [
   }),
   CodeBlockLowlight.configure({
     lowlight,
-    defaultLanguage: 'javascript',
+    defaultLanguage: "javascript",
   }),
   Mention.configure({
     // @提及設定
   }),
   Focus.configure({
-    className: 'has-focus',
-    mode: 'all',
+    className: "has-focus",
+    mode: "all",
   }),
   FontFamily.configure({
-    types: ['textStyle'],
+    types: ["textStyle"],
   }),
   // ... 其他擴展
-]
+];
 ```
 
 4. **新增 BubbleMenu 和 FloatingMenu**
+
 ```tsx
-{editor && (
-  <>
-    <BubbleMenu editor={editor}>
-      {/* 快速格式化按鈕 */}
-    </BubbleMenu>
-    
-    <FloatingMenu editor={editor}>
-      {/* 快捷插入按鈕 */}
-    </FloatingMenu>
-  </>
-)}
+{
+  editor && (
+    <>
+      <BubbleMenu editor={editor}>{/* 快速格式化按鈕 */}</BubbleMenu>
+
+      <FloatingMenu editor={editor}>{/* 快捷插入按鈕 */}</FloatingMenu>
+    </>
+  );
+}
 ```
 
 5. **新增字體選擇工具**
+
 ```tsx
 <div className="relative group">
   <button>字體▼</button>
-  <div className="dropdown">
-    {/* 8 種字體選項 */}
-  </div>
+  <div className="dropdown">{/* 8 種字體選項 */}</div>
 </div>
 ```
 
@@ -264,6 +277,7 @@ extensions: [
 ### 功能測試清單
 
 #### 1. 程式碼語法高亮
+
 - [ ] 插入程式碼區塊
 - [ ] 輸入 JavaScript 程式碼
 - [ ] 輸入 Python 程式碼
@@ -271,6 +285,7 @@ extensions: [
 - [ ] 確認語法顏色正確
 
 #### 2. @提及功能
+
 - [ ] 輸入 `@`
 - [ ] 確認建議選單彈出
 - [ ] 使用鍵盤上下選擇
@@ -278,6 +293,7 @@ extensions: [
 - [ ] 確認提及樣式正確
 
 #### 3. BubbleMenu
+
 - [ ] 選取文字
 - [ ] 確認浮動工具列出現
 - [ ] 測試粗體按鈕
@@ -285,6 +301,7 @@ extensions: [
 - [ ] 測試螢光筆按鈕
 
 #### 4. FloatingMenu
+
 - [ ] 游標移至空行
 - [ ] 確認工具列彈出
 - [ ] 測試插入 H1
@@ -292,6 +309,7 @@ extensions: [
 - [ ] 測試插入引言
 
 #### 5. 字體選擇
+
 - [ ] 點擊字體選單
 - [ ] 選取微軟正黑體
 - [ ] 選取標楷體
@@ -299,6 +317,7 @@ extensions: [
 - [ ] 確認字體正確套用
 
 #### 6. 焦點追蹤
+
 - [ ] 點擊不同段落
 - [ ] 確認焦點高亮出現
 - [ ] 移動焦點到其他元素
@@ -310,26 +329,26 @@ extensions: [
 
 ### 編輯器功能總覽
 
-| 類別 | 功能數量 |
-|------|---------|
-| 基本格式 | 6 (粗體、斜體、底線、刪除線、上下標) |
-| 文字樣式 | 3 (顏色、螢光筆、字體) |
-| 標題段落 | 4 (H1-H3、對齊) |
-| 列表區塊 | 6 (無序、有序、待辦、引言、程式碼、分隔線) |
-| 表格 | 1 (完整表格操作) |
-| 媒體連結 | 3 (圖片、影片、連結) |
-| 智慧輔助 | 3 (@提及、BubbleMenu、FloatingMenu) |
-| 其他 | 5 (字數統計、焦點追蹤、自動儲存、預覽、歷史記錄) |
+| 類別     | 功能數量                                         |
+| -------- | ------------------------------------------------ |
+| 基本格式 | 6 (粗體、斜體、底線、刪除線、上下標)             |
+| 文字樣式 | 3 (顏色、螢光筆、字體)                           |
+| 標題段落 | 4 (H1-H3、對齊)                                  |
+| 列表區塊 | 6 (無序、有序、待辦、引言、程式碼、分隔線)       |
+| 表格     | 1 (完整表格操作)                                 |
+| 媒體連結 | 3 (圖片、影片、連結)                             |
+| 智慧輔助 | 3 (@提及、BubbleMenu、FloatingMenu)              |
+| 其他     | 5 (字數統計、焦點追蹤、自動儲存、預覽、歷史記錄) |
 
 **總計**: 31 項編輯功能
 
 ### Tiptap 擴展統計
 
-| 類型 | 數量 |
-|------|------|
+| 類型            | 數量  |
+| --------------- | ----- |
 | StarterKit 內建 | 15 個 |
-| 額外安裝 | 27 個 |
-| 自訂擴展 | 2 個 |
+| 額外安裝        | 27 個 |
+| 自訂擴展        | 2 個  |
 
 **總計**: 44 個擴展
 
@@ -357,15 +376,15 @@ extensions: [
 
 ### 套件大小
 
-| 套件 | 大小 |
-|------|------|
-| @tiptap/extension-mention | ~50KB |
-| @tiptap/extension-bubble-menu | ~20KB |
-| @tiptap/extension-floating-menu | ~20KB |
-| @tiptap/extension-focus | ~15KB |
-| @tiptap/extension-font-family | ~10KB |
-| @tiptap/extension-code-block-lowlight | ~30KB |
-| lowlight | ~1.5MB |
+| 套件                                  | 大小   |
+| ------------------------------------- | ------ |
+| @tiptap/extension-mention             | ~50KB  |
+| @tiptap/extension-bubble-menu         | ~20KB  |
+| @tiptap/extension-floating-menu       | ~20KB  |
+| @tiptap/extension-focus               | ~15KB  |
+| @tiptap/extension-font-family         | ~10KB  |
+| @tiptap/extension-code-block-lowlight | ~30KB  |
+| lowlight                              | ~1.5MB |
 
 **總增加**: ~1.6MB (gzip 後約 400KB)
 
@@ -421,12 +440,14 @@ modified:   README.md
 ### README.md 更新
 
 **新增章節**:
+
 - 🎯 智慧輔助工具
   - BubbleMenu (選取浮動工具列)
   - FloatingMenu (空行快捷工具)
   - @提及建議
 
 **更新內容**:
+
 - 編輯器功能列表 (2026-02-04 → 2026-02-06)
 - Tiptap 擴展列表 (新增 12 項)
 - 工具列功能表格 (新增字體選擇)
@@ -495,6 +516,7 @@ modified:   README.md
 ## 📞 技術支援
 
 如有問題，請參考：
+
 - [Tiptap 官方文件](https://tiptap.dev/docs)
 - [GitHub Issues](https://github.com/ken158ken/coach-aaron-test/issues)
 - 專案 README.md

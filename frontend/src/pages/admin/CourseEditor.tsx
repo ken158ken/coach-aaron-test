@@ -7,42 +7,38 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { useEditor, EditorContent } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/extension-bubble-menu";
-import { FloatingMenu } from "@tiptap/extension-floating-menu";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
-import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
-import Youtube from "@tiptap/extension-youtube";
-import Placeholder from "@tiptap/extension-placeholder";
-import { TextStyle } from "@tiptap/extension-text-style";
-import { Color } from "@tiptap/extension-color";
-import { Highlight } from "@tiptap/extension-highlight";
-import { Subscript } from "@tiptap/extension-subscript";
-import { Superscript } from "@tiptap/extension-superscript";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { common, createLowlight } from "lowlight";
-import { Table } from "@tiptap/extension-table";
-import { TableRow } from "@tiptap/extension-table-row";
-import { TableCell } from "@tiptap/extension-table-cell";
-import { TableHeader } from "@tiptap/extension-table-header";
-import { TaskList } from "@tiptap/extension-task-list";
-import { TaskItem } from "@tiptap/extension-task-item";
-import { CharacterCount } from "@tiptap/extension-character-count";
-import { Typography } from "@tiptap/extension-typography";
-import { Dropcursor } from "@tiptap/extension-dropcursor";
-import { Gapcursor } from "@tiptap/extension-gapcursor";
-import Mention from "@tiptap/extension-mention";
-import Focus from "@tiptap/extension-focus";
-import FontFamily from "@tiptap/extension-font-family";
 import { useAuth } from "@/context";
 import { Loading } from "@/components/ui";
+import { useDialog } from "@/components/ui/Dialog";
+import { RichTextEditor } from "@/components/editor";
+import { useRichTextEditor } from "@/hooks";
 import { courseService } from "@/services/course.service";
 
-// 初始化 lowlight 語法高亮
-const lowlight = createLowlight(common);
+/**
+ * 驗證 Cloudinary 圖片網址
+ */
+const isValidCloudinaryUrl = (url: string): boolean => {
+  return /^https?:\/\/res\.cloudinary\.com\/.+/.test(url);
+};
+
+/**
+ * 驗證 YouTube 網址
+ */
+const isValidYouTubeUrl = (url: string): boolean => {
+  return /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|shorts\/)|youtu\.be\/).+/.test(
+    url,
+  );
+};
+
+/**
+ * 提取 YouTube 影片 ID
+ */
+const extractYouTubeId = (url: string): string | null => {
+  const regex =
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
 
 /** 課程資料結構 */
 interface CourseData {
@@ -135,151 +131,12 @@ const CourseEditor: React.FC = () => {
       .slice(0, 50);
   }, []);
 
-  // Tiptap 編輯器 - 完整功能版
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        codeBlock: false,
-        dropcursor: {
-          color: "#d4af37",
-          width: 2,
-        },
-      }),
-      // 程式碼語法高亮
-      CodeBlockLowlight.configure({
-        lowlight,
-        defaultLanguage: "javascript",
-      }),
-      // 基本格式
-      Underline,
-      Subscript,
-      Superscript,
-      // 文字樣式
-      TextStyle,
-      Color,
-      Highlight.configure({ multicolor: true }),
-      FontFamily.configure({
-        types: ["textStyle"],
-      }),
-      // 對齊
-      TextAlign.configure({
-        types: ["heading", "paragraph"],
-      }),
-      // 表格
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableCell,
-      TableHeader,
-      // 待辦清單
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-      // @提及
-      Mention.configure({
-        HTMLAttributes: {
-          class: "mention",
-        },
-        suggestion: {
-          items: ({ query }) => {
-            return ["Aaron 教練", "營養師", "學員", "健身房", "教練團隊"]
-              .filter((item) =>
-                item.toLowerCase().startsWith(query.toLowerCase()),
-              )
-              .slice(0, 5);
-          },
-          render: () => {
-            let component: any;
-            let popup: any;
-
-            return {
-              onStart: (props: any) => {
-                component = document.createElement("div");
-                component.className = "mention-suggestions";
-
-                if (props.items.length > 0) {
-                  popup = document.createElement("div");
-                  popup.className =
-                    "bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl p-1 max-h-60 overflow-auto";
-                  props.items.forEach((item: string, index: number) => {
-                    const button = document.createElement("button");
-                    button.className =
-                      "w-full text-left px-3 py-2 text-sm rounded hover:bg-luxe-gold/20 transition-colors";
-                    button.textContent = item;
-                    button.onclick = () => props.command({ id: item });
-                    if (index === props.selectedIndex) {
-                      button.classList.add("bg-luxe-gold/10");
-                    }
-                    popup.appendChild(button);
-                  });
-                  component.appendChild(popup);
-                  document.body.appendChild(component);
-                }
-              },
-              onUpdate: (props: any) => {
-                if (popup && props.items.length > 0) {
-                  popup.innerHTML = "";
-                  props.items.forEach((item: string, index: number) => {
-                    const button = document.createElement("button");
-                    button.className =
-                      "w-full text-left px-3 py-2 text-sm rounded hover:bg-luxe-gold/20 transition-colors";
-                    button.textContent = item;
-                    button.onclick = () => props.command({ id: item });
-                    if (index === props.selectedIndex) {
-                      button.classList.add("bg-luxe-gold/10");
-                    }
-                    popup.appendChild(button);
-                  });
-                }
-              },
-              onExit: () => {
-                if (component) {
-                  component.remove();
-                }
-              },
-            };
-          },
-        },
-      }),
-      // 焦點追蹤
-      Focus.configure({
-        className: "has-focus",
-        mode: "all",
-      }),
-      // 浮動工具列
-      BubbleMenu,
-      FloatingMenu,
-      // 媒體
-      Image.configure({
-        HTMLAttributes: {
-          class: "max-w-full rounded-lg",
-        },
-      }),
-      Link.configure({
-        openOnClick: false,
-      }),
-      Youtube.configure({
-        width: 640,
-        height: 360,
-      }),
-      // 功能性
-      Placeholder.configure({
-        placeholder: "開始撰寫課程內容...（輸入 @ 可提及他人）",
-      }),
-      CharacterCount.configure({
-        limit: 50000,
-      }),
-      Typography,
-      Dropcursor,
-      Gapcursor,
-    ],
+  // 使用共用的富文本編輯器 Hook
+  const editor = useRichTextEditor({
     content: course.content,
-    onUpdate: ({ editor }) => {
-      setCourse((prev) => ({ ...prev, content: editor.getHTML() }));
+    placeholder: "開始撰寫課程內容...（輸入 @ 可提及他人）",
+    onUpdate: (html) => {
+      setCourse((prev) => ({ ...prev, content: html }));
       setHasChanges(true);
     },
   });
@@ -400,31 +257,125 @@ const CourseEditor: React.FC = () => {
       tags: prev.tags.filter((t) => t !== tag),
     }));
     setHasChanges(true);
-  }, []);
+  // 使用美化對話框
+  const dialog = useDialog();
 
-  /** 插入圖片 */
-  const handleInsertImage = useCallback(() => {
-    const url = prompt("請輸入圖片網址 (建議使用 Cloudinary):");
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  }, [editor]);
+  /** 插入圖片（強制 Cloudinary 驗證） */
+  const handleInsertImage = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入圖片",
+      message: "請輸入 Cloudinary 圖片網址：",
+      placeholder: "https://res.cloudinary.com/...",
+      validation: (value) => {
+        if (!isValidCloudinaryUrl(value)) {
+          return "❌ 只能使用 Cloudinary 圖片網址！\n請確保網址以 https://res.cloudinary.com/ 開頭";
+        }
+        return null;
+      },
+      renderPreview: (value) =>
+        isValidCloudinaryUrl(value) ? (
+          <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
+            <img
+              src={value}
+              alt="圖片預覽"
+              className="max-h-48 mx-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        ) : null,
+    });
 
-  /** 插入 YouTube */
-  const handleInsertYoutube = useCallback(() => {
-    const url = prompt("請輸入 YouTube 網址:");
     if (url && editor) {
-      editor.chain().focus().setYoutubeVideo({ src: url }).run();
+      if (!isValidCloudinaryUrl(url)) {
+        await dialog.alert({
+          type: "error",
+          title: "無效的圖片網址",
+          message: "只能使用 Cloudinary 圖片網址！",
+        });
+        return;
+      }
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "resizableImage",
+          attrs: { src: url },
+        })
+        .run();
     }
-  }, [editor]);
+  }, [editor, dialog]);
+
+  /** 插入 YouTube（強制 YouTube 驗證 + 即時預覽） */
+  const handleInsertYoutube = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入 YouTube 影片",
+      message: "請輸入 YouTube 影片網址：",
+      placeholder: "https://www.youtube.com/watch?v=...",
+      validation: (value) => {
+        if (!isValidYouTubeUrl(value)) {
+          return "❌ 只能使用 YouTube 影片網址！\n支援格式：youtube.com/watch?v=, youtu.be/, youtube.com/shorts/";
+        }
+        return null;
+      },
+      renderPreview: (value) => {
+        const videoId = extractYouTubeId(value);
+        return videoId ? (
+          <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube 預覽"
+              className="w-full aspect-video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        ) : null;
+      },
+    });
+
+    if (url && editor) {
+      if (!isValidYouTubeUrl(url)) {
+        await dialog.alert({
+          type: "error",
+          title: "無效的影片網址",
+          message: "只能使用 YouTube 影片網址！",
+        });
+        return;
+      }
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "resizableYoutube",
+          attrs: { src: url, width: 640, height: 360 },
+        })
+        .run();
+    }
+  }, [editor, dialog]);
 
   /** 插入連結 */
-  const handleInsertLink = useCallback(() => {
-    const url = prompt("請輸入連結網址:");
+  const handleInsertLink = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入連結",
+      message: "請輸入網址：",
+      placeholder: "https://...",
+      validation: (value) => {
+        try {
+          new URL(value);
+          return null;
+        } catch {
+          return "請輸入有效的網址";
+        }
+      },
+    });
+
     if (url && editor) {
       editor.chain().focus().setLink({ href: url }).run();
     }
-  }, [editor]);
+  }, [editor, dialog]);
 
   /** 手動儲存草稿到 localStorage */
   const handleSaveDraft = useCallback(() => {
@@ -651,160 +602,13 @@ const CourseEditor: React.FC = () => {
               />
             </div>
 
-            {/* 編輯器工具列 */}
-            <div className="flex flex-wrap gap-1 p-2 bg-luxe-surface rounded-lg border border-luxe-gold/20">
-              {/* 文字格式 */}
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleBold().run()}
-                title="粗體 - 讓文字變粗，強調重點"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("bold") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                <strong>B</strong>
-              </button>
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-                title="斜體 - 讓文字傾斜，常用於引用或強調"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("italic") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                <em>I</em>
-              </button>
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleUnderline().run()}
-                title="底線 - 在文字下方加線"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("underline") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                <u>U</u>
-              </button>
-
-              <span className="w-px bg-luxe-gold/30 mx-1" />
-
-              {/* 標題 */}
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().toggleHeading({ level: 1 }).run()
-                }
-                title="大標題 - 文章主標題，字體最大"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("heading", { level: 1 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                H1
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().toggleHeading({ level: 2 }).run()
-                }
-                title="中標題 - 段落標題，字體中等"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("heading", { level: 2 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                H2
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().toggleHeading({ level: 3 }).run()
-                }
-                title="小標題 - 子段落標題，字體較小"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("heading", { level: 3 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                H3
-              </button>
-
-              <span className="w-px bg-luxe-gold/30 mx-1" />
-
-              {/* 列表 */}
-              <button
-                type="button"
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                title="項目符號列表 - 用圓點條列重點，適合無順序的清單"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("bulletList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                • 列表
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().toggleOrderedList().run()
-                }
-                title="編號列表 - 用數字條列步驟，適合有順序的清單"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive("orderedList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                1. 列表
-              </button>
-
-              <span className="w-px bg-luxe-gold/30 mx-1" />
-
-              {/* 對齊 */}
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().setTextAlign("left").run()
-                }
-                title="左對齊 - 文字靠左排列（預設）"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive({ textAlign: "left" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                ⬅
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().setTextAlign("center").run()
-                }
-                title="置中對齊 - 文字置中排列，適合標題或引言"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive({ textAlign: "center" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                ⬛
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editor?.chain().focus().setTextAlign("right").run()
-                }
-                title="右對齊 - 文字靠右排列"
-                className={`px-3 py-1.5 text-sm rounded ${editor?.isActive({ textAlign: "right" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-              >
-                ➡
-              </button>
-
-              <span className="w-px bg-luxe-gold/30 mx-1" />
-
-              {/* 插入 */}
-              <button
-                type="button"
-                onClick={handleInsertImage}
-                title="插入圖片 - 貼上圖片網址即可插入圖片（建議使用 Cloudinary）"
-                className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
-              >
-                🖼️ 圖片
-              </button>
-              <button
-                type="button"
-                onClick={handleInsertYoutube}
-                title="插入 YouTube 影片 - 貼上 YouTube 網址即可嵌入影片"
-                className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
-              >
-                🎬 影片
-              </button>
-              <button
-                type="button"
-                onClick={handleInsertLink}
-                title="插入連結 - 將文字轉換成可點擊的連結"
-                className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
-              >
-                🔗 連結
-              </button>
-            </div>
-
-            {/* 編輯器內容 */}
-            <div className="min-h-[400px] p-4 bg-luxe-surface rounded-lg border border-luxe-gold/20">
-              <EditorContent
-                editor={editor}
-                className="prose prose-invert max-w-none min-h-[350px] [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[350px]"
-              />
-            </div>
+            {/* 富文本編輯器 */}
+            <RichTextEditor
+              editor={editor}
+              onInsertImage={handleInsertImage}
+              onInsertYoutube={handleInsertYoutube}
+              onInsertLink={handleInsertLink}
+            />
           </div>
 
           {/* 右側：課程資訊 */}
@@ -815,7 +619,7 @@ const CourseEditor: React.FC = () => {
               </h2>
 
               <div className="space-y-4">
-                {/* Slug */}
+                {/* Slug（自動產生，唯讀） */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
                     網址代稱

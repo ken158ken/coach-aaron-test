@@ -24,3 +24,6 @@ export {
   renderSafeContent,
   splitSafeContentLines,
 } from "./useSafeInput";
+
+// 富文本編輯器 Hook
+export { useRichTextEditor } from "./useRichTextEditor";

@@ -5,3 +5,4 @@
 
 export { ResizableImage } from "./ResizableImage";
 export { ResizableYoutube } from "./ResizableYoutube";
+export { RichTextEditor } from "./RichTextEditor";
