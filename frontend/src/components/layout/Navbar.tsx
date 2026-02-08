@@ -99,12 +99,12 @@ const Navbar: React.FC = (): JSX.Element => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-10">
+        <div className="hidden xl:flex items-center gap-3 2xl:gap-7">
           {navLinks.map((link) => (
             <Link
               key={link.name}
               to={link.path}
-              className={`relative text-base tracking-wider transition-all duration-300 hover:text-luxe-gold group ${
+              className={`relative text-sm 2xl:text-base tracking-wide 2xl:tracking-wider transition-all duration-300 hover:text-luxe-gold group ${
                 location.pathname === link.path
                   ? "text-luxe-gold"
                   : "text-luxe-text"
@@ -126,15 +126,15 @@ const Navbar: React.FC = (): JSX.Element => {
           {!mounted ? (
             <Link
               to="/login"
-              className="text-base tracking-wider px-5 py-2 border border-white/20 hover:border-luxe-gold hover:text-luxe-gold hover:scale-105 transition-all duration-300"
+              className="text-sm 2xl:text-base tracking-wide 2xl:tracking-wider px-3 2xl:px-5 py-1.5 2xl:py-2 border border-white/20 hover:border-luxe-gold hover:text-luxe-gold hover:scale-105 transition-all duration-300"
             >
               {t.nav.login}
             </Link>
           ) : user ? (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 2xl:gap-5">
               <Link
                 to="/member"
-                className="relative text-base tracking-wider text-luxe-text hover:text-luxe-gold transition-all duration-300 group"
+                className="relative text-sm 2xl:text-base tracking-wide 2xl:tracking-wider text-luxe-text hover:text-luxe-gold transition-all duration-300 group"
               >
                 {t.nav.memberCenter}
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-luxe-gold transition-all duration-300 w-0 group-hover:w-full" />
@@ -142,30 +142,30 @@ const Navbar: React.FC = (): JSX.Element => {
               {user.isAdmin && (
                 <Link
                   to="/admin"
-                  className="text-base tracking-wider text-luxe-gold hover:scale-105 transition-transform duration-300"
+                  className="text-sm 2xl:text-base tracking-wide 2xl:tracking-wider text-luxe-gold hover:scale-105 transition-transform duration-300"
                 >
                   {t.nav.admin}
                 </Link>
               )}
               <button
                 onClick={logout}
-                className="text-base tracking-wider px-5 py-2 border border-white/20 hover:border-red-500 hover:text-red-500 hover:scale-105 transition-all duration-300"
+                className="text-sm 2xl:text-base tracking-wide 2xl:tracking-wider px-3 2xl:px-5 py-1.5 2xl:py-2 border border-white/20 hover:border-red-500 hover:text-red-500 hover:scale-105 transition-all duration-300"
               >
                 {t.nav.logout}
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 2xl:gap-5">
               <Link
                 to="/login"
-                className="relative text-base tracking-wider text-luxe-text hover:text-luxe-gold transition-all duration-300 group"
+                className="relative text-sm 2xl:text-base tracking-wide 2xl:tracking-wider text-luxe-text hover:text-luxe-gold transition-all duration-300 group"
               >
                 {t.nav.login}
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-luxe-gold transition-all duration-300 w-0 group-hover:w-full" />
               </Link>
               <Link
                 to="/register"
-                className="text-base tracking-wider px-5 py-2 border border-luxe-gold text-luxe-gold hover:bg-luxe-gold hover:text-luxe-black hover:scale-105 transition-all duration-300"
+                className="text-sm 2xl:text-base tracking-wide 2xl:tracking-wider px-3 2xl:px-5 py-1.5 2xl:py-2 border border-luxe-gold text-luxe-gold hover:bg-luxe-gold hover:text-luxe-black hover:scale-105 transition-all duration-300"
               >
                 {t.nav.register}
               </Link>
@@ -173,7 +173,7 @@ const Navbar: React.FC = (): JSX.Element => {
           )}
 
           {/* Theme & Language Toggle */}
-          <div className="flex items-center gap-2 ml-4 border-l border-white/20 pl-4">
+          <div className="flex items-center gap-1.5 2xl:gap-2 ml-2 2xl:ml-4 border-l border-white/20 pl-2 2xl:pl-4">
             {/* Global Search Button */}
             <SearchButton onClick={() => setSearchOpen(true)} />
 
@@ -241,7 +241,7 @@ const Navbar: React.FC = (): JSX.Element => {
 
         {/* Mobile Menu Button */}
         <button
-          className="lg:hidden text-luxe-text hover:text-luxe-gold transition-colors"
+          className="xl:hidden text-luxe-text hover:text-luxe-gold transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           <span className="text-xs sm:text-sm tracking-widest border border-white/20 px-3 sm:px-4 py-1.5 sm:py-2">
@@ -252,7 +252,7 @@ const Navbar: React.FC = (): JSX.Element => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden mt-4 sm:mt-6 py-4 sm:py-6 border-t border-white/10 bg-luxe-bg/95 backdrop-blur-md rounded-lg -mx-2 px-4">
+        <div className="xl:hidden mt-4 sm:mt-6 py-4 sm:py-6 border-t border-white/10 bg-luxe-bg/95 backdrop-blur-md rounded-lg -mx-2 px-4">
           <div className="flex flex-col gap-3 sm:gap-4">
             {navLinks.map((link) => (
               <Link
