@@ -74,6 +74,11 @@ const GlowButton: React.FC<GlowButtonProps> = ({
     tracking-wider
     transition-all
     duration-300
+    focus-visible:outline-none
+    focus-visible:ring-2
+    focus-visible:ring-abyss-accent/50
+    focus-visible:ring-offset-2
+    focus-visible:ring-offset-abyss-bg
     ${variants[variant]}
     ${sizes[size]}
     ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}

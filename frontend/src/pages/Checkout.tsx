@@ -10,6 +10,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useTheme } from "@/context";
 import { useAuth } from "@/context/AuthContext";
 import { GlowButton, PillButton, Loading, Modal } from "@/components/ui";
+import { useDialog } from "@/components/ui/Dialog";
 import { SEOHead } from "@/components/seo";
 import { PrismScene } from "@/components/three";
 
@@ -125,6 +126,7 @@ const Checkout: React.FC = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const dialog = useDialog();
 
   // 狀態
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | null>(
@@ -197,26 +199,39 @@ const Checkout: React.FC = () => {
       switch (selectedPayment) {
         case "linepay":
           // 導向 LINE Pay
-          alert("將導向 LINE Pay 付款頁面（模擬）");
+          await dialog.alert({
+            title: "付款導向",
+            message: "將導向 LINE Pay 付款頁面（模擬）",
+          });
           break;
         case "newebpay":
           // 導向藍新金流
-          alert("將導向藍新金流付款頁面（模擬）");
+          await dialog.alert({
+            title: "付款導向",
+            message: "將導向藍新金流付款頁面（模擬）",
+          });
           break;
         case "ecpay":
           // 導向綠界
-          alert("將導向綠界付款頁面（模擬）");
+          await dialog.alert({
+            title: "付款導向",
+            message: "將導向綠界付款頁面（模擬）",
+          });
           break;
         case "jkopay":
           // 導向街口支付
-          alert("將導向街口支付頁面（模擬）");
+          await dialog.alert({
+            title: "付款導向",
+            message: "將導向街口支付頁面（模擬）",
+          });
           break;
         case "apple_pay":
         case "google_pay":
           // Apple Pay / Google Pay 直接在頁面處理
-          alert(
-            `將啟動 ${selectedPayment === "apple_pay" ? "Apple Pay" : "Google Pay"}（模擬）`,
-          );
+          await dialog.alert({
+            title: "行動支付",
+            message: `將啟動 ${selectedPayment === "apple_pay" ? "Apple Pay" : "Google Pay"}（模擬）`,
+          });
           break;
       }
 

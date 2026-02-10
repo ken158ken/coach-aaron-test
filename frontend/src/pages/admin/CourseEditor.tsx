@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/context";
-import { Loading } from "@/components/ui";
+import { Loading, Tooltip } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks";
@@ -92,6 +92,9 @@ const CourseEditor: React.FC = () => {
   const { user, isAuthenticated, isAdmin, loading: authLoading } = useAuth();
   const isNew = !id || id === "new";
 
+  // 使用美化對話框
+  const dialog = useDialog();
+
   // 客戶端掛載狀態 (防止 SSR 水合問題)
   const [mounted, setMounted] = useState(false);
 
@@ -111,6 +114,7 @@ const CourseEditor: React.FC = () => {
     status: "draft",
   });
 
+  const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
@@ -175,16 +179,17 @@ const CourseEditor: React.FC = () => {
     if (typeof window === "undefined" || !mounted || !isNew || !editor) return;
 
     // 使用 setTimeout 確保在客戶端完全掛載後執行
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const data = JSON.parse(saved);
           if (data.savedAt) {
             const savedTime = new Date(data.savedAt);
-            const confirmed = window.confirm(
-              `發現上次編輯的草稿（${savedTime.toLocaleString()}）\n\n是否要恢復？`,
-            );
+            const confirmed = await dialog.confirm({
+              title: "恢復草稿",
+              message: `發現上次編輯的草稿（${savedTime.toLocaleString()}）\n\n是否要恢復？`,
+            });
             if (confirmed) {
               setCourse(data.course);
               editor.commands.setContent(data.course.content || "");
@@ -201,7 +206,68 @@ const CourseEditor: React.FC = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [mounted, isNew, editor]);
+  }, [mounted, isNew, editor, dialog]);
+
+  // 載入既有課程資料（編輯模式）
+  useEffect(() => {
+    if (isNew || !id || !mounted || !editor) return;
+
+    const loadCourse = async () => {
+      try {
+        setIsLoading(true);
+        logger.info("載入課程資料, id:", id);
+        const data = await courseService.getById(Number(id));
+        logger.info("課程資料已載入:", data);
+
+        const keywordsArray: string[] = data.course_keywords
+          ? String(data.course_keywords)
+              .split(",")
+              .map((k: string) => k.trim())
+              .filter(Boolean)
+          : Array.isArray(data.keywords)
+            ? data.keywords
+            : [];
+
+        const mapped: CourseData = {
+          id: String(data.course_id),
+          title: data.course_title || data.title || "",
+          slug: data.course_slug || data.slug || "",
+          description: data.course_description || data.description || "",
+          category: data.course_category || data.category || "",
+          tags: keywordsArray,
+          coverImage: data.course_thumbnail_url || data.thumbnail || "",
+          videoUrl: "",
+          content: data.course_content || data.content || "",
+          price: data.price ? String(data.price) : "",
+          duration: data.duration_minutes
+            ? String(data.duration_minutes)
+            : data.duration || "",
+          level: data.course_level || data.level || "beginner",
+          status: (data.status as "draft" | "published") || "draft",
+        };
+
+        setCourse(mapped);
+
+        // 設定 Tiptap 編輯器內容
+        if (mapped.content) {
+          editor.commands.setContent(mapped.content);
+        }
+
+        logger.info("課程資料已填入表單");
+      } catch (error) {
+        logger.error("載入課程失敗:", error);
+        await dialog.alert({
+          title: "載入失敗",
+          message: "載入課程失敗，請返回重試",
+          type: "error",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCourse();
+  }, [isNew, id, mounted, editor]);
 
   // 自動儲存到 localStorage (每 30 秒，僅客戶端)
   useEffect(() => {
@@ -260,9 +326,6 @@ const CourseEditor: React.FC = () => {
     }));
     setHasChanges(true);
   }, []);
-
-  // 使用美化對話框
-  const dialog = useDialog();
 
   /** 插入圖片（強制 Cloudinary 驗證） */
   const handleInsertImage = useCallback(async () => {
@@ -382,7 +445,7 @@ const CourseEditor: React.FC = () => {
   }, [editor, dialog]);
 
   /** 手動儲存草稿到 localStorage */
-  const handleSaveDraft = useCallback(() => {
+  const handleSaveDraft = useCallback(async () => {
     try {
       const data = {
         course,
@@ -391,18 +454,30 @@ const CourseEditor: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       setLastSaved(new Date());
       setHasChanges(false);
-      alert("✅ 草稿已儲存到瀏覽器！\n\n下次打開這個頁面時會詢問是否恢復。");
+      await dialog.alert({
+        title: "儲存成功",
+        message: "草稿已儲存到瀏覽器！",
+        type: "success",
+      });
       logger.info("手動儲存草稿成功");
     } catch (error) {
       logger.error("儲存草稿失敗:", error);
-      alert("❌ 儲存失敗，請稍後再試");
+      await dialog.alert({
+        title: "儲存失敗",
+        message: "儲存失敗，請稍後再試",
+        type: "error",
+      });
     }
-  }, [course]);
+  }, [course, dialog]);
 
   /** 發布課程 */
   const handlePublish = useCallback(async () => {
     if (!course.title.trim()) {
-      alert("請輸入課程標題");
+      await dialog.alert({
+        title: "提示",
+        message: "請輸入課程標題",
+        type: "warning",
+      });
       return;
     }
 
@@ -426,25 +501,30 @@ const CourseEditor: React.FC = () => {
       logger.info("發布課程:", payload);
 
       if (isNew) {
-        // 建立新課程
         await courseService.create(payload);
       } else {
-        // 更新現有課程
         await courseService.update(Number(id), payload);
       }
 
-      // 清除 localStorage 草稿
       localStorage.removeItem(STORAGE_KEY);
       setHasChanges(false);
-      alert("✅ 課程已發布！");
+      await dialog.alert({
+        title: "發布成功",
+        message: "課程已發布！",
+        type: "success",
+      });
       navigate("/admin/courses");
     } catch (error) {
       logger.error("發布失敗:", error);
-      alert("❌ 發布失敗，請稍後再試");
+      await dialog.alert({
+        title: "發布失敗",
+        message: "發布失敗，請稍後再試",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
-  }, [course, generateSlug, isNew, id, navigate]);
+  }, [course, generateSlug, isNew, id, navigate, dialog]);
 
   /** 新增分類 */
   const handleAddCategory = useCallback(() => {
@@ -472,8 +552,14 @@ const CourseEditor: React.FC = () => {
 
   /** 刪除分類 */
   const handleDeleteCategory = useCallback(
-    (categoryId: string) => {
-      if (!confirm("確定要刪除此分類嗎？")) return;
+    async (categoryId: string) => {
+      const confirmed = await dialog.confirm({
+        title: "刪除分類",
+        message: "確定要刪除此分類嗎？",
+        variant: "danger",
+        confirmText: "刪除",
+      });
+      if (!confirmed) return;
 
       const updated = categories.filter((c) => c.id !== categoryId);
       setCategories(updated);
@@ -488,24 +574,29 @@ const CourseEditor: React.FC = () => {
       // TODO: 同步到資料庫
       logger.info("刪除分類:", categoryId);
     },
-    [categories, course.category],
+    [categories, course.category, dialog],
   );
 
   /** 返回列表 */
-  const handleBack = useCallback(() => {
+  const handleBack = useCallback(async () => {
     if (hasChanges) {
-      if (!confirm("有未儲存的變更，確定要離開嗎？")) {
-        return;
-      }
+      const confirmed = await dialog.confirm({
+        title: "離開頁面",
+        message: "有未儲存的變更，確定要離開嗎？",
+        variant: "danger",
+        confirmText: "離開",
+        cancelText: "繼續編輯",
+      });
+      if (!confirmed) return;
     }
     navigate("/admin/courses");
-  }, [navigate, hasChanges]);
+  }, [navigate, hasChanges, dialog]);
 
   // 權限保護
-  if (authLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-luxe-bg">
-        <Loading text="載入中..." />
+        <Loading text={isLoading ? "載入課程資料..." : "載入中..."} />
       </div>
     );
   }
@@ -556,14 +647,15 @@ const CourseEditor: React.FC = () => {
             )}
 
             {/* 說明按鈕 */}
-            <button
-              type="button"
-              onClick={() => setShowHelpModal(true)}
-              title="查看使用說明"
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-luxe-gold/20 text-luxe-gold hover:bg-luxe-gold/30 text-sm font-bold"
-            >
-              ?
-            </button>
+            <Tooltip label="使用說明">
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(true)}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-luxe-gold/20 text-luxe-gold hover:bg-luxe-gold/30 text-sm font-bold"
+              >
+                ?
+              </button>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-3">
@@ -668,7 +760,7 @@ const CourseEditor: React.FC = () => {
                       setHasChanges(true);
                     }}
                     placeholder="簡短描述課程內容..."
-                    rows={3}
+                    rows={5}
                     className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none resize-none text-sm"
                   />
                 </div>

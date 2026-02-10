@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/context";
-import { Loading } from "@/components/ui";
+import { Loading, Tooltip } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks";
@@ -88,6 +88,9 @@ const ArticleEditor: React.FC = () => {
   const { user, isAuthenticated, isAdmin, loading: authLoading } = useAuth();
   const isNew = !id || id === "new";
 
+  // 使用美化對話框
+  const dialog = useDialog();
+
   // 客戶端掛載狀態 (防止 SSR 水合問題)
   const [mounted, setMounted] = useState(false);
 
@@ -103,6 +106,7 @@ const ArticleEditor: React.FC = () => {
     status: "draft",
   });
 
+  const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
@@ -173,16 +177,17 @@ const ArticleEditor: React.FC = () => {
     if (typeof window === "undefined" || !mounted || !isNew || !editor) return;
 
     // 使用 setTimeout 確保在客戶端完全掛載後執行
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const data = JSON.parse(saved);
           if (data.savedAt) {
             const savedTime = new Date(data.savedAt);
-            const confirmed = window.confirm(
-              `發現上次編輯的草稿（${savedTime.toLocaleString()}）\n\n是否要恢復？`,
-            );
+            const confirmed = await dialog.confirm({
+              title: "恢復草稿",
+              message: `發現上次編輯的草稿（${savedTime.toLocaleString()}）\n\n是否要恢復？`,
+            });
             if (confirmed) {
               setArticle(data.article);
               editor.commands.setContent(data.article.content || "");
@@ -199,7 +204,60 @@ const ArticleEditor: React.FC = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [mounted, isNew, editor]);
+  }, [mounted, isNew, editor, dialog]);
+
+  // 載入既有文章資料（編輯模式）
+  useEffect(() => {
+    if (isNew || !id || !mounted || !editor) return;
+
+    const loadArticle = async () => {
+      try {
+        setIsLoading(true);
+        logger.info("載入文章資料, id:", id);
+        const data = await articleService.getByIdentifier(id);
+        logger.info("文章資料已載入:", data);
+
+        const keywordsArray: string[] = data.article_keywords
+          ? data.article_keywords
+              .split(",")
+              .map((k: string) => k.trim())
+              .filter(Boolean)
+          : [];
+
+        const mapped: ArticleData = {
+          id: String(data.article_id),
+          title: data.article_title || "",
+          slug: data.article_slug || "",
+          excerpt: data.article_description || "",
+          category: data.article_category || "",
+          tags: keywordsArray,
+          coverImage: data.article_thumbnail_url || "",
+          content: data.article_content || "",
+          status: (data.status as "draft" | "published") || "draft",
+        };
+
+        setArticle(mapped);
+
+        // 設定 Tiptap 編輯器內容
+        if (mapped.content) {
+          editor.commands.setContent(mapped.content);
+        }
+
+        logger.info("文章資料已填入表單");
+      } catch (error) {
+        logger.error("載入文章失敗:", error);
+        await dialog.alert({
+          title: "載入失敗",
+          message: "載入文章失敗，請返回重試",
+          type: "error",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadArticle();
+  }, [isNew, id, mounted, editor]);
 
   // 自動儲存到 localStorage (每 30 秒，僅客戶端)
   useEffect(() => {
@@ -258,9 +316,6 @@ const ArticleEditor: React.FC = () => {
     }));
     setHasChanges(true);
   }, []);
-
-  // 使用美化對話框
-  const dialog = useDialog();
 
   /** 插入圖片（強制 Cloudinary 驗證） */
   const handleInsertImage = useCallback(async () => {
@@ -384,7 +439,7 @@ const ArticleEditor: React.FC = () => {
   }, [editor, dialog]);
 
   /** 手動儲存草稿到 localStorage */
-  const handleSaveDraft = useCallback(() => {
+  const handleSaveDraft = useCallback(async () => {
     try {
       const data = {
         article,
@@ -393,27 +448,43 @@ const ArticleEditor: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       setLastSaved(new Date());
       setHasChanges(false);
-      alert("✅ 草稿已儲存到瀏覽器！\n\n下次打開這個頁面時會詢問是否恢復。");
+      await dialog.alert({
+        title: "儲存成功",
+        message: "草稿已儲存到瀏覽器！",
+        type: "success",
+      });
       logger.info("手動儲存草稿成功");
     } catch (error) {
       logger.error("儲存草稿失敗:", error);
-      alert("❌ 儲存失敗，請稍後再試");
+      await dialog.alert({
+        title: "儲存失敗",
+        message: "儲存失敗，請稍後再試",
+        type: "error",
+      });
     }
-  }, [article]);
+  }, [article, dialog]);
 
   /** 顯示預覽（發布前確認） */
-  const handleShowPreview = useCallback(() => {
+  const handleShowPreview = useCallback(async () => {
     if (!article.title.trim()) {
-      alert("請輸入文章標題");
+      await dialog.alert({
+        title: "提示",
+        message: "請輸入文章標題",
+        type: "warning",
+      });
       return;
     }
     setShowPreviewModal(true);
-  }, [article.title]);
+  }, [article.title, dialog]);
 
   /** 確認發布文章 */
   const handleConfirmPublish = useCallback(async () => {
     if (!article.title.trim()) {
-      alert("請輸入文章標題");
+      await dialog.alert({
+        title: "提示",
+        message: "請輸入文章標題",
+        type: "warning",
+      });
       return;
     }
 
@@ -446,15 +517,23 @@ const ArticleEditor: React.FC = () => {
       localStorage.removeItem(STORAGE_KEY);
       setHasChanges(false);
       setShowPreviewModal(false);
-      alert("✅ 文章已發布！");
+      await dialog.alert({
+        title: "發布成功",
+        message: "文章已發布！",
+        type: "success",
+      });
       navigate("/admin/articles");
     } catch (error) {
       logger.error("發布失敗:", error);
-      alert("❌ 發布失敗，請稍後再試");
+      await dialog.alert({
+        title: "發布失敗",
+        message: "發布失敗，請稍後再試",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
-  }, [article, generateSlug, isNew, id, navigate]);
+  }, [article, generateSlug, isNew, id, navigate, dialog]);
 
   /** 新增分類 */
   const handleAddCategory = useCallback(() => {
@@ -482,8 +561,14 @@ const ArticleEditor: React.FC = () => {
 
   /** 刪除分類 */
   const handleDeleteCategory = useCallback(
-    (categoryId: string) => {
-      if (!confirm("確定要刪除此分類嗎？")) return;
+    async (categoryId: string) => {
+      const confirmed = await dialog.confirm({
+        title: "刪除分類",
+        message: "確定要刪除此分類嗎？",
+        variant: "danger",
+        confirmText: "刪除",
+      });
+      if (!confirmed) return;
 
       const updated = categories.filter((c) => c.id !== categoryId);
       setCategories(updated);
@@ -498,24 +583,29 @@ const ArticleEditor: React.FC = () => {
       // TODO: 同步到資料庫
       logger.info("刪除分類:", categoryId);
     },
-    [categories, article.category],
+    [categories, article.category, dialog],
   );
 
   /** 返回列表 */
-  const handleBack = useCallback(() => {
+  const handleBack = useCallback(async () => {
     if (hasChanges) {
-      if (!confirm("有未儲存的變更，確定要離開嗎？")) {
-        return;
-      }
+      const confirmed = await dialog.confirm({
+        title: "離開頁面",
+        message: "有未儲存的變更，確定要離開嗎？",
+        variant: "danger",
+        confirmText: "離開",
+        cancelText: "繼續編輯",
+      });
+      if (!confirmed) return;
     }
     navigate("/admin/articles");
-  }, [navigate, hasChanges]);
+  }, [navigate, hasChanges, dialog]);
 
   // 權限保護
-  if (authLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-luxe-bg">
-        <Loading text="載入中..." />
+        <Loading text={isLoading ? "載入文章資料..." : "載入中..."} />
       </div>
     );
   }
@@ -566,14 +656,15 @@ const ArticleEditor: React.FC = () => {
             )}
 
             {/* 說明按鈕 */}
-            <button
-              type="button"
-              onClick={() => setShowHelpModal(true)}
-              title="查看使用說明"
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-luxe-gold/20 text-luxe-gold hover:bg-luxe-gold/30 text-sm font-bold"
-            >
-              ?
-            </button>
+            <Tooltip label="使用說明">
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(true)}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-luxe-gold/20 text-luxe-gold hover:bg-luxe-gold/30 text-sm font-bold"
+              >
+                ?
+              </button>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-3">
@@ -583,24 +674,26 @@ const ArticleEditor: React.FC = () => {
                 {editor.storage.characterCount?.characters() || 0} 字
               </span>
             )}
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={isSaving}
-              title="儲存草稿到瀏覽器"
-              className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50"
-            >
-              {isSaving ? "儲存中..." : "儲存草稿"}
-            </button>
-            <button
-              type="button"
-              onClick={handleShowPreview}
-              disabled={isSaving}
-              title="預覽文章並確認發布"
-              className="px-4 py-2 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg disabled:opacity-50 font-medium"
-            >
-              預覽並發布
-            </button>
+            <Tooltip label="儲存草稿">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50"
+              >
+                {isSaving ? "儲存中..." : "儲存草稿"}
+              </button>
+            </Tooltip>
+            <Tooltip label="預覽並發布">
+              <button
+                type="button"
+                onClick={handleShowPreview}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg disabled:opacity-50 font-medium"
+              >
+                預覽並發布
+              </button>
+            </Tooltip>
           </div>
         </div>
       </header>
@@ -647,13 +740,17 @@ const ArticleEditor: React.FC = () => {
           className={`fixed right-0 top-16 h-[calc(100vh-64px)] w-80 bg-luxe-bg border-l border-luxe-gold/20 overflow-y-auto transition-transform duration-300 ${sidebarCollapsed ? "translate-x-full" : "translate-x-0"}`}
         >
           {/* 收合按鈕 */}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "展開側邊欄" : "收合側邊欄"}
-            className="absolute -left-10 top-4 w-10 h-10 flex items-center justify-center bg-luxe-surface border border-luxe-gold/20 rounded-l-lg text-luxe-gold hover:bg-luxe-gold/10"
+          <Tooltip
+            label={sidebarCollapsed ? "展開側邊欄" : "收合側邊欄"}
+            position="left"
           >
-            {sidebarCollapsed ? "◀" : "▶"}
-          </button>
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="absolute -left-10 top-4 w-10 h-10 flex items-center justify-center bg-luxe-surface border border-luxe-gold/20 rounded-l-lg text-luxe-gold hover:bg-luxe-gold/10"
+            >
+              {sidebarCollapsed ? "◀" : "▶"}
+            </button>
+          </Tooltip>
 
           <div className="p-4 space-y-6">
             <div className="p-4 bg-luxe-surface rounded-lg border border-luxe-gold/20">
@@ -691,7 +788,7 @@ const ArticleEditor: React.FC = () => {
                       setHasChanges(true);
                     }}
                     placeholder="簡短描述文章內容..."
-                    rows={3}
+                    rows={5}
                     className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none resize-none text-sm"
                   />
                 </div>

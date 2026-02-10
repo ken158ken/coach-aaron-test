@@ -9,7 +9,9 @@ const config: Config = {
         // ABYSS Theme (深海)
         abyss: {
           black: "#000205",
+          bg: "transparent",
           cyan: "#00ffff",
+          accent: "#00ffff",
           purple: "#7b00ff",
           glass: "rgba(0, 5, 10, 0.6)",
           text: "#e0f7fa",
@@ -18,7 +20,9 @@ const config: Config = {
         // PRISM Theme (水晶)
         prism: {
           void: "#0b001a",
+          bg: "transparent",
           purple: "#b388ff",
+          accent: "#b388ff",
           blue: "#82b1ff",
           glass: "rgba(255, 255, 255, 0.05)",
           text: "#ffffff",
@@ -52,6 +56,15 @@ const config: Config = {
         "fade-up": "fadeUp 1s ease forwards",
         drift: "drift 20s linear infinite",
         "glow-pulse": "glowPulse 2s ease-in-out infinite",
+        // 頁面/元件進場動畫
+        "fade-in": "fadeIn 0.4s ease-out forwards",
+        "fade-in-up": "fadeInUp 0.5s ease-out forwards",
+        "fade-in-down": "fadeInDown 0.4s ease-out forwards",
+        "slide-in-right": "slideInRight 0.35s ease-out forwards",
+        "slide-in-left": "slideInLeft 0.35s ease-out forwards",
+        "scale-in": "scaleIn 0.3s ease-out forwards",
+        // 卡片 stagger 入場（搭配 animation-delay 使用）
+        "stagger-fade-in": "fadeInUp 0.6s ease-out both",
       },
       keyframes: {
         fadeUp: {
@@ -65,6 +78,30 @@ const config: Config = {
         glowPulse: {
           "0%, 100%": { boxShadow: "0 0 20px rgba(0, 255, 255, 0.3)" },
           "50%": { boxShadow: "0 0 40px rgba(0, 255, 255, 0.6)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        fadeInUp: {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeInDown: {
+          "0%": { opacity: "0", transform: "translateY(-10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideInRight: {
+          "0%": { opacity: "0", transform: "translateX(30px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        slideInLeft: {
+          "0%": { opacity: "0", transform: "translateX(-30px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
       backdropBlur: {

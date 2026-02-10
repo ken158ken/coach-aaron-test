@@ -849,6 +849,170 @@ npm install react-moveable moveable @scena/react-guides uuid
 
 ## 📝 更新日誌
 
+### 2026-02-10T02-00-00+08:00 - 全域 UX 動畫系統升級
+
+#### 🎯 概述
+
+針對整體專案「互動回饋不足、頁面切換生硬」問題，建立完整的 CSS 動畫系統，涵蓋頁面轉場、滾動入場、Navbar/Footer 互動、表單聚焦、Modal 進場、按鈕微互動等，並完整支援 `prefers-reduced-motion` 無障礙設定。
+
+#### ✨ 新增全域動畫基礎設施
+
+| 檔案                                   | 說明                                                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `tailwind.config.ts`                   | 新增 8 種動畫 utility（fade-in、fade-in-up、fade-in-down、slide-in-right/left、scale-in、stagger-fade-in）        |
+| `index.css`                            | 新增 ~150 行動畫 CSS：頁面轉場、滾動入場、stagger 延遲、手機選單動畫、按鈕按壓、link 底線、Modal 進場、表單聚焦線 |
+| `hooks/useScrollReveal.ts`             | 新建 IntersectionObserver hook，自動偵測 `.scroll-reveal` 子元素並觸發 `.is-visible` 入場動畫                     |
+| `components/layout/PageTransition.tsx` | 新建路由切換動畫包裝器，監聽 `location.pathname` 變化觸發 CSS enter/exit 動畫（200ms exit → 400ms enter）         |
+
+#### 🔧 元件級動畫增強
+
+| 元件               | 改動                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Layout.tsx**     | `<Outlet />` 包裝 `<PageTransition>` 實現頁面轉場                                            |
+| **Navbar.tsx**     | 手機選單加入 `mobile-menu-enter` clip-path 展開動畫 + 各選項 `mobile-menu-item` stagger 進場 |
+| **Footer.tsx**     | 導航連結加入 `link-underline` 底線動畫，社群圖示增加 `hover:shadow-[0_0_12px]` 光暈效果      |
+| **Courses.tsx**    | 課程卡片使用 `useScrollReveal` + `scroll-reveal` + `getStaggerClass()` 實現依序淡入進場      |
+| **Articles.tsx**   | 文章卡片同上，滾動入場 + stagger 延遲動畫                                                    |
+| **Dialog.tsx**     | 覆蓋層 `modal-overlay-enter`（淡入）+ 內容 `modal-content-enter`（縮放彈入）                 |
+| **GlowButton.tsx** | 新增 `focus-visible:ring-2` 鍵盤無障礙焦點環                                                 |
+| **PillButton.tsx** | 新增 `focus-visible:ring-2` 鍵盤無障礙焦點環                                                 |
+
+#### 🎨 表單聚焦一致性
+
+| 元件                | 修正                                                                        |
+| ------------------- | --------------------------------------------------------------------------- |
+| **Select.tsx**      | 新增 `focus:ring-2 focus:ring-{theme}/30` 三主題一致聚焦環                  |
+| **Textarea.tsx**    | 新增 `focus:ring-2 focus:ring-{theme}/30` 三主題一致聚焦環                  |
+| **SearchInput.tsx** | 新增 `focus:ring-2 focus:ring-luxe-gold/20` + `transition-all duration-300` |
+
+#### ♿ 無障礙支援
+
+- `@media (prefers-reduced-motion: reduce)` 媒體查詢全域停用所有動畫
+- `useScrollReveal` 偵測到減少動畫偏好時，直接標記 `.is-visible` 跳過動畫
+- `PageTransition` 尊重 `prefers-reduced-motion` 設定
+
+#### 📄 完整修改檔案清單
+
+- `frontend/tailwind.config.ts` — 8 新動畫 + keyframes
+- `frontend/src/index.css` — ~150 行動畫 CSS
+- `frontend/src/hooks/useScrollReveal.ts` — **新建**
+- `frontend/src/components/layout/PageTransition.tsx` — **新建**
+- `frontend/src/components/layout/Layout.tsx` — PageTransition 整合
+- `frontend/src/components/layout/Navbar.tsx` — 手機選單動畫
+- `frontend/src/components/layout/Footer.tsx` — link-underline + 光暈
+- `frontend/src/pages/Courses.tsx` — stagger 入場動畫
+- `frontend/src/pages/Articles.tsx` — stagger 入場動畫
+- `frontend/src/components/ui/Dialog.tsx` — Modal 進場動畫
+- `frontend/src/components/ui/buttons/GlowButton.tsx` — focus-visible
+- `frontend/src/components/ui/buttons/PillButton.tsx` — focus-visible
+- `frontend/src/components/ui/form/Select.tsx` — focus ring
+- `frontend/src/components/ui/form/Textarea.tsx` — focus ring
+- `frontend/src/components/ui/form/SearchInput.tsx` — focus ring
+
+---
+
+### 2026-02-09T22-00-00+08:00 - 全域 UI 美化：Dialog 替換 + Tooltip 即時提示系統
+
+#### 🎨 新增全域 Tooltip 元件
+
+- **`components/ui/Tooltip.tsx`**: 新建 CSS-only Tooltip 元件，取代原生 `title` 屬性
+  - **零延遲**: hover 即顯示，移開即消失（0.1s 過渡）
+  - **12px 字體**: 精緻不干擾主內容
+  - **四方向支持**: `top`（預設）、`bottom`、`left`、`right`
+  - **箭頭指示**: 每個方向都有正確的 CSS 三角箭頭
+  - **z-index 9999**: 確保不被遮擋
+
+#### 🔄 替換所有原生 confirm() / alert()
+
+將所有頁面的原生瀏覽器 `confirm()` 和 `alert()` 替換為美化版 `useDialog()` 系統：
+
+| 檔案                | 替換數量 | 說明                                                                 |
+| ------------------- | -------- | -------------------------------------------------------------------- |
+| `ArticleEditor.tsx` | 8 處     | 草稿恢復、載入失敗、儲存成功/失敗、預覽/發布驗證、刪除分類、返回確認 |
+| `CourseEditor.tsx`  | 8 處     | 同上（課程版本）                                                     |
+| `AdminArticles.tsx` | 1 處     | 刪除文章確認                                                         |
+| `AdminCourses.tsx`  | 1 處     | 刪除課程確認                                                         |
+| `Checkout.tsx`      | 5 處     | LINE Pay / 藍新 / 綠界 / 街口 / Apple/Google Pay 付款導向提示        |
+
+#### 🏷️ 替換所有原生 title 為 Tooltip 元件
+
+| 檔案                                      | 替換數量  | 說明                                                          |
+| ----------------------------------------- | --------- | ------------------------------------------------------------- |
+| `components/editor/RichTextEditor.tsx`    | 26 個按鈕 | 舊版 Tiptap 工具列全部按鈕                                    |
+| `components/ui/editor/RichTextEditor.tsx` | 17 個按鈕 | 新版 Tiptap 工具列（透過修改 `ToolbarButton` 子元件一次完成） |
+| `ArticleEditor.tsx`                       | 4 處      | 說明、儲存草稿、預覽並發布、側邊欄收合                        |
+| `CourseEditor.tsx`                        | 1 處      | 說明按鈕                                                      |
+
+#### 🐛 修復：useDialog() 宣告順序
+
+- 將 `const dialog = useDialog()` 移至元件最上方（hooks 區域），修復 `dialog` 在 `useEffect` 依賴陣列中「使用在宣告之前」的 TypeScript 編譯錯誤
+
+#### 📄 修改檔案清單
+
+- `frontend/src/components/ui/Tooltip.tsx` — 新建
+- `frontend/src/components/ui/index.ts` — 新增 Tooltip 匯出
+- `frontend/src/index.css` — 新增 Tooltip CSS 樣式系統
+- `frontend/src/components/editor/RichTextEditor.tsx` — 26 個 Tooltip 包裝
+- `frontend/src/components/ui/editor/RichTextEditor.tsx` — ToolbarButton 改用 Tooltip
+- `frontend/src/pages/admin/ArticleEditor.tsx` — Dialog + Tooltip
+- `frontend/src/pages/admin/CourseEditor.tsx` — Dialog + Tooltip
+- `frontend/src/pages/admin/AdminArticles.tsx` — Dialog
+- `frontend/src/pages/admin/AdminCourses.tsx` — Dialog
+- `frontend/src/pages/Checkout.tsx` — Dialog
+
+---
+
+### 2026-02-09T18-00-00+08:00 - 文章/課程編輯器載入既有資料修復
+
+#### 🐛 問題描述
+
+- 從文章管理列表點擊「編輯」進入 `/admin/articles/:id/edit` 時，表單為空白，未載入 DB 中的文章資料
+- 課程編輯器 `/admin/courses/:id/edit` 同樣問題
+- 側邊欄（slug、摘要、分類、標籤、封面圖片、狀態）也全部空白
+
+#### 🔍 根本原因
+
+兩個編輯器（ArticleEditor / CourseEditor）都只有在 `isNew === true` 時從 localStorage 載入草稿的邏輯，
+**完全沒有 `useEffect` 在 `isNew === false`（編輯模式）時呼叫 API 載入既有資料**。
+
+#### ✅ 修復方案
+
+| 檔案                                         | 修復內容                                                                                                               |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `frontend/src/pages/admin/ArticleEditor.tsx` | 新增 `useEffect` 呼叫 `articleService.getByIdentifier(id)` 載入文章，映射 DB 欄位 → 前端欄位，填入表單 + Tiptap 編輯器 |
+| `frontend/src/pages/admin/CourseEditor.tsx`  | 新增 `useEffect` 呼叫 `courseService.getById(id)` 載入課程，映射 DB 欄位 → 前端欄位，填入表單 + Tiptap 編輯器          |
+
+#### 📋 欄位映射對照
+
+**文章 (Article)**:
+
+- `article_title` → `title`, `article_slug` → `slug`, `article_description` → `excerpt`
+- `article_category` → `category`, `article_keywords` (逗號分隔) → `tags[]`
+- `article_thumbnail_url` → `coverImage`, `article_content` → `content` + Tiptap editor
+
+**課程 (Course)**:
+
+- `course_title` → `title`, `course_slug` → `slug`, `course_description` → `description`
+- `course_category` → `category`, `course_keywords` (逗號分隔) → `tags[]`
+- `course_thumbnail_url` → `coverImage`, `course_content` → `content` + Tiptap editor
+- `price` → `price`, `duration_minutes` → `duration`, `course_level` → `level`
+
+---
+
+### 2026-02-09T14-00-00+08:00 - 首頁 Three.js 水母球體手機版 RWD 縮放
+
+#### 🎨 UI 調整
+
+- **AbyssScene 手機版縮放**: 螢幕寬度 < 768px 時，水母球體自動縮小至 80%（`scale(0.8)`）
+- **動態偵測**: 於 `resize` 事件中即時更新縮放比例，確保旋轉裝置方向也能正確切換
+- **零效能影響**: 使用 Three.js 原生 `setScalar()` 方法，不需重建幾何體
+
+#### 📄 修改檔案
+
+- `frontend/src/components/three/AbyssScene.tsx` — 新增 `updateJellyfishScale()` 函式
+
+---
+
 ### 2026-02-08T18-00-00+08:00 - 全專案 TypeScript 編譯錯誤 + SSR 水合問題全面修復
 
 #### 問題描述
@@ -1009,5 +1173,51 @@ npm install react-moveable moveable @scena/react-guides uuid
 #### 完整報告
 
 - 詳見 `REPORTS/COURSE_MANAGEMENT_ALIGNMENT_2026-02-06T14-30-00+08-00.md`
+
+---
+
+### 2026-02-10: RWD 修復與文章卡片渲染異常修復
+
+#### 問題
+
+- 文章頁面（Articles）卡片完全不顯示（opacity: 0 卡住）
+- `prism-bg` / `prism-accent` 等 Tailwind class 無效（缺少色盤鍵）
+- `--luxe-bg` / `--luxe-surface` / `--luxe-muted` CSS 變數缺少 `:root` fallback
+- Articles.tsx z-index wrapper 結構不一致
+- Articles / ArticleDetail 缺少 `setTheme("luxe")` 呼叫
+
+#### 修復
+
+- **useScrollReveal.ts**: 重寫為 callback ref + MutationObserver，支援動態載入的內容
+- **tailwind.config.ts**: prism/abyss 色盤新增 `bg` 和 `accent` 鍵
+- **index.css**: `:root` 新增 `--luxe-bg/surface/muted` fallback 變數
+- **Articles.tsx**: 統一 z-10 wrapper 結構 + setTheme("luxe")
+- **ArticleDetail.tsx**: 新增 setTheme("luxe")
+
+#### 完整報告
+
+- 詳見 `REPORTS/RWD_ARTICLE_RENDERING_FIX_2026-02-10T15-00-00+08-00.md`
+
+---
+
+### 🔧 RWD 排版與 Three.js 場景修復 (2026-02-07)
+
+#### 問題
+
+- `html { font-size: 20px }` 固定值使手機上所有 rem 值膨脹 25%（文字、間距全部過大）
+- AbyssScene 水母球在 iPhone SE (375px) 上佔螢幕寬度 74%，幾乎填滿畫面
+- PrismScene 水晶無手機縮放，在小螢幕佔比 58%
+- Navbar `md:px-16` 在平板 (768px) 上水平 padding 過多
+
+#### 修復
+
+- **index.css**: `font-size: clamp(16px, 0.5vw + 14.5px, 20px)` 漸進式響應（375px→16.4px, 768px→18.3px, 1100px+→20px）
+- **AbyssScene.tsx**: 分級縮放（<480px: 0.45, <768px: 0.6, ≥768px: 1.0）+ 手機端攝影機晃動從 2→0.5
+- **PrismScene.tsx**: 新增分級縮放（<480px: 0.55, <768px: 0.7）+ 碎片半徑同步縮小 + 攝影機跟隨幅度降低 + resize 回調
+- **Navbar.tsx**: `md:px-16` → `md:px-8 lg:px-16`，`py-4 sm:py-6` → `py-3 sm:py-4 md:py-5`
+
+#### 完整報告
+
+- 詳見 `REPORTS/RWD_TYPOGRAPHY_FIX_2026-02-07T10-00-00+08-00.md`
 
 ---

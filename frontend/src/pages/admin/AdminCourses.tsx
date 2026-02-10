@@ -15,6 +15,7 @@ import {
   Textarea,
   TagInput,
   RichTextEditor,
+  useDialog,
 } from "@/components/ui";
 import { get, post, put, del } from "@/services/api";
 import type { Course } from "@/types";
@@ -64,6 +65,7 @@ interface CourseFormData {
  */
 const AdminCourses: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -258,8 +260,13 @@ const AdminCourses: React.FC = () => {
 
   /** 刪除課程 */
   const handleDelete = async (course: Course) => {
-    if (!confirm(`確定要刪除「${course.course_title || course.title}」嗎？`))
-      return;
+    const confirmed = await dialog.confirm({
+      title: "刪除課程",
+      message: `確定要刪除「${course.course_title || course.title}」嗎？此操作無法復原。`,
+      variant: "danger",
+      confirmText: "刪除",
+    });
+    if (!confirmed) return;
 
     try {
       logger.info("Deleting course", { id: course.course_id });

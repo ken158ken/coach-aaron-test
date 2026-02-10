@@ -9,6 +9,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
   createContext,
   useContext,
 } from "react";
@@ -17,9 +18,9 @@ import { createPortal } from "react-dom";
 // ============ 共用樣式 ============
 
 const overlayClasses =
-  "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm";
+  "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm modal-overlay-enter";
 const modalClasses =
-  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200";
+  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden modal-content-enter";
 const headerClasses = "px-6 py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
 const contentClasses = "px-6 py-4";
 const footerClasses =
@@ -471,8 +472,13 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({
     [closeDialog],
   );
 
+  const contextValue = useMemo(
+    () => ({ prompt, confirm, alert }),
+    [prompt, confirm, alert],
+  );
+
   return (
-    <DialogContext.Provider value={{ prompt, confirm, alert }}>
+    <DialogContext.Provider value={contextValue}>
       {children}
 
       {/* Prompt Dialog */}

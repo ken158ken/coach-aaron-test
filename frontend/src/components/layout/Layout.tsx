@@ -7,18 +7,21 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import PageTransition from "./PageTransition";
 
 /**
  * Layout 元件
  *
- * @returns {JSX.Element} 佈局元件
+ * @returns {JSX.Element} 佈局元件（含頁面過渡動畫）
  */
 const Layout: React.FC = (): JSX.Element => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow">
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
       <Footer />
     </div>

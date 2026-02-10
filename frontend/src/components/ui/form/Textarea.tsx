@@ -23,21 +23,21 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       abyss: {
         container: "text-abyss-text",
         input:
-          "bg-abyss-bg/50 border-abyss-accent/30 hover:border-abyss-accent/60 focus:border-abyss-accent text-abyss-text placeholder:text-abyss-text/40 transition-all duration-300",
+          "bg-abyss-bg/50 border-abyss-accent/30 hover:border-abyss-accent/60 focus:border-abyss-accent focus:ring-2 focus:ring-abyss-accent/30 text-abyss-text placeholder:text-abyss-text/40 transition-all duration-300",
         label: "text-abyss-text/70",
         error: "text-red-400",
       },
       prism: {
         container: "text-prism-text",
         input:
-          "bg-prism-bg/50 border-prism-accent/30 hover:border-prism-accent/60 focus:border-prism-accent text-prism-text placeholder:text-prism-text/40 transition-all duration-300",
+          "bg-prism-bg/50 border-prism-accent/30 hover:border-prism-accent/60 focus:border-prism-accent focus:ring-2 focus:ring-prism-accent/30 text-prism-text placeholder:text-prism-text/40 transition-all duration-300",
         label: "text-prism-text/70",
         error: "text-red-400",
       },
       luxe: {
         container: "text-luxe-text",
         input:
-          "bg-transparent border-luxe-muted/30 hover:border-luxe-gold/50 focus:border-luxe-gold text-luxe-text placeholder:text-luxe-muted transition-all duration-300",
+          "bg-transparent border-luxe-muted/30 hover:border-luxe-gold/50 focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/30 text-luxe-text placeholder:text-luxe-muted transition-all duration-300",
         label: "text-luxe-muted",
         error: "text-red-400",
       },
@@ -48,7 +48,9 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className={`${styles.container} ${className}`}>
         {label && (
-          <label className={`block text-xs sm:text-sm mb-1.5 sm:mb-2 ${styles.label}`}>
+          <label
+            className={`block text-xs sm:text-sm mb-1.5 sm:mb-2 ${styles.label}`}
+          >
             {label}
           </label>
         )}
@@ -75,7 +77,9 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           `}
           {...props}
         />
-        {error && <p className={`text-xs sm:text-sm mt-1 ${styles.error}`}>{error}</p>}
+        {error && (
+          <p className={`text-xs sm:text-sm mt-1 ${styles.error}`}>{error}</p>
+        )}
       </div>
     );
   },

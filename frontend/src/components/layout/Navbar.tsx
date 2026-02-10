@@ -82,7 +82,7 @@ const Navbar: React.FC = (): JSX.Element => {
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-16 py-4 sm:py-6 ${
+      className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-8 lg:px-16 py-3 sm:py-4 md:py-5 ${
         isDark
           ? "bg-gradient-to-b from-[rgba(10,10,10,0.9)] to-transparent"
           : "bg-gradient-to-b from-[rgba(255,255,255,0.95)] to-transparent shadow-sm"
@@ -252,18 +252,19 @@ const Navbar: React.FC = (): JSX.Element => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="xl:hidden mt-4 sm:mt-6 py-4 sm:py-6 border-t border-white/10 bg-luxe-bg/95 backdrop-blur-md rounded-lg -mx-2 px-4">
+        <div className="xl:hidden mt-4 sm:mt-6 py-4 sm:py-6 border-t border-white/10 bg-luxe-bg/95 backdrop-blur-md rounded-lg -mx-2 px-4 mobile-menu-enter">
           <div className="flex flex-col gap-3 sm:gap-4">
-            {navLinks.map((link) => (
+            {navLinks.map((link, index) => (
               <Link
                 key={link.name}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`text-base sm:text-lg tracking-wider transition-colors py-1 ${
+                className={`mobile-menu-item text-base sm:text-lg tracking-wider transition-colors py-1 ${
                   location.pathname === link.path
                     ? "text-luxe-gold"
                     : "text-luxe-text hover:text-luxe-gold"
                 }`}
+                style={{ animationDelay: `${index * 0.05 + 0.1}s` }}
               >
                 {link.name}
               </Link>

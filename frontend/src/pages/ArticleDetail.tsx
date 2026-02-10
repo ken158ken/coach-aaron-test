@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { articleService } from "@/services/article.service";
-import { useAuth } from "@/context";
+import { useAuth, useTheme } from "@/context";
 import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -23,6 +23,7 @@ import type { Article, ArticleComment, ArticleRating } from "@/types";
 const ArticleDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAuthenticated } = useAuth();
+  const { setTheme } = useTheme();
   const [article, setArticle] = useState<Article | null>(null);
   const [comments, setComments] = useState<ArticleComment[]>([]);
   const [, setRatings] = useState<ArticleRating[]>([]);
@@ -61,6 +62,11 @@ const ArticleDetail: React.FC = () => {
     allowNewlines: true,
     strictMode: true,
   });
+
+  // 設定 luxe 主題
+  useEffect(() => {
+    setTheme("luxe");
+  }, [setTheme]);
 
   const fetchArticle = useCallback(async () => {
     if (!slug) return;

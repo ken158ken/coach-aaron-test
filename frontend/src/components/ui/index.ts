@@ -37,5 +37,8 @@ export {
   useDialog,
 } from "./Dialog";
 
+// Tooltip
+export { default as Tooltip } from "./Tooltip";
+
 // Search
 export { GlobalSearch, SearchButton } from "./GlobalSearch";

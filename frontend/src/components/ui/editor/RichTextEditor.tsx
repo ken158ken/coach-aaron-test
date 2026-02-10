@@ -19,6 +19,7 @@ import Youtube from "@tiptap/extension-youtube";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
+import { Tooltip } from "@/components/ui";
 
 /** 主題類型 */
 type Theme = "abyss" | "prism" | "luxe";
@@ -145,15 +146,16 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   children,
   className = "",
 }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    className={`p-2 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-  >
-    {children}
-  </button>
+  <Tooltip label={title}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`p-2 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    >
+      {children}
+    </button>
+  </Tooltip>
 );
 
 /**

@@ -16,6 +16,7 @@ import {
   Textarea,
   TagInput,
   RichTextEditor,
+  useDialog,
 } from "@/components/ui";
 import { articleService } from "@/services/article.service";
 import type { Article, ArticleStatus } from "@/types";
@@ -35,6 +36,7 @@ const logger = {
  */
 const AdminArticles: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -167,7 +169,13 @@ const AdminArticles: React.FC = () => {
   };
 
   const handleDelete = async (article: Article) => {
-    if (!confirm(`確定要刪除「${article.article_title}」嗎？`)) return;
+    const confirmed = await dialog.confirm({
+      title: "刪除文章",
+      message: `確定要刪除「${article.article_title}」嗎？此操作無法復原。`,
+      variant: "danger",
+      confirmText: "刪除",
+    });
+    if (!confirmed) return;
 
     try {
       await articleService.delete(article.article_id);

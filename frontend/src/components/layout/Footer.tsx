@@ -65,25 +65,25 @@ const Footer: React.FC = (): JSX.Element => {
           <nav className="flex items-center gap-4 sm:gap-6 overflow-x-auto max-w-full pb-1 sm:pb-0">
             <Link
               to="/"
-              className="text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
+              className="link-underline text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
             >
               教練介紹
             </Link>
             <Link
               to="/courses"
-              className="text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
+              className="link-underline text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
             >
               線上課程
             </Link>
             <Link
               to="/videos"
-              className="text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
+              className="link-underline text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
             >
               短影音
             </Link>
             <Link
               to="/contact"
-              className="text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
+              className="link-underline text-[11px] sm:text-xs text-luxe-text-dim hover:text-luxe-gold transition-colors duration-300 whitespace-nowrap"
             >
               聯絡我
             </Link>
@@ -97,7 +97,7 @@ const Footer: React.FC = (): JSX.Element => {
                 href={social.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-7 h-7 sm:w-8 sm:h-8 border border-white/20 rounded flex items-center justify-center text-luxe-text-dim hover:border-luxe-gold hover:text-luxe-gold hover:scale-110 transition-all duration-300 text-xs sm:text-sm"
+                className="w-7 h-7 sm:w-8 sm:h-8 border border-white/20 rounded flex items-center justify-center text-luxe-text-dim hover:border-luxe-gold hover:text-luxe-gold hover:scale-110 hover:shadow-[0_0_12px_rgba(212,175,55,0.25)] transition-all duration-300 text-xs sm:text-sm"
                 aria-label={social.label}
               >
                 <social.icon />

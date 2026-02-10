@@ -12,6 +12,7 @@ import { courseService } from "@/services";
 import { PrismScene } from "@/components/three";
 import { PillButton, Loading, PageHeader } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";
 import type { Course } from "@/types";
 
 /**
@@ -25,6 +26,7 @@ const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const coursesRef = useScrollReveal();
 
   useEffect(() => {
     setTheme("prism");
@@ -102,12 +104,15 @@ const Courses: React.FC = () => {
 
           {/* Courses Grid */}
           {courses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-              {courses.map((course) => (
+            <div
+              ref={coursesRef}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+            >
+              {courses.map((course, index) => (
                 <Link
                   key={course.course_id}
                   to={`/courses/${course.course_id}`}
-                  className="group"
+                  className={`group scroll-reveal ${getStaggerClass(index)}`}
                 >
                   <article className="bg-prism-bg/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-prism-accent/20 hover:border-prism-accent/50 hover:shadow-xl hover:shadow-prism-accent/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
@@ -211,7 +216,7 @@ const Courses: React.FC = () => {
           )}
 
           {/* Contact CTA */}
-          <section className="mt-16 sm:mt-20 text-center">
+          <section className="mt-16 sm:mt-20 text-center scroll-reveal">
             <div className="bg-prism-bg/30 backdrop-blur-sm border border-prism-accent/20 rounded-2xl p-8 sm:p-12 max-w-2xl mx-auto">
               <h2 className="text-2xl sm:text-3xl font-bold text-prism-text mb-4">
                 需要客製化訓練計畫？

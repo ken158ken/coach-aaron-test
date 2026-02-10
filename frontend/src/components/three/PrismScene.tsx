@@ -72,6 +72,23 @@ const PrismScene: React.FC<PrismSceneProps> = ({ className = "" }) => {
     const mainCrystal = new THREE.Mesh(crystalGeo, crystalMat);
     scene.add(mainCrystal);
 
+    // 手機版水晶依螢幕寬度縮小
+    const SMALL_MOBILE = 480;
+    const MOBILE_BREAKPOINT = 768;
+
+    const getCrystalScale = () => {
+      const w = window.innerWidth;
+      if (w < SMALL_MOBILE) return 0.55;
+      if (w < MOBILE_BREAKPOINT) return 0.7;
+      return 1.0;
+    };
+
+    const updateCrystalScale = () => {
+      const s = getCrystalScale();
+      mainCrystal.scale.setScalar(s);
+    };
+    updateCrystalScale();
+
     // Floating Shards
     interface Shard {
       mesh: THREE.Mesh;
@@ -91,7 +108,9 @@ const PrismScene: React.FC<PrismSceneProps> = ({ className = "" }) => {
 
     for (let i = 0; i < 30; i++) {
       const shard = new THREE.Mesh(shardGeo, shardMat);
-      const r = 4 + Math.random() * 3;
+      // 手機上縮小碎片分佈半徑
+      const shardScale = getCrystalScale();
+      const r = (4 + Math.random() * 3) * shardScale;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.random() * Math.PI * 2;
 
@@ -153,9 +172,10 @@ const PrismScene: React.FC<PrismSceneProps> = ({ className = "" }) => {
       pointLight1.position.x = Math.sin(t) * 5;
       pointLight1.position.z = Math.cos(t) * 5;
 
-      // Camera follow mouse
-      camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
-      camera.position.y += (-mouseY * 5 - camera.position.y) * 0.05;
+      // Camera follow mouse - 手機上減少位移幅度
+      const followAmp = window.innerWidth < 768 ? 2 : 5;
+      camera.position.x += (mouseX * followAmp - camera.position.x) * 0.05;
+      camera.position.y += (-mouseY * followAmp - camera.position.y) * 0.05;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
@@ -168,6 +188,7 @@ const PrismScene: React.FC<PrismSceneProps> = ({ className = "" }) => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      updateCrystalScale();
     };
 
     window.addEventListener("resize", handleResize);

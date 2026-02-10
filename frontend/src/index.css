@@ -33,6 +33,11 @@
   --luxe-gold-dim: #8a7020;
   --luxe-text: #e0e0e0;
   --luxe-text-dim: #888888;
+
+  /* LUXE CSS 變數 fallback（DaisyUI 主題啟用時會覆蓋） */
+  --luxe-bg: transparent;
+  --luxe-surface: #141414;
+  --luxe-muted: #888888;
 }
 
 /* ========================================
@@ -57,7 +62,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    font-size: 20px; /* 預設 16px + 4px = 20px */
+    /* RWD 漸進式字體：手機 16px → 平板 18px → 桌面 20px */
+    font-size: clamp(16px, 0.5vw + 14.5px, 20px);
     /* 確保背景始終深色 */
     background-color: #000205;
   }
@@ -76,6 +82,56 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ========================================
+   全域 Tooltip 即時提示系統
+   ======================================== */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-content {
+  position: absolute;
+  z-index: 9999;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #e0e0e0;
+  background-color: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.1s ease,
+    visibility 0.1s ease;
+  max-width: 280px;
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-width: 4px;
+  border-style: solid;
+}
+
+.tooltip-wrapper:hover > .tooltip-content {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 去掉原生 title 的延遲 tooltip（全域禁用瀏覽器原生 title） */
+[data-tooltip-disabled] {
+  pointer-events: auto;
 }
 
 /* ========================================
@@ -364,6 +420,240 @@
   }
   50% {
     box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+  }
+}
+
+/* ========================================
+   頁面過渡動畫系統
+   ======================================== */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.page-transition-enter {
+  animation: pageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.page-transition-exit {
+  animation: pageExit 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ========================================
+   IntersectionObserver 滾動入場動畫
+   ======================================== */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger 延遲工具 — 用於卡片列表逐一淡入 */
+.stagger-1 {
+  transition-delay: 0.05s;
+}
+.stagger-2 {
+  transition-delay: 0.1s;
+}
+.stagger-3 {
+  transition-delay: 0.15s;
+}
+.stagger-4 {
+  transition-delay: 0.2s;
+}
+.stagger-5 {
+  transition-delay: 0.25s;
+}
+.stagger-6 {
+  transition-delay: 0.3s;
+}
+.stagger-7 {
+  transition-delay: 0.35s;
+}
+.stagger-8 {
+  transition-delay: 0.4s;
+}
+.stagger-9 {
+  transition-delay: 0.45s;
+}
+
+/* ========================================
+   Mobile 選單動畫
+   ======================================== */
+@keyframes mobileMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes mobileMenuItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.mobile-menu-enter {
+  animation: mobileMenuSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.mobile-menu-item {
+  opacity: 0;
+  animation: mobileMenuItemFadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ========================================
+   全域微交互動畫
+   ======================================== */
+
+/* 按鈕按壓回彈效果 */
+.btn-press {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* focus-visible 統一鍵盤導航光環 */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--luxe-gold, #d4af37);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 連結底線展開動畫 — 通用版 */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* Modal / Dialog 進出場 */
+@keyframes modalOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalContentIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-overlay-enter {
+  animation: modalOverlayIn 0.2s ease-out forwards;
+}
+
+.modal-content-enter {
+  animation: modalContentIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 表單 focus 底線動畫 */
+.input-focus-line {
+  position: relative;
+}
+
+.input-focus-line::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--luxe-gold, #d4af37);
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.input-focus-line:focus-within::after {
+  width: 100%;
+  left: 0;
+}
+
+/* 無障礙：尊重使用者動畫偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .page-transition-enter,
+  .page-transition-exit {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -1240,4 +1530,69 @@
 
 .hljs-strong {
   font-weight: bold;
+}
+
+/* ========================================
+   自訂捲軸 - 精緻深色風格
+   ======================================== */
+
+/* Webkit 瀏覽器 (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.4);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(212, 175, 55, 0.6);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* 內部區域捲軸（側邊欄、下拉等）更細 */
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.35);
 }

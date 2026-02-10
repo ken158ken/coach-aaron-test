@@ -38,8 +38,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
           w-full pl-10 pr-4 py-2.5
           bg-luxe-surface border border-luxe-gold/20 rounded-lg
           text-luxe-text placeholder:text-luxe-muted/50
-          focus:outline-none focus:border-luxe-gold/40
-          transition-colors
+          focus:outline-none focus:border-luxe-gold/40 focus:ring-2 focus:ring-luxe-gold/20
+          transition-all duration-300
         "
       />
       <svg

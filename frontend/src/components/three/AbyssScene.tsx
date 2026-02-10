@@ -83,6 +83,22 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
     const jellyfish = new THREE.Mesh(jellyfishGeo, jellyfishMat);
     scene.add(jellyfish);
 
+    // 手機版球體依螢幕寬度分級縮小
+    const SMALL_MOBILE = 480;
+    const MOBILE_BREAKPOINT = 768;
+
+    const getJellyfishScale = () => {
+      const w = window.innerWidth;
+      if (w < SMALL_MOBILE) return 0.45; // iPhone SE 等極小螢幕
+      if (w < MOBILE_BREAKPOINT) return 0.6; // 一般手機
+      return 1.0; // 平板及桌面
+    };
+
+    const updateJellyfishScale = () => {
+      jellyfish.scale.setScalar(getJellyfishScale());
+    };
+    updateJellyfishScale();
+
     // Plankton Particles
     const particleCount = 2000;
     const particleGeo = new THREE.BufferGeometry();
@@ -173,9 +189,10 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
       }
       particleGeo.attributes.position.needsUpdate = true;
 
-      // Camera sway
-      camera.position.x = Math.sin(t * 0.1) * 2;
-      camera.position.y = Math.cos(t * 0.1) * 2;
+      // Camera sway - 手機上減少晃動幅度
+      const swayAmp = window.innerWidth < 768 ? 0.5 : 2;
+      camera.position.x = Math.sin(t * 0.1) * swayAmp;
+      camera.position.y = Math.cos(t * 0.1) * swayAmp;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
@@ -188,6 +205,7 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      updateJellyfishScale();
     };
 
     window.addEventListener("resize", handleResize);

@@ -44,21 +44,21 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
       abyss: {
         container: "text-abyss-text",
         select:
-          "bg-abyss-bg/50 border-abyss-accent/30 hover:border-abyss-accent/60 focus:border-abyss-accent text-abyss-text transition-all duration-300",
+          "bg-abyss-bg/50 border-abyss-accent/30 hover:border-abyss-accent/60 focus:border-abyss-accent focus:ring-2 focus:ring-abyss-accent/30 text-abyss-text transition-all duration-300",
         label: "text-abyss-text/70",
         error: "text-red-400",
       },
       prism: {
         container: "text-prism-text",
         select:
-          "bg-prism-bg/50 border-prism-accent/30 hover:border-prism-accent/60 focus:border-prism-accent text-prism-text transition-all duration-300",
+          "bg-prism-bg/50 border-prism-accent/30 hover:border-prism-accent/60 focus:border-prism-accent focus:ring-2 focus:ring-prism-accent/30 text-prism-text transition-all duration-300",
         label: "text-prism-text/70",
         error: "text-red-400",
       },
       luxe: {
         container: "text-luxe-text",
         select:
-          "bg-luxe-surface border-luxe-muted/30 hover:border-luxe-gold/50 focus:border-luxe-gold text-luxe-text transition-all duration-300",
+          "bg-luxe-surface border-luxe-muted/30 hover:border-luxe-gold/50 focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/30 text-luxe-text transition-all duration-300",
         label: "text-luxe-muted",
         error: "text-red-400",
       },

@@ -8,6 +8,7 @@
 
 import React from "react";
 import { Editor, EditorContent } from "@tiptap/react";
+import { Tooltip } from "@/components/ui";
 
 interface RichTextEditorProps {
   editor: Editor | null;
@@ -35,67 +36,74 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* 編輯器工具列 */}
       <div className="flex flex-wrap gap-1 p-2 bg-luxe-surface rounded-lg border border-luxe-gold/20">
         {/* 文字格式 - 第一行 */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          title="粗體 (Ctrl+B) - 讓文字變粗，強調重點"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("bold") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          <strong>B</strong>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          title="斜體 (Ctrl+I) - 讓文字傾斜，常用於引用或強調"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("italic") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          <em>I</em>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          title="底線 (Ctrl+U) - 在文字下方加線"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("underline") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          <u>U</u>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          title="刪除線 - 在文字中間畫線，表示刪除或更正"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("strike") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          <s>S</s>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleSubscript().run()}
-          title="下標 - 文字縮小並下移，如 H₂O"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("subscript") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          X<sub>2</sub>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleSuperscript().run()}
-          title="上標 - 文字縮小並上移，如 X²"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("superscript") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          X<sup>2</sup>
-        </button>
+        <Tooltip label="粗體 (Ctrl+B)">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("bold") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            <strong>B</strong>
+          </button>
+        </Tooltip>
+        <Tooltip label="斜體 (Ctrl+I)">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("italic") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            <em>I</em>
+          </button>
+        </Tooltip>
+        <Tooltip label="底線 (Ctrl+U)">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("underline") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            <u>U</u>
+          </button>
+        </Tooltip>
+        <Tooltip label="刪除線">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("strike") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            <s>S</s>
+          </button>
+        </Tooltip>
+        <Tooltip label="下標">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleSubscript().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("subscript") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            X<sub>2</sub>
+          </button>
+        </Tooltip>
+        <Tooltip label="上標">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleSuperscript().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("superscript") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            X<sup>2</sup>
+          </button>
+        </Tooltip>
 
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 文字顏色 */}
         <div className="relative group">
-          <button
-            type="button"
-            title="文字顏色 - 改變選取文字的顏色"
-            className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
-          >
-            <span className="text-red-500">A</span>
-            <span className="text-[10px]">▼</span>
-          </button>
+          <Tooltip label="文字顏色">
+            <button
+              type="button"
+              className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
+            >
+              <span className="text-red-500">A</span>
+              <span className="text-[10px]">▼</span>
+            </button>
+          </Tooltip>
           <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:grid grid-cols-5 gap-1 z-50 min-w-[140px]">
             {[
               "#ef4444",
@@ -131,14 +139,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
         {/* 螢光筆 */}
         <div className="relative group">
-          <button
-            type="button"
-            title="螢光筆 - 為文字加上背景色標記"
-            className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor.isActive("highlight") ? "bg-luxe-gold text-black" : ""}`}
-          >
-            <span className="bg-yellow-300 text-black px-1">H</span>
-            <span className="text-[10px]">▼</span>
-          </button>
+          <Tooltip label="螢光筆">
+            <button
+              type="button"
+              className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor.isActive("highlight") ? "bg-luxe-gold text-black" : ""}`}
+            >
+              <span className="bg-yellow-300 text-black px-1">H</span>
+              <span className="text-[10px]">▼</span>
+            </button>
+          </Tooltip>
           <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:grid grid-cols-5 gap-1 z-50 min-w-[140px]">
             {[
               "#fef08a",
@@ -176,14 +185,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
         {/* 字體選擇 */}
         <div className="relative group">
-          <button
-            type="button"
-            title="字體 - 選擇文字字體"
-            className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
-          >
-            <span>字體</span>
-            <span className="text-[10px]">▼</span>
-          </button>
+          <Tooltip label="字體">
+            <button
+              type="button"
+              className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
+            >
+              <span>字體</span>
+              <span className="text-[10px]">▼</span>
+            </button>
+          </Tooltip>
           <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:block z-50 min-w-[160px]">
             {[
               { name: "預設", value: "" },
@@ -216,132 +226,145 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 標題 */}
-        <button
-          type="button"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-          title="大標題 (H1) - 文章主標題，字體最大，每篇文章建議只用一次"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("heading", { level: 1 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          H1
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          title="中標題 (H2) - 段落標題，字體中等，用於劃分主要段落"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("heading", { level: 2 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          H2
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 3 }).run()
-          }
-          title="小標題 (H3) - 子段落標題，字體較小，用於細分內容"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("heading", { level: 3 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          H3
-        </button>
+        <Tooltip label="大標題 (H1)">
+          <button
+            type="button"
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 1 }).run()
+            }
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("heading", { level: 1 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            H1
+          </button>
+        </Tooltip>
+        <Tooltip label="中標題 (H2)">
+          <button
+            type="button"
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("heading", { level: 2 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            H2
+          </button>
+        </Tooltip>
+        <Tooltip label="小標題 (H3)">
+          <button
+            type="button"
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 3 }).run()
+            }
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("heading", { level: 3 }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            H3
+          </button>
+        </Tooltip>
 
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 列表 */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          title="項目符號列表 - 用圓點條列重點，適合無順序的清單"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("bulletList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          •
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          title="編號列表 - 用數字條列步驟，適合有順序的清單"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("orderedList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          1.
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleTaskList().run()}
-          title="待辦清單 - 可勾選的任務清單"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("taskList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          ☑
-        </button>
+        <Tooltip label="項目符號">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("bulletList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            •
+          </button>
+        </Tooltip>
+        <Tooltip label="編號列表">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("orderedList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            1.
+          </button>
+        </Tooltip>
+        <Tooltip label="待辦清單">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("taskList") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            ☑
+          </button>
+        </Tooltip>
 
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 區塊 */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          title="引用區塊 - 引用他人的話或重要內容"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("blockquote") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          ❝
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          title="程式碼區塊 - 顯示程式碼，保留格式"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive("codeBlock") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          {"</>"}
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          title="水平分隔線 - 在段落之間加入分隔線"
-          className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
-        >
-          ―
-        </button>
+        <Tooltip label="引用區塊">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("blockquote") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            ❝
+          </button>
+        </Tooltip>
+        <Tooltip label="程式碼區塊">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("codeBlock") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            {"</>"}
+          </button>
+        </Tooltip>
+        <Tooltip label="分隔線">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+            className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+          >
+            ―
+          </button>
+        </Tooltip>
 
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 對齊 */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          title="左對齊 - 文字靠左排列（預設）"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive({ textAlign: "left" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          ⬅
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          title="置中對齊 - 文字置中排列，適合標題或引言"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive({ textAlign: "center" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          ⬛
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          title="右對齊 - 文字靠右排列"
-          className={`px-3 py-1.5 text-sm rounded ${editor.isActive({ textAlign: "right" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-        >
-          ➡
-        </button>
+        <Tooltip label="靠左對齊">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("left").run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive({ textAlign: "left" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            ⬅
+          </button>
+        </Tooltip>
+        <Tooltip label="置中對齊">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("center").run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive({ textAlign: "center" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            ⬛
+          </button>
+        </Tooltip>
+        <Tooltip label="靠右對齊">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign("right").run()}
+            className={`px-3 py-1.5 text-sm rounded ${editor.isActive({ textAlign: "right" }) ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+          >
+            ➡
+          </button>
+        </Tooltip>
 
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 表格 */}
         <div className="relative group">
-          <button
-            type="button"
-            title="表格 - 插入或編輯表格"
-            className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor.isActive("table") ? "bg-luxe-gold text-black" : ""}`}
-          >
-            ⊞<span className="text-[10px]">▼</span>
-          </button>
+          <Tooltip label="表格">
+            <button
+              type="button"
+              className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor.isActive("table") ? "bg-luxe-gold text-black" : ""}`}
+            >
+              ⊞<span className="text-[10px]">▼</span>
+            </button>
+          </Tooltip>
           <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:block z-50 min-w-[160px]">
             <button
               type="button"
@@ -408,44 +431,48 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
         {/* 插入媒體 */}
         {onInsertImage && (
-          <button
-            type="button"
-            onClick={onInsertImage}
-            title="插入圖片 - 貼上 Cloudinary 圖片網址（僅支援 Cloudinary）"
-            className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
-          >
-            🖼️
-          </button>
+          <Tooltip label="插入圖片">
+            <button
+              type="button"
+              onClick={onInsertImage}
+              className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+            >
+              🖼️
+            </button>
+          </Tooltip>
         )}
         {onInsertYoutube && (
-          <button
-            type="button"
-            onClick={onInsertYoutube}
-            title="插入 YouTube 影片 - 貼上 YouTube 網址（僅支援 YouTube）"
-            className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
-          >
-            🎬
-          </button>
+          <Tooltip label="插入 YouTube">
+            <button
+              type="button"
+              onClick={onInsertYoutube}
+              className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+            >
+              🎬
+            </button>
+          </Tooltip>
         )}
         {onInsertLink && (
-          <button
-            type="button"
-            onClick={onInsertLink}
-            title="插入連結 - 將文字轉換成可點擊的連結"
-            className={`px-3 py-1.5 text-sm rounded ${editor.isActive("link") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
-          >
-            🔗
-          </button>
+          <Tooltip label="插入連結">
+            <button
+              type="button"
+              onClick={onInsertLink}
+              className={`px-3 py-1.5 text-sm rounded ${editor.isActive("link") ? "bg-luxe-gold text-black" : "hover:bg-luxe-gold/20"}`}
+            >
+              🔗
+            </button>
+          </Tooltip>
         )}
         {editor.isActive("link") && (
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().unsetLink().run()}
-            title="移除連結"
-            className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
-          >
-            ✕
-          </button>
+          <Tooltip label="移除連結">
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().unsetLink().run()}
+              className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
+            >
+              ✕
+            </button>
+          </Tooltip>
         )}
       </div>
 

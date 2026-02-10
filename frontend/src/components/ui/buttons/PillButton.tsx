@@ -75,6 +75,11 @@ const PillButton: React.FC<PillButtonProps> = ({
     font-light
     transition-all
     duration-300
+    focus-visible:outline-none
+    focus-visible:ring-2
+    focus-visible:ring-current/40
+    focus-visible:ring-offset-2
+    focus-visible:ring-offset-transparent
     ${themes[theme][variant]}
     ${sizes[size]}
     ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
