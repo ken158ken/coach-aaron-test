@@ -12,7 +12,8 @@
     },
     "api/ssr.js": {
       "maxDuration": 10,
-      "includeFiles": "{frontend/dist/server/entry-server.js,frontend/dist/client/index.html}"
+      "includeFiles": "{frontend/dist/server/entry-server.js,frontend/dist/client/index.html}",
+      "excludeFiles": "{frontend/node_modules/**,node_modules/**,backend/**,frontend/src/**}"
     }
   },
   "headers": [

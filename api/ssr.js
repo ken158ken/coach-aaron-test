@@ -115,9 +115,12 @@ module.exports = async function handler(req, res) {
 
     // ===== 4. 載入 SSR render 函數 =====
     console.log("📦 Loading entry-server module...");
-    const serverModule = await import(
-      `file://${serverModulePath.replace(/\\/g, "/")}`
+    // 使用運行時拼接路徑，防止 @vercel/nft 追蹤 entry-server.js 內部的依賴
+    // entry-server.js 已是完全打包的 bundle (noExternal: true)，不需要 node_modules
+    const moduleUrl = ["file://", serverModulePath.replace(/\\/g, "/")].join(
+      "",
     );
+    const serverModule = await import(/* @vite-ignore */ moduleUrl);
     const { render } = serverModule;
 
     if (!render || typeof render !== "function") {
