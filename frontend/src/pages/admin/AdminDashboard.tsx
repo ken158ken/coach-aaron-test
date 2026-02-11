@@ -8,24 +8,12 @@ import React, { useState, useEffect } from "react";
 import { StatCard, Loading } from "@/components/ui";
 import { get } from "@/services/api";
 
-/** 後端統計資料結構 */
+/** 後端統計資料結構 - 對齊 GET /api/admin/stats 回傳欄位 */
 interface AdminStats {
-  totalUsers: number;
-  totalCourses: number;
-  totalVideos: number;
-  totalOrders: number;
-  recentUsers: Array<{
-    user_id: number;
-    email: string;
-    name: string | null;
-    created_at: string;
-  }>;
-  recentOrders: Array<{
-    order_id: number;
-    total_amount: number;
-    status: string;
-    created_at: string;
-  }>;
+  userCount: number | null;
+  courseCount: number | null;
+  orderCount: number | null;
+  monthlyRevenue: number;
 }
 
 /**
@@ -45,7 +33,7 @@ const AdminDashboard: React.FC = () => {
         setError("");
         const res = await get<AdminStats>("/api/admin/stats");
         // ✅ 防禦性編程：API 攔截器返回 response.data
-        if (res && typeof res === "object" && "totalUsers" in res) {
+        if (res && typeof res === "object" && "userCount" in res) {
           setStats(res);
         } else {
           console.error("Failed to fetch stats:", res);
@@ -64,37 +52,37 @@ const AdminDashboard: React.FC = () => {
 
   const displayStats = [
     {
-      value: stats?.totalUsers?.toLocaleString() || "0",
+      value: stats?.userCount?.toLocaleString() || "0",
       label: "總用戶數",
       icon: "👥",
       trend: { value: 12, direction: "up" as const },
     },
     {
-      value: stats?.totalCourses?.toString() || "0",
+      value: stats?.courseCount?.toLocaleString() || "0",
       label: "活躍課程",
       icon: "📚",
       trend: { value: 5, direction: "up" as const },
     },
     {
-      value: stats?.totalVideos?.toString() || "0",
-      label: "總影片數",
-      icon: "🎬",
-      trend: { value: 8, direction: "up" as const },
-    },
-    {
-      value: stats?.totalOrders?.toString() || "0",
+      value: stats?.orderCount?.toLocaleString() || "0",
       label: "總訂單數",
       icon: "💰",
       trend: { value: 15, direction: "up" as const },
     },
+    {
+      value: `NT$ ${(stats?.monthlyRevenue || 0).toLocaleString()}`,
+      label: "本月營收",
+      icon: "📈",
+      trend: { value: 8, direction: "up" as const },
+    },
   ];
 
-  const recentActivities =
-    stats?.recentUsers?.slice(0, 4).map((user) => ({
-      type: "user",
-      message: `新用戶 ${user.name || user.email} 註冊`,
-      time: formatRelativeTime(user.created_at),
-    })) || [];
+  // 後端目前未提供 recentUsers，待擴充 API 後可啟用
+  const recentActivities: Array<{
+    type: string;
+    message: string;
+    time: string;
+  }> = [];
 
   if (loading) {
     return <Loading text="載入中..." />;
@@ -104,7 +92,9 @@ const AdminDashboard: React.FC = () => {
     <div>
       {/* Page Title */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">儀表板</h1>
+        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
+          儀表板
+        </h1>
         <p className="text-sm sm:text-base text-luxe-muted">歡迎來到管理後台</p>
       </div>
 
@@ -132,7 +122,9 @@ const AdminDashboard: React.FC = () => {
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Activities */}
         <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg text-luxe-text font-light mb-3 sm:mb-4">最近活動</h2>
+          <h2 className="text-base sm:text-lg text-luxe-text font-light mb-3 sm:mb-4">
+            最近活動
+          </h2>
           <div className="space-y-3 sm:space-y-4">
             {recentActivities.length > 0 ? (
               recentActivities.map((activity, index) => (
@@ -142,8 +134,12 @@ const AdminDashboard: React.FC = () => {
                 >
                   <span className="text-lg sm:text-xl">👤</span>
                   <div className="flex-grow min-w-0">
-                    <p className="text-xs sm:text-sm text-luxe-text truncate">{activity.message}</p>
-                    <p className="text-[10px] sm:text-xs text-luxe-muted">{activity.time}</p>
+                    <p className="text-xs sm:text-sm text-luxe-text truncate">
+                      {activity.message}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-luxe-muted">
+                      {activity.time}
+                    </p>
                   </div>
                 </div>
               ))
@@ -155,7 +151,9 @@ const AdminDashboard: React.FC = () => {
 
         {/* Quick Stats Chart Placeholder */}
         <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg text-luxe-text font-light mb-3 sm:mb-4">本週流量</h2>
+          <h2 className="text-base sm:text-lg text-luxe-text font-light mb-3 sm:mb-4">
+            本週流量
+          </h2>
           <div className="h-48 sm:h-64 flex items-center justify-center text-luxe-muted">
             <div className="text-center">
               <p className="mb-2 text-2xl sm:text-3xl">📊</p>

@@ -4,7 +4,7 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   DataTable,
@@ -34,6 +34,15 @@ const logger = {
  *
  * @returns {JSX.Element} 文章管理頁面
  */
+type ViewMode = "list" | "card-sm" | "card-md" | "card-lg";
+
+const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
+  { mode: "list", icon: "☰", label: "清單" },
+  { mode: "card-sm", icon: "▪▪▪", label: "小圖" },
+  { mode: "card-md", icon: "◻◻", label: "中圖" },
+  { mode: "card-lg", icon: "⬜", label: "大圖" },
+];
+
 const AdminArticles: React.FC = () => {
   const navigate = useNavigate();
   const dialog = useDialog();
@@ -44,6 +53,8 @@ const AdminArticles: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [featuredFilter, setFeaturedFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
 
@@ -105,6 +116,14 @@ const AdminArticles: React.FC = () => {
       setLoading(false);
     }
   };
+
+  /** 依據精選篩選器過濾文章（client-side） */
+  const filteredArticles = useMemo(() => {
+    if (featuredFilter === "all") return articles;
+    return articles.filter((a) =>
+      featuredFilter === "featured" ? a.is_featured : !a.is_featured,
+    );
+  }, [articles, featuredFilter]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -186,6 +205,34 @@ const AdminArticles: React.FC = () => {
     }
   };
 
+  /**
+   * 快速切換精選狀態
+   */
+  const handleToggleFeatured = async (article: Article) => {
+    try {
+      const newFeatured = !article.is_featured;
+      logger.info("Toggling featured", {
+        id: article.article_id,
+        featured: newFeatured,
+      });
+      await articleService.update(article.article_id, {
+        isFeatured: newFeatured,
+      });
+      // 更新本地狀態（避免重新載入）
+      setArticles((prev) =>
+        prev.map((a) =>
+          a.article_id === article.article_id
+            ? { ...a, is_featured: newFeatured }
+            : a,
+        ),
+      );
+      logger.info("Featured toggled successfully");
+    } catch (err) {
+      logger.error("Failed to toggle featured", err);
+      setError("切換精選狀態失敗");
+    }
+  };
+
   const openEditModal = (article: Article) => {
     setEditingArticle(article);
     // 將分類和關鍵字字串轉換為陣列
@@ -250,16 +297,34 @@ const AdminArticles: React.FC = () => {
       key: "article_title" as const,
       header: "標題",
       isPrimary: true,
+      sortValue: (article: Article) =>
+        (article.article_title || "").toLowerCase(),
       render: (article: Article) => (
-        <div>
-          <p className="text-luxe-text">{article.article_title}</p>
-          {article.is_featured && (
-            <span className="text-xs text-luxe-gold">★ 精選</span>
-          )}
-        </div>
+        <p className="text-luxe-text">{article.article_title}</p>
       ),
     },
     { key: "article_category" as const, header: "分類" },
+    {
+      key: "is_featured" as const,
+      header: "精選",
+      sortValue: (article: Article) => (article.is_featured ? 1 : 0),
+      render: (article: Article) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleFeatured(article);
+          }}
+          className={`px-2 py-1 text-xs rounded cursor-pointer transition-all duration-200 hover:scale-105 ${
+            article.is_featured
+              ? "bg-luxe-gold/20 text-luxe-gold hover:bg-luxe-gold/30"
+              : "bg-luxe-muted/10 text-luxe-muted/50 hover:bg-luxe-gold/10 hover:text-luxe-gold/70"
+          }`}
+          title={article.is_featured ? "取消精選" : "設為精選"}
+        >
+          {article.is_featured ? "★ 精選" : "☆ 普通"}
+        </button>
+      ),
+    },
     {
       key: "status" as const,
       header: "狀態",
@@ -269,12 +334,14 @@ const AdminArticles: React.FC = () => {
       key: "view_count" as const,
       header: "瀏覽",
       hideOnMobile: true,
+      sortValue: (article: Article) => article.view_count || 0,
       render: (article: Article) => article.view_count?.toLocaleString() || "0",
     },
     {
       key: "rating_average" as const,
       header: "評分",
       hideOnMobile: true,
+      sortValue: (article: Article) => article.rating_average || 0,
       render: (article: Article) =>
         article.rating_count > 0
           ? `${article.rating_average.toFixed(1)} (${article.rating_count})`
@@ -289,6 +356,7 @@ const AdminArticles: React.FC = () => {
     {
       key: "actions" as const,
       header: "操作",
+      sortable: false,
       render: (article: Article) => (
         <div className="flex gap-2">
           <button
@@ -394,10 +462,53 @@ const AdminArticles: React.FC = () => {
           <option value="published">已發布</option>
           <option value="archived">已封存</option>
         </select>
+        <select
+          value={featuredFilter}
+          onChange={(e) => {
+            setFeaturedFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+        >
+          <option value="all">全部文章</option>
+          <option value="featured">★ 僅精選</option>
+          <option value="normal">☆ 普通文章</option>
+        </select>
         <PillButton theme="luxe" variant="outline" onClick={handleSearch}>
           搜尋
         </PillButton>
+
+        {/* 檢視模式切換 */}
+        <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
+          {viewOptions.map((opt) => (
+            <button
+              key={opt.mode}
+              onClick={() => setViewMode(opt.mode)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                viewMode === opt.mode
+                  ? "bg-luxe-gold/20 text-luxe-gold"
+                  : "text-luxe-muted hover:text-luxe-text"
+              }`}
+              title={opt.label}
+            >
+              {opt.icon}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* 篩選結果計數 */}
+      {featuredFilter !== "all" && (
+        <div className="mb-3 text-xs text-luxe-muted">
+          {featuredFilter === "featured" ? "★ 精選" : "☆ 普通"}文章：
+          {
+            articles.filter((a) =>
+              featuredFilter === "featured" ? a.is_featured : !a.is_featured,
+            ).length
+          }{" "}
+          篇
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -406,25 +517,131 @@ const AdminArticles: React.FC = () => {
         </div>
       )}
 
-      {/* Table */}
-      <DataTable
-        columns={columns}
-        data={articles}
-        keyExtractor={(article) => String(article.article_id)}
-        loading={loading}
-        theme="luxe"
-        emptyMessage="沒有找到文章"
-      />
+      {/* Content */}
+      {viewMode === "list" ? (
+        <>
+          <DataTable
+            columns={columns}
+            data={filteredArticles}
+            keyExtractor={(article) => String(article.article_id)}
+            loading={loading}
+            theme="luxe"
+            emptyMessage="沒有找到文章"
+            sortable
+          />
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              theme="luxe"
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {loading ? (
+            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+          ) : filteredArticles.length === 0 ? (
+            <div className="text-center py-12 text-luxe-muted">
+              沒有找到文章
+            </div>
+          ) : (
+            <div
+              className={`grid gap-4 ${
+                viewMode === "card-sm"
+                  ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                  : viewMode === "card-md"
+                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
+                    : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+              }`}
+            >
+              {filteredArticles.map((article) => (
+                <div
+                  key={article.article_id}
+                  className={`group bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 overflow-hidden transition-all ${
+                    !article.is_featured ? "" : "ring-1 ring-luxe-gold/20"
+                  }`}
+                >
+                  {/* 縮圖 */}
+                  <div className="aspect-[16/9] bg-luxe-bg flex items-center justify-center relative">
+                    {article.article_thumbnail_url ? (
+                      <img
+                        src={article.article_thumbnail_url}
+                        alt={article.article_title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-3xl text-luxe-muted/30">📝</span>
+                    )}
+                    {/* 狀態浮標 */}
+                    {getStatusBadge(article.status)}
+                    {/* 精選浮標 */}
+                    {article.is_featured && (
+                      <span className="absolute top-1 right-1 bg-luxe-gold/80 text-black text-[10px] px-1.5 py-0.5 rounded font-bold">
+                        ★ 精選
+                      </span>
+                    )}
+                  </div>
 
-      {/* Pagination */}
-      <div className="mt-6">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          theme="luxe"
-        />
-      </div>
+                  {/* 資訊 */}
+                  <div className="p-3">
+                    <h3
+                      className={`font-medium text-luxe-text truncate mb-1 ${
+                        viewMode === "card-sm" ? "text-xs" : "text-sm"
+                      }`}
+                    >
+                      {article.article_title}
+                    </h3>
+                    {viewMode !== "card-sm" && (
+                      <p className="text-xs text-luxe-muted line-clamp-2 mb-2">
+                        {article.article_description || "無描述"}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between text-[10px] text-luxe-muted">
+                      <span>{article.article_category || "未分類"}</span>
+                      <span>👁 {article.view_count || 0}</span>
+                    </div>
+
+                    {/* 操作按鈕 */}
+                    <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() =>
+                          navigate(`/admin/articles/${article.article_id}/edit`)
+                        }
+                        className="text-luxe-gold hover:underline text-xs flex-1"
+                      >
+                        編輯
+                      </button>
+                      <button
+                        onClick={() => handleToggleFeatured(article)}
+                        className="text-yellow-400 hover:underline text-xs"
+                      >
+                        {article.is_featured ? "取消精選" : "精選"}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(article)}
+                        className="text-red-400 hover:underline text-xs"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              theme="luxe"
+            />
+          </div>
+        </>
+      )}
 
       {/* Create/Edit Modal */}
       <Modal

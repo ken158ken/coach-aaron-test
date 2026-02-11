@@ -88,6 +88,7 @@ coach-aaron-redesign/
 │   │   ├── services/      # API 服務
 │   │   ├── types/         # TypeScript 類型
 │   │   ├── context/       # React Context
+│   │   ├── utils/         # 工具函數 (含 contentTemplates.ts 範本)
 │   │   ├── entry-server.tsx  # SSR 入口
 │   │   └── entry-client.tsx  # 客戶端 hydration
 │   ├── public/            # 靜態資源
@@ -111,6 +112,9 @@ coach-aaron-redesign/
 ├── database/               # 💾 SQL 腳本
 │   ├── schema.sql         # 資料表結構
 │   ├── seed.sql           # 種子資料
+│   ├── migrations/        # 遷移腳本
+│   │   ├── 003_site_content_and_popup.sql   # 內容管理 + 彈窗
+│   │   └── 004_content_templates.sql        # 預設文案範本
 │   └── *.sql              # 其他 SQL 腳本
 │
 └── REPORTS/                # 📊 報告文件
@@ -617,6 +621,164 @@ npm run generate:coach-photos
 - **放大查看**: 點擊照片可全螢幕放大瀏覽
 
 ## 📝 更新日誌
+
+### 2026-02-12 - 預設文案範本系統 / SSR 全域修復
+
+#### 📋 預設文案範本系統 (Template System)
+
+- **`004_content_templates.sql` 新增 Migration**：建立 `content_templates` 表，含 15 組預設範本（hero_title ×5、hero_subtitle ×5、about_coach ×5）
+- **範本資料來源**：教練雜資料.md（阿倫教官行銷素材 — NSCA/TQUK/NLP 證照、130+ 教練培訓、銷售心理學定位）
+- **`contentTemplates.ts` 前端範本工具**：`getRandomTemplate(key)` 隨機取範本、`getTemplates(key)` 取全部、`ContentTemplate` 介面
+- **HeroSection / CoachIntroSection 隨機 fallback**：DB 無自定義內容（null 或空白）時，`useState(() => getRandomTemplate(...))` 隨機套用範本
+- **AdminContent Modal 範本選擇器**：`TemplatePicker` 元件，編輯/新增文案 Modal 皆可快速套用範本，含 tooltip 預覽
+
+#### 🔧 SSR 全域修復 (Vercel 部署)
+
+- **根因分析**：`api/ssr.js` 中 `path.resolve(process.cwd(), "index.html")` 找不到檔案 — Vercel 的 `outputDirectory` 僅將檔案作為 CDN 靜態資源，不會放在 serverless 函數的 `process.cwd()` 根目錄
+- **`vercel.json` 修復**：`includeFiles` 從單一檔案改為 `{frontend/dist/server/**,frontend/dist/client/index.html}`，確保 SSR 函數可存取 index.html 和所有 server bundle
+- **`api/ssr.js` 完全重寫**：多路徑候選搜尋（`findFile()` 工具函數）、支援 `<!--ssr-outlet-->` 和 `<div id="root"></div>` 兩種注入方式、增強偵錯日誌
+- **`vite.config.ts` 修正**：`mode === "ssr"` 改為 `isSsrBuild`（Vite 5 正式 API），確保 SSR 構建配置正確套用
+- **`entry-server.tsx` 錯誤處理**：`render()` 函數加入 try-catch，SSR 渲染失敗時回傳空 HTML 讓 CSR 接管
+- **CSR fallback 鏈**：SSR render 失敗 → 回傳空 HTML 由客戶端接管；找不到 entry-server.js → 回傳純靜態 index.html
+
+#### 📄 新增/修改檔案
+
+| 操作 | 檔案                                                                     |
+| ---- | ------------------------------------------------------------------------ |
+| 新增 | `database/migrations/004_content_templates.sql`                          |
+| 新增 | `frontend/src/utils/contentTemplates.ts`                                 |
+| 修改 | `api/ssr.js` — SSR handler 完全重寫                                      |
+| 修改 | `vercel.json` — includeFiles 修正                                        |
+| 修改 | `frontend/vite.config.ts` — isSsrBuild 偵測修正                          |
+| 修改 | `frontend/src/entry-server.tsx` — 加入 try-catch 錯誤處理                |
+| 修改 | `frontend/src/components/sections/HeroSection.tsx` — 隨機 fallback       |
+| 修改 | `frontend/src/components/sections/CoachIntroSection.tsx` — 隨機 fallback |
+| 修改 | `frontend/src/pages/admin/AdminContent.tsx` — TemplatePicker 範本選擇器  |
+
+#### 📄 相關文件
+
+- 完整報告：[REPORTS/TEMPLATE_AND_SSR_FIX_2026-02-12T18-00-00+08-00.md](REPORTS/TEMPLATE_AND_SSR_FIX_2026-02-12T18-00-00+08-00.md)
+
+---
+
+### 2026-02-11 - 內容管理活化 / 首頁彈窗 / 影片拖曳排序 / 卡片檢視切換
+
+#### 🗄️ 內容管理活化 (AdminContent + DB)
+
+- **SQL Migration** `003_site_content_and_popup.sql`：`site_content` + `site_popups` 兩張新資料表
+- **Backend `content.ts` 路由**：完整 CRUD（公開 + Admin），彈窗啟用時自動停用其他
+- **前端 `content.service.ts`**：TypeScript API Client，含 `SiteContent` / `SitePopup` 介面
+- **AdminContent 全面重寫**：雙 Tab（📝 網站文案 / 🪟 首頁彈窗），DB 連動 CRUD，RichTextEditor 編輯彈窗
+
+#### 🪟 首頁自定義彈窗系統 (HomePopup)
+
+- **`HomePopup.tsx`**：首頁彈窗元件，localStorage 追蹤「僅顯示一次」
+- **Home.tsx 整合**：`<HomePopup />` 放入首頁 JSX
+- **管理端**：AdminContent 彈窗 Tab 可新增/編輯/刪除/啟用彈窗
+
+#### 🎬 影片管理拖曳排序重寫 (AdminVideos)
+
+- **拖曳排序**：HTML5 Drag & Drop，拖曳手柄 `⠿`，拖曳過程視覺回饋
+- **直接編輯排序號**：每列提供數字輸入欄位，即時修改 sort_order
+- **上移/下移按鈕**：▲ ▼ 快捷操作
+- **儲存排序按鈕**：呼叫 `videoService.reorder()` 批次更新後端
+- **卡片/列表檢視**：同時支援 ☰清單 / ▪小圖 / ◻中圖 / ⬜大圖 四種模式
+
+#### 🃏 課程/文章/影片 卡片檢視切換
+
+- **AdminArticles**：新增 ViewMode 切換（清單/小圖/中圖/大圖），卡片顯示縮圖、標題、分類、瀏覽數、精選標記、狀態徽章
+- **AdminCourses**：相同 ViewMode 切換，卡片顯示縮圖、課程名、價格浮標、難度、課堂數
+- **AdminVideos**：同時具備拖曳排序 + 四種檢視模式
+
+#### 📄 新增/修改檔案
+
+| 操作 | 檔案                                                         |
+| ---- | ------------------------------------------------------------ |
+| 新增 | `database/migrations/003_site_content_and_popup.sql`         |
+| 新增 | `backend/routes/content.ts`                                  |
+| 新增 | `frontend/src/services/content.service.ts`                   |
+| 新增 | `frontend/src/components/sections/HomePopup.tsx`             |
+| 修改 | `backend/index.ts` — 註冊 content 路由                       |
+| 修改 | `frontend/src/pages/admin/AdminContent.tsx` — 完全重寫       |
+| 修改 | `frontend/src/pages/Home.tsx` — 加入 HomePopup               |
+| 修改 | `frontend/src/services/video.service.ts` — 新增 reorder 方法 |
+| 修改 | `frontend/src/pages/admin/AdminVideos.tsx` — 完全重寫        |
+| 修改 | `frontend/src/pages/admin/AdminArticles.tsx` — 加入卡片檢視  |
+| 修改 | `frontend/src/pages/admin/AdminCourses.tsx` — 加入卡片檢視   |
+
+#### 📄 相關文件
+
+- 完整報告：[REPORTS/ADMIN_CONTENT_VIDEO_CARDVIEW_2026-02-11T18-00-00+08-00.md](REPORTS/ADMIN_CONTENT_VIDEO_CARDVIEW_2026-02-11T18-00-00+08-00.md)
+
+---
+
+### 2026-02-11 - 課程內頁標題階層 / 用戶管理篩選排序 / 文章精選功能整合
+
+#### 💎 課程內頁 Prose 標題階層 (prism 主題)
+
+- **`.prose-theme-prism` CSS**: 新增紫色系 heading 階層覆寫（h1 紫色漸層、h2 紫色左邊線、h3 `›` 前綴紫色、h4 縮排）
+- **CourseDetail 套用**: `prose prose-invert` → `prose prose-invert prose-theme-prism`
+- **附加樣式**: a/blockquote/code/hr 統一紫色 (#b388ff) 裝飾
+
+#### 👥 用戶管理排序 + 多重篩選 (AdminUsers)
+
+- **DataTable `sortable`**: 所有欄位啟用排序（姓名、Email、角色、狀態、私密相簿、註冊時間）
+- **三組篩選器**: 角色（管理員/一般用戶）、狀態（活躍/停用）、私密相簿（已啟用/未啟用）
+- **`useMemo` 過濾**: 搜尋 + 三篩選器合併計算
+- **結果計數器**: 「顯示 X / Y 位用戶」即時回饋
+
+#### ⭐ 文章管理精選功能強化 (AdminArticles)
+
+- **獨立精選欄位**: 從標題副文字改為獨立 `is_featured` 欄位，含 `sortValue` 排序
+- **快速切換按鈕**: 表格內直接點擊 `★ 精選 / ☆ 普通` 切換，呼叫 `articleService.update()` 即時更新
+- **精選篩選器**: 新增下拉式「全部文章 / ★ 僅精選 / ☆ 普通文章」篩選
+- **`useMemo` client-side 過濾**: 精選篩選不重新呼叫 API，本地過濾
+- **篩選計數**: 選擇精選/普通時顯示「★ 精選文章：N 篇」
+
+#### 📄 修改檔案
+
+- `frontend/src/index.css` — 新增 `.prose-theme-prism` CSS (~50 行)
+- `frontend/src/pages/CourseDetail.tsx` — 加入 `prose-theme-prism` class
+- `frontend/src/pages/admin/AdminUsers.tsx` — 完全重寫含排序+篩選
+- `frontend/src/pages/admin/AdminArticles.tsx` — 精選獨立欄位+切換按鈕+篩選器
+
+#### 📄 相關文件
+
+- 完整報告：[REPORTS/ADMIN_FEATURED_FILTER_SORT_2026-02-11T10-00-00+08-00.md](REPORTS/ADMIN_FEATURED_FILTER_SORT_2026-02-11T10-00-00+08-00.md)
+
+---
+
+### 2026-02-07 - UI / 後台管理功能增強
+
+#### 🎨 文章內頁標題階層
+
+- **prose heading 覆寫**: h1 金色漸層+底線、h2 左邊線+1.25rem 縮排、h3 `›`前綴+2.25rem 縮排、h4 3rem 縮排
+- **跟隨縮排**: heading 後方的 p/ul/ol 自動跟隨上層縮排
+- **主題一致化**: blockquote、code、link、hr 統一金色系裝飾
+
+#### 📐 4 欄精緻卡片
+
+- **Articles / Courses**: `lg:grid-cols-3` → `lg:grid-cols-3 xl:grid-cols-4`
+- **卡片高度縮減**: aspect-video → aspect-[16/10]、padding 縮小、描述行數減少
+- **gap 微調**: 4 欄佈局搭配較小的 gap 保持視覺平衡
+
+#### 🐛 Dashboard 修復
+
+- **欄位對齊**: 前端 interface 改為 `userCount/courseCount/orderCount/monthlyRevenue` 對齊後端 API
+- **新增「本月營收」**: 取代不存在的「總影片數」欄位
+- **移除無效存取**: 後端未提供 recentUsers/recentOrders，改為空陣列
+
+#### 🔀 後台排序功能
+
+- **DataTable 升級**: 新增 `sortable` / `sortValue` 屬性，三態排序 (null→asc→desc→null)
+- **排序指示器**: 表頭 ▲▼ 圖示即時回饋排序狀態
+- **三頁面啟用**: 影片管理、課程管理、文章管理皆可點擊表頭排序
+
+#### 📄 相關文件
+
+- 完整報告：[REPORTS/UI_ADMIN_ENHANCEMENTS_2026-02-07T10-00-00+08-00.md](REPORTS/UI_ADMIN_ENHANCEMENTS_2026-02-07T10-00-00+08-00.md)
+
+---
 
 ### 2026-02-06 - 資料庫 Migration 後前端修正
 

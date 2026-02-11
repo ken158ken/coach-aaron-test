@@ -2,9 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
-export default defineConfig(({ command, mode }) => {
-  const isSSRBuild = mode === "ssr";
-
+export default defineConfig(({ command, mode, isSsrBuild }) => {
   return {
     plugins: [react()],
     resolve: {
@@ -16,7 +14,7 @@ export default defineConfig(({ command, mode }) => {
       port: 5173,
       open: true,
     },
-    build: isSSRBuild
+    build: isSsrBuild
       ? {
           // SSR 構建配置
           outDir: "dist/server",

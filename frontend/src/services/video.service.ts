@@ -74,6 +74,16 @@ export const videoService = {
   delete: async (id: number): Promise<void> => {
     return del(`/api/admin/videos/${id}`);
   },
+
+  /**
+   * 批量更新排序（管理員）
+   * @param orders 排序陣列 [{ id, sortOrder }]
+   */
+  reorder: async (
+    orders: { id: number; sortOrder: number }[],
+  ): Promise<void> => {
+    return put("/api/videos/admin/reorder", { orders });
+  },
 };
 
 export default videoService;

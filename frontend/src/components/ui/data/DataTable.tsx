@@ -1,10 +1,13 @@
 /**
- * DataTable 元件 - 響應式資料表格
+ * DataTable 元件 - 響應式資料表格（支援排序）
  * 桌面顯示表格，手機顯示卡片
  * @module components/ui/data/DataTable
  */
 
-import React from "react";
+import React, { useState, useMemo, useCallback } from "react";
+
+/** 排序方向 */
+type SortDirection = "asc" | "desc" | null;
 
 interface Column<T> {
   key: keyof T | string;
@@ -15,6 +18,10 @@ interface Column<T> {
   hideOnMobile?: boolean;
   /** 是否為主要欄位（手機版會放大顯示） */
   isPrimary?: boolean;
+  /** 是否可排序（需要 sortable 屬性啟用） */
+  sortable?: boolean;
+  /** 自訂排序取值函式 */
+  sortValue?: (item: T) => string | number;
 }
 
 interface DataTableProps<T> {
@@ -26,10 +33,12 @@ interface DataTableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
+  /** 啟用欄位排序功能 */
+  sortable?: boolean;
 }
 
 /**
- * DataTable - 響應式資料表格元件
+ * DataTable - 響應式資料表格元件（含排序）
  *
  * @param {DataTableProps} props - 元件屬性
  * @returns {JSX.Element} 資料表格
@@ -43,7 +52,11 @@ function DataTable<T>({
   loading = false,
   emptyMessage = "沒有資料",
   className = "",
+  sortable = false,
 }: DataTableProps<T>) {
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<SortDirection>(null);
+
   const themes = {
     abyss: {
       container: "bg-abyss-bg/30 border-abyss-accent/20",
@@ -52,6 +65,7 @@ function DataTable<T>({
       text: "text-abyss-text",
       muted: "text-abyss-text/60",
       card: "bg-abyss-bg/40 border-abyss-accent/20 hover:border-abyss-accent/40 hover:shadow-md transition-all duration-300",
+      sortActive: "text-abyss-accent",
     },
     prism: {
       container: "bg-prism-bg/30 border-prism-accent/20",
@@ -60,6 +74,7 @@ function DataTable<T>({
       text: "text-prism-text",
       muted: "text-prism-text/60",
       card: "bg-prism-bg/40 border-prism-accent/20 hover:border-prism-accent/40 hover:shadow-md transition-all duration-300",
+      sortActive: "text-prism-accent",
     },
     luxe: {
       container: "bg-luxe-surface border-luxe-gold/10",
@@ -68,18 +83,94 @@ function DataTable<T>({
       text: "text-luxe-text",
       muted: "text-luxe-muted",
       card: "bg-luxe-surface border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300",
+      sortActive: "text-luxe-gold",
     },
   };
 
   const styles = themes[theme];
 
-  const getValue = (item: T, key: string): unknown => {
+  /** 取得巢狀物件值 */
+  const getValue = useCallback((item: T, key: string): unknown => {
     const keys = key.split(".");
     let value: unknown = item;
     for (const k of keys) {
       value = (value as Record<string, unknown>)?.[k];
     }
     return value;
+  }, []);
+
+  /** 切換排序：null → asc → desc → null */
+  const handleSort = useCallback(
+    (column: Column<T>) => {
+      if (!sortable) return;
+      const colKey = String(column.key);
+      // 排除操作欄
+      if (colKey === "actions") return;
+      // 只有標記 sortable 或全域 sortable 時可排序
+      if (column.sortable === false) return;
+
+      if (sortKey !== colKey) {
+        setSortKey(colKey);
+        setSortDir("asc");
+      } else if (sortDir === "asc") {
+        setSortDir("desc");
+      } else {
+        setSortKey(null);
+        setSortDir(null);
+      }
+    },
+    [sortable, sortKey, sortDir],
+  );
+
+  /** 排序後的資料 */
+  const sortedData = useMemo(() => {
+    if (!sortKey || !sortDir) return data;
+
+    const col = columns.find((c) => String(c.key) === sortKey);
+    return [...data].sort((a, b) => {
+      const aVal = col?.sortValue ? col.sortValue(a) : getValue(a, sortKey);
+      const bVal = col?.sortValue ? col.sortValue(b) : getValue(b, sortKey);
+
+      // 數字比較
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      // 字串比較
+      const aStr = String(aVal ?? "").toLowerCase();
+      const bStr = String(bVal ?? "").toLowerCase();
+      if (sortDir === "asc") return aStr.localeCompare(bStr, "zh-TW");
+      return bStr.localeCompare(aStr, "zh-TW");
+    });
+  }, [data, sortKey, sortDir, columns, getValue]);
+
+  /** 排序指示器 */
+  const renderSortIcon = (column: Column<T>) => {
+    if (!sortable) return null;
+    const colKey = String(column.key);
+    if (colKey === "actions" || column.sortable === false) return null;
+
+    const isActive = sortKey === colKey;
+    return (
+      <span
+        className={`ml-1 inline-flex flex-col text-[10px] leading-none ${isActive ? styles.sortActive : "opacity-30"}`}
+      >
+        <span
+          className={
+            isActive && sortDir === "asc" ? "opacity-100" : "opacity-40"
+          }
+        >
+          ▲
+        </span>
+        <span
+          className={
+            isActive && sortDir === "desc" ? "opacity-100" : "opacity-40"
+          }
+        >
+          ▼
+        </span>
+      </span>
+    );
   };
 
   if (loading) {
@@ -92,7 +183,7 @@ function DataTable<T>({
     );
   }
 
-  if (data.length === 0) {
+  if (sortedData.length === 0) {
     return (
       <div className={`rounded-lg border ${styles.container} ${className}`}>
         <div className={`px-4 py-12 text-center ${styles.text}`}>
@@ -119,18 +210,31 @@ function DataTable<T>({
           <table className="w-full">
             <thead>
               <tr className={`border-b ${styles.header}`}>
-                {columns.map((column) => (
-                  <th
-                    key={String(column.key)}
-                    className={`px-4 py-3 text-left text-sm font-medium uppercase tracking-wider ${column.className || ""}`}
-                  >
-                    {column.header}
-                  </th>
-                ))}
+                {columns.map((column) => {
+                  const colKey = String(column.key);
+                  const canSort =
+                    sortable &&
+                    colKey !== "actions" &&
+                    column.sortable !== false;
+                  return (
+                    <th
+                      key={colKey}
+                      onClick={() => canSort && handleSort(column)}
+                      className={`px-4 py-3 text-left text-sm font-medium uppercase tracking-wider select-none ${
+                        canSort ? "cursor-pointer hover:opacity-80" : ""
+                      } ${column.className || ""}`}
+                    >
+                      <span className="inline-flex items-center gap-0.5">
+                        {column.header}
+                        {renderSortIcon(column)}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {data.map((item) => (
+              {sortedData.map((item) => (
                 <tr
                   key={keyExtractor(item)}
                   onClick={() => onRowClick?.(item)}
@@ -160,7 +264,7 @@ function DataTable<T>({
 
       {/* 手機版卡片 */}
       <div className={`md:hidden space-y-3 ${className}`}>
-        {data.map((item) => (
+        {sortedData.map((item) => (
           <div
             key={keyExtractor(item)}
             onClick={() => onRowClick?.(item)}

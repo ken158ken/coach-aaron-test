@@ -10,7 +10,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   theme?: "abyss" | "prism" | "luxe";
   className?: string;
 }
@@ -62,6 +62,8 @@ const Modal: React.FC<ModalProps> = ({
     md: "max-w-md",
     lg: "max-w-lg",
     xl: "max-w-xl",
+    "2xl": "max-w-[900px]",
+    full: "max-w-[1440px]",
   };
 
   const themes = {

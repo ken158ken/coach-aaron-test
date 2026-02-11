@@ -13,6 +13,7 @@ import {
   PodcastSection,
   ReviewSection,
 } from "@/components/sections";
+import HomePopup from "@/components/sections/HomePopup";
 
 /**
  * Home - 網站首頁
@@ -30,6 +31,9 @@ const Home: React.FC = () => {
     <div className="relative min-h-screen bg-abyss-bg">
       {/* Three.js Background */}
       <AbyssScene />
+
+      {/* 首頁自定義彈窗 */}
+      <HomePopup />
 
       {/* Hero Section */}
       <HeroSection />

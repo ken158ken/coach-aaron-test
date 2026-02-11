@@ -3,10 +3,12 @@
  * @module components/sections/CoachIntroSection
  */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TextButton } from "@/components/ui";
+import { contentService } from "@/services/content.service";
+import { getRandomTemplate } from "@/utils/contentTemplates";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -26,6 +28,26 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   const sectionRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // 初始值使用隨機範本 fallback
+  const [aboutCoach, setAboutCoach] = useState(() =>
+    getRandomTemplate(
+      "about_coach",
+      "擁有超過 10 年健身教學經驗，專注於體態雕塑、增肌減脂與運動表現提升。結合科學化訓練方法與個人化指導，幫助學員突破極限，達成目標。",
+    ),
+  );
+
+  // 從後台載入內容，若 DB 回傳空值則保留隨機範本
+  useEffect(() => {
+    contentService
+      .getPublicContent()
+      .then((content) => {
+        if (content.about_coach?.trim()) setAboutCoach(content.about_coach);
+      })
+      .catch(() => {
+        // API 失敗時保留隨機範本，不做額外處理
+      });
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -76,7 +98,10 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12 items-center">
           {/* Image */}
-          <div ref={imageRef} className="relative max-w-sm mx-auto md:max-w-none">
+          <div
+            ref={imageRef}
+            className="relative max-w-sm mx-auto md:max-w-none"
+          >
             <div className="aspect-[3/4] rounded-xl overflow-hidden">
               <img
                 src="/images/coach-aaron.jpg"
@@ -100,9 +125,7 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
               <span className="text-luxe-gold">專業健身指導</span>
             </h2>
             <p className="text-luxe-muted text-base sm:text-lg font-light leading-relaxed mb-4 sm:mb-6">
-              擁有超過 10
-              年健身教學經驗，專注於體態雕塑、增肌減脂與運動表現提升。
-              結合科學化訓練方法與個人化指導，幫助學員突破極限，達成目標。
+              {aboutCoach}
             </p>
             <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 text-left max-w-md mx-auto md:mx-0">
               {[

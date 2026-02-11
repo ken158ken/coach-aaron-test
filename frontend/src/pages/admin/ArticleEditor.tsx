@@ -721,7 +721,7 @@ const ArticleEditor: React.FC = () => {
                   setHasChanges(true);
                 }}
                 placeholder="文章標題"
-                className="w-full text-3xl font-bold bg-transparent border-none outline-none placeholder:text-gray-600"
+                className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-gray-600"
               />
             </div>
 

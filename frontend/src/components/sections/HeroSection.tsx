@@ -3,9 +3,11 @@
  * @module components/sections/HeroSection
  */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { GlowButton, TextButton } from "@/components/ui";
+import { contentService } from "@/services/content.service";
+import { getRandomTemplate } from "@/utils/contentTemplates";
 
 interface HeroSectionProps {
   className?: string;
@@ -22,6 +24,31 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
+
+  // 初始值使用隨機範本 fallback
+  const [heroTitle, setHeroTitle] = useState(() =>
+    getRandomTemplate("hero_title", "打造 理想體態\n遇見更好的自己"),
+  );
+  const [heroSubtitle, setHeroSubtitle] = useState(() =>
+    getRandomTemplate(
+      "hero_subtitle",
+      "專業一對一健身指導，量身打造訓練計畫\n科學化訓練 × 飲食規劃 × 心理建設",
+    ),
+  );
+
+  // 從後台載入內容，若 DB 回傳空值則保留隨機範本
+  useEffect(() => {
+    contentService
+      .getPublicContent()
+      .then((content) => {
+        if (content.hero_title?.trim()) setHeroTitle(content.hero_title);
+        if (content.hero_subtitle?.trim())
+          setHeroSubtitle(content.hero_subtitle);
+      })
+      .catch(() => {
+        // API 失敗時保留隨機範本，不做額外處理
+      });
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -78,10 +105,12 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           ref={titleRef}
           className="text-3xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 text-abyss-text leading-tight"
         >
-          打造
-          <span className="text-abyss-accent"> 理想體態 </span>
-          <br />
-          遇見更好的自己
+          {heroTitle.split("\n").map((line, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <br />}
+              {line}
+            </React.Fragment>
+          ))}
         </h1>
 
         {/* Subtitle */}
@@ -89,10 +118,17 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           ref={subtitleRef}
           className="text-base sm:text-xl md:text-2xl text-abyss-text/70 mb-8 sm:mb-10 max-w-2xl mx-auto font-light"
         >
-          專業一對一健身指導，量身打造訓練計畫
-          <br className="hidden sm:block" />
-          <span className="sm:hidden"> · </span>
-          科學化訓練 × 飲食規劃 × 心理建設
+          {heroSubtitle.split("\n").map((line, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && (
+                <>
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> · </span>
+                </>
+              )}
+              {line}
+            </React.Fragment>
+          ))}
         </p>
 
         {/* CTA */}

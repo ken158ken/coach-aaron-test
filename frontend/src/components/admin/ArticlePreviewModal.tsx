@@ -144,7 +144,7 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
 
               {/* Content - 使用 dangerouslySetInnerHTML */}
               <div
-                className="prose prose-invert prose-lg max-w-none text-luxe-text/80"
+                className="prose prose-invert max-w-none text-luxe-text/80"
                 dangerouslySetInnerHTML={{
                   __html:
                     article.content ||

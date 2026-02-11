@@ -403,7 +403,7 @@ const ArticleDetail: React.FC = () => {
           </div>
 
           {/* Title */}
-          <h1 className="text-4xl font-light text-luxe-text mb-6">
+          <h1 className="text-3xl font-light text-luxe-text mb-6">
             {article.article_title}
           </h1>
 
@@ -447,7 +447,7 @@ const ArticleDetail: React.FC = () => {
 
           {/* Content */}
           <div
-            className="prose prose-invert prose-lg max-w-none text-luxe-text/80"
+            className="prose prose-invert max-w-none text-luxe-text/80"
             dangerouslySetInnerHTML={{
               __html: article.article_content || "<p>文章內容尚未撰寫</p>",
             }}
@@ -471,7 +471,7 @@ const ArticleDetail: React.FC = () => {
 
           {/* Rating Section */}
           <div className="mt-12 pt-8 border-t border-luxe-gold/10">
-            <h3 className="text-xl font-light text-luxe-text mb-4">
+            <h3 className="text-lg font-light text-luxe-text mb-4">
               為這篇文章評分
             </h3>
             <div className="flex items-center gap-2">
@@ -507,7 +507,7 @@ const ArticleDetail: React.FC = () => {
 
           {/* Comments Section */}
           <div className="mt-12 pt-8 border-t border-luxe-gold/10">
-            <h3 className="text-xl font-light text-luxe-text mb-6">
+            <h3 className="text-lg font-light text-luxe-text mb-6">
               留言 ({comments.filter((c) => c.is_visible).length})
             </h3>
 

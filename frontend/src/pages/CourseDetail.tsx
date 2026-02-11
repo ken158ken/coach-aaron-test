@@ -242,7 +242,7 @@ const CourseDetail: React.FC = () => {
               )}
 
               {/* Title */}
-              <h1 className="text-4xl font-light text-prism-text mb-4">
+              <h1 className="text-3xl font-light text-prism-text mb-4">
                 {course.title}
               </h1>
 
@@ -272,7 +272,7 @@ const CourseDetail: React.FC = () => {
 
               {/* Price & CTA */}
               <div className="flex items-center gap-6">
-                <span className="text-3xl font-light text-prism-accent">
+                <span className="text-2xl font-light text-prism-accent">
                   {formatPrice(course.price)}
                 </span>
                 {isAuthenticated ? (
@@ -298,11 +298,11 @@ const CourseDetail: React.FC = () => {
           {/* Course Description */}
           {course.content && (
             <section className="mb-12">
-              <h2 className="text-2xl font-light text-prism-text mb-6">
+              <h2 className="text-xl font-light text-prism-text mb-6">
                 課程介紹
               </h2>
               <div
-                className="prose prose-invert prose-lg max-w-none text-prism-text/80"
+                className="prose prose-invert prose-theme-prism max-w-none text-prism-text/80"
                 dangerouslySetInnerHTML={{ __html: course.content }}
               />
             </section>
@@ -310,7 +310,7 @@ const CourseDetail: React.FC = () => {
 
           {/* What You'll Learn */}
           <section className="mb-12">
-            <h2 className="text-2xl font-light text-prism-text mb-6">
+            <h2 className="text-xl font-light text-prism-text mb-6">
               你將學到
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,7 +335,7 @@ const CourseDetail: React.FC = () => {
 
           {/* Reviews Section */}
           <section className="mb-12">
-            <h2 className="text-2xl font-light text-prism-text mb-6">
+            <h2 className="text-xl font-light text-prism-text mb-6">
               學員評價 ({reviews.length})
             </h2>
 

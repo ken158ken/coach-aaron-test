@@ -106,7 +106,7 @@ const Courses: React.FC = () => {
           {courses.length > 0 ? (
             <div
               ref={coursesRef}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5"
             >
               {courses.map((course, index) => (
                 <Link
@@ -117,7 +117,7 @@ const Courses: React.FC = () => {
                   <article className="bg-prism-bg/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-prism-accent/20 hover:border-prism-accent/50 hover:shadow-xl hover:shadow-prism-accent/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
                     {course.course_thumbnail_url ? (
-                      <div className="aspect-video overflow-hidden">
+                      <div className="aspect-[16/10] overflow-hidden">
                         <img
                           src={course.course_thumbnail_url}
                           alt={course.course_title}
@@ -125,17 +125,17 @@ const Courses: React.FC = () => {
                         />
                       </div>
                     ) : (
-                      <div className="aspect-video bg-prism-accent/10 flex items-center justify-center">
-                        <span className="text-4xl sm:text-6xl text-prism-accent/30">
+                      <div className="aspect-[16/10] bg-prism-accent/10 flex items-center justify-center">
+                        <span className="text-3xl sm:text-4xl text-prism-accent/30">
                           📚
                         </span>
                       </div>
                     )}
 
                     {/* Content */}
-                    <div className="p-4 sm:p-6 flex-1 flex flex-col">
+                    <div className="p-3 sm:p-4 flex-1 flex flex-col">
                       {/* Level & Category */}
-                      <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                      <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                         {course.course_level && (
                           <span className="px-2 py-1 bg-prism-accent/20 text-prism-accent text-xs rounded-full">
                             {levelLabels[course.course_level] ||
@@ -150,13 +150,13 @@ const Courses: React.FC = () => {
                       </div>
 
                       {/* Title */}
-                      <h2 className="text-lg sm:text-xl font-medium text-prism-text mb-2 sm:mb-3 group-hover:text-prism-accent transition-colors line-clamp-2">
+                      <h2 className="text-sm sm:text-base font-medium text-prism-text mb-1.5 sm:mb-2 group-hover:text-prism-accent transition-colors line-clamp-2">
                         {course.course_title}
                       </h2>
 
                       {/* Description */}
                       {course.course_description && (
-                        <p className="text-prism-text/60 text-sm mb-3 sm:mb-4 flex-1 line-clamp-2 sm:line-clamp-3">
+                        <p className="text-prism-text/60 text-xs sm:text-sm mb-2 sm:mb-3 flex-1 line-clamp-1 sm:line-clamp-2">
                           {course.course_description}
                         </p>
                       )}
@@ -185,8 +185,8 @@ const Courses: React.FC = () => {
                       </div>
 
                       {/* Price */}
-                      <div className="mt-4 pt-4 border-t border-prism-accent/10 flex items-center justify-between">
-                        <span className="text-lg sm:text-xl font-semibold text-prism-accent">
+                      <div className="mt-3 pt-3 border-t border-prism-accent/10 flex items-center justify-between">
+                        <span className="text-base sm:text-lg font-semibold text-prism-accent">
                           {formatPrice(course.price)}
                         </span>
                         <PillButton

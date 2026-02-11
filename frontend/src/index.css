@@ -698,6 +698,207 @@
 }
 
 /* ========================================
+   文章渲染 prose 標題階層樣式
+   讓 h1/h2/h3/h4 在文章內頁呈現明確的視覺階層
+   ======================================== */
+.prose :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  padding-left: 0;
+  border-bottom: 2px solid rgba(212, 175, 55, 0.4);
+  letter-spacing: -0.025em;
+  background: linear-gradient(
+    135deg,
+    var(--luxe-gold, #d4af37),
+    rgba(212, 175, 55, 0.7)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.prose :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+  position: relative;
+  color: var(--luxe-text, #e0e0e0);
+}
+
+.prose
+  :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *))::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  bottom: 0.2em;
+  width: 4px;
+  background: var(--luxe-gold, #d4af37);
+  border-radius: 2px;
+}
+
+.prose :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-left: 2.25rem;
+  color: rgba(212, 175, 55, 0.9);
+  letter-spacing: -0.01em;
+  position: relative;
+}
+
+.prose
+  :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *))::before {
+  content: "›";
+  position: absolute;
+  left: 1rem;
+  color: var(--luxe-gold, #d4af37);
+  font-weight: 700;
+  font-size: 1.25em;
+  line-height: 1;
+  top: 0.15em;
+}
+
+.prose :where(h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 3rem;
+  color: var(--luxe-text, #e0e0e0);
+}
+
+/* prose 內的 p/ul/ol 跟隨上層 heading 縮排 */
+.prose
+  :where(h2 + p, h2 + ul, h2 + ol):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
+  padding-left: 1.25rem;
+}
+
+.prose
+  :where(h3 + p, h3 + ul, h3 + ol):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
+  padding-left: 2.25rem;
+}
+
+.prose
+  :where(h4 + p, h4 + ul, h4 + ol):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
+  padding-left: 3rem;
+}
+
+/* prose 內的列表和連結裝飾 */
+.prose
+  :where(ul > li):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  position: relative;
+}
+
+.prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: var(--luxe-gold, #d4af37);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  transition: all 0.2s;
+}
+
+.prose
+  :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)):hover {
+  border-bottom-color: var(--luxe-gold, #d4af37);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.prose
+  :where(blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-left: 4px solid var(--luxe-gold, #d4af37);
+  background: rgba(212, 175, 55, 0.05);
+  border-radius: 0 0.25rem 0.25rem 0;
+  color: rgba(136, 136, 136, 0.9);
+}
+
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--luxe-gold, #d4af37);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.9em;
+}
+
+.prose :where(hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+/* ========================================
+   PRISM 主題 prose 標題階層（課程內頁）
+   使用 .prose-theme-prism 啟用紫色系配色
+   ======================================== */
+.prose-theme-prism
+  :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background: linear-gradient(135deg, #b388ff, rgba(179, 136, 255, 0.7));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border-bottom-color: rgba(179, 136, 255, 0.4);
+}
+
+.prose-theme-prism
+  :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *))::before {
+  background: #b388ff;
+}
+
+.prose-theme-prism
+  :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: rgba(179, 136, 255, 0.9);
+}
+
+.prose-theme-prism
+  :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *))::before {
+  color: #b388ff;
+}
+
+.prose-theme-prism
+  :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: #b388ff;
+  border-bottom-color: rgba(179, 136, 255, 0.3);
+}
+
+.prose-theme-prism
+  :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)):hover {
+  border-bottom-color: #b388ff;
+  background: rgba(179, 136, 255, 0.1);
+}
+
+.prose-theme-prism
+  :where(blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-left-color: #b388ff;
+  background: rgba(179, 136, 255, 0.05);
+}
+
+.prose-theme-prism
+  :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background: rgba(179, 136, 255, 0.15);
+  color: #b388ff;
+  border-color: rgba(179, 136, 255, 0.2);
+}
+
+.prose-theme-prism
+  :where(hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-color: rgba(179, 136, 255, 0.3);
+}
+
+/* ========================================
    Tiptap 編輯器樣式
    ======================================== */
 .ProseMirror {
@@ -708,7 +909,7 @@
 
 /* 標題樣式 - 與 .prose 一致的豐富樣式 */
 .ProseMirror h1 {
-  font-size: 2.5rem; /* 40px - 與 .prose 一致 */
+  font-size: 2.25rem; /* 36px - 全域縮小 2px */
   font-weight: 800;
   line-height: 1.1;
   margin-top: 2rem;
@@ -728,7 +929,7 @@
 }
 
 .ProseMirror h2 {
-  font-size: 2rem; /* 32px - 與 .prose 一致 */
+  font-size: 1.875rem; /* 30px - 全域縮小 2px */
   font-weight: 700;
   line-height: 1.25;
   margin-top: 2.5rem;
@@ -750,7 +951,7 @@
 }
 
 .ProseMirror h3 {
-  font-size: 1.5rem; /* 24px - 與 .prose 一致 */
+  font-size: 1.375rem; /* 22px - 全域縮小 2px */
   font-weight: 600;
   line-height: 1.4;
   margin-top: 2rem;
@@ -760,7 +961,7 @@
 }
 
 .ProseMirror h4 {
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.125rem; /* 18px - 全域縮小 2px */
   font-weight: 600;
   line-height: 1.5;
   margin-top: 1.5rem;
@@ -768,20 +969,20 @@
   color: var(--luxe-text, #e0e0e0);
 }
 
-/* 段落 - 與 .prose 一致 */
+/* 段落 - 全域縮小 2px */
 .ProseMirror p {
-  font-size: 1.125rem; /* 18px - 與 .prose 一致 */
+  font-size: 1rem; /* 16px - 全域縮小 2px */
   line-height: 1.8;
   margin-bottom: 1.25rem;
   color: rgba(224, 224, 224, 0.85);
 }
 
-/* 列表 - 與 .prose 一致 */
+/* 列表 - 全域縮小 2px */
 .ProseMirror ul,
 .ProseMirror ol {
   padding-left: 1.75rem;
   margin-bottom: 1.5rem;
-  font-size: 1.125rem;
+  font-size: 1rem;
   line-height: 1.75;
 }
 

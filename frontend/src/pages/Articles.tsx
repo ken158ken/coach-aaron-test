@@ -160,7 +160,7 @@ const Articles: React.FC = () => {
           {articles.length > 0 ? (
             <div
               ref={articlesRef}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5"
             >
               {articles.map((article, index) => (
                 <Link
@@ -171,7 +171,7 @@ const Articles: React.FC = () => {
                   <article className="bg-luxe-surface rounded-lg overflow-hidden border border-luxe-gold/10 hover:border-luxe-gold/40 hover:shadow-xl hover:shadow-luxe-gold/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
                     {article.article_thumbnail_url ? (
-                      <div className="aspect-video overflow-hidden">
+                      <div className="aspect-[16/10] overflow-hidden">
                         <img
                           src={article.article_thumbnail_url}
                           alt={article.article_title}
@@ -179,17 +179,17 @@ const Articles: React.FC = () => {
                         />
                       </div>
                     ) : (
-                      <div className="aspect-video bg-luxe-gold/10 flex items-center justify-center">
-                        <span className="text-4xl sm:text-6xl text-luxe-gold/30">
+                      <div className="aspect-[16/10] bg-luxe-gold/10 flex items-center justify-center">
+                        <span className="text-3xl sm:text-4xl text-luxe-gold/30">
                           📝
                         </span>
                       </div>
                     )}
 
                     {/* Content */}
-                    <div className="p-4 sm:p-6 flex-1 flex flex-col">
+                    <div className="p-3 sm:p-4 flex-1 flex flex-col">
                       {/* Category & Featured */}
-                      <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                      <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                         {article.article_category && (
                           <span className="text-[10px] sm:text-xs text-luxe-gold">
                             {article.article_category}
@@ -203,13 +203,13 @@ const Articles: React.FC = () => {
                       </div>
 
                       {/* Title */}
-                      <h2 className="text-base sm:text-xl font-light text-luxe-text mb-2 sm:mb-3 group-hover:text-luxe-gold transition-colors line-clamp-2">
+                      <h2 className="text-sm sm:text-base font-light text-luxe-text mb-1.5 sm:mb-2 group-hover:text-luxe-gold transition-colors line-clamp-2">
                         {article.article_title}
                       </h2>
 
                       {/* Description */}
                       {article.article_description && (
-                        <p className="text-luxe-muted text-xs sm:text-sm mb-3 sm:mb-4 flex-1 line-clamp-2 sm:line-clamp-3">
+                        <p className="text-luxe-muted text-xs sm:text-sm mb-2 sm:mb-3 flex-1 line-clamp-1 sm:line-clamp-2">
                           {article.article_description}
                         </p>
                       )}

@@ -1,10 +1,10 @@
 /**
- * AdminUsers 頁面 - 用戶管理
+ * AdminUsers 頁面 - 用戶管理（含排序與篩選）
  * @module pages/admin/AdminUsers
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   DataTable,
   Pagination,
@@ -15,6 +15,14 @@ import {
 } from "@/components/ui";
 import { get, put } from "@/services/api";
 import type { User, PaginatedUsersResponse } from "@/types";
+
+/** 日誌工具 */
+const logger = {
+  info: (msg: string, data?: unknown) =>
+    console.log(`[AdminUsers] ${msg}`, data || ""),
+  error: (msg: string, err?: unknown) =>
+    console.error(`[AdminUsers] ${msg}`, err || ""),
+};
 
 /**
  * AdminUsers - 用戶管理頁面
@@ -29,6 +37,11 @@ const AdminUsers: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // 篩選狀態
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [albumFilter, setAlbumFilter] = useState<string>("all");
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -63,12 +76,12 @@ const AdminUsers: React.FC = () => {
           );
           setTotalPages(res.totalPages || 1);
         } else {
-          console.error("Failed to fetch users:", res);
+          logger.error("Failed to fetch users", res);
           setUsers([]);
           setError("載入用戶失敗：數據格式錯誤");
         }
       } catch (err) {
-        console.error("Failed to fetch users:", err);
+        logger.error("Failed to fetch users", err);
         setUsers([]);
         setError("載入用戶失敗");
       } finally {
@@ -85,48 +98,97 @@ const AdminUsers: React.FC = () => {
   const handleToggleSex = async (user: User) => {
     try {
       await put(`/api/admin/users/${user.user_id}`, { sex: !user.sex });
-      // 更新本地狀態
       setUsers((prev) =>
         prev.map((u) =>
           u.user_id === user.user_id ? { ...u, sex: !u.sex } : u,
         ),
       );
+      logger.info("Toggled album permission", { userId: user.user_id });
     } catch (err) {
-      console.error("Failed to toggle sex permission:", err);
+      logger.error("Failed to toggle sex permission", err);
       setError("切換權限失敗");
     }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  /** 篩選後的用戶列表 */
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      // 文字搜尋
+      const matchSearch =
+        !searchTerm ||
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // 角色篩選
+      const matchRole =
+        roleFilter === "all" ||
+        (roleFilter === "admin" && user.role === "admin") ||
+        (roleFilter === "user" && user.role !== "admin");
+
+      // 活躍狀態篩選
+      const matchActive =
+        activeFilter === "all" ||
+        (activeFilter === "active" && user.is_active) ||
+        (activeFilter === "inactive" && !user.is_active);
+
+      // 私密相簿篩選
+      const matchAlbum =
+        albumFilter === "all" ||
+        (albumFilter === "enabled" && user.sex) ||
+        (albumFilter === "disabled" && !user.sex);
+
+      return matchSearch && matchRole && matchActive && matchAlbum;
+    });
+  }, [users, searchTerm, roleFilter, activeFilter, albumFilter]);
 
   const columns = [
-    { key: "name" as const, header: "姓名", isPrimary: true },
-    { key: "email" as const, header: "電子郵件" },
+    {
+      key: "name" as const,
+      header: "姓名",
+      isPrimary: true,
+      sortValue: (user: User) => (user.name || "").toLowerCase(),
+    },
+    {
+      key: "email" as const,
+      header: "電子郵件",
+      sortValue: (user: User) => user.email.toLowerCase(),
+    },
     {
       key: "role" as const,
       header: "角色",
+      sortValue: (user: User) => (user.role === "admin" ? 0 : 1),
       render: (user: User) => (
         <span
-          className={`
-            px-2 py-1 text-xs rounded
-            ${
-              user.role === "admin"
-                ? "bg-luxe-gold/20 text-luxe-gold"
-                : "bg-luxe-muted/20 text-luxe-muted"
-            }
-          `}
+          className={`px-2 py-1 text-xs rounded ${
+            user.role === "admin"
+              ? "bg-luxe-gold/20 text-luxe-gold"
+              : "bg-luxe-muted/20 text-luxe-muted"
+          }`}
         >
           {user.role === "admin" ? "管理員" : "一般用戶"}
         </span>
       ),
     },
     {
+      key: "is_active" as const,
+      header: "狀態",
+      sortValue: (user: User) => (user.is_active ? 1 : 0),
+      render: (user: User) => (
+        <span
+          className={`px-2 py-1 text-xs rounded ${
+            user.is_active
+              ? "bg-green-500/20 text-green-400"
+              : "bg-red-500/20 text-red-400"
+          }`}
+        >
+          {user.is_active ? "活躍" : "停用"}
+        </span>
+      ),
+    },
+    {
       key: "sex" as const,
       header: "私密相簿",
+      sortValue: (user: User) => (user.sex ? 1 : 0),
       render: (user: User) => (
         <Toggle
           checked={user.sex ?? false}
@@ -134,10 +196,15 @@ const AdminUsers: React.FC = () => {
         />
       ),
     },
-    { key: "createdAt" as const, header: "建立日期", hideOnMobile: true },
+    {
+      key: "createdAt" as const,
+      header: "建立日期",
+      hideOnMobile: true,
+    },
     {
       key: "actions" as const,
       header: "操作",
+      sortable: false,
       render: (user: User) => (
         <button
           onClick={() => setSelectedUser(user)}
@@ -162,14 +229,14 @@ const AdminUsers: React.FC = () => {
         </PillButton>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
-          placeholder="搜尋用戶..."
+          placeholder="搜尋姓名或信箱..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
-          className="w-full sm:max-w-sm"
+          className="w-full sm:w-64"
           icon={
             <svg
               className="w-4 h-4 text-luxe-muted"
@@ -186,6 +253,38 @@ const AdminUsers: React.FC = () => {
             </svg>
           }
         />
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+        >
+          <option value="all">全部角色</option>
+          <option value="admin">管理員</option>
+          <option value="user">一般用戶</option>
+        </select>
+        <select
+          value={activeFilter}
+          onChange={(e) => setActiveFilter(e.target.value)}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+        >
+          <option value="all">全部狀態</option>
+          <option value="active">活躍</option>
+          <option value="inactive">停用</option>
+        </select>
+        <select
+          value={albumFilter}
+          onChange={(e) => setAlbumFilter(e.target.value)}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+        >
+          <option value="all">私密相簿</option>
+          <option value="enabled">已啟用</option>
+          <option value="disabled">未啟用</option>
+        </select>
+      </div>
+
+      {/* 篩選結果計數 */}
+      <div className="mb-3 text-xs text-luxe-muted">
+        顯示 {filteredUsers.length} / {users.length} 位用戶
       </div>
 
       {/* Error Message */}
@@ -203,6 +302,7 @@ const AdminUsers: React.FC = () => {
         loading={loading}
         theme="luxe"
         emptyMessage="沒有找到用戶"
+        sortable
       />
 
       {/* Pagination */}

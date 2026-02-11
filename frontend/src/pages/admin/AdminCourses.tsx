@@ -58,6 +58,15 @@ interface CourseFormData {
   status: "draft" | "published" | "archived";
 }
 
+type ViewMode = "list" | "card-sm" | "card-md" | "card-lg";
+
+const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
+  { mode: "list", icon: "☰", label: "清單" },
+  { mode: "card-sm", icon: "▪▪▪", label: "小圖" },
+  { mode: "card-md", icon: "◻◻", label: "中圖" },
+  { mode: "card-lg", icon: "⬜", label: "大圖" },
+];
+
 /**
  * AdminCourses - 課程管理頁面
  *
@@ -72,6 +81,7 @@ const AdminCourses: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
@@ -296,6 +306,8 @@ const AdminCourses: React.FC = () => {
       key: "title" as const,
       header: "課程名稱",
       isPrimary: true,
+      sortValue: (course: Course) =>
+        (course.course_title || course.title || "").toLowerCase(),
       render: (course: Course) => (
         <span className="text-luxe-text">
           {course.course_title || course.title}
@@ -314,6 +326,7 @@ const AdminCourses: React.FC = () => {
     {
       key: "price" as const,
       header: "價格",
+      sortValue: (course: Course) => course.price || 0,
       render: (course: Course) => (
         <span className="text-luxe-gold">
           NT$ {course.price?.toLocaleString() || 0}
@@ -342,11 +355,13 @@ const AdminCourses: React.FC = () => {
       key: "lessonsCount" as const,
       header: "課堂數",
       hideOnMobile: true,
+      sortValue: (course: Course) => course.lessonsCount || 0,
       render: (course: Course) => `${course.lessonsCount || 0} 堂`,
     },
     {
       key: "actions" as const,
       header: "操作",
+      sortable: false,
       render: (course: Course) => (
         <div className="flex gap-2">
           <button
@@ -401,14 +416,14 @@ const AdminCourses: React.FC = () => {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
+      {/* Search + View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <Input
           placeholder="搜尋課程..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
-          className="w-full sm:max-w-sm"
+          className="flex-1 sm:max-w-sm"
           icon={
             <svg
               className="w-4 h-4 text-luxe-muted"
@@ -425,6 +440,24 @@ const AdminCourses: React.FC = () => {
             </svg>
           }
         />
+
+        {/* 檢視模式切換 */}
+        <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
+          {viewOptions.map((opt) => (
+            <button
+              key={opt.mode}
+              onClick={() => setViewMode(opt.mode)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                viewMode === opt.mode
+                  ? "bg-luxe-gold/20 text-luxe-gold"
+                  : "text-luxe-muted hover:text-luxe-text"
+              }`}
+              title={opt.label}
+            >
+              {opt.icon}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Error Message */}
@@ -434,25 +467,144 @@ const AdminCourses: React.FC = () => {
         </div>
       )}
 
-      {/* Table */}
-      <DataTable
-        columns={columns}
-        data={filteredCourses}
-        keyExtractor={(course) => course.course_id}
-        loading={loading}
-        theme="luxe"
-        emptyMessage="沒有找到課程"
-      />
+      {/* Content */}
+      {viewMode === "list" ? (
+        <>
+          <DataTable
+            columns={columns}
+            data={filteredCourses}
+            keyExtractor={(course) => course.course_id}
+            loading={loading}
+            theme="luxe"
+            emptyMessage="沒有找到課程"
+            sortable
+          />
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              theme="luxe"
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {loading ? (
+            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+          ) : filteredCourses.length === 0 ? (
+            <div className="text-center py-12 text-luxe-muted">
+              沒有找到課程
+            </div>
+          ) : (
+            <div
+              className={`grid gap-4 ${
+                viewMode === "card-sm"
+                  ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                  : viewMode === "card-md"
+                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
+                    : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+              }`}
+            >
+              {filteredCourses.map((course) => {
+                const statusColors: Record<string, string> = {
+                  draft: "bg-gray-500/20 text-gray-400",
+                  published: "bg-green-500/20 text-green-400",
+                  archived: "bg-yellow-500/20 text-yellow-400",
+                };
+                return (
+                  <div
+                    key={course.course_id}
+                    className="group bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 overflow-hidden transition-all"
+                  >
+                    {/* 縮圖 */}
+                    <div className="aspect-[16/9] bg-luxe-bg flex items-center justify-center relative">
+                      {course.course_thumbnail_url ? (
+                        <img
+                          src={course.course_thumbnail_url}
+                          alt={course.course_title || course.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="text-3xl text-luxe-muted/30">🎓</span>
+                      )}
+                      {/* 狀態浮標 */}
+                      <span
+                        className={`absolute top-1 left-1 px-1.5 py-0.5 text-[10px] rounded ${statusColors[course.status] || ""}`}
+                      >
+                        {statusLabels[course.status] || course.status}
+                      </span>
+                      {/* 價格浮標 */}
+                      <span className="absolute bottom-1 right-1 bg-luxe-gold/90 text-black text-[10px] px-1.5 py-0.5 rounded font-bold">
+                        NT$ {course.price?.toLocaleString() || 0}
+                      </span>
+                    </div>
 
-      {/* Pagination */}
-      <div className="mt-6">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          theme="luxe"
-        />
-      </div>
+                    {/* 資訊 */}
+                    <div className="p-3">
+                      <h3
+                        className={`font-medium text-luxe-text truncate mb-1 ${
+                          viewMode === "card-sm" ? "text-xs" : "text-sm"
+                        }`}
+                      >
+                        {course.course_title || course.title}
+                      </h3>
+                      {viewMode !== "card-sm" && (
+                        <p className="text-xs text-luxe-muted line-clamp-2 mb-2">
+                          {course.course_description ||
+                            course.description ||
+                            "無描述"}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between text-[10px] text-luxe-muted">
+                        <span>
+                          {course.level
+                            ? levelLabels[course.level] || course.level
+                            : "-"}
+                        </span>
+                        <span>{course.lessonsCount || 0} 堂</span>
+                      </div>
+
+                      {/* 操作按鈕 */}
+                      <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() =>
+                            navigate(`/admin/courses/${course.course_id}/edit`)
+                          }
+                          className="text-luxe-gold hover:underline text-xs flex-1"
+                        >
+                          編輯
+                        </button>
+                        <button
+                          onClick={() => openEditModal(course)}
+                          className="text-blue-400 hover:underline text-xs"
+                        >
+                          快速編輯
+                        </button>
+                        <button
+                          onClick={() => handleDelete(course)}
+                          className="text-red-400 hover:underline text-xs"
+                        >
+                          刪除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              theme="luxe"
+            />
+          </div>
+        </>
+      )}
 
       {/* Create/Edit Modal */}
       <Modal
