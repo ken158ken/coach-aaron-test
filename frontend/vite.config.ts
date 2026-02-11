@@ -2,7 +2,9 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
-export default defineConfig(({ isSsrBuild }) => {
+export default defineConfig(({ command, isSsrBuild }) => {
+  const isDevServer = command === "serve";
+
   return {
     plugins: [react()],
     resolve: {
@@ -24,6 +26,8 @@ export default defineConfig(({ isSsrBuild }) => {
             output: {
               format: "esm",
               entryFileNames: "[name].js",
+              // 所有動態 import 內聯到單一檔案，避免 chunk 依賴追蹤
+              inlineDynamicImports: true,
             },
           },
         }
@@ -38,10 +42,19 @@ export default defineConfig(({ isSsrBuild }) => {
           },
         },
     ssr: {
-      // SSR 執行時配置 - 僅打包必要的 ESM-only 套件
-      noExternal: ["react-icons", "gsap", "react-helmet-async"],
-      // Three.js 生態系僅在客戶端 useEffect 中執行，SSR 時不需要
-      external: ["three", "@react-three/fiber", "@react-three/drei"],
+      /**
+       * SSR 執行時配置
+       *
+       * Dev 模式 (serve): 僅打包 ESM-only 套件，其他保持 external
+       *   → React CJS 模組需要 external 才能正常運作
+       *
+       * Build 模式 (build): noExternal: true 打包所有套件
+       *   → entry-server.js 自包含，不需要 node_modules
+       *   → Vercel 函式不追蹤依賴，大幅縮減大小
+       */
+      noExternal: isDevServer
+        ? ["react-icons", "gsap", "react-helmet-async"]
+        : true,
     },
   };
 });

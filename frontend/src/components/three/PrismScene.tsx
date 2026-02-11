@@ -99,13 +99,8 @@ const PrismScene: React.FC<PrismSceneProps> = ({ className = "" }) => {
       updateCrystalScale();
 
       // Floating Shards
-      interface Shard {
-        mesh: THREE.Mesh;
-        axis: THREE.Vector3;
-        speed: number;
-      }
-
-      const shards: Shard[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const shards: { mesh: any; axis: any; speed: number }[] = [];
       const shardGeo = new THREE.OctahedronGeometry(0.3, 0);
       const shardMat = new THREE.MeshPhysicalMaterial({
         color: 0x82b1ff,
