@@ -19,6 +19,7 @@ export interface User {
   phone_number?: string;
   avatar_url?: string;
   gender?: Gender;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
   // 前端別名 (方便使用)

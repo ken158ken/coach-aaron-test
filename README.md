@@ -1362,6 +1362,33 @@ npm install react-moveable moveable @scena/react-guides uuid
 
 ---
 
+### 🔧 Vercel 構建錯誤修復 (2026-02-12)
+
+#### 問題
+
+- 13 個 TypeScript 編譯錯誤（User 缺少 `is_active`、未使用變數、Toggle 缺少 `theme` prop、tsconfig `types` 阻擋 `@types/three`）
+- SSR 函式大小 646.08MB 超過 Vercel 300MB 限制（Three.js 被打包進 SSR bundle）
+
+#### 修復
+
+- **user.ts**: User 介面新增 `is_active?: boolean`
+- **AdminDashboard.tsx**: 移除未使用的 `formatRelativeTime` 函式
+- **Toggle.tsx**: ToggleProps 新增 `theme?: string`
+- **tsconfig.json**: 移除 `"types": ["vite/client"]` 讓 TS 自動偵測 @types/\*
+- **vite.config.ts**: 解構只保留 `isSsrBuild`；Three.js 從 `noExternal` 移到 `external`
+- **PrismScene.tsx / AbyssScene.tsx**: 頂層 `import * as THREE` 改為 `useEffect` 內 `import("three")` 動態載入
+- **vercel.json**: `includeFiles` 縮減為僅 `entry-server.js` + `index.html`
+
+#### 清理
+
+- 舊專案 `coach-aaron-test` 的 `vercel.json`、`.vercel/`、`.vercel_build_output/`、`api/` 全部移除
+
+#### 完整報告
+
+- 詳見 `REPORTS/VERCEL_BUILD_FIX_2026-02-12T10-00-00+08-00.md`
+
+---
+
 ### 🔧 RWD 排版與 Three.js 場景修復 (2026-02-07)
 
 #### 問題

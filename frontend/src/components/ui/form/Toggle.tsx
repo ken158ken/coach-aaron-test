@@ -11,6 +11,8 @@ interface ToggleProps {
   label?: string;
   disabled?: boolean;
   className?: string;
+  /** 主題樣式 (abyss | prism | luxe) */
+  theme?: string;
 }
 
 /**

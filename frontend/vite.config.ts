@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
-export default defineConfig(({ command, mode, isSsrBuild }) => {
+export default defineConfig(({ isSsrBuild }) => {
   return {
     plugins: [react()],
     resolve: {
@@ -38,15 +38,10 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
           },
         },
     ssr: {
-      // SSR 執行時配置
-      noExternal: [
-        "react-icons",
-        "gsap",
-        "react-helmet-async",
-        "three",
-        "@react-three/fiber",
-        "@react-three/drei",
-      ],
+      // SSR 執行時配置 - 僅打包必要的 ESM-only 套件
+      noExternal: ["react-icons", "gsap", "react-helmet-async"],
+      // Three.js 生態系僅在客戶端 useEffect 中執行，SSR 時不需要
+      external: ["three", "@react-three/fiber", "@react-three/drei"],
     },
   };
 });
