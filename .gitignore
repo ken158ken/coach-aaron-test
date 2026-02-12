@@ -32,3 +32,6 @@ coverage/
 
 # Vercel
 .vercel/
+
+# SSR bundle (build artifact, copied during Vercel build)
+api/_ssr_bundle.cjs
