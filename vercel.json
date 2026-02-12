@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build && cd .. && cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs && cp frontend/dist/client/index.html api/_ssr_template.html && rm frontend/dist/client/index.html",
+  "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": "frontend/dist/client",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/server" },
