@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build && cd .. && cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs",
+  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build && cd .. && cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs && mv frontend/dist/client/index.html api/_ssr_template.html",
   "outputDirectory": "frontend/dist/client",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/server" },
@@ -11,8 +11,7 @@
       "includeFiles": "backend/dist/**"
     },
     "api/ssr.js": {
-      "maxDuration": 10,
-      "includeFiles": "frontend/dist/client/index.html"
+      "maxDuration": 10
     }
   },
   "headers": [

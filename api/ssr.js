@@ -4,12 +4,12 @@
  *
  * @module api/ssr
  * @description
- *   SSR bundle (_ssr_bundle.cjs) 在 build 階段從 frontend/dist/server/entry-server.cjs
- *   複製到 api/ 目錄。這確保 @vercel/nft 從 api/ 解析 require()，
- *   永遠找不到 frontend/node_modules/（~630MB），有效控制函數大小。
+ *   Build 階段將以下檔案複製/移動到 api/ 目錄：
+ *   - _ssr_bundle.cjs: SSR 渲染 bundle (CJS, 自包含所有依賴)
+ *   - _ssr_template.html: HTML 模板 (從 frontend/dist/client/index.html 移出)
  *
- *   _ssr_bundle.cjs 使用 CJS 格式 + noExternal:true，所有 React/GSAP 等依賴
- *   已內嵌到 bundle 中，不需要任何 node_modules。
+ *   移出 index.html 是因為 Vercel 靜態檔案優先於 rewrites，
+ *   若 index.html 留在 outputDirectory 中，會被直接返回而不觸發 SSR。
  */
 
 const fs = require("node:fs");
@@ -17,7 +17,6 @@ const path = require("node:path");
 
 /**
  * 載入 SSR entry module（惰性載入，僅執行一次）
- * 使用同目錄下的 _ssr_bundle.cjs，NFT 會追蹤但只在 api/ 上下文解析
  *
  * @returns {{ render: Function }} SSR module
  */
@@ -29,36 +28,30 @@ function loadSSRModule() {
   return _cachedModule;
 }
 
+/**
+ * 讀取 HTML 模板（惰性載入，僅執行一次）
+ *
+ * @returns {string} HTML 模板內容
+ */
+let _cachedTemplate = null;
+function loadTemplate() {
+  if (_cachedTemplate) return _cachedTemplate;
+  const templatePath = path.resolve(__dirname, "_ssr_template.html");
+  _cachedTemplate = fs.readFileSync(templatePath, "utf-8");
+  console.log(`✅ Loaded template from: ${templatePath}`);
+  return _cachedTemplate;
+}
+
 module.exports = async function handler(req, res) {
   const url = req.url;
 
   try {
     console.log(`📥 SSR Request: ${url}`);
 
-    // ===== 1. 尋找 HTML 模板 =====
-    const projectRoot = process.cwd();
-    const templateCandidates = [
-      path.resolve(projectRoot, "frontend/dist/client/index.html"),
-      path.resolve(__dirname, "../frontend/dist/client/index.html"),
-      path.resolve(projectRoot, "index.html"),
-    ];
+    // ===== 1. 讀取 HTML 模板 =====
+    const template = loadTemplate();
 
-    let templatePath = null;
-    for (const p of templateCandidates) {
-      if (fs.existsSync(p)) {
-        templatePath = p;
-        break;
-      }
-    }
-
-    if (!templatePath) {
-      throw new Error("Cannot find index.html template");
-    }
-
-    // ===== 2. 讀取 HTML 模板 =====
-    const template = fs.readFileSync(templatePath, "utf-8");
-
-    // ===== 3. 載入 SSR render 函數 =====
+    // ===== 2. 載入 SSR render 函數 =====
     const serverModule = loadSSRModule();
     const render = serverModule.render || serverModule.default?.render;
 
@@ -68,7 +61,7 @@ module.exports = async function handler(req, res) {
       );
     }
 
-    // ===== 4. 渲染 HTML =====
+    // ===== 3. 渲染 HTML =====
     let appHtml = "";
     let headTags = "";
 
@@ -81,7 +74,7 @@ module.exports = async function handler(req, res) {
       console.error("Falling back to CSR...");
     }
 
-    // ===== 5. 注入 head 標籤和 body 內容 =====
+    // ===== 4. 注入 head 標籤和 body 內容 =====
     let html = template;
 
     if (html.includes("<!--ssr-outlet-->")) {
@@ -115,28 +108,22 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     console.error("❌ SSR Error:", e.message);
 
-    // SSR 失敗時返回純靜態 HTML (CSR fallback)
+    // SSR 失敗時返回模板 HTML 作為 CSR fallback
     try {
-      const fallbackCandidates = [
-        path.resolve(process.cwd(), "frontend/dist/client/index.html"),
-        path.resolve(__dirname, "../frontend/dist/client/index.html"),
-      ];
-
-      for (const p of fallbackCandidates) {
-        if (fs.existsSync(p)) {
-          let fallbackHtml = fs.readFileSync(p, "utf-8");
-          fallbackHtml = fallbackHtml.replace(
-            '<script type="module" src="/src/entry-client.tsx"></script>',
-            "",
-          );
-          console.log(`📄 CSR fallback from: ${p}`);
-          res
-            .status(200)
-            .setHeader("Content-Type", "text/html; charset=utf-8")
-            .setHeader("X-SSR-Fallback", "true")
-            .end(fallbackHtml);
-          return;
-        }
+      const fallbackPath = path.resolve(__dirname, "_ssr_template.html");
+      if (fs.existsSync(fallbackPath)) {
+        let fallbackHtml = fs.readFileSync(fallbackPath, "utf-8");
+        fallbackHtml = fallbackHtml.replace(
+          '<script type="module" src="/src/entry-client.tsx"></script>',
+          "",
+        );
+        console.log("📄 CSR fallback served");
+        res
+          .status(200)
+          .setHeader("Content-Type", "text/html; charset=utf-8")
+          .setHeader("X-SSR-Fallback", "true")
+          .end(fallbackHtml);
+        return;
       }
     } catch (fallbackError) {
       console.error("❌ Fallback also failed:", fallbackError.message);
