@@ -102,6 +102,8 @@ coach-aaron-redesign/
 │   ├── index.ts           # 入口點
 │   ├── config/            # 設定檔
 │   ├── routes/            # API 路由
+│   │   ├── contact.ts    # 📧 聯絡表單 (Resend 寄信)
+│   │   └── ...           # 其他路由
 │   ├── middleware/        # 中介軟體
 │   ├── utils/             # 工具函數
 │   │   ├── logger.ts      # 日誌工具
@@ -160,6 +162,16 @@ coach-aaron-redesign/
 - `renderSafeContent()` - 安全渲染用戶生成內容
 
 詳細資訊請參考: [REPORTS/SECURITY_INPUT_SANITIZATION_2026-02-04T12-00-00Z.md](./REPORTS/SECURITY_INPUT_SANITIZATION_2026-02-04T12-00-00Z.md)
+
+### 聯絡表單防護 (2026-02-13)
+
+| 防護層 | 措施 |
+| --- | --- |
+| 前端驗證 | 姓名 2-50 字、Email 格式、電話格式、主題 2-100 字、訊息 10-2000 字 |
+| 速率限制 | 每 IP 每 15 分鐘最多 5 次請求 (express-rate-limit) |
+| 輸入消毒 | HTML 標籤移除、`javascript:`/`vbscript:` 協議阻擋、事件處理器移除 |
+| Email 驗證 | RFC 5322 格式驗證 |
+| 電話驗證 | 台灣手機/市話格式（09xx、02-xxxx 等） |
 
 ## 🔍 全域搜尋功能 (2026-02-04 新增)
 
@@ -430,6 +442,8 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:5173
+RESEND_API_KEY=your_resend_api_key     # Resend 郵件服務 API Key
+COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 ```
 
 ## 📦 部署到 Vercel
@@ -447,6 +461,19 @@ CORS_ORIGIN=http://localhost:5173
 - **SSR Bundle**: CJS 格式 (`entry-server.cjs`) + `noExternal: true` 完全自包含，不依賴 node_modules
 - **NFT 阻斷**: 透過 `.nftignore` + `require()` 阻止 @vercel/nft 追蹤不必要的依賴
 - **路由優先順序**: 刪除 `index.html` 讓 Filesystem 層不攔截頁面請求，改由 `rewrites` 導向 SSR
+
+### Vercel 環境變數設定
+
+部署時需在 Vercel Dashboard 設定以下環境變數：
+
+| 變數名稱 | 用途 | 必填 |
+| --- | --- | --- |
+| `SUPABASE_URL` | Supabase 專案 URL | ✅ |
+| `SUPABASE_ANON_KEY` | Supabase 匿名金鑰 | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰 | ✅ |
+| `JWT_SECRET` | JWT 加密金鑰 | ✅ |
+| `RESEND_API_KEY` | Resend 郵件 API Key | ✅ (聯絡表單) |
+| `COACH_EMAIL` | 教練收件信箱 | ⚡ (預設 s330221@gmail.com) |
 
 ### SEO 配置 (2026-02-12 新增)
 
@@ -637,6 +664,51 @@ npm run generate:coach-photos
 - **放大查看**: 點擊照片可全螢幕放大瀏覽
 
 ## 📝 更新日誌
+
+### 2026-02-13 - 聯絡表單 Resend 寄信 + 教練資訊整合
+
+#### 📧 聯絡表單功能 (Resend Email API)
+
+- **`backend/routes/contact.ts` 新增路由**：POST `/api/contact`，透過 Resend REST API 寄送郵件
+- **速率限制**：每 IP 每 15 分鐘最多 5 次請求（express-rate-limit）
+- **多層輸入消毒**：HTML 標籤移除、`javascript:`/`vbscript:` 協議阻擋、事件處理器移除、長度限制
+- **美化 HTML 郵件模板**：金黑主題 luxe 風格，含訪客姓名、信箱、電話、主題、訊息、時間戳
+- **reply_to 機制**：寄件者為 `onboarding@resend.dev`（Resend 免費方案），`reply_to` 設為訪客信箱
+
+#### 👤 教練個人資訊整合
+
+- **`constants/app.ts` 新增 `COACH_INFO`**：阿倫教官、威豪健身總教官、NSCA/TQUK/NLP 證照、LINE ID
+- **社群連結更新**：Instagram @coach.luen、LINE Official @667nqldx、LINE 群組、TikTok @coachluen、Podcast
+
+#### 📱 Contact 頁面全面重寫
+
+- **教練資訊區塊**：照片、頭銜、認證徽章、營業時間
+- **LINE 官方帳號卡片**：綠色主題突顯，一鍵加好友
+- **6 大社群連結**：Instagram、LINE Official、LINE 群組、Facebook、TikTok、Podcast
+- **表單欄位**：姓名、信箱、電話（選填）、主題、訊息 + 前端驗證
+- **API 串接**：表單送出呼叫 `/api/contact`，含 loading/success/error 狀態
+
+#### 🔧 環境變數需求
+
+| 變數 | 說明 |
+| --- | --- |
+| `RESEND_API_KEY` | Resend API Key（Vercel 環境變數設定） |
+| `COACH_EMAIL` | 教練收件信箱（選填，預設 s330221@gmail.com） |
+
+#### 📄 新增/修改檔案
+
+| 操作 | 檔案 |
+| --- | --- |
+| 新增 | `backend/routes/contact.ts` — Resend 寄信路由 + 速率限制 + 消毒 |
+| 修改 | `backend/index.ts` — 註冊 contactRoutes |
+| 修改 | `frontend/src/constants/app.ts` — SOCIAL_LINKS + COACH_INFO |
+| 修改 | `frontend/src/pages/Contact.tsx` — 完全重寫 |
+
+#### 📄 相關文件
+
+- 完整報告：[REPORTS/CONTACT_RESEND_EMAIL_2026-02-13T10-00-00+08-00.md](REPORTS/CONTACT_RESEND_EMAIL_2026-02-13T10-00-00+08-00.md)
+
+---
 
 ### 2026-02-12 - 預設文案範本系統 / SSR 全域修復
 
