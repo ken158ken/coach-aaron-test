@@ -100,6 +100,7 @@ module.exports = async function handler(req, res) {
     res
       .status(200)
       .setHeader("Content-Type", "text/html; charset=utf-8")
+      .setHeader("X-Rendered-By", "ssr")
       .setHeader(
         "Cache-Control",
         "public, s-maxage=10, stale-while-revalidate=60",
