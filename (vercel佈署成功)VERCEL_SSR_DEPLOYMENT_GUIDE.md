@@ -62,7 +62,10 @@
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     }
   ]
@@ -70,6 +73,7 @@
 ```
 
 **⚠️ 重要注意事項**:
+
 - `buildCommand` 有 **256 字元上限**，超過會直接 schema validation 失敗
 - 用 `rewrites`（modern config），**不能用** `routes`（legacy config）
 - `routes` 和 `buildCommand`/`outputDirectory` 是**互斥**的兩套系統
@@ -134,7 +138,8 @@ module.exports = async function handler(req, res) {
     html = html.replace("<!--ssr-outlet-->", appHtml);
     html = html.replace("<!--ssr-head-->", headTags);
 
-    res.status(200)
+    res
+      .status(200)
       .setHeader("Content-Type", "text/html; charset=utf-8")
       .setHeader("X-Rendered-By", "ssr")
       .end(html);
@@ -219,6 +224,7 @@ api/_ssr_template.html
 **原因**: `api/ssr.js` 用 `import()` 載入 `../frontend/dist/server/entry-server.js`，`@vercel/nft` 追蹤到 `frontend/node_modules` 把所有依賴都包進去。
 
 **解法**:
+
 1. SSR bundle 改為 **CJS 格式** + `noExternal: true`（自包含 ~5.5MB）
 2. 複製 bundle 到 `api/` 目錄，用 `require("./_ssr_bundle.cjs")`
 3. NFT 從 `api/` 目錄追蹤，不會碰到 `frontend/node_modules`
@@ -229,9 +235,11 @@ api/_ssr_template.html
 ### 坑 2：SSR 不觸發（靜態 index.html 攔截）
 
 **原因**: Vercel 路由優先順序：
+
 ```
 redirects → headers → Filesystem → rewrites
 ```
+
 `index.html` 在 `outputDirectory` 中，Filesystem 層直接返回它，`rewrites` 永遠不執行。
 
 **解法**: Build 完成後 `rm frontend/dist/client/index.html`。
@@ -253,6 +261,7 @@ redirects → headers → Filesystem → rewrites
 ### 坑 5：`routes` 和 `rewrites` 不能混用
 
 **原因**: Vercel 有兩套路由系統：
+
 - **Legacy**: `routes` 陣列 + `handle: filesystem`
 - **Modern**: `rewrites` / `redirects` / `headers`（搭配 `buildCommand` / `outputDirectory`）
 
@@ -286,14 +295,14 @@ curl -s https://coach-aaron-test.vercel.app/ | grep "meta name"
 
 ## 📊 部署指標
 
-| 指標 | 數值 |
-|---|---|
-| Build 時間 | ~34 秒 |
-| SSR Function 大小 | ~6 MB（上限 300MB） |
-| SSR Bundle (CJS) | 5,505 KB |
-| Client JS | 1,406 KB（main）+ 667 KB（three.js） |
-| Client CSS | 142 KB |
-| Build Cache | 66 MB |
+| 指標              | 數值                                 |
+| ----------------- | ------------------------------------ |
+| Build 時間        | ~34 秒                               |
+| SSR Function 大小 | ~6 MB（上限 300MB）                  |
+| SSR Bundle (CJS)  | 5,505 KB                             |
+| Client JS         | 1,406 KB（main）+ 667 KB（three.js） |
+| Client CSS        | 142 KB                               |
+| Build Cache       | 66 MB                                |
 
 ---
 

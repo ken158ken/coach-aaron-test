@@ -39,8 +39,22 @@ export const ROUTES = {
 
 // Social Links
 export const SOCIAL_LINKS = {
-  INSTAGRAM: "https://instagram.com/coach_aaron",
-  FACEBOOK: "https://facebook.com/coach.aaron",
+  INSTAGRAM: "https://www.instagram.com/coach.luen",
+  FACEBOOK: "https://www.facebook.com/populuen/",
   YOUTUBE: "https://youtube.com/@coach_aaron",
-  LINE: "https://line.me/ti/p/~coach_aaron",
+  LINE_OFFICIAL: "https://line.me/R/ti/p/@667nqldx",
+  LINE_GROUP:
+    "https://line.me/ti/g2/ppb_IYd6tOfdy9jwzkjMPOa6eJCo5rm22ObUoQ?utm_source=invitation&utm_medium=link_copy&utm_campaign=default",
+  TIKTOK: "https://www.tiktok.com/@coachluen",
+  PODCAST:
+    "https://podcasts.apple.com/tw/podcast/%E9%99%AA%E4%BD%A0%E5%81%A5%E8%BA%AB/id1551996280",
+} as const;
+
+// Coach Contact Info
+export const COACH_INFO = {
+  NAME: "阿倫教官",
+  TITLE: "威豪健身總教官｜私教變現專家",
+  EMAIL: "s330221@gmail.com",
+  LINE_ID: "@667nqldx",
+  BUSINESS_HOURS: "週一至週六 09:00 - 21:00",
 } as const;

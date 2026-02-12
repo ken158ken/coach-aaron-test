@@ -15,10 +15,12 @@ Vercel 路由優先順序為：`redirects` → `headers` → **Filesystem** → 
 由於 `index.html` 存在於 `outputDirectory`（`frontend/dist/client`）中，所有頁面請求都被 Filesystem 層攔截並直接返回靜態 `index.html`，永遠不會觸發 `rewrites` 中的 SSR 路由。
 
 **之前嘗試的修復方式**：
+
 1. ❌ `mv` index.html → `cp`（buildCommand 中順序問題）
 2. ❌ `routes` 替代 `rewrites`（與 `buildCommand`/`outputDirectory` 不相容）
 
 **本次修復方式**：
+
 - 在 `buildCommand` 末尾加入 `rm frontend/dist/client/index.html`
 - 先 `cp` index.html 到 `api/_ssr_template.html`（SSR 模板用）
 - 再 `rm` 從 outputDirectory 中刪除
@@ -35,12 +37,13 @@ Vercel 路由優先順序為：`redirects` → `headers` → **Filesystem** → 
 
 ### 1. `vercel.json` — SSR 路由修復
 
-| 欄位 | 變更內容 |
-|---|---|
+| 欄位           | 變更內容                                         |
+| -------------- | ------------------------------------------------ |
 | `buildCommand` | 末尾增加 `&& rm frontend/dist/client/index.html` |
-| 路由策略 | 從 `routes`（legacy）回退到 `rewrites`（modern） |
+| 路由策略       | 從 `routes`（legacy）回退到 `rewrites`（modern） |
 
 **路由流程**（修復後）：
+
 ```
 客戶端請求 /about
   → Filesystem: 無 index.html → 未匹配
@@ -55,12 +58,13 @@ Vercel 路由優先順序為：`redirects` → `headers` → **Filesystem** → 
 
 ### 2. SEO Meta 標籤 — 公開頁面
 
-| 頁面 | 檔案 | Title | noIndex |
-|---|---|---|---|
-| 首頁 | `Home.tsx` | 私教變現專家 \| 銷售心理學助健身教練月入8萬 | ❌ |
-| 聯絡 | `Contact.tsx` | 聯絡阿倫教官 - 免費40分鐘1對1諮詢 | ❌ |
+| 頁面 | 檔案          | Title                                       | noIndex |
+| ---- | ------------- | ------------------------------------------- | ------- |
+| 首頁 | `Home.tsx`    | 私教變現專家 \| 銷售心理學助健身教練月入8萬 | ❌      |
+| 聯絡 | `Contact.tsx` | 聯絡阿倫教官 - 免費40分鐘1對1諮詢           | ❌      |
 
 **首頁 Keywords**（16個）：
+
 ```
 阿倫教官, 私人教練變現, 銷售心理學, 健身教練續課, 教練業績提升,
 健身房銷售, 學生續約技巧, 健身教練收入, 教練培訓, NLP心理學,
@@ -70,13 +74,13 @@ Vercel 路由優先順序為：`redirects` → `headers` → **Filesystem** → 
 
 ### 3. SEO Meta 標籤 — 私密/管理頁面（noIndex）
 
-| 頁面 | 檔案 | Title | noIndex |
-|---|---|---|---|
-| 教練寫真 | `CoachPhotos.tsx` | 教練寫真相簿 \| 阿倫教官 | ✅ |
-| 登入 | `Login.tsx` | 登入 \| 阿倫教官 | ✅ |
-| 註冊 | `Register.tsx` | 註冊 \| 阿倫教官 | ✅ |
-| 會員中心 | `MemberCenter.tsx` | 會員中心 \| 阿倫教官 | ✅ |
-| 管理後台 | `Dashboard.tsx` | 管理後台 \| 阿倫教官 | ✅ |
+| 頁面     | 檔案               | Title                    | noIndex |
+| -------- | ------------------ | ------------------------ | ------- |
+| 教練寫真 | `CoachPhotos.tsx`  | 教練寫真相簿 \| 阿倫教官 | ✅      |
+| 登入     | `Login.tsx`        | 登入 \| 阿倫教官         | ✅      |
+| 註冊     | `Register.tsx`     | 註冊 \| 阿倫教官         | ✅      |
+| 會員中心 | `MemberCenter.tsx` | 會員中心 \| 阿倫教官     | ✅      |
+| 管理後台 | `Dashboard.tsx`    | 管理後台 \| 阿倫教官     | ✅      |
 
 ### 4. 已有 SEOHead 的頁面（無需修改）
 
@@ -109,6 +113,7 @@ Vercel 路由優先順序為：`redirects` → `headers` → **Filesystem** → 
 ### 為什麼不用 `routes`（legacy）？
 
 Vercel 有兩套路由系統：
+
 1. **Legacy**: `routes` 陣列（與 `handle: filesystem` 搭配）
 2. **Modern**: `rewrites`/`redirects`/`headers`（與 `buildCommand`/`outputDirectory` 搭配）
 
@@ -117,6 +122,7 @@ Vercel 有兩套路由系統：
 ### 為什麼用 `rm` 而不是 `mv`？
 
 `mv` 在之前的嘗試中可能因 build cache 導致問題。`cp` + `rm` 更明確：
+
 1. `cp` 確保 SSR 模板被複製到 `api/` 目錄
 2. `rm` 確保 `index.html` 從 outputDirectory 中被刪除
 

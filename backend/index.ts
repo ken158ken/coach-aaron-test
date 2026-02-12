@@ -20,6 +20,7 @@ import articlesRoutes from "./routes/articles.js";
 import userRoutes from "./routes/user.js";
 import searchRoutes from "./routes/search.js";
 import contentRoutes from "./routes/content.js";
+import contactRoutes from "./routes/contact.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
 import {
@@ -99,6 +100,7 @@ app.use("/api/articles", articlesRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
+app.use("/api/contact", contactRoutes);
 app.use("/api/search", searchRoutes);
 
 /**
