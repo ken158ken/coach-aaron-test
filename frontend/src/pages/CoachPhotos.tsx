@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import { useTheme, useAuth } from "@/context";
 import { Modal, Loading, PillButton } from "@/components/ui";
 import { PrismScene } from "@/components/three";
+import SEOHead from "@/components/seo/SEOHead";
 import coachPhotosManifest from "@/data/coachPhotos.json";
 
 /**
@@ -250,6 +251,11 @@ const CoachPhotos: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-black relative">
+      <SEOHead
+        title="教練寫真相簿 | 阿倫教官"
+        description="阿倫教官私密教練寫真相簿，僅限授權會員瀏覽。"
+        noIndex={true}
+      />
       {/* Three.js Background */}
       <PrismScene />
 

@@ -118,6 +118,8 @@ coach-aaron-redesign/
 │   └── *.sql              # 其他 SQL 腳本
 │
 └── REPORTS/                # 📊 報告文件
+    ├── SSR_ROUTING_AND_SEO_META_2026-02-12T23-00-00+08-00.md
+    └── ...其他報告
 ```
 
 ## 🔐 安全性設計
@@ -438,12 +440,24 @@ CORS_ORIGIN=http://localhost:5173
 
 ### Vercel 設定說明
 
-- **buildCommand**: 先建構後端，再建構前端
-- **outputDirectory**: `frontend/dist/client` (前端靜態檔案)
-- **SSR**: 透過 `api/ssr.js` 處理所有前端路由
+- **buildCommand**: 先建構後端，再建構前端，複製 SSR bundle 到 `api/`，刪除 outputDirectory 中的 `index.html`
+- **outputDirectory**: `frontend/dist/client` (前端靜態檔案，不含 index.html)
+- **SSR**: 透過 `api/ssr.js` 處理所有前端路由（`rewrites` 配置）
 - **API**: 透過 `api/server.js` 代理後端 API
 - **SSR Bundle**: CJS 格式 (`entry-server.cjs`) + `noExternal: true` 完全自包含，不依賴 node_modules
 - **NFT 阻斷**: 透過 `.nftignore` + `require()` 阻止 @vercel/nft 追蹤不必要的依賴
+- **路由優先順序**: 刪除 `index.html` 讓 Filesystem 層不攔截頁面請求，改由 `rewrites` 導向 SSR
+
+### SEO 配置 (2026-02-12 新增)
+
+所有頁面均已配置 `SEOHead` 組件（基於 `react-helmet-async`）：
+
+| 類型 | 頁面 | SEO 行為 |
+|---|---|---|
+| 公開頁面 | 首頁、聯絡、課程、文章、影片 | 完整 SEO meta（title, description, keywords, OG） |
+| 私密頁面 | 登入、註冊、會員中心、管理後台、教練寫真 | `noIndex` 防止搜尋引擎索引 |
+
+核心 SEO 關鍵字：`私人教練銷售`、`健身教練銷售`、`皮拉提斯銷售`、`阿倫教官`、`私人教練變現`、`銷售心理學`
 
 ## 📝 開發腳本
 

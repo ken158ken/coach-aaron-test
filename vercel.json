@@ -1,6 +1,10 @@
 {
-  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build && cd .. && cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs && cp frontend/dist/client/index.html api/_ssr_template.html",
+  "buildCommand": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build && cd .. && cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs && cp frontend/dist/client/index.html api/_ssr_template.html && rm frontend/dist/client/index.html",
   "outputDirectory": "frontend/dist/client",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/server" },
+    { "source": "/(.*)", "destination": "/api/ssr" }
+  ],
   "functions": {
     "api/server.js": {
       "maxDuration": 10,
@@ -11,24 +15,28 @@
       "includeFiles": "api/_ssr_template.html"
     }
   },
-  "routes": [
+  "headers": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/server"
+      "source": "/coach-photos/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
     },
     {
-      "src": "^/(assets|coach-photos)/(.*)",
-      "headers": {
-        "Cache-Control": "public, max-age=31536000, immutable"
-      },
-      "continue": true
-    },
-    {
-      "src": "^/(?!_next|assets/|coach-photos/|images/|public/|favicon\\.svg$|favicon\\.ico$|robots\\.txt$|manifest\\.json$|sitemap\\.xml$).*",
-      "dest": "/api/ssr"
-    },
-    {
-      "handle": "filesystem"
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }

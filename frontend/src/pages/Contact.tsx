@@ -9,6 +9,7 @@ import { useTheme } from "@/context";
 import { Input, Textarea, PillButton, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
 import { SOCIAL_LINKS } from "@/constants";
+import SEOHead from "@/components/seo/SEOHead";
 
 /**
  * Contact - 聯絡頁面
@@ -65,6 +66,14 @@ const Contact: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-bg relative">
+      {/* SEO Meta 標籤 */}
+      <SEOHead
+        title="聯絡阿倫教官 - 免費40分鐘1對1諮詢"
+        description="想提升教練業績？立即預約免費諮詢，讓阿倫教官幫你找出突破關鍵。已協助130+教練月收穩定8萬以上。"
+        keywords={["聯絡阿倫教官", "教練諮詢", "免費諮詢", "私人教練培訓"]}
+        url="/contact"
+      />
+
       {/* Three.js Background */}
       <PrismScene />
 

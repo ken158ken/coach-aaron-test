@@ -9,6 +9,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton, Input, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
+import SEOHead from "@/components/seo/SEOHead";
 
 /**
  * MemberCenter - 會員中心頁面
@@ -48,6 +49,7 @@ const MemberCenter: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-bg relative">
+      <SEOHead title="會員中心 | 阿倫教官" noIndex={true} />
       {/* Three.js Background */}
       <PrismScene />
 

@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
+import SEOHead from "@/components/seo/SEOHead";
 
 /**
  * Register - 註冊頁面
@@ -78,6 +79,7 @@ const Register: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-8 sm:py-12 relative">
+      <SEOHead title="註冊 | 阿倫教官" noIndex={true} />
       {/* Three.js Background */}
       <PrismScene />
 

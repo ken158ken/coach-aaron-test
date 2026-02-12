@@ -9,6 +9,7 @@ import { Navigate, Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton } from "@/components/ui";
 import { PrismScene } from "@/components/three";
+import SEOHead from "@/components/seo/SEOHead";
 
 /**
  * Dashboard - 用戶儀表板頁面
@@ -57,6 +58,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-luxe-bg relative">
+      <SEOHead title="管理後台 | 阿倫教官" noIndex={true} />
       {/* Three.js Background */}
       <PrismScene />
 
