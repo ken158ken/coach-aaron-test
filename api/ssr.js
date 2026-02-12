@@ -7,9 +7,11 @@
  *   在 Vercel 部署時：
  *   - __dirname = /var/task/api
  *   - process.cwd() = /var/task
- *   - includeFiles 將 frontend/dist/server/** 和 frontend/dist/client/index.html
- *     複製到 /var/task/frontend/dist/server/** 和 /var/task/frontend/dist/client/index.html
+ *   - includeFiles 將 entry-server.cjs 和 index.html 複製到函數可存取的路徑
  *   - outputDirectory (frontend/dist/client) 的內容會作為靜態檔案供 CDN 分發
+ *
+ *   SSR bundle 使用 CJS 格式 + noExternal:true，所有依賴已內嵌到 entry-server.cjs，
+ *   無需 node_modules，透過 require() 載入以阻斷 @vercel/nft 追蹤。
  */
 
 const fs = require("node:fs");
@@ -59,20 +61,69 @@ function listDir(dir, depth = 2) {
   return result;
 }
 
+// ===== 預先用 runtime 拼接路徑載入 SSR module =====
+// 使用字串拼接阻斷 @vercel/nft 的靜態分析追蹤
+// entry-server.cjs 已是完全自包含的 bundle (noExternal: true)，不需要 node_modules
+let _serverModule = null;
+let _loadError = null;
+
+/**
+ * 載入 SSR entry module（惰性載入，僅執行一次）
+ *
+ * @returns {{ render: Function }} SSR module
+ */
+function loadServerModule() {
+  if (_serverModule) return _serverModule;
+  if (_loadError) throw _loadError;
+
+  const projectRoot = process.cwd();
+  const candidates = [
+    path.resolve(projectRoot, "frontend", "dist", "server", "entry-server.cjs"),
+    path.resolve(
+      __dirname,
+      "..",
+      "frontend",
+      "dist",
+      "server",
+      "entry-server.cjs",
+    ),
+  ];
+
+  const modulePath = findFile(candidates, "entry-server.cjs");
+  if (!modulePath) {
+    _loadError = new Error("Cannot find entry-server.cjs SSR module");
+    console.error("📋 Project root contents:", listDir(projectRoot));
+    console.error(
+      "📋 Server dist dir:",
+      listDir(path.resolve(projectRoot, "frontend/dist/server")),
+    );
+    throw _loadError;
+  }
+
+  try {
+    // 使用運行時拼接的變數路徑呼叫 require()
+    // @vercel/nft 無法靜態分析此路徑，不會追蹤 entry-server.cjs 的依賴
+    const resolvedPath = path["resolve"](modulePath);
+    _serverModule = require(resolvedPath);
+    console.log(`✅ Loaded entry-server.cjs from: ${resolvedPath}`);
+    return _serverModule;
+  } catch (err) {
+    _loadError = err;
+    console.error(`❌ Failed to load entry-server.cjs:`, err.message);
+    throw err;
+  }
+}
+
 module.exports = async function handler(req, res) {
   const url = req.url;
 
   try {
     console.log(`📥 SSR Request: ${url}`);
-    console.log(`📂 CWD: ${process.cwd()}`);
-    console.log(`📂 __dirname: ${__dirname}`);
 
     // 專案根目錄 (Vercel: /var/task)
     const projectRoot = process.cwd();
 
     // ===== 1. 尋找 HTML 模板 =====
-    // index.html 由 Vite client build 產生在 frontend/dist/client/index.html
-    // 透過 includeFiles 複製到 serverless 函數可存取的路徑
     const templateCandidates = [
       path.resolve(projectRoot, "frontend/dist/client/index.html"),
       path.resolve(__dirname, "../frontend/dist/client/index.html"),
@@ -90,46 +141,20 @@ module.exports = async function handler(req, res) {
       throw new Error("Cannot find index.html template");
     }
 
-    // ===== 2. 尋找 SSR entry module =====
-    // entry-server.js 由 Vite SSR build 產生在 frontend/dist/server/
-    const serverModuleCandidates = [
-      path.resolve(projectRoot, "frontend/dist/server/entry-server.js"),
-      path.resolve(__dirname, "../frontend/dist/server/entry-server.js"),
-    ];
-
-    const serverModulePath = findFile(
-      serverModuleCandidates,
-      "entry-server.js",
-    );
-    if (!serverModulePath) {
-      console.error("📋 Project root contents:", listDir(projectRoot));
-      console.error(
-        "📋 Server dist dir:",
-        listDir(path.resolve(projectRoot, "frontend/dist/server")),
-      );
-      throw new Error("Cannot find entry-server.js SSR module");
-    }
-
-    // ===== 3. 讀取 HTML 模板 =====
+    // ===== 2. 讀取 HTML 模板 =====
     const template = fs.readFileSync(templatePath, "utf-8");
 
-    // ===== 4. 載入 SSR render 函數 =====
-    console.log("📦 Loading entry-server module...");
-    // 使用運行時拼接路徑，防止 @vercel/nft 追蹤 entry-server.js 內部的依賴
-    // entry-server.js 已是完全打包的 bundle (noExternal: true)，不需要 node_modules
-    const moduleUrl = ["file://", serverModulePath.replace(/\\/g, "/")].join(
-      "",
-    );
-    const serverModule = await import(/* @vite-ignore */ moduleUrl);
-    const { render } = serverModule;
+    // ===== 3. 載入 SSR render 函數 =====
+    const serverModule = loadServerModule();
+    const render = serverModule.render || serverModule.default?.render;
 
     if (!render || typeof render !== "function") {
       throw new Error(
-        `entry-server.js does not export a 'render' function. Exports: ${Object.keys(serverModule).join(", ")}`,
+        `entry-server.cjs does not export a 'render' function. Exports: ${Object.keys(serverModule).join(", ")}`,
       );
     }
 
-    // ===== 5. 渲染 HTML =====
+    // ===== 4. 渲染 HTML =====
     console.log("🎨 Rendering HTML...");
     let appHtml = "";
     let headTags = "";
@@ -142,30 +167,24 @@ module.exports = async function handler(req, res) {
       console.error("❌ React render error:", renderError.message);
       console.error("Stack:", renderError.stack);
       console.error("Falling back to CSR...");
-      // 渲染失敗，appHtml 保持空字串讓客戶端渲染接管
     }
 
-    // ===== 6. 注入 head 標籤和 body 內容 =====
+    // ===== 5. 注入 head 標籤和 body 內容 =====
     let html = template;
 
-    // 替換 SSR outlet (支援 client build 後的 HTML)
     if (html.includes("<!--ssr-outlet-->")) {
       html = html.replace("<!--ssr-outlet-->", appHtml);
     } else {
-      // client build 後 index.html 中的 <div id="root"></div> 可能沒有 ssr-outlet
-      // 直接在 <div id="root"> 後面注入
       html = html.replace(
         '<div id="root"></div>',
         `<div id="root">${appHtml}</div>`,
       );
     }
 
-    // 替換 SSR head
     if (html.includes("<!--ssr-head-->")) {
       html = html.replace("<!--ssr-head-->", headTags);
     }
 
-    // 將開發時的 entry-client 腳本路徑移除（已由 Vite client build 處理）
     html = html.replace(
       '<script type="module" src="/src/entry-client.tsx"></script>',
       "",
@@ -184,8 +203,6 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     console.error("❌ SSR Error:", e.message);
     console.error("Stack:", e.stack);
-    console.error("__dirname:", __dirname);
-    console.error("process.cwd():", process.cwd());
 
     // SSR 失敗時嘗試返回純靜態 HTML (CSR fallback)
     try {
@@ -205,7 +222,6 @@ module.exports = async function handler(req, res) {
       }
 
       if (fallbackTemplate) {
-        // 移除開發腳本引用
         fallbackTemplate = fallbackTemplate.replace(
           '<script type="module" src="/src/entry-client.tsx"></script>',
           "",

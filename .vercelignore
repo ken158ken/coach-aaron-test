@@ -38,6 +38,13 @@ scripts/
 
 # 前端開發用檔案（構建後不需要）
 frontend/public/*.md
+frontend/src/
+frontend/server.js
+frontend/tsconfig.json
+frontend/tsconfig.node.json
+frontend/postcss.config.js
+frontend/tailwind.config.ts
+frontend/vite.config.ts
 
 # 編輯器配置
 .vscode/

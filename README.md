@@ -94,7 +94,7 @@ coach-aaron-redesign/
 │   ├── public/            # 靜態資源
 │   └── dist/              # 編譯輸出
 │       ├── client/        # 客戶端 bundle
-│       └── server/        # SSR bundle
+│       └── server/        # SSR bundle (CJS 格式, 自包含)
 │
 ├── backend/                # ⚙️ 後端 API
 │   ├── package.json       # 後端依賴
@@ -442,6 +442,8 @@ CORS_ORIGIN=http://localhost:5173
 - **outputDirectory**: `frontend/dist/client` (前端靜態檔案)
 - **SSR**: 透過 `api/ssr.js` 處理所有前端路由
 - **API**: 透過 `api/server.js` 代理後端 API
+- **SSR Bundle**: CJS 格式 (`entry-server.cjs`) + `noExternal: true` 完全自包含，不依賴 node_modules
+- **NFT 阻斷**: 透過 `.nftignore` + `require()` 阻止 @vercel/nft 追蹤不必要的依賴
 
 ## 📝 開發腳本
 

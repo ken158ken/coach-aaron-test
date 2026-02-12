@@ -24,8 +24,10 @@ export default defineConfig(({ command, isSsrBuild }) => {
           rollupOptions: {
             input: path.resolve(__dirname, "src/entry-server.tsx"),
             output: {
-              format: "esm",
-              entryFileNames: "[name].js",
+              // 使用 CJS 格式，讓 api/ssr.js 用 require() 載入
+              // 避免 ESM dynamic import() 被 @vercel/nft 追蹤依賴
+              format: "cjs",
+              entryFileNames: "[name].cjs",
               // 所有動態 import 內聯到單一檔案，避免 chunk 依賴追蹤
               inlineDynamicImports: true,
             },

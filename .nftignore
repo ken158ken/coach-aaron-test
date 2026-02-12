@@ -1,0 +1,18 @@
+# @vercel/nft ignore - 阻止 Node File Trace 追蹤不需要的依賴
+# entry-server.cjs 已是完全自包含的 bundle (noExternal: true)
+# 不需要任何 node_modules
+
+# 前端 node_modules（SSR bundle 已自包含所有依賴）
+frontend/node_modules/**
+
+# 前端原始碼（僅需 build 產物）
+frontend/src/**
+
+# 資料庫相關
+database/**
+
+# 報告與文件
+REPORTS/**
+
+# 腳本
+scripts/**

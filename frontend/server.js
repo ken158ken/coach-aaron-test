@@ -45,12 +45,13 @@ async function createServer() {
         template = await vite.transformIndexHtml(url, template);
         render = (await vite.ssrLoadModule("/src/entry-server.tsx")).render;
       } else {
-        // Prod: use built assets
+        // Prod: use built assets (CJS format for Vercel compatibility)
         template = fs.readFileSync(
           path.resolve(__dirname, "dist/client/index.html"),
           "utf-8",
         );
-        render = (await import("./dist/server/entry-server.js")).render;
+        const serverModule = await import("./dist/server/entry-server.cjs");
+        render = serverModule.render || serverModule.default?.render;
       }
 
       const { html: appHtml, head } = render(url);
