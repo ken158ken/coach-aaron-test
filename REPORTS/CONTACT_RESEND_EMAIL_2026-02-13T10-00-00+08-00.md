@@ -32,12 +32,12 @@ Content-Type: application/json
 
 #### 速率限制
 
-| 設定 | 值 |
-| --- | --- |
-| 時間窗口 | 15 分鐘 |
-| 每 IP 最大請求數 | 5 |
-| 超限回應 | 429 Too Many Requests |
-| 訊息 | "您已送出太多次聯繫表單，請稍後再試" |
+| 設定             | 值                                   |
+| ---------------- | ------------------------------------ |
+| 時間窗口         | 15 分鐘                              |
+| 每 IP 最大請求數 | 5                                    |
+| 超限回應         | 429 Too Many Requests                |
+| 訊息             | "您已送出太多次聯繫表單，請稍後再試" |
 
 #### 輸入消毒 (`sanitizeInput`)
 
@@ -51,13 +51,13 @@ Content-Type: application/json
 
 #### 欄位驗證規則
 
-| 欄位 | 類型 | 長度限制 | 格式驗證 |
-| --- | --- | --- | --- |
-| `name` | 必填 | 2-100 字元 | — |
-| `email` | 必填 | ≤200 字元 | RFC 5322 正則 |
-| `phone` | 選填 | ≤20 字元 | 僅數字、+、-、()、空格 |
-| `subject` | 必填 | 2-200 字元 | — |
-| `message` | 必填 | 10-5000 字元 | — |
+| 欄位      | 類型 | 長度限制     | 格式驗證               |
+| --------- | ---- | ------------ | ---------------------- |
+| `name`    | 必填 | 2-100 字元   | —                      |
+| `email`   | 必填 | ≤200 字元    | RFC 5322 正則          |
+| `phone`   | 選填 | ≤20 字元     | 僅數字、+、-、()、空格 |
+| `subject` | 必填 | 2-200 字元   | —                      |
+| `message` | 必填 | 10-5000 字元 | —                      |
 
 #### Resend API 整合
 
@@ -80,10 +80,10 @@ Authorization: Bearer ${RESEND_API_KEY}
 
 #### 環境變數
 
-| 變數 | 用途 | 必填 |
-| --- | --- | --- |
-| `RESEND_API_KEY` | Resend API Key | ✅ |
-| `COACH_EMAIL` | 教練收件信箱 | ⚡ (預設 s330221@gmail.com) |
+| 變數             | 用途           | 必填                        |
+| ---------------- | -------------- | --------------------------- |
+| `RESEND_API_KEY` | Resend API Key | ✅                          |
+| `COACH_EMAIL`    | 教練收件信箱   | ⚡ (預設 s330221@gmail.com) |
 
 ---
 
@@ -103,14 +103,14 @@ export const COACH_INFO = {
 
 #### 更新 `SOCIAL_LINKS`
 
-| 平台 | 連結 |
-| --- | --- |
-| Instagram | https://www.instagram.com/coach.luen/ |
-| Facebook | https://www.facebook.com/Coach.Luen |
-| LINE Official | https://line.me/R/ti/p/@667nqldx |
-| LINE Group | https://line.me/ti/g2/... |
-| TikTok | https://www.tiktok.com/@coachluen |
-| Podcast | https://podcasts.apple.com/tw/podcast/... |
+| 平台          | 連結                                      |
+| ------------- | ----------------------------------------- |
+| Instagram     | https://www.instagram.com/coach.luen/     |
+| Facebook      | https://www.facebook.com/Coach.Luen       |
+| LINE Official | https://line.me/R/ti/p/@667nqldx          |
+| LINE Group    | https://line.me/ti/g2/...                 |
+| TikTok        | https://www.tiktok.com/@coachluen         |
+| Podcast       | https://podcasts.apple.com/tw/podcast/... |
 
 ---
 
@@ -126,13 +126,13 @@ export const COACH_INFO = {
 
 #### 表單驗證（前端）
 
-| 欄位 | 驗證規則 |
-| --- | --- |
-| 姓名 | 2-50 字元，必填 |
-| Email | 正則驗證格式，必填 |
-| 電話 | 台灣手機/市話格式，選填 |
-| 主題 | 2-100 字元，必填 |
-| 訊息 | 10-2000 字元，必填 |
+| 欄位  | 驗證規則                |
+| ----- | ----------------------- |
+| 姓名  | 2-50 字元，必填         |
+| Email | 正則驗證格式，必填      |
+| 電話  | 台灣手機/市話格式，選填 |
+| 主題  | 2-100 字元，必填        |
+| 訊息  | 10-2000 字元，必填      |
 
 #### 表單狀態管理
 
@@ -166,24 +166,24 @@ app.use("/api/contact", contactRoutes);
 
 ### 防護的攻擊類型
 
-| 攻擊類型 | 防護措施 |
-| --- | --- |
-| XSS | HTML 標籤移除、`javascript:` 協議阻擋 |
-| HTML 注入 | 所有 `<tag>` 移除 |
-| Email Header 注入 | Email 格式正則驗證 |
-| 速率攻擊 (DoS) | 每 IP 每 15 分鐘 5 次限制 |
-| 超長輸入 | 每欄位長度截斷 |
+| 攻擊類型          | 防護措施                              |
+| ----------------- | ------------------------------------- |
+| XSS               | HTML 標籤移除、`javascript:` 協議阻擋 |
+| HTML 注入         | 所有 `<tag>` 移除                     |
+| Email Header 注入 | Email 格式正則驗證                    |
+| 速率攻擊 (DoS)    | 每 IP 每 15 分鐘 5 次限制             |
+| 超長輸入          | 每欄位長度截斷                        |
 
 ---
 
 ## 📁 檔案變更清單
 
-| 操作 | 檔案 | 說明 |
-| --- | --- | --- |
-| ✅ 新增 | `backend/routes/contact.ts` | Resend 寄信路由 + 速率限制 + 消毒 |
-| ✏️ 修改 | `backend/index.ts` | 新增 contactRoutes 匯入與註冊 |
-| ✏️ 修改 | `frontend/src/constants/app.ts` | SOCIAL_LINKS 更新 + COACH_INFO 新增 |
-| ✏️ 修改 | `frontend/src/pages/Contact.tsx` | 完全重寫：教練資訊 + 社群 + 表單 |
+| 操作    | 檔案                             | 說明                                |
+| ------- | -------------------------------- | ----------------------------------- |
+| ✅ 新增 | `backend/routes/contact.ts`      | Resend 寄信路由 + 速率限制 + 消毒   |
+| ✏️ 修改 | `backend/index.ts`               | 新增 contactRoutes 匯入與註冊       |
+| ✏️ 修改 | `frontend/src/constants/app.ts`  | SOCIAL_LINKS 更新 + COACH_INFO 新增 |
+| ✏️ 修改 | `frontend/src/pages/Contact.tsx` | 完全重寫：教練資訊 + 社群 + 表單    |
 
 ---
 

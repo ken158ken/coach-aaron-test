@@ -42,7 +42,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6">
       {/* Backdrop with enhanced blur */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -50,7 +50,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       />
 
       {/* Dialog */}
-      <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-4 sm:p-6 max-w-md w-full mx-3 sm:mx-4 shadow-2xl my-auto">
         <h3 className="text-lg font-medium text-luxe-text mb-2">{title}</h3>
         <p className="text-luxe-muted mb-6">{message}</p>
 

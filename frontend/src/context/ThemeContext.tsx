@@ -58,29 +58,30 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   defaultTheme = "luxe",
 }) => {
-  const [theme, setThemeState] = useState<ThemeType>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "abyss" || saved === "prism" || saved === "luxe") {
-        return saved;
-      }
-    }
-    return defaultTheme;
-  });
+  // ✅ SSR-safe：初始值使用固定預設，避免 server/client 不一致
+  const [theme, setThemeState] = useState<ThemeType>(defaultTheme);
+  const [colorMode, setColorModeState] = useState<ColorMode>("dark");
 
-  const [colorMode, setColorModeState] = useState<ColorMode>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(COLOR_MODE_KEY);
-      if (saved === "light" || saved === "dark") {
-        return saved;
-      }
-      // 檢查系統偏好
-      if (window.matchMedia("(prefers-color-scheme: light)").matches) {
-        return "light";
-      }
+  // ✅ 在 hydration 完成後才從 localStorage 讀取使用者偏好
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (
+      savedTheme === "abyss" ||
+      savedTheme === "prism" ||
+      savedTheme === "luxe"
+    ) {
+      setThemeState(savedTheme);
     }
-    return "dark";
-  });
+
+    const savedMode = localStorage.getItem(COLOR_MODE_KEY);
+    if (savedMode === "light" || savedMode === "dark") {
+      setColorModeState(savedMode);
+    } else if (
+      window.matchMedia("(prefers-color-scheme: light)").matches
+    ) {
+      setColorModeState("light");
+    }
+  }, []);
 
   /**
    * 設置視覺主題

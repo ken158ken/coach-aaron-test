@@ -87,7 +87,7 @@ const Modal: React.FC<ModalProps> = ({
   const styles = themes[theme];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 px-3 sm:p-4">
       {/* Backdrop with enhanced blur */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -99,6 +99,7 @@ const Modal: React.FC<ModalProps> = ({
         className={`
           relative
           w-full
+          my-auto
           ${sizes[size]}
           border
           rounded-xl
@@ -111,9 +112,9 @@ const Modal: React.FC<ModalProps> = ({
         {/* Header */}
         {title && (
           <div
-            className={`flex items-center justify-between px-6 py-4 border-b ${styles.title}`}
+            className={`flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b ${styles.title}`}
           >
-            <h2 className="text-lg font-medium">{title}</h2>
+            <h2 className="text-base sm:text-lg font-medium">{title}</h2>
             <button
               onClick={onClose}
               className={`p-1 transition-colors ${styles.close}`}
@@ -136,7 +137,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content */}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 max-h-[70vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

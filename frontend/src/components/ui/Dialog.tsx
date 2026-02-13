@@ -18,13 +18,13 @@ import { createPortal } from "react-dom";
 // ============ 共用樣式 ============
 
 const overlayClasses =
-  "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm modal-overlay-enter";
+  "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm modal-overlay-enter";
 const modalClasses =
-  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden modal-content-enter";
-const headerClasses = "px-6 py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
-const contentClasses = "px-6 py-4";
+  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden modal-content-enter my-auto";
+const headerClasses = "px-4 sm:px-6 py-3 sm:py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
+const contentClasses = "px-4 sm:px-6 py-3 sm:py-4 max-h-[70vh] overflow-y-auto";
 const footerClasses =
-  "px-6 py-4 border-t border-luxe-gold/20 flex justify-end gap-3";
+  "px-4 sm:px-6 py-3 sm:py-4 border-t border-luxe-gold/20 flex flex-wrap justify-end gap-2 sm:gap-3";
 
 // ============ 基礎 Modal ============
 
@@ -89,7 +89,7 @@ export const Modal: React.FC<ModalProps> = ({
     lg: "max-w-lg",
     xl: "max-w-xl",
     "2xl": "max-w-[900px]",
-    full: "max-w-[1440px]",
+    full: "max-w-[95vw] sm:max-w-[1440px]",
   };
 
   return createPortal(

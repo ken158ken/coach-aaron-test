@@ -320,16 +320,16 @@ interface LanguageProviderProps {
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({
   children,
 }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    // 從 localStorage 讀取
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "en" || saved === "zh-TW") {
-        return saved;
-      }
+  // ✅ SSR-safe：初始值使用固定預設，避免 server/client 不一致
+  const [language, setLanguageState] = useState<Language>("zh-TW");
+
+  // ✅ hydration 完成後才從 localStorage 讀取使用者偏好
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "en" || saved === "zh-TW") {
+      setLanguageState(saved);
     }
-    return "zh-TW";
-  });
+  }, []);
 
   /**
    * 設置語言

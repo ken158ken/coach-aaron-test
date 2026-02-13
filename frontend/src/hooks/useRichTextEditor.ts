@@ -32,7 +32,11 @@ import Focus from "@tiptap/extension-focus";
 import FontFamily from "@tiptap/extension-font-family";
 import { BubbleMenu } from "@tiptap/extension-bubble-menu";
 import { FloatingMenu } from "@tiptap/extension-floating-menu";
-import { ResizableImage, ResizableYoutube } from "@/components/editor";
+import {
+  ResizableImage,
+  ResizableYoutube,
+  ImageGallery,
+} from "@/components/editor";
 
 // 初始化 lowlight 語法高亮
 const lowlight = createLowlight(common);
@@ -174,6 +178,7 @@ export const useRichTextEditor = ({
       FloatingMenu,
       // 媒體
       ResizableImage,
+      ImageGallery,
       Link.configure({
         openOnClick: false,
       }),

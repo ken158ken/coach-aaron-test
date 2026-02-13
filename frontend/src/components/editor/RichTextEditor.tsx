@@ -15,6 +15,7 @@ interface RichTextEditorProps {
   onInsertImage?: () => void;
   onInsertYoutube?: () => void;
   onInsertLink?: () => void;
+  onInsertImageGallery?: () => void;
 }
 
 /**
@@ -26,6 +27,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onInsertImage,
   onInsertYoutube,
   onInsertLink,
+  onInsertImageGallery,
 }) => {
   if (!editor) {
     return null;
@@ -438,6 +440,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
             >
               🖼️
+            </button>
+          </Tooltip>
+        )}
+        {onInsertImageGallery && (
+          <Tooltip label="插入圖片庫（最多3張一排）">
+            <button
+              type="button"
+              onClick={onInsertImageGallery}
+              className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 ${editor.isActive("imageGallery") ? "bg-luxe-gold text-black" : ""}`}
+            >
+              🏞️
             </button>
           </Tooltip>
         )}

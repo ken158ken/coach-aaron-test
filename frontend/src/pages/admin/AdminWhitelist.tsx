@@ -244,12 +244,12 @@ const AdminWhitelist: React.FC = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-md"
             onClick={() => setShowAddModal(false)}
           />
-          <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-4 sm:p-6 max-w-md w-full mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto">
             <h3 className="text-lg font-medium text-luxe-text mb-4">
               新增白名單
             </h3>

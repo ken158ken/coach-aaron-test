@@ -914,8 +914,8 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 
       {/* 圖片新增 Modal */}
       {showImageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 my-auto">
             <h3 className="text-lg font-medium mb-4">新增 Cloudinary 圖片</h3>
             <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <p className="text-sm text-amber-400">
@@ -956,8 +956,8 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 
       {/* 影片新增 Modal */}
       {showVideoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 my-auto">
             <h3 className="text-lg font-medium mb-4">新增 YouTube 影片</h3>
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-sm text-red-400">⚠️ 只支援 YouTube 影片！</p>

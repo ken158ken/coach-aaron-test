@@ -366,6 +366,12 @@ const ArticleEditor: React.FC = () => {
     }
   }, [editor, dialog]);
 
+  /** 插入圖片庫（最多三張一排） */
+  const handleInsertImageGallery = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().setImageGallery([]).run();
+  }, [editor]);
+
   /** 插入 YouTube（強制 YouTube 驗證 + 即時預覽） */
   const handleInsertYoutube = useCallback(async () => {
     const url = await dialog.prompt({
@@ -729,6 +735,7 @@ const ArticleEditor: React.FC = () => {
             <RichTextEditor
               editor={editor}
               onInsertImage={handleInsertImage}
+              onInsertImageGallery={handleInsertImageGallery}
               onInsertYoutube={handleInsertYoutube}
               onInsertLink={handleInsertLink}
             />
@@ -956,8 +963,8 @@ const ArticleEditor: React.FC = () => {
 
       {/* 分類管理 Modal */}
       {showCategoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium">管理分類</h3>
               <button
@@ -1019,8 +1026,8 @@ const ArticleEditor: React.FC = () => {
 
       {/* 使用說明 Modal */}
       {showHelpModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-2xl mx-3 sm:mx-4 max-h-[85vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-medium text-luxe-gold">
                 📝 文章編輯器使用說明
@@ -1061,7 +1068,7 @@ const ArticleEditor: React.FC = () => {
                 <h4 className="text-luxe-gold font-medium mb-2">
                   🔧 工具列按鈕說明
                 </h4>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-luxe-surface rounded-lg">
                     <p className="font-medium">B I U</p>
                     <p className="text-gray-400 text-xs">

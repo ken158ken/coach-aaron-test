@@ -107,7 +107,7 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
             </div>
 
             {/* Title */}
-            <h1 className="text-4xl font-light text-luxe-text mb-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-light text-luxe-text mb-4 sm:mb-6">
               {article.title || "未輸入標題"}
             </h1>
 
@@ -126,7 +126,7 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
           </div>
 
           {/* Article Content */}
-          <div className="px-6 py-12">
+          <div className="px-4 sm:px-6 py-6 sm:py-12">
             <div className="max-w-3xl mx-auto">
               {/* Thumbnail */}
               {article.coverImage && (
@@ -181,17 +181,17 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
               <span className="text-amber-400 ml-2">⚠️ 請輸入內容</span>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-2.5 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
             >
               繼續編輯
             </button>
             <button
               onClick={onConfirm}
               disabled={isSubmitting || !article.title || !article.content}
-              className="px-6 py-2.5 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? "發布中..." : "確認發布"}
             </button>

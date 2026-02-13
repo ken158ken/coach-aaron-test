@@ -32,6 +32,18 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
   >("enter");
   const prevPathRef = useRef(location.pathname);
 
+  // ✅ SSR-safe：初始值 false，hydration 完成後才讀取實際偏好
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) =>
+      setPrefersReducedMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   useEffect(() => {
     // 首次渲染：直接 enter
     if (prevPathRef.current === location.pathname) return;
@@ -49,17 +61,10 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     return () => clearTimeout(exitTimer);
   }, [location.pathname, children]);
 
-  // 尊重使用者動畫偏好
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  if (prefersReducedMotion) {
-    return <>{children}</>;
-  }
-
-  const animationClass =
-    transitionStage === "enter"
+  // 尊重使用者動畫偏好（server/client 都先渲染 wrapper div，避免 hydration mismatch）
+  const animationClass = prefersReducedMotion
+    ? ""
+    : transitionStage === "enter"
       ? "page-transition-enter"
       : transitionStage === "exit"
         ? "page-transition-exit"
