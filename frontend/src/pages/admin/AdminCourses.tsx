@@ -390,10 +390,14 @@ const AdminCourses: React.FC = () => {
   return (
     <div>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-light text-luxe-text">課程管理</h1>
-          <p className="text-luxe-muted">管理所有單堂課程</p>
+          <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
+            課程管理
+          </h1>
+          <p className="text-sm sm:text-base text-luxe-muted">
+            管理所有單堂課程
+          </p>
         </div>
         <div className="flex gap-3">
           <PillButton
@@ -417,7 +421,7 @@ const AdminCourses: React.FC = () => {
       </div>
 
       {/* Search + View Toggle */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
           placeholder="搜尋課程..."
           value={searchTerm}
@@ -566,8 +570,8 @@ const AdminCourses: React.FC = () => {
                         <span>{course.lessonsCount || 0} 堂</span>
                       </div>
 
-                      {/* 操作按鈕 */}
-                      <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* 操作按鈕（觸控裝置始終顯示，桌面 hover 顯示） */}
+                      <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() =>
                             navigate(`/admin/courses/${course.course_id}/edit`)

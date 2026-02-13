@@ -322,15 +322,19 @@ const AdminContent: React.FC = () => {
   return (
     <div>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-light text-luxe-text">內容管理</h1>
-          <p className="text-luxe-muted">管理網站文案內容與首頁彈窗</p>
+          <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
+            內容管理
+          </h1>
+          <p className="text-sm sm:text-base text-luxe-muted">
+            管理網站文案內容與首頁彈窗
+          </p>
         </div>
       </div>
 
       {/* Tab 切換 */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setActiveTab("content")}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${

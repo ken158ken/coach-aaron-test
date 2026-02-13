@@ -21,7 +21,7 @@ interface NavLink {
  * @returns {JSX.Element} 導航列元件
  */
 const Navbar: React.FC = (): JSX.Element => {
-  const { user, logout, mounted } = useAuth();
+  const { user, logout, mounted, isAdmin } = useAuth();
   const { isDark, toggleColorMode } = useTheme();
   const { language, toggleLanguage, t } = useLanguage();
   const navRef = useRef<HTMLDivElement>(null);
@@ -70,6 +70,7 @@ const Navbar: React.FC = (): JSX.Element => {
   ];
 
   // 根據用戶權限決定導航連結
+  // 根據用戶權限決定導航連結（sex 權限由後端控制）
   const navLinks: NavLink[] =
     mounted && user?.sex
       ? [
@@ -139,7 +140,7 @@ const Navbar: React.FC = (): JSX.Element => {
                 {t.nav.memberCenter}
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-luxe-gold transition-all duration-300 w-0 group-hover:w-full" />
               </Link>
-              {user.isAdmin && (
+              {isAdmin && (
                 <Link
                   to="/admin"
                   className="text-sm 2xl:text-base tracking-wide 2xl:tracking-wider text-luxe-gold hover:scale-105 transition-transform duration-300"
@@ -371,7 +372,7 @@ const Navbar: React.FC = (): JSX.Element => {
                   >
                     {t.nav.memberCenter}
                   </Link>
-                  {user.isAdmin && (
+                  {isAdmin && (
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}

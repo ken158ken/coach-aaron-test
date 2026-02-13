@@ -412,7 +412,7 @@ const AdminVideos: React.FC = () => {
                   <span className="text-[10px] text-luxe-muted">
                     {video.type}
                   </span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -453,10 +453,14 @@ const AdminVideos: React.FC = () => {
   return (
     <div>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-light text-luxe-text">影片管理</h1>
-          <p className="text-luxe-muted">拖曳調整影片在前台的顯示順序</p>
+          <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
+            影片管理
+          </h1>
+          <p className="text-sm sm:text-base text-luxe-muted">
+            拖曳調整影片在前台的顯示順序
+          </p>
         </div>
 
         {/* 儲存排序按鈕 */}
@@ -474,7 +478,7 @@ const AdminVideos: React.FC = () => {
       </div>
 
       {/* 搜尋 + 檢視切換 */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
           placeholder="搜尋影片..."
           value={searchTerm}

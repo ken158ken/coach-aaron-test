@@ -1,6 +1,10 @@
 /**
  * AdminSidebar 元件 - 管理後台側邊欄
  * @module components/admin/AdminSidebar
+ *
+ * @description
+ * 桌面版：固定左側，展開 w-64 / 收合 w-20
+ * 手機版：overlay 方式滑出，點擊連結或遮罩後自動收回
  */
 
 import React from "react";
@@ -10,6 +14,10 @@ import { useLanguage } from "@/context";
 interface AdminSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  /** 導航時呼叫（手機版用來關閉側邊欄） */
+  onNavigate?: () => void;
+  /** 目前是否為行動裝置 */
+  isMobile?: boolean;
 }
 
 /**
@@ -18,7 +26,12 @@ interface AdminSidebarProps {
  * @param {AdminSidebarProps} props - 元件屬性
  * @returns {JSX.Element} 側邊欄
  */
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  isOpen,
+  onToggle,
+  onNavigate,
+  isMobile = false,
+}) => {
   const location = useLocation();
   const { t, isZhTW } = useLanguage();
 
@@ -180,53 +193,71 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
   return (
     <aside
       className={`
-        fixed
-        left-0
-        top-0
-        bottom-0
-        z-20
-        bg-luxe-surface
-        border-r
-        border-luxe-gold/10
-        transition-all
-        duration-300
-        ${isOpen ? "w-64 translate-x-0" : "w-20 -translate-x-full lg:translate-x-0"}
+        fixed left-0 top-0 bottom-0
+        bg-luxe-surface border-r border-luxe-gold/10
+        transition-all duration-300 overflow-hidden
+        ${
+          isMobile
+            ? isOpen
+              ? "w-64 translate-x-0 z-40"
+              : "w-0 -translate-x-full z-40"
+            : isOpen
+              ? "w-64 z-20"
+              : "w-20 z-20"
+        }
       `}
     >
-      {/* Logo */}
-      <div className="h-14 sm:h-16 flex items-center justify-center border-b border-luxe-gold/10">
-        <Link to="/" className="flex items-center gap-2 sm:gap-3">
-          <span className="text-luxe-gold text-xl sm:text-2xl font-bold">
+      {/* Logo + Close (mobile) */}
+      <div className="h-14 sm:h-16 flex items-center justify-between border-b border-luxe-gold/10 px-3">
+        <Link
+          to="/"
+          onClick={onNavigate}
+          className="flex items-center gap-2 sm:gap-3"
+        >
+          <span className="text-luxe-gold text-xl sm:text-2xl font-bold flex-shrink-0">
             A
           </span>
           {isOpen && (
-            <span className="text-sm sm:text-base text-luxe-text font-light tracking-widest">
+            <span className="text-sm sm:text-base text-luxe-text font-light tracking-widest whitespace-nowrap">
               ADMIN
             </span>
           )}
         </Link>
+        {/* 手機版關閉按鈕 */}
+        {isMobile && isOpen && (
+          <button
+            onClick={onToggle}
+            className="p-1.5 text-luxe-muted hover:text-luxe-gold transition-colors"
+            aria-label="Close sidebar"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="p-3 sm:p-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
-        <ul className="space-y-1.5 sm:space-y-2">
+      <nav className="p-2 sm:p-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
+        <ul className="space-y-1">
           {navItems.map((item) => (
             <li key={item.path}>
               <Link
                 to={item.path}
+                onClick={onNavigate}
                 className={`
-                  flex
-                  items-center
-                  gap-2
-                  sm:gap-3
-                  px-3
-                  sm:px-4
-                  py-2.5
-                  sm:py-3
-                  rounded-lg
-                  transition-colors
-                  text-sm
-                  sm:text-base
+                  flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3
+                  rounded-lg transition-colors text-sm
                   ${
                     isActive(item.path)
                       ? "bg-luxe-gold/10 text-luxe-gold"
@@ -236,7 +267,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
               >
                 <span className="flex-shrink-0">{item.icon}</span>
                 {isOpen && (
-                  <span className="truncate">{labels[item.labelKey]}</span>
+                  <span className="truncate whitespace-nowrap">
+                    {labels[item.labelKey]}
+                  </span>
                 )}
               </Link>
             </li>
@@ -245,10 +278,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
       </nav>
 
       {/* Bottom Section */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 border-t border-luxe-gold/10">
+      <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 border-t border-luxe-gold/10">
         <Link
           to="/"
-          className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base text-luxe-muted hover:text-luxe-text hover:bg-luxe-gold/5 transition-colors"
+          onClick={onNavigate}
+          className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3 rounded-lg text-sm text-luxe-muted hover:text-luxe-text hover:bg-luxe-gold/5 transition-colors"
         >
           <svg
             className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
@@ -263,7 +297,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
               d="M11 17l-5-5m0 0l5-5m-5 5h12"
             />
           </svg>
-          {isOpen && <span>{t.common.back}</span>}
+          {isOpen && <span className="whitespace-nowrap">{t.common.back}</span>}
         </Link>
       </div>
     </aside>

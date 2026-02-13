@@ -264,20 +264,55 @@ function DataTable<T>({
 
       {/* 手機版卡片 */}
       <div className={`md:hidden space-y-3 ${className}`}>
+        {/* 手機版排序選擇器 */}
+        {sortable && (
+          <div className="flex items-center gap-2 px-1">
+            <span className={`text-xs ${styles.muted}`}>排序：</span>
+            <select
+              value={sortKey ? `${sortKey}:${sortDir}` : ""}
+              onChange={(e) => {
+                if (!e.target.value) {
+                  setSortKey(null);
+                  setSortDir(null);
+                } else {
+                  const [key, dir] = e.target.value.split(":");
+                  setSortKey(key);
+                  setSortDir(dir as SortDirection);
+                }
+              }}
+              className={`text-xs rounded border px-2 py-1.5 bg-transparent ${styles.muted} border-luxe-gold/20 focus:outline-none focus:border-luxe-gold/50`}
+            >
+              <option value="">預設</option>
+              {columns
+                .filter(
+                  (c) => String(c.key) !== "actions" && c.sortable !== false,
+                )
+                .map((c) => (
+                  <React.Fragment key={String(c.key)}>
+                    <option value={`${String(c.key)}:asc`}>{c.header} ↑</option>
+                    <option value={`${String(c.key)}:desc`}>
+                      {c.header} ↓
+                    </option>
+                  </React.Fragment>
+                ))}
+            </select>
+          </div>
+        )}
+
         {sortedData.map((item) => (
           <div
             key={keyExtractor(item)}
             onClick={() => onRowClick?.(item)}
             className={`
-              p-4 rounded-lg border
+              p-3 sm:p-4 rounded-lg border
               ${styles.card}
               ${onRowClick ? "cursor-pointer active:scale-[0.98]" : ""}
               transition-transform
             `}
           >
             {/* 主要資訊 + 操作按鈕 */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className={`font-medium ${styles.text}`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className={`font-medium min-w-0 break-words ${styles.text}`}>
                 {primaryColumn.render
                   ? primaryColumn.render(item)
                   : String(getValue(item, String(primaryColumn.key)) ?? "")}
@@ -289,21 +324,23 @@ function DataTable<T>({
               )}
             </div>
 
-            {/* 次要資訊 */}
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {secondaryColumns.slice(0, 4).map((column) => (
-                <div key={String(column.key)}>
-                  <span className={`${styles.muted} text-xs`}>
-                    {column.header}
-                  </span>
-                  <div className={styles.text}>
-                    {column.render
-                      ? column.render(item)
-                      : String(getValue(item, String(column.key)) ?? "-")}
+            {/* 次要資訊 — 顯示全部（不再限制 4 個） */}
+            {secondaryColumns.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                {secondaryColumns.map((column) => (
+                  <div key={String(column.key)} className="min-w-0">
+                    <span className={`${styles.muted} text-xs`}>
+                      {column.header}
+                    </span>
+                    <div className={`${styles.text} truncate`}>
+                      {column.render
+                        ? column.render(item)
+                        : String(getValue(item, String(column.key)) ?? "-")}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

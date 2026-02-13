@@ -219,10 +219,12 @@ const AdminUsers: React.FC = () => {
   return (
     <div>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-light text-luxe-text">用戶管理</h1>
-          <p className="text-luxe-muted">管理系統用戶</p>
+          <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
+            用戶管理
+          </h1>
+          <p className="text-sm sm:text-base text-luxe-muted">管理系統用戶</p>
         </div>
         <PillButton theme="luxe" variant="outline" className="w-full sm:w-auto">
           新增用戶
