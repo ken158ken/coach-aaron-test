@@ -165,13 +165,13 @@ coach-aaron-redesign/
 
 ### 聯絡表單防護 (2026-02-13)
 
-| 防護層 | 措施 |
-| --- | --- |
-| 前端驗證 | 姓名 2-50 字、Email 格式、電話格式、主題 2-100 字、訊息 10-2000 字 |
-| 速率限制 | 每 IP 每 15 分鐘最多 5 次請求 (express-rate-limit) |
-| 輸入消毒 | HTML 標籤移除、`javascript:`/`vbscript:` 協議阻擋、事件處理器移除 |
-| Email 驗證 | RFC 5322 格式驗證 |
-| 電話驗證 | 台灣手機/市話格式（09xx、02-xxxx 等） |
+| 防護層     | 措施                                                               |
+| ---------- | ------------------------------------------------------------------ |
+| 前端驗證   | 姓名 2-50 字、Email 格式、電話格式、主題 2-100 字、訊息 10-2000 字 |
+| 速率限制   | 每 IP 每 15 分鐘最多 5 次請求 (express-rate-limit)                 |
+| 輸入消毒   | HTML 標籤移除、`javascript:`/`vbscript:` 協議阻擋、事件處理器移除  |
+| Email 驗證 | RFC 5322 格式驗證                                                  |
+| 電話驗證   | 台灣手機/市話格式（09xx、02-xxxx 等）                              |
 
 ## 🔍 全域搜尋功能 (2026-02-04 新增)
 
@@ -466,14 +466,14 @@ COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 
 部署時需在 Vercel Dashboard 設定以下環境變數：
 
-| 變數名稱 | 用途 | 必填 |
-| --- | --- | --- |
-| `SUPABASE_URL` | Supabase 專案 URL | ✅ |
-| `SUPABASE_ANON_KEY` | Supabase 匿名金鑰 | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰 | ✅ |
-| `JWT_SECRET` | JWT 加密金鑰 | ✅ |
-| `RESEND_API_KEY` | Resend 郵件 API Key | ✅ (聯絡表單) |
-| `COACH_EMAIL` | 教練收件信箱 | ⚡ (預設 s330221@gmail.com) |
+| 變數名稱                    | 用途                  | 必填                        |
+| --------------------------- | --------------------- | --------------------------- |
+| `SUPABASE_URL`              | Supabase 專案 URL     | ✅                          |
+| `SUPABASE_ANON_KEY`         | Supabase 匿名金鑰     | ✅                          |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰 | ✅                          |
+| `JWT_SECRET`                | JWT 加密金鑰          | ✅                          |
+| `RESEND_API_KEY`            | Resend 郵件 API Key   | ✅ (聯絡表單)               |
+| `COACH_EMAIL`               | 教練收件信箱          | ⚡ (預設 s330221@gmail.com) |
 
 ### SEO 配置 (2026-02-12 新增)
 
@@ -665,6 +665,42 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-14 - 後台管理 RWD 全面修復
+
+#### 🔧 Navbar 管理員按鈕修復
+
+- 手機版導航列管理員按鈕改用 AuthContext `isAdmin` 狀態，確保桌面/手機一致渲染
+
+#### 📱 AdminLayout 響應式重寫
+
+- SSR-safe sidebar 預設關閉，桌面版 hydration 後自動展開
+- `MOBILE_BREAKPOINT` (1024px) 偵測 + window resize 監聽
+- 手機版遮罩層 `backdrop-blur-sm z-30`，點擊關閉側邊欄
+- 響應式 header：漢堡選單、前台連結、主題/語言切換、用戶頭像
+
+#### 📱 AdminSidebar 手機/桌面雙模式
+
+- 手機：`translate-x` 滑出 overlay + 關閉按鈕 (X) + 點擊連結自動收合
+- 桌面：固定側邊欄 w-64 展開 / w-20 收合
+- 所有 `<Link>` 加入 `onClick={onNavigate}` 手機自動關閉
+
+#### 📊 DataTable 手機版改進
+
+- 主要欄位 `min-w-0 break-words` 防止文字溢出
+- 移除 `.slice(0, 4)` 限制，顯示全部次要欄位
+- 新增手機版排序下拉選擇器
+
+#### 👆 觸控裝置修復 (AdminArticles/Courses/Videos)
+
+- `opacity-0 group-hover:opacity-100` → `md:opacity-0 md:group-hover:opacity-100`
+- 操作按鈕在觸控裝置始終可見，桌面保持 hover 動畫
+
+#### 🎨 全管理頁面 Header RWD 對齊
+
+- 標題：`text-xl sm:text-2xl`，描述：`text-sm sm:text-base`
+- 間距：`mb-6 sm:mb-8`，篩選器：`flex-wrap`
+- 影響頁面：Articles、Courses、Videos、Users、Content
+
 ### 2026-02-13 - 聯絡表單 Resend 寄信 + 教練資訊整合
 
 #### 📧 聯絡表單功能 (Resend Email API)
@@ -690,19 +726,19 @@ npm run generate:coach-photos
 
 #### 🔧 環境變數需求
 
-| 變數 | 說明 |
-| --- | --- |
-| `RESEND_API_KEY` | Resend API Key（Vercel 環境變數設定） |
-| `COACH_EMAIL` | 教練收件信箱（選填，預設 s330221@gmail.com） |
+| 變數             | 說明                                         |
+| ---------------- | -------------------------------------------- |
+| `RESEND_API_KEY` | Resend API Key（Vercel 環境變數設定）        |
+| `COACH_EMAIL`    | 教練收件信箱（選填，預設 s330221@gmail.com） |
 
 #### 📄 新增/修改檔案
 
-| 操作 | 檔案 |
-| --- | --- |
+| 操作 | 檔案                                                            |
+| ---- | --------------------------------------------------------------- |
 | 新增 | `backend/routes/contact.ts` — Resend 寄信路由 + 速率限制 + 消毒 |
-| 修改 | `backend/index.ts` — 註冊 contactRoutes |
-| 修改 | `frontend/src/constants/app.ts` — SOCIAL_LINKS + COACH_INFO |
-| 修改 | `frontend/src/pages/Contact.tsx` — 完全重寫 |
+| 修改 | `backend/index.ts` — 註冊 contactRoutes                         |
+| 修改 | `frontend/src/constants/app.ts` — SOCIAL_LINKS + COACH_INFO     |
+| 修改 | `frontend/src/pages/Contact.tsx` — 完全重寫                     |
 
 #### 📄 相關文件
 
