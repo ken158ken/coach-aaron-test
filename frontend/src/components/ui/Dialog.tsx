@@ -21,7 +21,8 @@ const overlayClasses =
   "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm modal-overlay-enter";
 const modalClasses =
   "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden modal-content-enter my-auto";
-const headerClasses = "px-4 sm:px-6 py-3 sm:py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
+const headerClasses =
+  "px-4 sm:px-6 py-3 sm:py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
 const contentClasses = "px-4 sm:px-6 py-3 sm:py-4 max-h-[70vh] overflow-y-auto";
 const footerClasses =
   "px-4 sm:px-6 py-3 sm:py-4 border-t border-luxe-gold/20 flex flex-wrap justify-end gap-2 sm:gap-3";

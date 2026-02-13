@@ -665,6 +665,27 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-14 - TipTap ImageGallery 擴展 + Modal RWD 全面修復
+
+#### 🖼️ TipTap ImageGallery 自定義擴展
+
+- **`ImageGallery.tsx` 全新 Node 擴展**：最多 3 張圖片一排的 Flexbox 佈局
+- Cloudinary-only URL 驗證 + 即時預覽縮圖
+- 每張圖片可拖曳調整大小 (80–600px)
+- 新增/移除按鈕、ReactNodeViewRenderer 渲染
+- 工具列 🏞️ 按鈕，Tooltip「插入圖片庫（最多3張一排）」
+- ArticleEditor + CourseEditor 同步整合
+
+#### 📱 後台 Modal RWD 全面修復 (10 個 Modal)
+
+- **Dialog.tsx 核心修復**：移除 `max-w-md` 與 `sizeClasses` 衝突，新增 `max-h-[70vh] overflow-y-auto`
+- **所有 Overlay**：`items-center` → `items-start + overflow-y-auto + py-6`，避免長內容裁切
+- **響應式間距**：`px-4 sm:px-6`、`py-3 sm:py-4`、`mx-3 sm:mx-4`
+- **ArticlePreviewModal**：標題 `text-2xl sm:text-3xl md:text-4xl`、內容 `py-6 sm:py-12`
+- **Help Modals (ArticleEditor/CourseEditor)**：`grid-cols-1 sm:grid-cols-2`
+- **ConfirmDialog / AdminWhitelist / BlockEditor modals**：一致的 RWD 處理
+- **overlay/Modal.tsx**：響應式 header/content + `max-h-[70vh] overflow-y-auto`
+
 ### 2026-02-14 - 後台管理 RWD 全面修復
 
 #### 🔧 Navbar 管理員按鈕修復
