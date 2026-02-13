@@ -157,7 +157,7 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         ];
 
         // Plankton Particles - 5000 顆隨機大小圓形粒子
-        const particleCount = 5000;
+        const particleCount = 2500;
         const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const basePositions = new Float32Array(particleCount * 3);
