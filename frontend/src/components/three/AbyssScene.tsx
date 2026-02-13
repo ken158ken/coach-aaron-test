@@ -59,12 +59,12 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
       containerRef.current.appendChild(renderer.domElement);
       rendererRef.current = renderer;
 
-      // Jellyfish Sphere with Shader
+      // Jellyfish Sphere with Shader - 金色呼吸燈
       const jellyfishGeo = new THREE.SphereGeometry(8, 64, 64);
       const jellyfishMat = new THREE.ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
-          uColor: { value: new THREE.Color(0x00ffff) },
+          uColor: { value: new THREE.Color(0xffd700) }, // 金色
         },
         wireframe: true,
         transparent: true,
@@ -84,8 +84,13 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
       `,
         fragmentShader: `
         uniform vec3 uColor;
+        uniform float uTime;
         void main() {
-          gl_FragColor = vec4(uColor, 0.3);
+          // 呼吸燈：亮度 0.85~1.35 脈動，alpha 0.45~0.8 脈動
+          float breath = sin(uTime * 1.2) * 0.5 + 0.5;
+          float glow = mix(0.85, 1.35, breath);
+          float alpha = mix(0.45, 0.8, breath);
+          gl_FragColor = vec4(uColor * glow, alpha);
         }
       `,
       });
@@ -108,32 +113,103 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
       };
       updateJellyfishScale();
 
-      // Plankton Particles
-      const particleCount = 2000;
+      // === 圓形粒子紋理 ===
+      const particleCanvas = document.createElement("canvas");
+      particleCanvas.width = 64;
+      particleCanvas.height = 64;
+      const pCtx = particleCanvas.getContext("2d")!;
+      const grad = pCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, "rgba(255,255,255,1)");
+      grad.addColorStop(0.75, "rgba(255,255,255,0.95)");
+      grad.addColorStop(0.9, "rgba(255,255,255,0.4)");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      pCtx.fillStyle = grad;
+      pCtx.fillRect(0, 0, 64, 64);
+      const circleTexture = new THREE.CanvasTexture(particleCanvas);
+
+      // === 粒子顏色組：深藍/深紫/靛藍/淺藍/深棕/淺棕 ===
+      const colorPalette = [
+        new THREE.Color(0x1a3a8a), // 深藍
+        new THREE.Color(0x4b2d99), // 深紫
+        new THREE.Color(0x2940ae), // 靛藍
+        new THREE.Color(0x5bc0f7), // 淺藍
+        new THREE.Color(0x6e4a3a), // 深棕
+        new THREE.Color(0xb08e78), // 淺棕
+      ];
+
+      // Plankton Particles - 5000 顆隨機大小圓形粒子
+      const particleCount = 5000;
       const particleGeo = new THREE.BufferGeometry();
       const positions = new Float32Array(particleCount * 3);
       const basePositions = new Float32Array(particleCount * 3);
+      const pColors = new Float32Array(particleCount * 3);
+      const pSizes = new Float32Array(particleCount);
 
-      for (let i = 0; i < particleCount * 3; i += 3) {
-        positions[i] = (Math.random() - 0.5) * 80;
-        positions[i + 1] = (Math.random() - 0.5) * 80;
-        positions[i + 2] = (Math.random() - 0.5) * 50;
-        basePositions[i] = positions[i];
-        basePositions[i + 1] = positions[i + 1];
-        basePositions[i + 2] = positions[i + 2];
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        positions[i3] = (Math.random() - 0.5) * 80;
+        positions[i3 + 1] = (Math.random() - 0.5) * 80;
+        positions[i3 + 2] = (Math.random() - 0.5) * 50;
+        basePositions[i3] = positions[i3];
+        basePositions[i3 + 1] = positions[i3 + 1];
+        basePositions[i3 + 2] = positions[i3 + 2];
+
+        // 隨機顏色
+        const col =
+          colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        pColors[i3] = col.r;
+        pColors[i3 + 1] = col.g;
+        pColors[i3 + 2] = col.b;
+
+        // 隨機大小：30% 大顆 (0.3~0.9)、70% 小顆 (0.05~0.2)
+        pSizes[i] =
+          Math.random() < 0.3
+            ? Math.random() * 0.6 + 0.3
+            : Math.random() * 0.15 + 0.05;
       }
 
       particleGeo.setAttribute(
         "position",
         new THREE.BufferAttribute(positions, 3),
       );
+      particleGeo.setAttribute(
+        "aColor",
+        new THREE.BufferAttribute(pColors, 3),
+      );
+      particleGeo.setAttribute(
+        "aSize",
+        new THREE.BufferAttribute(pSizes, 1),
+      );
 
-      const particleMat = new THREE.PointsMaterial({
-        color: 0x7b00ff,
-        size: 0.2,
+      const particleMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTexture: { value: circleTexture },
+          uPixelRatio: { value: renderer.getPixelRatio() },
+        },
+        vertexShader: `
+        uniform float uPixelRatio;
+        attribute float aSize;
+        attribute vec3 aColor;
+        varying vec3 vColor;
+        void main() {
+          vColor = aColor;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = clamp(aSize * uPixelRatio * (250.0 / -mvPosition.z), 1.0, 64.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+        fragmentShader: `
+        uniform sampler2D uTexture;
+        varying vec3 vColor;
+        void main() {
+          vec4 texColor = texture2D(uTexture, gl_PointCoord);
+          if (texColor.a < 0.05) discard;
+          gl_FragColor = vec4(vColor * 2.0, texColor.a * 0.85);
+        }
+      `,
         transparent: true,
-        opacity: 0.8,
         blending: THREE.AdditiveBlending,
+        depthWrite: false,
       });
 
       const particles = new THREE.Points(particleGeo, particleMat);
@@ -159,8 +235,8 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
 
         // Update jellyfish
         jellyfishMat.uniforms.uTime.value = t;
-        jellyfish.rotation.y += 0.002;
-        jellyfish.rotation.z += 0.001;
+        jellyfish.rotation.y += 0.0005;
+        jellyfish.rotation.z += 0.00025;
 
         // Smooth mouse
         mouse.lerp(target, 0.1);
@@ -187,7 +263,7 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
           );
           if (dist < 8) {
             const angle = Math.atan2(cy - mouse3D.y, cx - mouse3D.x);
-            const force = (8 - dist) * 0.5;
+            const force = (8 - dist) * 0.25;
             cx += Math.cos(angle) * force;
             cy += Math.sin(angle) * force;
           }
@@ -224,6 +300,11 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         cancelAnimationFrame(animationRef.current);
         window.removeEventListener("resize", handleResize);
         document.removeEventListener("mousemove", handleMouseMove);
+        circleTexture.dispose();
+        particleMat.dispose();
+        particleGeo.dispose();
+        jellyfishMat.dispose();
+        jellyfishGeo.dispose();
         renderer.dispose();
         if (containerRef.current) {
           containerRef.current.removeChild(renderer.domElement);
