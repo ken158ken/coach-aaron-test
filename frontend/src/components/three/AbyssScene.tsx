@@ -30,10 +30,12 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
     if (!containerRef.current) return;
 
     let cleanup: (() => void) | undefined;
+    let cancelled = false; // StrictMode 防重複掛載旗標
 
     // 動態載入 Three.js（僅在客戶端執行）
     import("three").then((THREE) => {
-      if (!containerRef.current) return;
+      // StrictMode 清理後不再繼續
+      if (cancelled || !containerRef.current) return;
 
       // Scene Setup
       const scene = new THREE.Scene();
@@ -172,14 +174,8 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         "position",
         new THREE.BufferAttribute(positions, 3),
       );
-      particleGeo.setAttribute(
-        "aColor",
-        new THREE.BufferAttribute(pColors, 3),
-      );
-      particleGeo.setAttribute(
-        "aSize",
-        new THREE.BufferAttribute(pSizes, 1),
-      );
+      particleGeo.setAttribute("aColor", new THREE.BufferAttribute(pColors, 3));
+      particleGeo.setAttribute("aSize", new THREE.BufferAttribute(pSizes, 1));
 
       const particleMat = new THREE.ShaderMaterial({
         uniforms: {
@@ -314,6 +310,7 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
 
     // Cleanup
     return () => {
+      cancelled = true; // 標記已清理，阻止 pending Promise 繼續
       cleanup?.();
     };
   }, []);
