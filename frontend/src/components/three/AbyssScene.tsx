@@ -67,14 +67,14 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         containerRef.current.appendChild(renderer.domElement);
         rendererRef.current = renderer;
 
-        // === Bloom 後處理 - 微量眩光 ===
+        // === Bloom 後處理 - 暫時關閉 ===
         const composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
         const bloomPass = new UnrealBloomPass(
           new THREE.Vector2(window.innerWidth, window.innerHeight),
-          0.5, // strength - 降低 20%
-          0.4, // radius - 柔和擴散
-          0.3, // threshold - 只讓亮部發光
+          0, // strength - 關閉
+          0, // radius
+          1, // threshold - 全部擋掉
         );
         composer.addPass(bloomPass);
 
