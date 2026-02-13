@@ -32,8 +32,13 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
     let cleanup: (() => void) | undefined;
     let cancelled = false; // StrictMode 防重複掛載旗標
 
-    // 動態載入 Three.js（僅在客戶端執行）
-    import("three").then((THREE) => {
+    // 動態載入 Three.js + 後處理（僅在客戶端執行）
+    Promise.all([
+      import("three"),
+      import("three/addons/postprocessing/EffectComposer.js"),
+      import("three/addons/postprocessing/RenderPass.js"),
+      import("three/addons/postprocessing/UnrealBloomPass.js"),
+    ]).then(([THREE, { EffectComposer }, { RenderPass }, { UnrealBloomPass }]) => {
       // StrictMode 清理後不再繼續
       if (cancelled || !containerRef.current) return;
 
@@ -60,6 +65,17 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       containerRef.current.appendChild(renderer.domElement);
       rendererRef.current = renderer;
+
+      // === Bloom 後處理 - 微量眩光 ===
+      const composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.65,  // strength - 適度光暈
+        0.5,   // radius - 柔和擴散
+        0.25,  // threshold - 只讓亮部發光
+      );
+      composer.addPass(bloomPass);
 
       // Jellyfish Sphere with Shader - 金色呼吸燈
       const jellyfishGeo = new THREE.SphereGeometry(8, 64, 64);
@@ -88,10 +104,10 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         uniform vec3 uColor;
         uniform float uTime;
         void main() {
-          // 呼吸燈：亮度 0.85~1.35 脈動，alpha 0.45~0.8 脈動
+          // 呼吸燈：亮度 1.0~1.8 脈動 + bloom feed，alpha 0.55~0.9 脈動
           float breath = sin(uTime * 1.2) * 0.5 + 0.5;
-          float glow = mix(0.85, 1.35, breath);
-          float alpha = mix(0.45, 0.8, breath);
+          float glow = mix(1.0, 1.8, breath);
+          float alpha = mix(0.55, 0.9, breath);
           gl_FragColor = vec4(uColor * glow, alpha);
         }
       `,
@@ -276,15 +292,19 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         camera.position.y = Math.cos(t * 0.1) * swayAmp;
         camera.lookAt(0, 0, 0);
 
-        renderer.render(scene, camera);
+        composer.render();
       };
 
       animate();
 
       // Resize Handler
       const handleResize = () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        renderer.setSize(w, h);
+        composer.setSize(w, h);
+        bloomPass.resolution.set(w, h);
+        camera.aspect = w / h;
         camera.updateProjectionMatrix();
         updateJellyfishScale();
       };
@@ -296,6 +316,7 @@ const AbyssScene: React.FC<AbyssSceneProps> = ({ className = "" }) => {
         cancelAnimationFrame(animationRef.current);
         window.removeEventListener("resize", handleResize);
         document.removeEventListener("mousemove", handleMouseMove);
+        composer.dispose();
         circleTexture.dispose();
         particleMat.dispose();
         particleGeo.dispose();
