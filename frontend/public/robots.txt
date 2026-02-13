@@ -2,4 +2,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://coach-aaron.com/sitemap.xml
+Sitemap: https://coach-aaron-test.vercel.app/sitemap.xml

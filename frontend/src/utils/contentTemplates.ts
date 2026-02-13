@@ -103,8 +103,23 @@ export function getTemplates(key: string): ContentTemplate[] {
 }
 
 /**
+ * 取得指定 content_key 的第一個範本值（確定性，SSR-safe）
+ * 用於 useState 初始值，避免 server/client Math.random() 不一致的 hydration 錯誤
+ *
+ * @param {string} key - content_key
+ * @param {string} [fallback=""] - 若無任何範本時的最終 fallback 值
+ * @returns {string} 第一個範本值
+ */
+export function getDefaultTemplate(key: string, fallback = ""): string {
+  const templates = CONTENT_TEMPLATES[key];
+  if (!templates || templates.length === 0) return fallback;
+  return templates[0].value;
+}
+
+/**
  * 從指定 content_key 的範本池中隨機取得一個值
- * 用於前端 DB 無值時的 fallback
+ * ⚠️ 不可用於 useState 初始值（會導致 SSR hydration mismatch）
+ * 僅用於 useEffect 或事件處理器等客戶端專屬邏輯
  *
  * @param {string} key - content_key
  * @param {string} [fallback=""] - 若無任何範本時的最終 fallback 值

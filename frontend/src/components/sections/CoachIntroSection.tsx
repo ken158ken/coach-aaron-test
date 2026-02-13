@@ -8,7 +8,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TextButton } from "@/components/ui";
 import { contentService } from "@/services/content.service";
-import { getRandomTemplate } from "@/utils/contentTemplates";
+import { getDefaultTemplate } from "@/utils/contentTemplates";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,9 +29,9 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   const imageRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // 初始值使用隨機範本 fallback
+  // ✅ SSR-safe：使用確定性範本（第一筆），避免 Math.random() hydration mismatch
   const [aboutCoach, setAboutCoach] = useState(() =>
-    getRandomTemplate(
+    getDefaultTemplate(
       "about_coach",
       "擁有超過 10 年健身教學經驗，專注於體態雕塑、增肌減脂與運動表現提升。結合科學化訓練方法與個人化指導，幫助學員突破極限，達成目標。",
     ),

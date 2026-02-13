@@ -56,7 +56,20 @@ const DEFAULT_SITE_NAME = "阿倫教官 | Coach Aaron";
 const DEFAULT_DESCRIPTION =
   "專業健身教練，提供線上課程、一對一訓練與健身知識分享";
 const DEFAULT_IMAGE = "/images/og-default.jpg";
-const DEFAULT_URL = "https://coach-aaron.com";
+
+/**
+ * 網站根 URL — 優先使用環境變數 VITE_SITE_URL
+ * SSR 環境無 import.meta.env 時自動 fallback
+ */
+const DEFAULT_URL: string = (() => {
+  try {
+    return (
+      import.meta.env?.VITE_SITE_URL || "https://coach-aaron-test.vercel.app"
+    );
+  } catch {
+    return "https://coach-aaron-test.vercel.app";
+  }
+})();
 
 /**
  * SEOHead - 動態 SEO Meta 標籤元件

@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { GlowButton, TextButton } from "@/components/ui";
 import { contentService } from "@/services/content.service";
-import { getRandomTemplate } from "@/utils/contentTemplates";
+import { getDefaultTemplate } from "@/utils/contentTemplates";
 
 interface HeroSectionProps {
   className?: string;
@@ -25,12 +25,12 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
 
-  // 初始值使用隨機範本 fallback
+  // ✅ SSR-safe：使用確定性範本（第一筆），避免 Math.random() hydration mismatch
   const [heroTitle, setHeroTitle] = useState(() =>
-    getRandomTemplate("hero_title", "打造 理想體態\n遇見更好的自己"),
+    getDefaultTemplate("hero_title", "打造 理想體態\n遇見更好的自己"),
   );
   const [heroSubtitle, setHeroSubtitle] = useState(() =>
-    getRandomTemplate(
+    getDefaultTemplate(
       "hero_subtitle",
       "專業一對一健身指導，量身打造訓練計畫\n科學化訓練 × 飲食規劃 × 心理建設",
     ),
