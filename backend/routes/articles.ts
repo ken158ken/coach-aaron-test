@@ -725,6 +725,44 @@ router.put(
 // ===== 輔助函數 =====
 
 /**
+ * 檢查文章 slug 是否已存在
+ * @route GET /api/articles/check-slug?slug=xxx&excludeId=xxx
+ */
+router.get(
+  "/check-slug",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { slug, excludeId } = req.query;
+      if (!slug || typeof slug !== "string") {
+        res.status(400).json({ error: "請提供 slug 參數" });
+        return;
+      }
+
+      let query = supabaseAdmin
+        .from("articles")
+        .select("article_id", { count: "exact", head: true })
+        .eq("article_slug", slug)
+        .is("deleted_at", null);
+
+      // 編輯時排除自己
+      if (excludeId && typeof excludeId === "string") {
+        query = query.neq("article_id", excludeId);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+
+      res.json({ exists: (count ?? 0) > 0 });
+    } catch (err) {
+      logger.error("Check slug error:", err);
+      res.status(500).json({ error: "檢查 slug 失敗" });
+    }
+  },
+);
+
+/**
  * 更新文章評分統計
  */
 async function updateArticleRatingStats(articleId: number): Promise<void> {

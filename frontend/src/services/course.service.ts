@@ -40,6 +40,20 @@ const normalizeCourse = (data: Partial<Course>): Course => {
  */
 export const courseService = {
   /**
+   * 檢查課程 slug 是否已存在
+   */
+  checkSlug: async (
+    slug: string,
+    excludeId?: string,
+  ): Promise<{ exists: boolean }> => {
+    const params = new URLSearchParams({ slug });
+    if (excludeId) params.append("excludeId", excludeId);
+    return get<{ exists: boolean }>(
+      `/api/courses/check-slug?${params.toString()}`,
+    );
+  },
+
+  /**
    * 取得所有課程
    */
   getAll: async (): Promise<Course[]> => {

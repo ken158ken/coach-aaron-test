@@ -5,7 +5,7 @@
  * @features localStorage 自動暫存、分類管理、使用說明、發布前預覽
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/context";
 import { Loading, Tooltip } from "@/components/ui";
@@ -126,14 +126,61 @@ const ArticleEditor: React.FC = () => {
   // 使用說明 Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
 
-  /** 自動生成 slug */
-  const generateSlug = useCallback((title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .slice(0, 50);
+  // Slug 狀態
+  const [slugDuplicate, setSlugDuplicate] = useState(false);
+  const [slugChecking, setSlugChecking] = useState(false);
+  const [showSlugHelp, setShowSlugHelp] = useState(false);
+  const slugCheckTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  /** 自動生成 slug（時間戳+短隨機碼） */
+  const generateSlug = useCallback(() => {
+    const d = new Date();
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const rand = Math.random().toString(36).substring(2, 8);
+    return `${date}-${rand}`;
   }, []);
+
+  /** 檢查 slug 是否重複（debounce 500ms） */
+  const checkSlugDuplicate = useCallback(
+    (slugValue: string) => {
+      if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
+      if (!slugValue.trim()) {
+        setSlugDuplicate(false);
+        setSlugChecking(false);
+        return;
+      }
+      setSlugChecking(true);
+      slugCheckTimer.current = setTimeout(async () => {
+        try {
+          const res = await articleService.checkSlug(
+            slugValue,
+            isNew ? undefined : id,
+          );
+          setSlugDuplicate(res.exists);
+        } catch {
+          setSlugDuplicate(false);
+        } finally {
+          setSlugChecking(false);
+        }
+      }, 500);
+    },
+    [isNew, id],
+  );
+
+  /** Slug 輸入處理（禁止中文，僅允許英數字連字符） */
+  const handleSlugChange = useCallback(
+    (value: string) => {
+      // 移除中文及特殊字元，僅保留 a-z 0-9 - _
+      const sanitized = value
+        .toLowerCase()
+        .replace(/[^a-z0-9\-_]/g, "")
+        .slice(0, 60);
+      setArticle((prev) => ({ ...prev, slug: sanitized }));
+      setHasChanges(true);
+      checkSlugDuplicate(sanitized);
+    },
+    [checkSlugDuplicate],
+  );
 
   // 使用共用的富文本編輯器 Hook
   const editor = useRichTextEditor({
@@ -496,7 +543,7 @@ const ArticleEditor: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const slug = article.slug || generateSlug(article.title);
+      const slug = article.slug || generateSlug();
       const payload = {
         title: article.title,
         slug,
@@ -721,8 +768,6 @@ const ArticleEditor: React.FC = () => {
                   setArticle((prev) => ({
                     ...prev,
                     title: newTitle,
-                    // 自動產生 slug
-                    slug: generateSlug(newTitle),
                   }));
                   setHasChanges(true);
                 }}
@@ -766,18 +811,55 @@ const ArticleEditor: React.FC = () => {
               </h2>
 
               <div className="space-y-4">
-                {/* Slug（自動產生，唯讀） */}
+                {/* Slug（可編輯） */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    網址代稱
-                    <span className="ml-2 text-gray-500">（自動產生）</span>
-                  </label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-luxe-black/50 border border-luxe-gold/20 rounded-lg text-sm text-gray-400">
-                    <span>/articles/</span>
-                    <span className="text-luxe-text truncate">
-                      {article.slug || "尚未輸入標題"}
-                    </span>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <label className="block text-xs text-gray-400">
+                      網址代稱
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowSlugHelp((p) => !p)}
+                        className="w-4 h-4 rounded-full bg-gray-600 text-gray-300 text-xs flex items-center justify-center hover:bg-luxe-gold hover:text-black transition-colors"
+                        title="什麼是網址代稱？"
+                      >
+                        ?
+                      </button>
+                      {showSlugHelp && (
+                        <div className="absolute left-6 top-0 z-50 w-64 p-3 bg-luxe-surface border border-luxe-gold/30 rounded-lg shadow-xl text-xs text-gray-300 leading-relaxed">
+                          <p className="font-medium text-luxe-gold mb-1">網址代稱 (Slug)</p>
+                          <p>影響文章網址的美觀度，例如：</p>
+                          <p className="text-luxe-gold/80 my-1">/articles/<strong>my-first-post</strong></p>
+                          <p>可輸入簡單英文，僅允許小寫英文、數字、連字符 (-) 和底線 (_)。</p>
+                          <p className="mt-1 text-gray-500">留空則自動產生時間戳代碼。</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowSlugHelp(false)}
+                            className="mt-2 text-luxe-gold hover:underline"
+                          >
+                            知道了
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500 shrink-0">/articles/</span>
+                    <input
+                      type="text"
+                      value={article.slug}
+                      onChange={(e) => handleSlugChange(e.target.value)}
+                      placeholder="留空自動產生"
+                      className="flex-1 min-w-0 px-2 py-1.5 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
+                    />
+                  </div>
+                  {slugChecking && (
+                    <p className="text-xs text-gray-500 mt-1">檢查中...</p>
+                  )}
+                  {slugDuplicate && !slugChecking && (
+                    <p className="text-xs text-red-400 mt-1">⚠️ 此網址代稱已被使用，請更換其他名稱</p>
+                  )}
                 </div>
 
                 {/* 摘要 */}
