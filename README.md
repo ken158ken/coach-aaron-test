@@ -117,7 +117,8 @@ coach-aaron-redesign/
 │   ├── seed.sql           # 種子資料
 │   ├── migrations/        # 遷移腳本
 │   │   ├── 003_site_content_and_popup.sql   # 內容管理 + 彈窗
-│   │   └── 004_content_templates.sql        # 預設文案範本
+│   │   ├── 004_content_templates.sql        # 預設文案範本
+│   │   └── 005_add_avatar_base64.sql        # 頭像 base64 欄位
 │   └── *.sql              # 其他 SQL 腳本
 │
 └── REPORTS/                # 📊 報告文件
@@ -665,6 +666,60 @@ npm run generate:coach-photos
 - **放大查看**: 點擊照片可全螢幕放大瀏覽
 
 ## 📝 更新日誌
+
+### 2026-02-17 - Avatar 系統：放大 + 金色呼吸燈 + 全端頭像上傳
+
+#### ✨ Navbar Avatar 放大 + 金色呼吸燈
+
+- **Avatar 尺寸放大 1.5 倍**：sm `w-7 h-7` → `w-9 h-9`、md `w-8 h-8` → `w-11 h-11`
+- **金色呼吸燈動畫**：`@keyframes avatarBreathing` (3s 週期，`rgba(212,175,55)` box-shadow 脈衝)
+- **`.avatar-glow` CSS 類別**：套用在所有三種 Avatar 狀態（無使用者 / 有頭像 / 首字母）
+- **Hover 加強**：懸停時金色光暈加強 + 動畫暫停（靜態強光）
+
+#### 📸 全端頭像上傳系統
+
+**資料庫**
+
+| 項目      | 內容                                                                            |
+| --------- | ------------------------------------------------------------------------------- |
+| Migration | `005_add_avatar_base64.sql` — `ALTER TABLE users ADD COLUMN avatar_base64 TEXT` |
+
+**後端 (backend/routes/user.ts + auth.ts)**
+
+| 端點                      | 功能                                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `POST /api/user/avatar`   | 接收 base64 → sharp 裁切中心正方形 → resize 200px → SVG 圓形 mask composite → PNG quality 60 → data URI 存入 DB |
+| `DELETE /api/user/avatar` | 清除 `avatar_base64` 與 `avatar_url`                                                                            |
+| `GET /api/auth/me`        | 回傳 `avatar_base64 \|\| avatar_url`                                                                            |
+| Login                     | JWT payload + response 優先使用 `avatar_base64`                                                                 |
+
+**後端圖片處理 Pipeline (sharp)**
+
+```
+raw base64 → Buffer → extract(center square) → resize(200×200)
+→ composite([SVG circle mask, blend: 'dest-in'])
+→ png({ quality: 60, compressionLevel: 8 }) → data:image/png;base64,...
+```
+
+**前端**
+
+| 檔案                       | 改動                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `services/user.service.ts` | **新建** — `uploadAvatar(base64)` / `deleteAvatar()`                                        |
+| `services/index.ts`        | 新增 `userService` 匯出                                                                     |
+| `context/AuthContext.tsx`  | 新增 `updateUser(partial)` 方法，支援 optimistic UI 更新                                    |
+| `types/user.ts`            | `AuthContextType` 新增 `updateUser` 方法簽名                                                |
+| `pages/MemberCenter.tsx`   | 頭像區域 hover overlay（相機 icon + "更換頭貼"）、hidden file input、上傳 spinner、移除按鈕 |
+
+**使用者流程**
+
+```
+會員中心 hover 頭像 → 📷 更換頭貼
+→ 選擇圖片 (max 5MB, image/*)
+→ FileReader → base64 → POST /api/user/avatar
+→ sharp 裁切圓形 + 壓縮 → data URI → DB
+→ updateUser({ avatar_url }) → Navbar 即時更新
+```
 
 ### 2026-02-14 - Auth 渲染時序修正 + 路由守衛
 
