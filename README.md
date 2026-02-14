@@ -667,6 +667,55 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-18 - 頭像系統升級：裁切上傳 + 多方案生成式頭像 + Bug 修復
+
+#### 🐛 Bug 修復
+
+| 問題 | 根因 | 修復 |
+| --- | --- | --- |
+| **頭像上傳 500 錯誤** | `sanitize.ts` 中 `sanitizeString()` 截斷字串至 10,000 字元，破壞 base64 圖片資料 | 跳過 `POST /api/user/avatar` 路由的 sanitize、提升一般限制至 500,000 |
+| **DataTable tooltip 無法顯示** | 外層 `overflow-hidden` 裁切了 `position: absolute` 的 tooltip 元素 | 移除 `overflow-hidden`，改用 `overflow-y-visible`，`<thead>` 加 `relative` |
+
+#### ✂️ AvatarCropper 裁切元件
+
+- **react-easy-crop** 圓形裁切介面：拖曳平移 + 滾輪/滑桿縮放
+- 輸出 400×400 PNG base64，後端再縮至 200×200
+- LUXE 主題風格：金色滑桿、深色背景
+
+#### 🎨 AvatarPicker 多方案選擇器
+
+三個 Tab 頁籤讓使用者選擇頭像來源：
+
+| Tab | 說明 |
+| --- | --- |
+| **上傳裁切** | 選擇圖片 → AvatarCropper 裁切 → 上傳 |
+| **風格頭像 (DiceBear)** | 11 種風格（Avataaars、探險家、機器人、趣味表情、Lorelei、Micah、Mini、Notion 風、Open Peeps、像素風、讚）+ 自訂 seed 文字 + 隨機按鈕 |
+| **幾何頭像 (Boring Avatars)** | 6 種變體（光束、大理石、像素、日落、圓環、包浩斯）+ 自訂 seed 文字 |
+
+- SVG → Canvas → PNG base64 轉換，統一格式送後端
+- 預覽格子即時產生，選中金色框高亮
+
+#### 🔧 後端支援
+
+- `POST /api/user/avatar` 新增 `type` 參數：
+  - `type="upload"`（預設）：原始圖片 → sharp 中央裁剪 + 圓形遮罩 + 壓縮
+  - `type="generated"`：前端已裁切/生成 → sharp 只做 resize + 壓縮
+
+#### 📁 修改清單
+
+| 檔案 | 改動 |
+| --- | --- |
+| `backend/middleware/sanitize.ts` | 跳過 avatar 路由、字串截斷限制 10000→500000 |
+| `backend/routes/user.ts` | 新增 `type` 參數，支援 `generated` 模式 |
+| `frontend/src/components/ui/avatar/AvatarCropper.tsx` | **新建** — react-easy-crop 裁切元件 |
+| `frontend/src/components/ui/avatar/AvatarPicker.tsx` | **新建** — 多方案頭像選擇器 |
+| `frontend/src/components/ui/avatar/index.ts` | **新建** — 模組匯出 |
+| `frontend/src/components/ui/index.ts` | 新增 avatar 模組匯出 |
+| `frontend/src/components/ui/data/DataTable.tsx` | 移除 overflow-hidden，修復 tooltip 裁切 |
+| `frontend/src/pages/MemberCenter.tsx` | 改用 Modal + AvatarPicker 取代舊版直接 file input |
+| `frontend/src/services/user.service.ts` | 新增 `AvatarType` 參數 |
+| `frontend/package.json` | 新增 react-easy-crop, @dicebear/core, @dicebear/collection, boring-avatars |
+
 ### 2026-02-14 - 後台白名單 & 用戶管理 UI 升級
 
 #### 🛡️ 白名單管理 (AdminWhitelist)
