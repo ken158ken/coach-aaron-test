@@ -65,6 +65,8 @@ export interface AuthContextType {
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  /** 局部更新 user state（如頭像上傳後） */
+  updateUser: (partial: Partial<User>) => void;
 }
 
 /** 認證回應 */

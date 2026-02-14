@@ -129,16 +129,17 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   onClick,
   className = "",
 }) => {
-  const dim = size === "sm" ? "w-7 h-7 text-[10px]" : "w-8 h-8 text-xs";
+  const dim = size === "sm" ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
+  const glowClass = "avatar-glow";
 
   // 未登入
   if (!user) {
     return (
       <button
         onClick={onClick}
-        className={`${dim} rounded-full border border-white/20 bg-luxe-surface flex items-center justify-center text-luxe-muted hover:border-luxe-gold hover:text-luxe-gold transition-all duration-200 ${className}`}
+        className={`${dim} rounded-full border border-white/20 bg-luxe-surface flex items-center justify-center text-luxe-muted hover:border-luxe-gold hover:text-luxe-gold transition-all duration-200 ${glowClass} ${className}`}
       >
-        <UserIcon className={size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"} />
+        <UserIcon className={size === "sm" ? "w-4 h-4" : "w-5 h-5"} />
       </button>
     );
   }
@@ -152,7 +153,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     return (
       <button
         onClick={onClick}
-        className={`${dim} rounded-full overflow-hidden border-2 border-luxe-gold/40 hover:border-luxe-gold transition-all duration-200 ring-0 hover:ring-2 hover:ring-luxe-gold/20 ${className}`}
+        className={`${dim} rounded-full overflow-hidden border-2 border-luxe-gold/50 hover:border-luxe-gold transition-all duration-200 ring-0 hover:ring-2 hover:ring-luxe-gold/20 ${glowClass} ${className}`}
       >
         <img
           src={user.avatar_url}
@@ -167,7 +168,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`${dim} rounded-full bg-luxe-gold/20 border border-luxe-gold/40 hover:border-luxe-gold flex items-center justify-center text-luxe-gold font-semibold transition-all duration-200 hover:bg-luxe-gold/30 ${className}`}
+      className={`${dim} rounded-full bg-luxe-gold/20 border-2 border-luxe-gold/50 hover:border-luxe-gold flex items-center justify-center text-luxe-gold font-semibold transition-all duration-200 hover:bg-luxe-gold/30 ${glowClass} ${className}`}
     >
       {initial}
     </button>

@@ -190,7 +190,7 @@ router.post(
           username: user.username,
           email: user.email,
           displayName: user.display_name,
-          avatarUrl: user.avatar_url,
+          avatarUrl: user.avatar_base64 || user.avatar_url,
           sex: user.sex,
           isAdmin: !!adminCheck,
         },
@@ -215,7 +215,7 @@ router.post(
           username: user.username,
           email: user.email,
           displayName: user.display_name,
-          avatarUrl: user.avatar_url,
+          avatarUrl: user.avatar_base64 || user.avatar_url,
           sex: user.sex,
           isAdmin: !!adminCheck,
         },
@@ -254,7 +254,7 @@ router.get(
       const { data: user, error } = await supabaseAdmin
         .from("users")
         .select(
-          "user_id, username, email, display_name, avatar_url, sex, phone_number, created_at",
+          "user_id, username, email, display_name, avatar_url, avatar_base64, sex, phone_number, created_at",
         )
         .eq("user_id", req.user?.userId)
         .single();
@@ -278,7 +278,7 @@ router.get(
           username: user.username,
           email: user.email,
           displayName: user.display_name,
-          avatarUrl: user.avatar_url,
+          avatarUrl: user.avatar_base64 || user.avatar_url,
           phoneNumber: user.phone_number,
           sex: user.sex,
           isAdmin: !!adminCheck,

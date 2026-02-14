@@ -5,5 +5,6 @@
 
 export { default as apiClient, get, post, put, del } from "./api";
 export { authService } from "./auth.service";
+export { userService } from "./user.service";
 export { courseService } from "./course.service";
 export { videoService } from "./video.service";

@@ -4,12 +4,13 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton, Input, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
+import { userService } from "@/services";
 
 /**
  * MemberCenter - 會員中心頁面
@@ -18,7 +19,7 @@ import SEOHead from "@/components/seo/SEOHead";
  */
 const MemberCenter: React.FC = () => {
   const { setTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "profile" | "courses" | "settings"
   >("profile");
@@ -26,10 +27,76 @@ const MemberCenter: React.FC = () => {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTheme("luxe");
   }, [setTheme]);
+
+  /**
+   * 處理頭像檔案選擇 → 轉 base64 → 上傳
+   */
+  const handleAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // 前端驗證
+      if (!file.type.startsWith("image/")) {
+        setToast({ message: "請選擇圖片檔案", type: "error" });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setToast({ message: "圖片大小不可超過 5MB", type: "error" });
+        return;
+      }
+
+      setAvatarUploading(true);
+      try {
+        // 檔案轉 base64
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const result = await userService.uploadAvatar(base64);
+        if (result.success && result.avatarUrl) {
+          updateUser({ avatar_url: result.avatarUrl });
+          setToast({ message: "頭像更新成功！", type: "success" });
+        }
+      } catch (err) {
+        console.error("[MemberCenter] 頭像上傳失敗:", err);
+        setToast({ message: "頭像上傳失敗，請稍後再試", type: "error" });
+      } finally {
+        setAvatarUploading(false);
+        // 清空 input 以便重複選擇同一檔案
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    },
+    [updateUser],
+  );
+
+  /**
+   * 刪除頭像
+   */
+  const handleAvatarDelete = useCallback(async () => {
+    setAvatarUploading(true);
+    try {
+      const result = await userService.deleteAvatar();
+      if (result.success) {
+        updateUser({ avatar_url: undefined });
+        setToast({ message: "頭像已移除", type: "success" });
+      }
+    } catch (err) {
+      console.error("[MemberCenter] 刪除頭像失敗:", err);
+      setToast({ message: "刪除頭像失敗", type: "error" });
+    } finally {
+      setAvatarUploading(false);
+    }
+  }, [updateUser]);
 
   // Auth guard 已由 App.tsx RequireAuth 統一處理
 
@@ -118,14 +185,86 @@ const MemberCenter: React.FC = () => {
                   個人資料
                 </h2>
                 <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-luxe-gold/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-luxe-gold text-xl sm:text-2xl">
-                      {user?.name?.charAt(0) || "U"}
-                    </span>
+                  {/* 頭像區域 — hover 可更換 */}
+                  <div className="relative group flex-shrink-0">
+                    {/* 隱藏的 file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+
+                    {/* 頭像圓形 */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-luxe-gold/40 avatar-glow">
+                      {user?.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt="avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-luxe-gold/20 flex items-center justify-center">
+                          <span className="text-luxe-gold text-xl sm:text-2xl font-semibold">
+                            {user?.name?.charAt(0) || "U"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Hover 遮罩 — 更換頭貼 */}
+                    <div
+                      onClick={() =>
+                        !avatarUploading && fileInputRef.current?.click()
+                      }
+                      className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                    >
+                      {avatarUploading ? (
+                        <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"
+                            />
+                          </svg>
+                          <span className="text-[9px] sm:text-[10px] text-white/90">
+                            更換頭貼
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* 有頭像時顯示刪除按鈕 */}
+                    {user?.avatar_url && !avatarUploading && (
+                      <button
+                        onClick={handleAvatarDelete}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[10px]"
+                        title="移除頭像"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
+
                   <div className="min-w-0">
                     <p className="text-base sm:text-lg text-luxe-text truncate">
-                      {user?.name || "會員"}
+                      {user?.display_name || user?.name || "會員"}
                     </p>
                     <p className="text-xs sm:text-sm text-luxe-muted truncate">
                       {user?.email}
