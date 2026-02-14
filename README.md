@@ -667,6 +667,33 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-14 - 後台白名單 & 用戶管理 UI 升級
+
+#### 🛡️ 白名單管理 (AdminWhitelist)
+
+- **狀態欄重新命名**：「狀態」→「可進入後台管理權限」，紅色文字強調
+- **問號 Tooltip**：hover 顯示 ⚠️「如果不小心把自己後台權限關掉請聯絡小恩調整資料庫」
+
+#### 👥 用戶管理 (AdminUsers) 全面升級
+
+| 功能 | 說明 |
+| --- | --- |
+| **私密相簿 Tooltip** | 問號 icon hover 顯示 ⚠️「開啟權限會讓會員看到私密相簿要注意喔」 |
+| **四種檢視模式** | ☰ 清單 / ▪▪▪ 小圖 / ◻◻ 中圖 / ⬜ 大圖（同 AdminArticles 風格） |
+| **卡片頭像顯示** | 頭像圖片（avatar_base64 → avatar_url → 首字母）+ 角色/狀態徽章 |
+| **使用者詳情 Modal** | 單擊列或卡片 → 彈窗顯示完整資訊（頭像、姓名、Email、角色、狀態、電話、相簿權限 Toggle、建立日期） |
+| **列表頭像** | 表格姓名欄內嵌小頭像 |
+
+#### 📁 修改清單
+
+| 檔案 | 改動 |
+| --- | --- |
+| `AdminWhitelist.tsx` | 狀態欄紅字 + 問號 tooltip |
+| `AdminUsers.tsx` | ViewMode 切換、card-sm/md/lg 渲染、detailUser Modal、renderAvatar helper、getRoleBadge/getStatusBadge |
+| `DataTable.tsx` | Column `header` 改為 `React.ReactNode`、新增 `headerText` 純文字備援 |
+| `types/admin.ts` | `AdminUser` 新增 `avatar_base64?` 欄位 |
+| `backend/routes/admin.ts` | GET `/api/admin/users` select 加入 `avatar_base64` |
+
 ### 2026-02-17 - Avatar 系統：放大 + 金色呼吸燈 + 全端頭像上傳
 
 #### ✨ Navbar Avatar 放大 + 金色呼吸燈
