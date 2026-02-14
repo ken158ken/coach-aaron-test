@@ -11,6 +11,9 @@ interface AvatarUploadResponse {
   avatarUrl: string;
 }
 
+/** 頭像來源類型 */
+type AvatarType = "upload" | "generated";
+
 /**
  * 使用者服務物件
  */
@@ -19,11 +22,16 @@ export const userService = {
    * 上傳頭像（base64）
    *
    * @param {string} imageBase64 - base64 編碼的圖片
+   * @param {AvatarType} type - "upload"（原始上傳）或 "generated"（已裁切/生成）
    * @returns {Promise<AvatarUploadResponse>} 上傳回應
    */
-  uploadAvatar: async (imageBase64: string): Promise<AvatarUploadResponse> => {
+  uploadAvatar: async (
+    imageBase64: string,
+    type: AvatarType = "upload",
+  ): Promise<AvatarUploadResponse> => {
     return post<AvatarUploadResponse>("/api/user/avatar", {
       image: imageBase64,
+      type,
     });
   },
 

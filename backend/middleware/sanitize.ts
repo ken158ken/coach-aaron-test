@@ -33,9 +33,9 @@ const sanitizeString = (value: string): string => {
   // 移除 XSS 相關內容
   cleaned = cleaned.replace(DANGEROUS_PATTERNS.xss, "");
 
-  // 限制長度（防止 DoS）
-  if (cleaned.length > 10000) {
-    cleaned = cleaned.substring(0, 10000);
+  // 限制長度（防止 DoS）— base64 圖片可能很長，由各路由自行驗證
+  if (cleaned.length > 500000) {
+    cleaned = cleaned.substring(0, 500000);
   }
 
   return cleaned;
@@ -96,6 +96,11 @@ export const sanitizeInput = (
   next: NextFunction,
 ): void => {
   try {
+    // 跳過頭像上傳路由（base64 資料不可被清理）
+    if (req.path === "/api/user/avatar" && req.method === "POST") {
+      return next();
+    }
+
     // 清理 body（這是可寫的）
     if (req.body && typeof req.body === "object") {
       req.body = sanitizeObject(req.body);

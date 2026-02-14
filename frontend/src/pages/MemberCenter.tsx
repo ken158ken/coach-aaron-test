@@ -4,13 +4,21 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
-import { StatCard, PillButton, Input, Toast } from "@/components/ui";
+import { StatCard, PillButton, Input, Toast, Modal } from "@/components/ui";
+import { AvatarPicker } from "@/components/ui/avatar";
 import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 import { userService } from "@/services";
+
+/** 日誌工具 */
+const logger = {
+  info: (msg: string) => console.log(`[MemberCenter] ${msg}`),
+  error: (msg: string, err?: unknown) =>
+    console.error(`[MemberCenter] ${msg}`, err),
+};
 
 /**
  * MemberCenter - 會員中心頁面
@@ -28,52 +36,35 @@ const MemberCenter: React.FC = () => {
     type: "success" | "error";
   } | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => {
     setTheme("luxe");
   }, [setTheme]);
 
   /**
-   * 處理頭像檔案選擇 → 轉 base64 → 上傳
+   * AvatarPicker 選擇完成 → 上傳到後端
    */
-  const handleAvatarChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      // 前端驗證
-      if (!file.type.startsWith("image/")) {
-        setToast({ message: "請選擇圖片檔案", type: "error" });
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setToast({ message: "圖片大小不可超過 5MB", type: "error" });
-        return;
-      }
-
+  const handleAvatarSelect = useCallback(
+    async (avatarBase64: string) => {
       setAvatarUploading(true);
       try {
-        // 檔案轉 base64
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const result = await userService.uploadAvatar(base64);
+        logger.info("上傳頭像到後端...");
+        const result = await userService.uploadAvatar(
+          avatarBase64,
+          "generated",
+        );
         if (result.success && result.avatarUrl) {
           updateUser({ avatar_url: result.avatarUrl });
           setToast({ message: "頭像更新成功！", type: "success" });
+          setShowAvatarPicker(false);
+          logger.info("頭像更新成功");
         }
       } catch (err) {
-        console.error("[MemberCenter] 頭像上傳失敗:", err);
+        logger.error("頭像上傳失敗", err);
         setToast({ message: "頭像上傳失敗，請稍後再試", type: "error" });
       } finally {
         setAvatarUploading(false);
-        // 清空 input 以便重複選擇同一檔案
-        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
     [updateUser],
@@ -91,7 +82,7 @@ const MemberCenter: React.FC = () => {
         setToast({ message: "頭像已移除", type: "success" });
       }
     } catch (err) {
-      console.error("[MemberCenter] 刪除頭像失敗:", err);
+      logger.error("刪除頭像失敗", err);
       setToast({ message: "刪除頭像失敗", type: "error" });
     } finally {
       setAvatarUploading(false);
@@ -185,17 +176,8 @@ const MemberCenter: React.FC = () => {
                   個人資料
                 </h2>
                 <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
-                  {/* 頭像區域 — hover 可更換 */}
+                  {/* 頭像區域 — 點擊開啟 AvatarPicker */}
                   <div className="relative group flex-shrink-0">
-                    {/* 隱藏的 file input */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-
                     {/* 頭像圓形 */}
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-luxe-gold/40 avatar-glow">
                       {user?.avatar_url ? (
@@ -216,7 +198,7 @@ const MemberCenter: React.FC = () => {
                     {/* Hover 遮罩 — 更換頭貼 */}
                     <div
                       onClick={() =>
-                        !avatarUploading && fileInputRef.current?.click()
+                        !avatarUploading && setShowAvatarPicker(true)
                       }
                       className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                     >
@@ -341,6 +323,23 @@ const MemberCenter: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* AvatarPicker Modal */}
+      <Modal
+        isOpen={showAvatarPicker}
+        onClose={() => !avatarUploading && setShowAvatarPicker(false)}
+        title="選擇頭像"
+        size="md"
+        theme="luxe"
+      >
+        <AvatarPicker
+          userName={user?.display_name || user?.name || ""}
+          userEmail={user?.email}
+          onSelect={handleAvatarSelect}
+          onCancel={() => setShowAvatarPicker(false)}
+          loading={avatarUploading}
+        />
+      </Modal>
 
       {toast && (
         <Toast

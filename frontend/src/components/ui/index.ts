@@ -27,6 +27,9 @@ export * from "./overlay";
 // Editor
 export * from "./editor";
 
+// Avatar
+export * from "./avatar";
+
 // Dialog
 export {
   Modal,

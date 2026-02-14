@@ -204,10 +204,13 @@ router.put(
 
 /**
  * 上傳/更新使用者頭像
- * 接收 base64 圖片 → 裁剪圓形 → 壓縮畫質 → 存入 DB
+ * 支援兩種模式：
+ *   - type="upload"（預設）：原始圖片 → sharp 裁剪圓形 → 壓縮 → 存入 DB
+ *   - type="generated"：前端已裁切/生成的圖片 → sharp 縮放壓縮 → 存入 DB
  *
  * @route POST /api/user/avatar
- * @body {string} image - base64 編碼的圖片資料（含或不含 data URI prefix）
+ * @body {string} image - base64 編碼的圖片資料
+ * @body {string} [type="upload"] - "upload" | "generated"
  */
 router.post(
   "/avatar",
@@ -220,7 +223,7 @@ router.post(
         return;
       }
 
-      const { image } = req.body;
+      const { image, type = "upload" } = req.body;
       if (!image || typeof image !== "string") {
         res.status(400).json({ error: "請提供圖片資料" });
         return;
@@ -236,37 +239,45 @@ router.post(
         return;
       }
 
-      // 取得圖片元資料
-      const metadata = await sharp(imageBuffer).metadata();
-      const minDim = Math.min(metadata.width || 200, metadata.height || 200);
-
-      // 裁剪正方形 → 調整大小 → 套用圓形遮罩 → 壓縮 → 轉 base64
       const circleSize = AVATAR_CONFIG.SIZE;
+      let processedBuffer: Buffer;
 
-      // 建立圓形 SVG 遮罩
-      const circleMask = Buffer.from(
-        `<svg width="${circleSize}" height="${circleSize}">
-          <circle cx="${circleSize / 2}" cy="${circleSize / 2}" r="${circleSize / 2}" fill="white"/>
-        </svg>`,
-      );
+      if (type === "generated") {
+        // 前端已裁切 / DiceBear / Boring Avatars 生成的圖片
+        // 只做縮放 + 壓縮，不再做中央裁剪
+        console.log(`[User] 使用者 ${userId} 使用生成式頭像`);
+        processedBuffer = await sharp(imageBuffer)
+          .resize(circleSize, circleSize, { fit: "cover" })
+          .png({ quality: AVATAR_CONFIG.QUALITY, compressionLevel: 8 })
+          .toBuffer();
+      } else {
+        // 原始上傳圖片：中央裁剪正方形 → 縮放 → 圓形遮罩 → 壓縮
+        const metadata = await sharp(imageBuffer).metadata();
+        const minDim = Math.min(metadata.width || 200, metadata.height || 200);
 
-      // 從中央裁剪正方形 → 縮放到目標尺寸 → 套用圓形遮罩
-      const processedBuffer = await sharp(imageBuffer)
-        .extract({
-          left: Math.floor(((metadata.width || minDim) - minDim) / 2),
-          top: Math.floor(((metadata.height || minDim) - minDim) / 2),
-          width: minDim,
-          height: minDim,
-        })
-        .resize(circleSize, circleSize)
-        .composite([
-          {
-            input: circleMask,
-            blend: "dest-in",
-          },
-        ])
-        .png({ quality: AVATAR_CONFIG.QUALITY, compressionLevel: 8 })
-        .toBuffer();
+        const circleMask = Buffer.from(
+          `<svg width="${circleSize}" height="${circleSize}">
+            <circle cx="${circleSize / 2}" cy="${circleSize / 2}" r="${circleSize / 2}" fill="white"/>
+          </svg>`,
+        );
+
+        processedBuffer = await sharp(imageBuffer)
+          .extract({
+            left: Math.floor(((metadata.width || minDim) - minDim) / 2),
+            top: Math.floor(((metadata.height || minDim) - minDim) / 2),
+            width: minDim,
+            height: minDim,
+          })
+          .resize(circleSize, circleSize)
+          .composite([
+            {
+              input: circleMask,
+              blend: "dest-in",
+            },
+          ])
+          .png({ quality: AVATAR_CONFIG.QUALITY, compressionLevel: 8 })
+          .toBuffer();
+      }
 
       // 轉為 data URI
       const avatarBase64 = `data:image/png;base64,${processedBuffer.toString("base64")}`;

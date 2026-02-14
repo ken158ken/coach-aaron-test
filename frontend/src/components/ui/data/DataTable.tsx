@@ -206,11 +206,11 @@ function DataTable<T>({
     <>
       {/* 桌面版表格 */}
       <div
-        className={`hidden md:block rounded-lg border overflow-hidden ${styles.container} ${className}`}
+        className={`hidden md:block rounded-lg border ${styles.container} ${className}`}
       >
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full">
-            <thead>
+            <thead className="relative">
               <tr className={`border-b ${styles.header}`}>
                 {columns.map((column) => {
                   const colKey = String(column.key);
