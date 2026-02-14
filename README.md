@@ -666,6 +666,27 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-16 - Navbar User Dropdown 選單 + RWD 重構
+
+#### 👤 User Dropdown 下拉選單
+
+- **UserAvatar 子元件**：顯示 avatar_url 圖片 → 名字首字母 → 匿名使用者 icon；`sm`/`md` 兩種尺寸；金色邊框 + hover ring 動畫
+- **UserDropdown 子元件**：點擊外部關閉 + ESC 關閉；使用者資訊 header（display_name + email）
+- **日夜切換**：太陽/月亮 icon + 文字 + emoji badge，SSR-safe `themeReady` 防閃爍
+- **中英切換**：地球 icon + "English"/"中文" 切換文字 + EN/中 badge
+- **會員中心**：導航至 `/member`
+- **後台管理**：金色文字，`isAdmin` 才渲染
+- **登出**：紅色系視覺，未登入顯示「登入/註冊」
+- **進場動畫**：`dropdownIn` keyframe（fadeIn + scaleUp + translateY）
+
+#### 📱 Navbar RWD 重構
+
+- **桌面版（lg+）**：Logo | 導航連結（flex-1 居中）| SearchButton + Avatar 下拉選單；原本 inline 的 auth 按鈕 + theme/language 全部收進 dropdown
+- **手機版（< lg）**：Logo + SearchButton + 漢堡圖示（SVG ≡/✕ 取代 "MENU"/"CLOSE" 文字）
+- **MobileMenu 子元件**：使用者資訊 header → 導航連結 → 搜尋/日夜/語言切換 → 帳號區塊（會員/管理/登出 or 登入/註冊）
+- **Breakpoint 調整**：`xl:hidden` → `lg:hidden`（1024px 以上即桌面版）
+- **全域搜尋**：保留 `Ctrl+K` / `⌘K` 快捷鍵 + `GlobalSearch` modal
+
 ### 2026-02-15 - 後台 Select 主題化 + 分類篩選器 + 卡片徽章重設計 + AOS 滾動動畫
 
 #### 🎨 Select/Combobox 主題化修復
