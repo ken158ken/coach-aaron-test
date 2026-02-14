@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton, Input, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
@@ -18,7 +18,7 @@ import SEOHead from "@/components/seo/SEOHead";
  */
 const MemberCenter: React.FC = () => {
   const { setTheme } = useTheme();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "profile" | "courses" | "settings"
   >("profile");
@@ -31,9 +31,7 @@ const MemberCenter: React.FC = () => {
     setTheme("luxe");
   }, [setTheme]);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  // Auth guard 已由 App.tsx RequireAuth 統一處理
 
   const tabs = [
     { key: "profile" as const, label: "個人資料" },

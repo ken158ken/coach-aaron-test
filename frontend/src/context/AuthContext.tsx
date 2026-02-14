@@ -27,10 +27,13 @@ interface AuthProviderProps {
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  /** auth 已就緒：mounted 且 loading 結束，可安全做 auth 判斷 */
+  const authReady = mounted && !loading;
 
   /**
    * 檢查認證狀態 - 只在客戶端執行
@@ -133,6 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     isAdmin,
     loading,
+    authReady,
     mounted,
     login,
     register,

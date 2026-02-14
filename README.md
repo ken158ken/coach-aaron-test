@@ -666,6 +666,44 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-14 - Auth 渲染時序修正 + 路由守衛
+
+#### 🔐 問題根因
+
+`AuthContext.loading` 初始值為 `false`，導致 auth API 尚在檢查期間（~300ms），所有保護頁面誤將使用者判定為「未登入」並觸發重導向。
+
+#### ⚡ 修正方案
+
+| 修正 | 說明 |
+|---|---|
+| `loading` 初始值 `false` → `true` | 代表「尚未確認 auth 狀態」，與「已確認未登入」區分 |
+| 新增 `authReady` 屬性 | `= mounted && !loading`，auth 已就緒可安全做判斷 |
+| `RequireAuth` 路由守衛 | 等 `authReady` 後才判斷登入狀態，否則顯示 loading |
+| `RequireAdmin` 路由守衛 | 等 `authReady` 後才判斷管理員權限 |
+
+#### 📁 修改清單
+
+| 檔案 | 改動 |
+|---|---|
+| `context/AuthContext.tsx` | `loading` 初始 `true`、新增 `authReady` 計算屬性 |
+| `types/user.ts` | `AuthContextType` 新增 `authReady: boolean` |
+| `components/auth/RequireAuth.tsx` | **新建** RequireAuth + RequireAdmin 路由守衛元件 |
+| `App.tsx` | `/member`、`/dashboard` 包 RequireAuth；`/admin/*` 包 RequireAdmin |
+| `AdminLayout.tsx` | 移除冗餘 auth guard（改由 RequireAdmin 統一處理） |
+| `MemberCenter.tsx` | 移除 `<Navigate to="/login">` guard |
+| `Dashboard.tsx` | 移除 `<Navigate to="/login">` guard |
+| `Login.tsx` | 加入 `authLoading` 保護，避免 loading 期間誤 redirect |
+| `Register.tsx` | 加入 `authLoading` 保護，避免 loading 期間誤 redirect |
+
+#### 🕒 Auth 時序對照（修正後）
+
+| 階段 | loading | authReady | user | 行為 |
+|---|---|---|---|---|
+| SSR / 初始渲染 | `true` | `false` | `null` | 顯示 loading 畫面 |
+| checkAuth 進行中 | `true` | `false` | `null` | 繼續顯示 loading |
+| 已確認登入 | `false` | `true` | `{...}` | ✅ 渲染保護頁面 |
+| 已確認未登入 | `false` | `true` | `null` | ✅ 重導向登入頁 |
+
 ### 2026-02-16 - Navbar User Dropdown 選單 + RWD 重構
 
 #### 👤 User Dropdown 下拉選單

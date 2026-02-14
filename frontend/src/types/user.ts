@@ -53,6 +53,8 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   loading: boolean;
+  /** auth 已就緒：mounted 且 loading 結束，可安全做 auth 判斷 */
+  authReady: boolean;
   mounted: boolean;
   login: (
     email: string,

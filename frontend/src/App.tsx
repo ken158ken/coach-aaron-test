@@ -8,6 +8,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { DialogProvider } from "@/components/ui/Dialog";
+import { RequireAuth, RequireAdmin } from "@/components/auth/RequireAuth";
 
 // Layout
 import Layout from "@/components/layout/Layout";
@@ -68,14 +69,35 @@ function App(): JSX.Element {
                 <Route path="contact" element={<Contact />} />
                 <Route path="login" element={<Login />} />
                 <Route path="register" element={<Register />} />
-                <Route path="member" element={<MemberCenter />} />
-                <Route path="dashboard" element={<Dashboard />} />
+                <Route
+                  path="member"
+                  element={
+                    <RequireAuth>
+                      <MemberCenter />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="dashboard"
+                  element={
+                    <RequireAuth>
+                      <Dashboard />
+                    </RequireAuth>
+                  }
+                />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="checkout/success" element={<CheckoutSuccess />} />
               </Route>
 
               {/* 後台路由 */}
-              <Route path="/admin" element={<AdminLayout />}>
+              <Route
+                path="/admin"
+                element={
+                  <RequireAdmin>
+                    <AdminLayout />
+                  </RequireAdmin>
+                }
+              >
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="courses" element={<AdminCourses />} />
@@ -86,15 +108,37 @@ function App(): JSX.Element {
               </Route>
 
               {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}
-              <Route path="/admin/articles/new" element={<ArticleEditor />} />
+              <Route
+                path="/admin/articles/new"
+                element={
+                  <RequireAdmin>
+                    <ArticleEditor />
+                  </RequireAdmin>
+                }
+              />
               <Route
                 path="/admin/articles/:id/edit"
-                element={<ArticleEditor />}
+                element={
+                  <RequireAdmin>
+                    <ArticleEditor />
+                  </RequireAdmin>
+                }
               />
-              <Route path="/admin/courses/new" element={<CourseEditor />} />
+              <Route
+                path="/admin/courses/new"
+                element={
+                  <RequireAdmin>
+                    <CourseEditor />
+                  </RequireAdmin>
+                }
+              />
               <Route
                 path="/admin/courses/:id/edit"
-                element={<CourseEditor />}
+                element={
+                  <RequireAdmin>
+                    <CourseEditor />
+                  </RequireAdmin>
+                }
               />
             </Routes>
           </DialogProvider>

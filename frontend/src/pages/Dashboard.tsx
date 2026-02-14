@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton } from "@/components/ui";
 import { PrismScene } from "@/components/three";
@@ -18,15 +18,13 @@ import SEOHead from "@/components/seo/SEOHead";
  */
 const Dashboard: React.FC = () => {
   const { setTheme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     setTheme("luxe");
   }, [setTheme]);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  // Auth guard 已由 App.tsx RequireAuth 統一處理
 
   const stats = [
     {

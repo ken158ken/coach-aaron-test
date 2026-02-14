@@ -18,7 +18,7 @@ import SEOHead from "@/components/seo/SEOHead";
  */
 const Login: React.FC = () => {
   const { setTheme } = useTheme();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -33,10 +33,10 @@ const Login: React.FC = () => {
   }, [setTheme]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!authLoading && isAuthenticated) {
       navigate("/member");
     }
-  }, [isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

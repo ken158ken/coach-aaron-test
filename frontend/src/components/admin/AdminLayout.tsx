@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Outlet, Navigate, Link } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 import { useAuth, useTheme, useLanguage } from "@/context";
 import AdminSidebar from "./AdminSidebar";
 
@@ -23,7 +23,7 @@ interface AdminLayoutProps {
  * @returns {JSX.Element} 管理後台佈局
  */
 const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
-  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { user } = useAuth();
   const { isDark, toggleColorMode } = useTheme();
   const { language, toggleLanguage, t } = useLanguage();
 
@@ -60,14 +60,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
-  // Check admin access
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isAdmin && user?.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
+  // Auth guard 已由 App.tsx RequireAdmin 統一處理
 
   return (
     <div className={`flex min-h-screen bg-luxe-bg ${className}`}>
