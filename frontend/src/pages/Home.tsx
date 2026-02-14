@@ -5,6 +5,8 @@
  */
 
 import React, { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import { useTheme } from "@/context";
 import { AbyssScene } from "@/components/three";
 import {
@@ -15,6 +17,11 @@ import {
 } from "@/components/sections";
 import HomePopup from "@/components/sections/HomePopup";
 import SEOHead from "@/components/seo/SEOHead";
+
+/** 日誌工具 */
+const logger = {
+  info: (msg: string) => console.log(`[Home] ${msg}`),
+};
 
 /**
  * Home - 網站首頁
@@ -27,6 +34,28 @@ const Home: React.FC = () => {
   useEffect(() => {
     setTheme("abyss");
   }, [setTheme]);
+
+  /** 初始化 AOS 滾動動畫 */
+  useEffect(() => {
+    try {
+      AOS.init({
+        duration: 800,
+        easing: "ease-out-cubic",
+        once: true,
+        offset: 80,
+        delay: 0,
+        anchorPlacement: "top-bottom",
+      });
+      logger.info("AOS 滾動動畫已初始化");
+    } catch (err) {
+      console.error("[Home] AOS 初始化失敗:", err);
+    }
+
+    return () => {
+      // 清理 AOS 監聽器
+      AOS.refreshHard();
+    };
+  }, []);
 
   return (
     <div className="relative min-h-screen bg-abyss-bg">
@@ -63,19 +92,30 @@ const Home: React.FC = () => {
       {/* 首頁自定義彈窗 */}
       <HomePopup />
 
-      {/* Hero Section */}
-      <HeroSection />
+      {/* Hero Section - 淡入 + 上滑 */}
+      <div data-aos="fade-up" data-aos-duration="1000">
+        <HeroSection />
+      </div>
 
-      {/* Coach Introduction (Luxe Style) */}
-      <div className="relative z-10 bg-luxe-bg">
+      {/* Coach Introduction (Luxe Style) - 淡入 + 上滑 */}
+      <div
+        className="relative z-10 bg-luxe-bg"
+        data-aos="fade-up"
+        data-aos-duration="900"
+        data-aos-delay="100"
+      >
         <CoachIntroSection />
       </div>
 
-      {/* Podcast Section (Abyss Style) */}
-      <PodcastSection />
+      {/* Podcast Section (Abyss Style) - 淡入 + 上滑 */}
+      <div data-aos="fade-up" data-aos-duration="900" data-aos-delay="100">
+        <PodcastSection />
+      </div>
 
-      {/* Review Section (Prism Style) */}
-      <ReviewSection />
+      {/* Review Section (Prism Style) - 淡入 + 上滑 */}
+      <div data-aos="fade-up" data-aos-duration="900" data-aos-delay="100">
+        <ReviewSection />
+      </div>
     </div>
   );
 };

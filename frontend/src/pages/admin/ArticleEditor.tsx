@@ -828,11 +828,20 @@ const ArticleEditor: React.FC = () => {
                       </button>
                       {showSlugHelp && (
                         <div className="absolute left-6 top-0 z-50 w-64 p-3 bg-luxe-surface border border-luxe-gold/30 rounded-lg shadow-xl text-xs text-gray-300 leading-relaxed">
-                          <p className="font-medium text-luxe-gold mb-1">網址代稱 (Slug)</p>
+                          <p className="font-medium text-luxe-gold mb-1">
+                            網址代稱 (Slug)
+                          </p>
                           <p>影響文章網址的美觀度，例如：</p>
-                          <p className="text-luxe-gold/80 my-1">/articles/<strong>my-first-post</strong></p>
-                          <p>可輸入簡單英文，僅允許小寫英文、數字、連字符 (-) 和底線 (_)。</p>
-                          <p className="mt-1 text-gray-500">留空則自動產生時間戳代碼。</p>
+                          <p className="text-luxe-gold/80 my-1">
+                            /articles/<strong>my-first-post</strong>
+                          </p>
+                          <p>
+                            可輸入簡單英文，僅允許小寫英文、數字、連字符 (-)
+                            和底線 (_)。
+                          </p>
+                          <p className="mt-1 text-gray-500">
+                            留空則自動產生時間戳代碼。
+                          </p>
                           <button
                             type="button"
                             onClick={() => setShowSlugHelp(false)}
@@ -845,7 +854,9 @@ const ArticleEditor: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-500 shrink-0">/articles/</span>
+                    <span className="text-xs text-gray-500 shrink-0">
+                      /articles/
+                    </span>
                     <input
                       type="text"
                       value={article.slug}
@@ -858,7 +869,9 @@ const ArticleEditor: React.FC = () => {
                     <p className="text-xs text-gray-500 mt-1">檢查中...</p>
                   )}
                   {slugDuplicate && !slugChecking && (
-                    <p className="text-xs text-red-400 mt-1">⚠️ 此網址代稱已被使用，請更換其他名稱</p>
+                    <p className="text-xs text-red-400 mt-1">
+                      ⚠️ 此網址代稱已被使用，請更換其他名稱
+                    </p>
                   )}
                 </div>
 
@@ -903,7 +916,13 @@ const ArticleEditor: React.FC = () => {
                       }));
                       setHasChanges(true);
                     }}
-                    className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
+                    className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20 outline-none text-sm appearance-none cursor-pointer hover:border-luxe-gold/60 transition-all duration-200 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 0.5rem center",
+                      backgroundSize: "1.25em 1.25em",
+                    }}
                   >
                     <option value="">選擇分類</option>
                     {categories.map((cat) => (

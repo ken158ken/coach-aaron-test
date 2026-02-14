@@ -58,7 +58,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
       luxe: {
         container: "text-luxe-text",
         select:
-          "bg-luxe-surface border-luxe-muted/30 hover:border-luxe-gold/50 focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/30 text-luxe-text transition-all duration-300",
+          "bg-luxe-surface border-luxe-muted/30 hover:border-luxe-gold/50 focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/30 text-luxe-text transition-all duration-300 [&>option]:bg-luxe-surface [&>option]:text-luxe-text",
         label: "text-luxe-muted",
         error: "text-red-400",
       },

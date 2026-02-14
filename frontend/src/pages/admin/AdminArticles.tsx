@@ -54,6 +54,7 @@ const AdminArticles: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [featuredFilter, setFeaturedFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
@@ -117,13 +118,37 @@ const AdminArticles: React.FC = () => {
     }
   };
 
-  /** 依據精選篩選器過濾文章（client-side） */
+  /** 從文章中提取所有唯一分類 */
+  const uniqueCategories = useMemo(() => {
+    const cats = new Set<string>();
+    articles.forEach((a) => {
+      if (a.article_category) {
+        a.article_category.split(",").forEach((c) => {
+          const trimmed = c.trim();
+          if (trimmed) cats.add(trimmed);
+        });
+      }
+    });
+    return Array.from(cats).sort();
+  }, [articles]);
+
+  /** 依據精選 + 分類篩選器過濾文章（client-side） */
   const filteredArticles = useMemo(() => {
-    if (featuredFilter === "all") return articles;
-    return articles.filter((a) =>
-      featuredFilter === "featured" ? a.is_featured : !a.is_featured,
-    );
-  }, [articles, featuredFilter]);
+    let result = articles;
+    if (featuredFilter !== "all") {
+      result = result.filter((a) =>
+        featuredFilter === "featured" ? a.is_featured : !a.is_featured,
+      );
+    }
+    if (categoryFilter !== "all") {
+      result = result.filter((a) =>
+        (a.article_category || "")
+          .toLowerCase()
+          .includes(categoryFilter.toLowerCase()),
+      );
+    }
+    return result;
+  }, [articles, featuredFilter, categoryFilter]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -274,20 +299,68 @@ const AdminArticles: React.FC = () => {
     });
   };
 
+  /** 狀態徽章（表格用） */
   const getStatusBadge = (status: ArticleStatus) => {
-    const styles = {
-      draft: "bg-gray-500/20 text-gray-400",
-      published: "bg-green-500/20 text-green-400",
-      archived: "bg-yellow-500/20 text-yellow-400",
+    const config = {
+      draft: {
+        dot: "bg-gray-400",
+        text: "text-gray-400",
+        bg: "bg-gray-500/10",
+        label: "草稿",
+      },
+      published: {
+        dot: "bg-emerald-400",
+        text: "text-emerald-400",
+        bg: "bg-emerald-500/10",
+        label: "已發布",
+      },
+      archived: {
+        dot: "bg-amber-400",
+        text: "text-amber-400",
+        bg: "bg-amber-500/10",
+        label: "已封存",
+      },
     };
-    const labels = {
-      draft: "草稿",
-      published: "已發布",
-      archived: "已封存",
-    };
+    const s = config[status];
     return (
-      <span className={`px-2 py-1 text-xs rounded ${styles[status]}`}>
-        {labels[status]}
+      <span
+        className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full ${s.bg} ${s.text}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+        {s.label}
+      </span>
+    );
+  };
+
+  /** 狀態徽章（卡片浮標用，帶 absolute 定位） */
+  const getCardStatusBadge = (status: ArticleStatus) => {
+    const config = {
+      draft: {
+        dot: "bg-gray-400",
+        text: "text-gray-300",
+        bg: "bg-black/60 backdrop-blur-sm",
+        label: "草稿",
+      },
+      published: {
+        dot: "bg-emerald-400",
+        text: "text-emerald-300",
+        bg: "bg-black/60 backdrop-blur-sm",
+        label: "已發布",
+      },
+      archived: {
+        dot: "bg-amber-400",
+        text: "text-amber-300",
+        bg: "bg-black/60 backdrop-blur-sm",
+        label: "已封存",
+      },
+    };
+    const s = config[status];
+    return (
+      <span
+        className={`absolute top-1.5 left-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full ${s.bg} ${s.text} font-medium`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${s.dot} animate-pulse`} />
+        {s.label}
       </span>
     );
   };
@@ -459,7 +532,13 @@ const AdminArticles: React.FC = () => {
             setStatusFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all duration-200 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.5rem center",
+            backgroundSize: "1.25em 1.25em",
+          }}
         >
           <option value="all">全部狀態</option>
           <option value="draft">草稿</option>
@@ -467,12 +546,39 @@ const AdminArticles: React.FC = () => {
           <option value="archived">已封存</option>
         </select>
         <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all duration-200 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.5rem center",
+            backgroundSize: "1.25em 1.25em",
+          }}
+        >
+          <option value="all">全部分類</option>
+          {uniqueCategories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+        <select
           value={featuredFilter}
           onChange={(e) => {
             setFeaturedFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all duration-200 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.5rem center",
+            backgroundSize: "1.25em 1.25em",
+          }}
         >
           <option value="all">全部文章</option>
           <option value="featured">★ 僅精選</option>
@@ -580,10 +686,10 @@ const AdminArticles: React.FC = () => {
                       <span className="text-3xl text-luxe-muted/30">📝</span>
                     )}
                     {/* 狀態浮標 */}
-                    {getStatusBadge(article.status)}
+                    {getCardStatusBadge(article.status)}
                     {/* 精選浮標 */}
                     {article.is_featured && (
-                      <span className="absolute top-1 right-1 bg-luxe-gold/80 text-black text-[10px] px-1.5 py-0.5 rounded font-bold">
+                      <span className="absolute top-1.5 right-1.5 bg-luxe-gold/90 text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
                         ★ 精選
                       </span>
                     )}

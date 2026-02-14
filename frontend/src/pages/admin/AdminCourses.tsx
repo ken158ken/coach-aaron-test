@@ -4,7 +4,7 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   DataTable,
@@ -81,6 +81,8 @@ const AdminCourses: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -166,11 +168,43 @@ const AdminCourses: React.FC = () => {
     fetchCourses();
   }, []);
 
-  const filteredCourses = courses.filter((course) =>
-    (course.title || course.course_title || "")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase()),
-  );
+  /** 從課程中提取所有唯一分類 */
+  const uniqueCategories = useMemo(() => {
+    const cats = new Set<string>();
+    courses.forEach((c) => {
+      const cat = c.category || c.course_category;
+      if (cat) {
+        cat.split(",").forEach((s) => {
+          const trimmed = s.trim();
+          if (trimmed) cats.add(trimmed);
+        });
+      }
+    });
+    return Array.from(cats).sort();
+  }, [courses]);
+
+  /** 依據搜尋 + 狀態 + 分類篩選器過濾課程（client-side） */
+  const filteredCourses = useMemo(() => {
+    let result = courses;
+    if (searchTerm) {
+      result = result.filter((course) =>
+        (course.title || course.course_title || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()),
+      );
+    }
+    if (statusFilter !== "all") {
+      result = result.filter((course) => course.status === statusFilter);
+    }
+    if (categoryFilter !== "all") {
+      result = result.filter((course) =>
+        (course.category || course.course_category || "")
+          .toLowerCase()
+          .includes(categoryFilter.toLowerCase()),
+      );
+    }
+    return result;
+  }, [courses, searchTerm, statusFilter, categoryFilter]);
 
   /** 重置表單 */
   const resetForm = () => {
@@ -337,15 +371,32 @@ const AdminCourses: React.FC = () => {
       key: "status" as const,
       header: "狀態",
       render: (course: Course) => {
-        const statusColors: Record<string, string> = {
-          draft: "bg-gray-500/20 text-gray-400",
-          published: "bg-green-500/20 text-green-400",
-          archived: "bg-yellow-500/20 text-yellow-400",
+        const config: Record<
+          string,
+          { dot: string; text: string; bg: string }
+        > = {
+          draft: {
+            dot: "bg-gray-400",
+            text: "text-gray-400",
+            bg: "bg-gray-500/10",
+          },
+          published: {
+            dot: "bg-emerald-400",
+            text: "text-emerald-400",
+            bg: "bg-emerald-500/10",
+          },
+          archived: {
+            dot: "bg-amber-400",
+            text: "text-amber-400",
+            bg: "bg-amber-500/10",
+          },
         };
+        const s = config[course.status] || config.draft;
         return (
           <span
-            className={`px-2 py-1 text-xs rounded ${statusColors[course.status] || ""}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full ${s.bg} ${s.text}`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
             {statusLabels[course.status] || course.status}
           </span>
         );
@@ -444,6 +495,46 @@ const AdminCourses: React.FC = () => {
             </svg>
           }
         />
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all duration-200 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.5rem center",
+            backgroundSize: "1.25em 1.25em",
+          }}
+        >
+          <option value="all">全部狀態</option>
+          <option value="draft">草稿</option>
+          <option value="published">已發布</option>
+          <option value="archived">已封存</option>
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all duration-200 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.5rem center",
+            backgroundSize: "1.25em 1.25em",
+          }}
+        >
+          <option value="all">全部分類</option>
+          {uniqueCategories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
 
         {/* 檢視模式切換 */}
         <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
@@ -511,11 +602,27 @@ const AdminCourses: React.FC = () => {
               }`}
             >
               {filteredCourses.map((course) => {
-                const statusColors: Record<string, string> = {
-                  draft: "bg-gray-500/20 text-gray-400",
-                  published: "bg-green-500/20 text-green-400",
-                  archived: "bg-yellow-500/20 text-yellow-400",
+                const statusConfig: Record<
+                  string,
+                  { dot: string; text: string; bg: string }
+                > = {
+                  draft: {
+                    dot: "bg-gray-400",
+                    text: "text-gray-300",
+                    bg: "bg-black/60 backdrop-blur-sm",
+                  },
+                  published: {
+                    dot: "bg-emerald-400",
+                    text: "text-emerald-300",
+                    bg: "bg-black/60 backdrop-blur-sm",
+                  },
+                  archived: {
+                    dot: "bg-amber-400",
+                    text: "text-amber-300",
+                    bg: "bg-black/60 backdrop-blur-sm",
+                  },
                 };
+                const sc = statusConfig[course.status] || statusConfig.draft;
                 return (
                   <div
                     key={course.course_id}
@@ -535,12 +642,15 @@ const AdminCourses: React.FC = () => {
                       )}
                       {/* 狀態浮標 */}
                       <span
-                        className={`absolute top-1 left-1 px-1.5 py-0.5 text-[10px] rounded ${statusColors[course.status] || ""}`}
+                        className={`absolute top-1.5 left-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full ${sc.bg} ${sc.text} font-medium`}
                       >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${sc.dot} animate-pulse`}
+                        />
                         {statusLabels[course.status] || course.status}
                       </span>
                       {/* 價格浮標 */}
-                      <span className="absolute bottom-1 right-1 bg-luxe-gold/90 text-black text-[10px] px-1.5 py-0.5 rounded font-bold">
+                      <span className="absolute bottom-1.5 right-1.5 bg-luxe-gold/90 text-black text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
                         NT$ {course.price?.toLocaleString() || 0}
                       </span>
                     </div>

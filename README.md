@@ -52,6 +52,7 @@ npm run build
 - **路由**: React Router 6.x
 - **3D 動畫**: Three.js r160+
 - **DOM 動畫**: GSAP 3.x
+- **滾動動畫**: AOS (Animate On Scroll)
 - **HTTP 客戶端**: Axios
 - **SEO**: react-helmet-async
 
@@ -664,6 +665,33 @@ npm run generate:coach-photos
 - **放大查看**: 點擊照片可全螢幕放大瀏覽
 
 ## 📝 更新日誌
+
+### 2026-02-15 - 後台 Select 主題化 + 分類篩選器 + 卡片徽章重設計 + AOS 滾動動畫
+
+#### 🎨 Select/Combobox 主題化修復
+
+- **ArticleEditor / CourseEditor**：原生 `<select>` 加入 `appearance-none`、自訂金色 SVG dropdown 箭頭、`[&>option]:bg-luxe-surface` 深色選項背景
+- **AdminArticles / AdminCourses**：篩選器 select 統一風格：`hover:border-luxe-gold/40`、`focus:ring-2 focus:ring-luxe-gold/20`、圓角 + 過渡動畫
+- **Select.tsx 元件**：luxe 主題增加 `[&>option]` 背景色樣式
+
+#### 🔍 後台文章/課程分類篩選器
+
+- **AdminArticles**：新增「全部分類」下拉篩選器（狀態篩選 + 分類篩選 + 精選篩選三合一），client-side 從文章提取 `uniqueCategories`
+- **AdminCourses**：新增「全部狀態」+ 「全部分類」兩個篩選器（原本只有搜尋框），`useMemo` 多重篩選鏈（搜尋 + 狀態 + 分類）
+
+#### 🏷️ Card 檢視狀態徽章重設計
+
+- **dot + text 設計**：`rounded-full` 藥丸徽章 + 左側圓點指示器 + `animate-pulse` 動畫
+- **AdminArticles**：`getStatusBadge()`（表格用）+ `getCardStatusBadge()`（卡片用 `absolute` 定位 + `backdrop-blur-sm` 半透明背景）
+- **AdminCourses**：columns 內狀態 render + 卡片狀態徽章統一使用新設計
+- **配色方案**：草稿=灰色、已發布=翡翠綠、已封存=琥珀色
+- **精選/價格浮標**：升級為 `rounded-full` + `shadow-sm` 一致風格
+
+#### 🎞️ AOS 首頁滾動動畫
+
+- **安裝 `aos` 套件** + `@types/aos` 類型定義
+- **Home.tsx**：`AOS.init()` 初始化（`duration: 800`、`easing: ease-out-cubic`、`once: true`、`offset: 80`）
+- **四大區塊 fade-up 動畫**：HeroSection、CoachIntroSection、PodcastSection、ReviewSection 依序 `data-aos="fade-up"` + `data-aos-delay` 交錯載入
 
 ### 2026-02-14 - TipTap ImageGallery 擴展 + Modal RWD 全面修復
 
