@@ -28,7 +28,7 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
     let query = supabaseAdmin
       .from("users")
       .select(
-        "user_id, username, email, display_name, avatar_url, sex, phone_number, is_active, email_verified, last_login_at, created_at",
+        "user_id, username, email, display_name, avatar_url, avatar_base64, sex, phone_number, is_active, email_verified, last_login_at, created_at",
         { count: "exact" },
       )
       .is("deleted_at", null)

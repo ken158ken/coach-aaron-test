@@ -188,7 +188,31 @@ const AdminWhitelist: React.FC = () => {
     { key: "note" as const, header: "備註" },
     {
       key: "isActive" as const,
-      header: "狀態",
+      header: (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-red-400 font-medium">可進入後台管理權限</span>
+          <span className="relative group/tip">
+            <svg
+              className="w-3.5 h-3.5 text-red-400/70 cursor-help"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.228 9c.549-1.065 2.01-1.37 3.272-1.37 1.635 0 2.5.882 2.5 1.87 0 1.128-1.443 1.614-2.5 2.164V13m0 3h.01"
+              />
+              <circle cx="12" cy="12" r="10" strokeWidth={2} />
+            </svg>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-luxe-surface border border-red-500/30 rounded-lg text-[11px] text-red-300 whitespace-nowrap opacity-0 pointer-events-none group-hover/tip:opacity-100 transition-opacity duration-200 shadow-lg z-50">
+              如果不小心把自己後台權限關掉請聯絡小恩調整資料庫
+            </span>
+          </span>
+        </span>
+      ),
+      headerText: "後台管理權限",
       render: (item: WhitelistItem) => (
         <Toggle
           checked={item.isActive}

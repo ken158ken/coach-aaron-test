@@ -21,6 +21,7 @@ export interface AdminStats {
 export interface AdminUser extends User {
   username?: string;
   display_name?: string;
+  avatar_base64?: string;
   is_active: boolean;
   last_login_at?: string;
 }

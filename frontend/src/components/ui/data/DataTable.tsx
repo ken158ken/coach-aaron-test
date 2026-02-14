@@ -11,7 +11,9 @@ type SortDirection = "asc" | "desc" | null;
 
 interface Column<T> {
   key: keyof T | string;
-  header: string;
+  header: React.ReactNode;
+  /** 純文字版 header，用於排序下拉選單（header 為 JSX 時必須提供） */
+  headerText?: string;
   render?: (item: T) => React.ReactNode;
   className?: string;
   /** 是否在手機版隱藏此欄位 */
@@ -289,9 +291,11 @@ function DataTable<T>({
                 )
                 .map((c) => (
                   <React.Fragment key={String(c.key)}>
-                    <option value={`${String(c.key)}:asc`}>{c.header} ↑</option>
+                    <option value={`${String(c.key)}:asc`}>
+                      {c.headerText ?? c.header} ↑
+                    </option>
                     <option value={`${String(c.key)}:desc`}>
-                      {c.header} ↓
+                      {c.headerText ?? c.header} ↓
                     </option>
                   </React.Fragment>
                 ))}
@@ -330,7 +334,7 @@ function DataTable<T>({
                 {secondaryColumns.map((column) => (
                   <div key={String(column.key)} className="min-w-0">
                     <span className={`${styles.muted} text-xs`}>
-                      {column.header}
+                      {column.headerText ?? column.header}
                     </span>
                     <div className={`${styles.text} truncate`}>
                       {column.render
