@@ -4,7 +4,7 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { StatCard, PillButton, Input, Toast, Modal } from "@/components/ui";
@@ -12,6 +12,7 @@ import { AvatarPicker } from "@/components/ui/avatar";
 import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 import { userService } from "@/services";
+import { put } from "@/services/api";
 
 /** 日誌工具 */
 const logger = {
@@ -37,10 +38,99 @@ const MemberCenter: React.FC = () => {
   } | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [profileDisplayName, setProfileDisplayName] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
 
   useEffect(() => {
     setTheme("luxe");
   }, [setTheme]);
+
+  // 初始化表單值
+  useEffect(() => {
+    if (user) {
+      setProfileDisplayName(user.display_name || user.name || "");
+    }
+  }, [user]);
+
+  /** 前端危險字元過濾模式 */
+  const DANGEROUS_INPUT_PATTERN =
+    /<script|<iframe|javascript:|on\w+=|<\/?\w+[^>]*>|\{\{|\$\{|union\s+select/i;
+
+  /** 顯示名稱合法字元（中英數字 + 空格 + 常見標點 + emoji） */
+  const DISPLAY_NAME_PATTERN =
+    /^[\p{L}\p{N}\p{Emoji_Presentation}\p{Emoji}\s._\-]+$/u;
+
+  /**
+   * 前端輸入消毒：移除危險字元
+   */
+  const sanitizeInput = useCallback((value: string): string => {
+    return value
+      .replace(/<[^>]*>/g, "") // 移除 HTML 標籤
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // 控制字元
+      .trim();
+  }, []);
+
+  /**
+   * 更新個人資料表單提交
+   */
+  const handleProfileSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      const cleanName = sanitizeInput(profileDisplayName);
+
+      // 前端驗證
+      if (!cleanName || cleanName.length < 1) {
+        setToast({ message: "顯示名稱不可為空", type: "error" });
+        return;
+      }
+      if (cleanName.length > 30) {
+        setToast({ message: "顯示名稱不可超過 30 字元", type: "error" });
+        return;
+      }
+      if (DANGEROUS_INPUT_PATTERN.test(cleanName)) {
+        setToast({ message: "顯示名稱包含不允許的字元", type: "error" });
+        logger.error("前端偵測到危險輸入", cleanName.substring(0, 50));
+        return;
+      }
+      if (!DISPLAY_NAME_PATTERN.test(cleanName)) {
+        setToast({
+          message: "顯示名稱只能包含中英文、數字、空格和常見標點",
+          type: "error",
+        });
+        return;
+      }
+
+      setProfileSaving(true);
+      try {
+        logger.info("更新個人資料...");
+        const result = await put<{
+          success: boolean;
+          data: { display_name: string };
+        }>("/api/user/profile", { displayName: cleanName });
+
+        if (result.success) {
+          updateUser({ display_name: result.data.display_name });
+          setToast({ message: "個人資料更新成功！", type: "success" });
+          logger.info("個人資料更新成功");
+        }
+      } catch (err) {
+        logger.error("更新個人資料失敗", err);
+        const errorMsg =
+          err instanceof Error ? err.message : "更新失敗，請稍後再試";
+        setToast({ message: errorMsg, type: "error" });
+      } finally {
+        setProfileSaving(false);
+      }
+    },
+    [profileDisplayName, sanitizeInput, updateUser],
+  );
+
+  /** 顯示名稱是否已修改 */
+  const profileChanged = useMemo(() => {
+    const original = user?.display_name || user?.name || "";
+    return profileDisplayName !== original;
+  }, [profileDisplayName, user]);
 
   /**
    * AvatarPicker 選擇完成 → 上傳到後端
@@ -253,21 +343,41 @@ const MemberCenter: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <form className="space-y-3 sm:space-y-4 max-w-md">
+                <form
+                  className="space-y-3 sm:space-y-4 max-w-md"
+                  onSubmit={handleProfileSubmit}
+                >
                   <Input
                     label="顯示名稱"
-                    defaultValue={user?.display_name || user?.name || ""}
+                    value={profileDisplayName}
+                    onChange={(e) =>
+                      setProfileDisplayName(e.target.value.slice(0, 30))
+                    }
                     placeholder="設定您的顯示名稱"
                     theme="luxe"
+                    maxLength={30}
+                    autoComplete="name"
+                    spellCheck={false}
                   />
+                  <p className="text-[10px] text-luxe-muted -mt-2">
+                    {profileDisplayName.length}/30
+                    字元，只允許中英文、數字、空格和常見標點
+                  </p>
                   <Input
                     label="電子郵件"
-                    defaultValue={user?.email || ""}
+                    value={user?.email || ""}
                     theme="luxe"
                     disabled
+                    readOnly
+                    tabIndex={-1}
                   />
-                  <PillButton theme="luxe" variant="outline">
-                    更新資料
+                  <PillButton
+                    theme="luxe"
+                    variant="outline"
+                    type="submit"
+                    disabled={profileSaving || !profileChanged}
+                  >
+                    {profileSaving ? "更新中…" : "更新資料"}
                   </PillButton>
                 </form>
               </div>

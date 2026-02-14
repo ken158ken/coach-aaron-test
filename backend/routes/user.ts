@@ -7,6 +7,7 @@ import express, { Request, Response, Router } from "express";
 import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { sanitizeComment, logSecurityEvent } from "../utils/sanitizer.js";
 
 const router: Router = express.Router();
 
@@ -160,9 +161,25 @@ router.get(
   },
 );
 
+/** 允許的性別值白名單 */
+const VALID_GENDERS = ["male", "female", "other", "prefer_not_to_say"] as const;
+
+/** 顯示名稱限制 */
+const DISPLAY_NAME_LIMITS = {
+  MIN_LENGTH: 1,
+  MAX_LENGTH: 30,
+  /** 只允許中英文、數字、常見標點、空格、常見 emoji */
+  PATTERN: /^[\p{L}\p{N}\p{Emoji_Presentation}\p{Emoji}\s._\-]+$/u,
+} as const;
+
 /**
  * 更新用戶個人資料
+ * 包含完整的輸入消毒與驗證
+ *
  * @route PUT /api/user/profile
+ * @body {string} [displayName] - 顯示名稱（1-30 字元，禁止 HTML/SQL/特殊字元）
+ * @body {string} [phoneNumber] - 手機號碼（09xxxxxxxx）
+ * @body {string} [gender] - 性別（male/female/other/prefer_not_to_say）
  */
 router.put(
   "/profile",
@@ -170,18 +187,122 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = (req as any).user?.userId;
-      const { displayName, phoneNumber, avatarUrl, gender } = req.body;
-
       if (!userId) {
         res.status(401).json({ error: "未授權" });
         return;
       }
 
+      const { displayName, phoneNumber, gender } = req.body;
+
+      // 僅允許白名單欄位，拒絕未知欄位
+      const allowedFields = ["displayName", "phoneNumber", "gender"];
+      const unknownFields = Object.keys(req.body).filter(
+        (k) => !allowedFields.includes(k),
+      );
+      if (unknownFields.length > 0) {
+        logSecurityEvent("unknown_profile_fields", {
+          userId,
+          fields: unknownFields,
+        });
+        // 静默忽略未知欄位，不報錯
+      }
+
       const updateData: Record<string, unknown> = {};
-      if (displayName !== undefined) updateData.display_name = displayName;
-      if (phoneNumber !== undefined) updateData.phone_number = phoneNumber;
-      if (avatarUrl !== undefined) updateData.avatar_url = avatarUrl;
-      if (gender !== undefined) updateData.gender = gender;
+      const errors: string[] = [];
+
+      // ── 顯示名稱消毒 ──
+      if (displayName !== undefined) {
+        if (typeof displayName !== "string") {
+          errors.push("顯示名稱必須是文字");
+        } else {
+          // 用 sanitizeComment 做基礎消毒（XSS + HTML + SQL 偏測）
+          const result = sanitizeComment(displayName, {
+            maxLength: DISPLAY_NAME_LIMITS.MAX_LENGTH,
+            minLength: DISPLAY_NAME_LIMITS.MIN_LENGTH,
+            allowNewlines: false,
+            strictMode: true,
+            fieldName: "顯示名稱",
+          });
+
+          if (!result.isValid) {
+            if (result.threatDetected) {
+              logSecurityEvent("display_name_injection_attempt", {
+                userId,
+                threatType: result.threatType,
+                input: displayName.substring(0, 100),
+              });
+            }
+            errors.push(result.errorMessage || "顯示名稱格式不正確");
+          } else {
+            // 額外檢查合法字元模式（中英數字 + 常見標點 + emoji）
+            const decoded = result.sanitizedValue
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&#x2F;/g, "/")
+              .replace(/&#x60;/g, "`")
+              .replace(/&#x3D;/g, "=");
+
+            if (!DISPLAY_NAME_LIMITS.PATTERN.test(decoded)) {
+              errors.push("顯示名稱包含不允許的特殊字元");
+            } else {
+              // 存入解碼後的乾淨值（不要存 HTML entities）
+              updateData.display_name = decoded;
+            }
+          }
+        }
+      }
+
+      // ── 電話消毒 ──
+      if (phoneNumber !== undefined) {
+        if (typeof phoneNumber !== "string") {
+          errors.push("電話必須是文字");
+        } else if (phoneNumber.trim() === "") {
+          // 允許清空
+          updateData.phone_number = null;
+        } else {
+          const cleaned = phoneNumber.replace(/[\s\-]/g, "");
+          if (!/^09\d{8}$/.test(cleaned)) {
+            errors.push("電話格式不正確，請輸入 09 開頭的10位數字");
+          } else {
+            updateData.phone_number = cleaned;
+          }
+        }
+      }
+
+      // ── 性別消毒 ──
+      if (gender !== undefined) {
+        if (typeof gender !== "string") {
+          errors.push("性別必須是文字");
+        } else if (
+          !VALID_GENDERS.includes(gender as (typeof VALID_GENDERS)[number])
+        ) {
+          logSecurityEvent("invalid_gender_value", {
+            userId,
+            value: gender.substring(0, 50),
+          });
+          errors.push("性別值不在允許範圍內");
+        } else {
+          updateData.gender = gender;
+        }
+      }
+
+      // 如果有驗證錯誤，回傳所有錯誤
+      if (errors.length > 0) {
+        res.status(400).json({ error: errors.join("；") });
+        return;
+      }
+
+      // 沒有任何欄位要更新
+      if (Object.keys(updateData).length === 0) {
+        res.status(400).json({ error: "請提供要更新的欄位" });
+        return;
+      }
+
+      // 加上更新時間
+      updateData.updated_at = new Date().toISOString();
 
       const { data, error } = await supabaseAdmin
         .from("users")
@@ -194,7 +315,8 @@ router.put(
 
       if (error) throw error;
 
-      res.json(data);
+      console.log(`[User] 使用者 ${userId} 個人資料更新成功`);
+      res.json({ success: true, data });
     } catch (err) {
       console.error("Update user profile error:", err);
       res.status(500).json({ error: "更新個人資料失敗" });
