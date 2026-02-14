@@ -24,13 +24,13 @@
 
 ### 2.1 AvatarCropper 裁切元件
 
-| 項目 | 說明 |
-| --- | --- |
-| 套件 | `react-easy-crop` |
-| 裁切形狀 | 圓形 (`cropShape="round"`) |
-| 互動方式 | 拖曳平移 + 滾輪/滑桿縮放 (1x ~ 3x) |
-| 輸出 | 400×400 PNG base64 (後端再縮至 200×200) |
-| 路徑 | `frontend/src/components/ui/avatar/AvatarCropper.tsx` |
+| 項目     | 說明                                                  |
+| -------- | ----------------------------------------------------- |
+| 套件     | `react-easy-crop`                                     |
+| 裁切形狀 | 圓形 (`cropShape="round"`)                            |
+| 互動方式 | 拖曳平移 + 滾輪/滑桿縮放 (1x ~ 3x)                    |
+| 輸出     | 400×400 PNG base64 (後端再縮至 200×200)               |
+| 路徑     | `frontend/src/components/ui/avatar/AvatarCropper.tsx` |
 
 ### 2.2 AvatarPicker 多方案選擇器
 
@@ -59,10 +59,10 @@
 
 `POST /api/user/avatar` 新增 `type` body 參數：
 
-| type | 處理 |
-| --- | --- |
+| type              | 處理                                                                      |
+| ----------------- | ------------------------------------------------------------------------- |
 | `"upload"` (預設) | sharp 中央裁剪正方形 → resize 200×200 → SVG 圓形遮罩 composite → PNG 壓縮 |
-| `"generated"` | sharp resize 200×200 + PNG 壓縮（跳過中央裁剪，前端已處理） |
+| `"generated"`     | sharp resize 200×200 + PNG 壓縮（跳過中央裁剪，前端已處理）               |
 
 ## 3. 使用者流程
 
@@ -80,24 +80,24 @@
 
 ## 4. 檔案變更清單
 
-| 檔案 | 類型 | 說明 |
-| --- | --- | --- |
-| `backend/middleware/sanitize.ts` | 修改 | 跳過 avatar 路由 + 限制提升 |
-| `backend/routes/user.ts` | 修改 | 新增 type 參數支援 generated 模式 |
-| `frontend/src/components/ui/avatar/AvatarCropper.tsx` | 新建 | react-easy-crop 裁切元件 |
-| `frontend/src/components/ui/avatar/AvatarPicker.tsx` | 新建 | 多方案頭像選擇器 |
-| `frontend/src/components/ui/avatar/index.ts` | 新建 | 模組匯出 |
-| `frontend/src/components/ui/index.ts` | 修改 | 新增 avatar 模組 |
-| `frontend/src/components/ui/data/DataTable.tsx` | 修改 | 修復 overflow-hidden tooltip 裁切 |
-| `frontend/src/pages/MemberCenter.tsx` | 修改 | 改用 Modal + AvatarPicker |
-| `frontend/src/services/user.service.ts` | 修改 | 新增 AvatarType 參數 |
-| `frontend/package.json` | 修改 | 新增 4 個依賴套件 |
+| 檔案                                                  | 類型 | 說明                              |
+| ----------------------------------------------------- | ---- | --------------------------------- |
+| `backend/middleware/sanitize.ts`                      | 修改 | 跳過 avatar 路由 + 限制提升       |
+| `backend/routes/user.ts`                              | 修改 | 新增 type 參數支援 generated 模式 |
+| `frontend/src/components/ui/avatar/AvatarCropper.tsx` | 新建 | react-easy-crop 裁切元件          |
+| `frontend/src/components/ui/avatar/AvatarPicker.tsx`  | 新建 | 多方案頭像選擇器                  |
+| `frontend/src/components/ui/avatar/index.ts`          | 新建 | 模組匯出                          |
+| `frontend/src/components/ui/index.ts`                 | 修改 | 新增 avatar 模組                  |
+| `frontend/src/components/ui/data/DataTable.tsx`       | 修改 | 修復 overflow-hidden tooltip 裁切 |
+| `frontend/src/pages/MemberCenter.tsx`                 | 修改 | 改用 Modal + AvatarPicker         |
+| `frontend/src/services/user.service.ts`               | 修改 | 新增 AvatarType 參數              |
+| `frontend/package.json`                               | 修改 | 新增 4 個依賴套件                 |
 
 ## 5. 新增依賴
 
-| 套件 | 用途 |
-| --- | --- |
-| `react-easy-crop` | 圖片裁切 UI |
-| `@dicebear/core` | DiceBear 頭像生成核心 |
+| 套件                   | 用途                      |
+| ---------------------- | ------------------------- |
+| `react-easy-crop`      | 圖片裁切 UI               |
+| `@dicebear/core`       | DiceBear 頭像生成核心     |
 | `@dicebear/collection` | DiceBear 風格集合 (11 種) |
-| `boring-avatars` | 幾何風格頭像 (6 種變體) |
+| `boring-avatars`       | 幾何風格頭像 (6 種變體)   |

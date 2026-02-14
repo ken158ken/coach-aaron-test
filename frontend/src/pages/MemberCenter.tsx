@@ -255,8 +255,9 @@ const MemberCenter: React.FC = () => {
                 </div>
                 <form className="space-y-3 sm:space-y-4 max-w-md">
                   <Input
-                    label="姓名"
-                    defaultValue={user?.name || ""}
+                    label="顯示名稱"
+                    defaultValue={user?.display_name || user?.name || ""}
+                    placeholder="設定您的顯示名稱"
                     theme="luxe"
                   />
                   <Input
@@ -333,8 +334,7 @@ const MemberCenter: React.FC = () => {
         theme="luxe"
       >
         <AvatarPicker
-          userName={user?.display_name || user?.name || ""}
-          userEmail={user?.email}
+          userName={user?.display_name || user?.name || "會員"}
           onSelect={handleAvatarSelect}
           onCancel={() => setShowAvatarPicker(false)}
           loading={avatarUploading}

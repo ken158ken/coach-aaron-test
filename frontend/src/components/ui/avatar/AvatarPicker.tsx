@@ -206,7 +206,6 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
  */
 const AvatarPicker: React.FC<AvatarPickerProps> = ({
   userName,
-  userEmail = "",
   onSelect,
   onCancel,
   loading = false,
@@ -214,17 +213,15 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
   const [activeTab, setActiveTab] = useState<TabKey>("upload");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedDicebear, setSelectedDicebear] = useState(0);
-  const [dicebearSeed, setDicebearSeed] = useState(
-    userName || userEmail || "user",
-  );
+  const [dicebearSeed, setDicebearSeed] = useState(userName || "user");
   const [selectedBoring, setSelectedBoring] = useState(0);
-  const [boringSeed, setBoringSeed] = useState(userName || userEmail || "user");
+  const [boringSeed, setBoringSeed] = useState(userName || "user");
   const [processing, setProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const seed = useMemo(
-    () => dicebearSeed || userName || userEmail || "default",
-    [dicebearSeed, userName, userEmail],
+    () => dicebearSeed || userName || "default",
+    [dicebearSeed, userName],
   );
 
   /* ── 上傳裁切 ── */
@@ -342,7 +339,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
     try {
       const svgStr = getBoringAvatarSvg(
         selectedBoring,
-        boringSeed || userName || userEmail || "user",
+        boringSeed || userName || "user",
       );
       if (!svgStr) return;
       const pngBase64 = await svgToPngBase64(svgStr, 400);
@@ -353,14 +350,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
     } finally {
       setProcessing(false);
     }
-  }, [
-    selectedBoring,
-    boringSeed,
-    userName,
-    userEmail,
-    getBoringAvatarSvg,
-    onSelect,
-  ]);
+  }, [selectedBoring, boringSeed, userName, getBoringAvatarSvg, onSelect]);
 
   /* ── 隨機 seed ── */
 
@@ -416,7 +406,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-28 h-28 rounded-full border-2 border-dashed border-luxe-gold/30 hover:border-luxe-gold/60 flex flex-col items-center justify-center gap-2 transition-colors group"
+                className="w-28 h-28 rounded-full border-2 border-dashed border-luxe-gold/30 hover:border-luxe-gold/60 flex flex-col items-center justify-center gap-2 transition-colors group avatar-glow"
               >
                 <svg
                   className="w-8 h-8 text-luxe-gold/40 group-hover:text-luxe-gold/70 transition-colors"
@@ -492,7 +482,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                     }`}
                 >
                   <div
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white/5"
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white/5 border-2 ${selectedDicebear === idx ? "border-luxe-gold/60 avatar-glow" : "border-transparent"}`}
                     dangerouslySetInnerHTML={{ __html: svgStr }}
                   />
                   <span className="text-[9px] sm:text-[10px] text-luxe-muted truncate w-full text-center">
@@ -576,12 +566,16 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                       : "border-luxe-gold/10 hover:border-luxe-gold/30"
                   }`}
               >
-                <BoringAvatar
-                  size={48}
-                  name={boringSeed || userName || userEmail || "user"}
-                  variant={variant.key}
-                  colors={BORING_COLORS}
-                />
+                <div
+                  className={`rounded-full overflow-hidden border-2 ${selectedBoring === idx ? "border-luxe-gold/60 avatar-glow" : "border-transparent"}`}
+                >
+                  <BoringAvatar
+                    size={48}
+                    name={boringSeed || userName || "user"}
+                    variant={variant.key}
+                    colors={BORING_COLORS}
+                  />
+                </div>
                 <span className="text-[10px] text-luxe-muted">
                   {variant.label}
                 </span>
