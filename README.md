@@ -165,6 +165,25 @@ coach-aaron-redesign/
 
 詳細資訊請參考: [REPORTS/SECURITY_INPUT_SANITIZATION_2026-02-04T12-00-00Z.md](./REPORTS/SECURITY_INPUT_SANITIZATION_2026-02-04T12-00-00Z.md)
 
+### 個人資料表單防護 (2026-02-16)
+
+對會員中心個人資料更新實施前後端雙層消毒：
+
+```
+前端 (sanitizeInput + 模式偵測) → 後端 (sanitizeComment + 白名單) → 安全日誌
+```
+
+| 防護層       | 措施                                                                        |
+| ------------ | --------------------------------------------------------------------------- |
+| 欄位白名單   | 僅接受 `displayName` / `phoneNumber` / `gender`，未知欄位靜默忽略           |
+| 顯示名稱消毒 | `sanitizeComment` 嚴格模式 + Unicode 字元模式驗證（中英數 + emoji + 標點）  |
+| 長度限制     | 1-30 字元，前端字元計數器即時顯示                                           |
+| 電話驗證     | 台灣手機格式 09xxxxxxxx                                                     |
+| 性別白名單   | male / female / other / prefer_not_to_say                                   |
+| Email 防篡改 | 前端 `disabled` + `readOnly`，後端不接受 email 欄位更新                     |
+| 前端偵測     | `<script>` / `<iframe>` / `javascript:` / `onXxx=` / `{{` / `${` / SQL 模式 |
+| 安全日誌     | 可疑輸入觸發 `logSecurityEvent` 記錄 userId + 威脅類型                      |
+
 ### 聯絡表單防護 (2026-02-13)
 
 | 防護層     | 措施                                                               |
