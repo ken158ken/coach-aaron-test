@@ -114,10 +114,31 @@ const MemberCenter: React.FC = () => {
           setToast({ message: "個人資料更新成功！", type: "success" });
           logger.info("個人資料更新成功");
         }
-      } catch (err) {
-        logger.error("更新個人資料失敗", err);
+      } catch (err: unknown) {
+        // 從 AxiosError 中提取後端返回的錯誤訊息
+        const axiosErr = err as {
+          response?: {
+            data?: {
+              error?: string;
+              detail?: string;
+              code?: string;
+              hint?: string;
+            };
+          };
+        };
+        const respData = axiosErr?.response?.data;
+        const detail = respData?.detail;
+        const serverMsg = respData?.error;
+        // 完整日誌（含 Supabase 錯誤碼、hint）以便追蹤
+        logger.error("更新個人資料失敗", {
+          error: serverMsg,
+          detail,
+          code: respData?.code,
+          hint: respData?.hint,
+        });
         const errorMsg =
-          err instanceof Error ? err.message : "更新失敗，請稍後再試";
+          serverMsg ||
+          (err instanceof Error ? err.message : "更新失敗，請稍後再試");
         setToast({ message: errorMsg, type: "error" });
       } finally {
         setProfileSaving(false);

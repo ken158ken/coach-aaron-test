@@ -4,7 +4,7 @@
  * @description 提供上傳裁切、DiceBear 生成式、Boring Avatars 幾何風格三大方案
  */
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import { createAvatar } from "@dicebear/core";
 import {
   adventurer,
@@ -298,6 +298,41 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
     [generateDicebearSvg],
   );
 
+  /**
+   * 快取所有 DiceBear 風格的縮圖 data URI
+   * 將 SVG 字串轉為 data:image/svg+xml base64，使用 <img> 渲染
+   * 避免 dangerouslySetInnerHTML 造成的 SVG 尺寸溢出問題
+   */
+  const dicebearThumbnails = useMemo(() => {
+    return DICEBEAR_STYLES.map((_, idx) => {
+      try {
+        const svgStr = generateDicebearSvg(idx, seed);
+        if (!svgStr) return "";
+        // 確保 SVG viewBox 正確，防止溢出
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        return URL.createObjectURL(blob);
+      } catch {
+        return "";
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed, generateDicebearSvg]);
+
+  // 清理 blob URL
+  React.useEffect(() => {
+    return () => {
+      dicebearThumbnails.forEach((url) => {
+        if (url) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {
+            /* ignore */
+          }
+        }
+      });
+    };
+  }, [dicebearThumbnails]);
+
   // 當 selectedDicebear 或 seed 改變時，自動更新預覽
   React.useEffect(() => {
     if (activeTab === "dicebear") {
@@ -490,7 +525,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
           {/* 風格格子 */}
           <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto pr-1">
             {DICEBEAR_STYLES.map((style, idx) => {
-              const svgStr = generateDicebearSvg(idx, seed);
+              const thumbSrc = dicebearThumbnails[idx];
               return (
                 <button
                   key={style.key}
@@ -504,8 +539,18 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                 >
                   <div
                     className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white/5 border-2 flex items-center justify-center ${selectedDicebear === idx ? "border-luxe-gold/60 avatar-glow" : "border-transparent"}`}
-                    dangerouslySetInnerHTML={{ __html: svgStr }}
-                  />
+                  >
+                    {thumbSrc ? (
+                      <img
+                        src={thumbSrc}
+                        alt={style.label}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-t-transparent border-luxe-gold/30 rounded-full animate-spin" />
+                    )}
+                  </div>
                   <span className="text-[9px] sm:text-[10px] text-luxe-muted truncate w-full text-center">
                     {style.label}
                   </span>

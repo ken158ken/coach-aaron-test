@@ -122,6 +122,8 @@ coach-aaron-redesign/
 │   └── *.sql              # 其他 SQL 腳本
 │
 └── REPORTS/                # 📊 報告文件
+    ├── AVATAR_DISPLAY_NAME_FIX_ROUND3_2026-02-19T10-00-00+08-00.md
+    ├── AVATAR_DISPLAY_NAME_FIX_2026-02-15T22-00-00+08-00.md
     ├── SSR_ROUTING_AND_SEO_META_2026-02-12T23-00-00+08-00.md
     └── ...其他報告
 ```
@@ -685,6 +687,26 @@ npm run generate:coach-photos
 - **放大查看**: 點擊照片可全螢幕放大瀏覽
 
 ## 📝 更新日誌
+
+### 2026-02-19 - Sanitize Middleware Regex 修復 + AvatarPicker 渲染優化
+
+#### 🐛 Bug 修復
+
+| 問題                                      | 根因                                                                                                              | 修復                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Sanitize Middleware regex `lastIndex`** | `DANGEROUS_PATTERNS` 使用帶 `g` flag 的全域 regex 物件，`.test()` 連續呼叫時 `lastIndex` 不歸零導致匹配結果不穩定 | 改為 `createDangerousPatterns()` 工廠函式，每次呼叫回傳全新 RegExp |
+| **AvatarPicker DiceBear 縮圖渲染異常**    | `dangerouslySetInnerHTML` 注入 SVG 時，SVG 內部 `size=200` 超出容器 40px 導致溢出                                 | 改用 `useMemo` + Blob URL + `<img>` 標籤，瀏覽器自動縮放           |
+
+#### 修改檔案
+
+- **backend/middleware/sanitize.ts**: regex 全域物件→工廠函式、`detectSuspiciousRequest` 加入 try-catch
+- **AvatarPicker.tsx**: DiceBear 縮圖改用 Blob URL + `<img>`、加入 `useMemo` 快取 + `useEffect` cleanup
+
+#### 完整報告
+
+- 詳見 `REPORTS/AVATAR_DISPLAY_NAME_FIX_ROUND3_2026-02-19T10-00-00+08-00.md`
+
+---
 
 ### 2026-02-15 - 頭像渲染、顯示名稱更新、Hydration 修復
 

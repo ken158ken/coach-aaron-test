@@ -11,18 +11,24 @@ import { logger } from "../utils/logger.js";
 
 /**
  * 危險字元的正則表達式
+ *
+ * 注意：帶 `g` flag 的 regex 在 `.test()` 後 `lastIndex` 不歸零，
+ * 重複呼叫會產生不穩定結果。因此改用函式工廠，每次呼叫回傳全新 RegExp。
  */
-const DANGEROUS_PATTERNS = {
+const createDangerousPatterns = () => ({
   // XSS 常見模式
   xss: /<script[^>]*>[\s\S]*?<\/script>|<iframe[^>]*>|javascript:/gi,
   // SQL 注入常見模式（作為額外檢查，Supabase 已有保護）
   sql: /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b)/gi,
   // HTML 標籤（保留部分安全標籤）
   htmlTags: /<(?!\/?(b|i|u|strong|em|br|p)>)[^>]+>/gi,
-};
+});
 
 /**
  * 清理字串值
+ *
+ * @param {string} value - 待清理字串
+ * @returns {string} 清理後字串
  */
 const sanitizeString = (value: string): string => {
   if (typeof value !== "string") return value;
@@ -30,8 +36,8 @@ const sanitizeString = (value: string): string => {
   // 移除前後空白
   let cleaned = value.trim();
 
-  // 移除 XSS 相關內容
-  cleaned = cleaned.replace(DANGEROUS_PATTERNS.xss, "");
+  // 移除 XSS 相關內容（每次建立新 regex 避免 lastIndex 問題）
+  cleaned = cleaned.replace(createDangerousPatterns().xss, "");
 
   // 限制長度（防止 DoS）— base64 圖片可能很長，由各路由自行驗證
   if (cleaned.length > 500000) {
@@ -149,27 +155,38 @@ export const validateEmail = (
 
 /**
  * 檢測可疑請求
+ *
+ * 注意：僅記錄警告，不阻擋請求。
+ * 使用工廠函式建立新 regex，避免全域 flag 的 lastIndex 問題。
  */
 export const detectSuspiciousRequest = (
   req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
-  const body = JSON.stringify(req.body);
-  const query = JSON.stringify(req.query);
-  const path = req.path;
+  try {
+    const body = JSON.stringify(req.body);
+    const query = JSON.stringify(req.query);
+    const path = req.path;
 
-  // 檢查是否包含 SQL 注入模式
-  if (
-    DANGEROUS_PATTERNS.sql.test(body) ||
-    DANGEROUS_PATTERNS.sql.test(query) ||
-    DANGEROUS_PATTERNS.sql.test(path)
-  ) {
-    logger.warn("檢測到可疑 SQL 注入嘗試", {
-      ip: req.ip,
-      path: req.path,
-      method: req.method,
-    });
+    // 每次建立新的 regex 實例，避免 g flag 的 lastIndex 問題
+    const sqlPattern = createDangerousPatterns().sql;
+
+    // 檢查是否包含 SQL 注入模式
+    if (
+      sqlPattern.test(body) ||
+      sqlPattern.test(query) ||
+      sqlPattern.test(path)
+    ) {
+      logger.warn("檢測到可疑 SQL 注入嘗試", {
+        ip: req.ip,
+        path: req.path,
+        method: req.method,
+      });
+    }
+  } catch (err) {
+    // 偵測失敗不應阻擋正常請求
+    logger.error("可疑請求偵測異常", err as Error);
   }
 
   next();
