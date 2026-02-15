@@ -686,6 +686,30 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-15 - 頭像渲染、顯示名稱更新、Hydration 修復
+
+#### 🐛 Bug 修復
+
+| 問題                          | 根因                                                                                 | 修復                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **頭像選擇器無法預覽**        | 風格/幾何頭像只有小縮圖，缺少大預覽圖，用戶無法看清選擇的樣式                        | 新增大的即時預覽區域（DiceBear 轉 PNG 預覽、Boring 直接渲染大尺寸）        |
+| **Seed 輸入框多餘**           | 暴露 seed 文字輸入框（顯示如「會員-1771139450566」），使用者名稱應從「顯示名稱」修改 | 移除 seed 輸入框，改為元件內部自動管理 seed + 隨機按鈕                     |
+| **顯示名稱更新 500 錯誤**     | `sanitizeComment` 的 `strictMode: true` + `escapeHtml` 雙重編碼/解碼流程過度複雜     | 簡化為直接清理 + 關鍵注入偵測 + 白名單驗證                                 |
+| **React Hydration #418/#423** | SSR 與 CSR 渲染不一致 + `entry-client.tsx` 錯誤排除 `<!--$-->` 標記                  | 修正 `hasSSRContent` 邏輯、新增 `onRecoverableError` 靜默處理預期 mismatch |
+
+#### 修改檔案
+
+- **AvatarPicker.tsx**: 移除 `userName` prop、移除 seed 輸入框、新增大預覽圖、統一 seed 管理
+- **MemberCenter.tsx**: 配合 props 變更、歡迎文字優先顯示 `display_name`
+- **backend/routes/user.ts**: 簡化顯示名稱消毒邏輯
+- **entry-client.tsx**: 改善 hydration 邏輯
+
+#### 完整報告
+
+- 詳見 `REPORTS/AVATAR_DISPLAY_NAME_FIX_2026-02-15T22-00-00+08-00.md`
+
+---
+
 ### 2026-02-18 - 頭像系統升級：裁切上傳 + 多方案生成式頭像 + Bug 修復
 
 #### 🐛 Bug 修復

@@ -207,8 +207,12 @@ const MemberCenter: React.FC = () => {
               <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-1 sm:mb-2">
                 會員中心
               </h1>
-              <p className="text-sm sm:text-base text-luxe-muted truncate max-w-[250px] sm:max-w-none">
-                歡迎回來，{user?.name || user?.email}
+              <p
+                className="text-sm sm:text-base text-luxe-muted truncate max-w-[250px] sm:max-w-none"
+                suppressHydrationWarning
+              >
+                歡迎回來，
+                {user?.display_name || user?.name || user?.email || ""}
               </p>
             </div>
             <button
@@ -444,7 +448,6 @@ const MemberCenter: React.FC = () => {
         theme="luxe"
       >
         <AvatarPicker
-          userName={user?.display_name || user?.name || "會員"}
           onSelect={handleAvatarSelect}
           onCancel={() => setShowAvatarPicker(false)}
           loading={avatarUploading}

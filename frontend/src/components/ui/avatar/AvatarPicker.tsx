@@ -4,7 +4,7 @@
  * @description 提供上傳裁切、DiceBear 生成式、Boring Avatars 幾何風格三大方案
  */
 
-import React, { useState, useCallback, useRef, useMemo } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { createAvatar } from "@dicebear/core";
 import {
   adventurer,
@@ -37,10 +37,6 @@ const logger = {
 type TabKey = "upload" | "dicebear" | "boring";
 
 interface AvatarPickerProps {
-  /** 目前使用者名稱（用作 seed） */
-  userName: string;
-  /** 目前使用者 email（用作 fallback seed） */
-  userEmail?: string;
   /** 選擇完成回呼，回傳 base64 data URI */
   onSelect: (avatarBase64: string) => void;
   /** 取消回呼 */
@@ -205,7 +201,6 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
  * @returns {JSX.Element} 頭像選擇器
  */
 const AvatarPicker: React.FC<AvatarPickerProps> = ({
-  userName,
   onSelect,
   onCancel,
   loading = false,
@@ -213,16 +208,12 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
   const [activeTab, setActiveTab] = useState<TabKey>("upload");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedDicebear, setSelectedDicebear] = useState(0);
-  const [dicebearSeed, setDicebearSeed] = useState(userName || "user");
   const [selectedBoring, setSelectedBoring] = useState(0);
-  const [boringSeed, setBoringSeed] = useState(userName || "user");
+  const [seed, setSeed] = useState(() => `avatar-${Date.now()}`);
   const [processing, setProcessing] = useState(false);
+  /** DiceBear 預覽用 PNG data URI（大圖） */
+  const [dicebearPreview, setDicebearPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const seed = useMemo(
-    () => dicebearSeed || userName || "default",
-    [dicebearSeed, userName],
-  );
 
   /* ── 上傳裁切 ── */
 
@@ -290,6 +281,33 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
   /**
    * 確認使用 DiceBear 頭像
    */
+  /**
+   * 即時更新 DiceBear 預覽圖
+   */
+  const updateDicebearPreview = useCallback(
+    async (styleIndex: number, seedStr: string) => {
+      try {
+        const svgStr = generateDicebearSvg(styleIndex, seedStr);
+        if (!svgStr) return;
+        const pngBase64 = await svgToPngBase64(svgStr, 400);
+        setDicebearPreview(pngBase64);
+      } catch (err) {
+        logger.error("DiceBear 預覽生成失敗", err);
+      }
+    },
+    [generateDicebearSvg],
+  );
+
+  // 當 selectedDicebear 或 seed 改變時，自動更新預覽
+  React.useEffect(() => {
+    if (activeTab === "dicebear") {
+      updateDicebearPreview(selectedDicebear, seed);
+    }
+  }, [activeTab, selectedDicebear, seed, updateDicebearPreview]);
+
+  /**
+   * 確認使用 DiceBear 頭像
+   */
   const handleDicebearConfirm = useCallback(async () => {
     setProcessing(true);
     try {
@@ -337,10 +355,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
   const handleBoringConfirm = useCallback(async () => {
     setProcessing(true);
     try {
-      const svgStr = getBoringAvatarSvg(
-        selectedBoring,
-        boringSeed || userName || "user",
-      );
+      const svgStr = getBoringAvatarSvg(selectedBoring, seed);
       if (!svgStr) return;
       const pngBase64 = await svgToPngBase64(svgStr, 400);
       logger.info("Boring Avatar 已轉 PNG");
@@ -350,15 +365,14 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
     } finally {
       setProcessing(false);
     }
-  }, [selectedBoring, boringSeed, userName, getBoringAvatarSvg, onSelect]);
+  }, [selectedBoring, seed, getBoringAvatarSvg, onSelect]);
 
   /* ── 隨機 seed ── */
 
   const randomizeSeed = useCallback(() => {
-    const newSeed = `${userName || "user"}-${Date.now()}`;
-    setDicebearSeed(newSeed);
-    setBoringSeed(newSeed);
-  }, [userName]);
+    const newSeed = `avatar-${Date.now()}`;
+    setSeed(newSeed);
+  }, []);
 
   /* ── 渲染 ── */
 
@@ -436,22 +450,28 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
       {/* ───── 方案二: DiceBear 風格頭像 ───── */}
       {activeTab === "dicebear" && (
         <div className="flex flex-col gap-4">
-          {/* Seed 控制 */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={dicebearSeed}
-              onChange={(e) => setDicebearSeed(e.target.value)}
-              placeholder="輸入名稱生成不同樣貌"
-              className="flex-1 px-3 py-1.5 text-xs bg-luxe-surface border border-luxe-gold/20 rounded-lg text-luxe-text placeholder:text-luxe-muted/50 focus:outline-none focus:border-luxe-gold/40"
-            />
+          {/* 大預覽圖 + 隨機按鈕 */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-luxe-gold/40 avatar-glow bg-white/5">
+              {dicebearPreview ? (
+                <img
+                  src={dicebearPreview}
+                  alt="預覽"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-t-transparent border-luxe-gold/40 rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
             <button
               onClick={randomizeSeed}
-              className="p-1.5 text-luxe-muted hover:text-luxe-gold border border-luxe-gold/20 rounded-lg transition-colors"
-              title="隨機"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-luxe-muted hover:text-luxe-gold border border-luxe-gold/20 rounded-lg transition-colors"
+              title="隨機生成"
             >
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -463,11 +483,12 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
+              隨機風格
             </button>
           </div>
 
           {/* 風格格子 */}
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[240px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto pr-1">
             {DICEBEAR_STYLES.map((style, idx) => {
               const svgStr = generateDicebearSvg(idx, seed);
               return (
@@ -482,7 +503,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                     }`}
                 >
                   <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white/5 border-2 ${selectedDicebear === idx ? "border-luxe-gold/60 avatar-glow" : "border-transparent"}`}
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white/5 border-2 flex items-center justify-center ${selectedDicebear === idx ? "border-luxe-gold/60 avatar-glow" : "border-transparent"}`}
                     dangerouslySetInnerHTML={{ __html: svgStr }}
                   />
                   <span className="text-[9px] sm:text-[10px] text-luxe-muted truncate w-full text-center">
@@ -523,22 +544,23 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
       {/* ───── 方案三: Boring Avatars 幾何頭像 ───── */}
       {activeTab === "boring" && (
         <div className="flex flex-col gap-4">
-          {/* Seed 控制 */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={boringSeed}
-              onChange={(e) => setBoringSeed(e.target.value)}
-              placeholder="輸入名稱生成不同樣貌"
-              className="flex-1 px-3 py-1.5 text-xs bg-luxe-surface border border-luxe-gold/20 rounded-lg text-luxe-text placeholder:text-luxe-muted/50 focus:outline-none focus:border-luxe-gold/40"
-            />
+          {/* 大預覽圖 + 隨機按鈕 */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-luxe-gold/40 avatar-glow">
+              <BoringAvatar
+                size={112}
+                name={seed}
+                variant={BORING_VARIANTS[selectedBoring].key}
+                colors={BORING_COLORS}
+              />
+            </div>
             <button
               onClick={randomizeSeed}
-              className="p-1.5 text-luxe-muted hover:text-luxe-gold border border-luxe-gold/20 rounded-lg transition-colors"
-              title="隨機"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-luxe-muted hover:text-luxe-gold border border-luxe-gold/20 rounded-lg transition-colors"
+              title="隨機生成"
             >
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -550,6 +572,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
+              隨機風格
             </button>
           </div>
 
@@ -571,7 +594,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                 >
                   <BoringAvatar
                     size={48}
-                    name={boringSeed || userName || "user"}
+                    name={seed}
                     variant={variant.key}
                     colors={BORING_COLORS}
                   />

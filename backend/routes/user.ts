@@ -215,41 +215,56 @@ router.put(
         if (typeof displayName !== "string") {
           errors.push("顯示名稱必須是文字");
         } else {
-          // 用 sanitizeComment 做基礎消毒（XSS + HTML + SQL 偏測）
-          const result = sanitizeComment(displayName, {
-            maxLength: DISPLAY_NAME_LIMITS.MAX_LENGTH,
-            minLength: DISPLAY_NAME_LIMITS.MIN_LENGTH,
-            allowNewlines: false,
-            strictMode: true,
-            fieldName: "顯示名稱",
-          });
+          // 基礎清理：移除控制字元、HTML 標籤、前後空白
+          let cleaned = displayName
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+            .replace(/<[^>]*>/g, "")
+            .trim();
 
-          if (!result.isValid) {
-            if (result.threatDetected) {
+          // 合併連續空白
+          cleaned = cleaned.replace(/\s+/g, " ");
+
+          // 長度驗證
+          if (
+            cleaned.length < DISPLAY_NAME_LIMITS.MIN_LENGTH ||
+            cleaned.length > DISPLAY_NAME_LIMITS.MAX_LENGTH
+          ) {
+            errors.push(
+              `顯示名稱長度需為 ${DISPLAY_NAME_LIMITS.MIN_LENGTH}-${DISPLAY_NAME_LIMITS.MAX_LENGTH} 字元`,
+            );
+          } else {
+            // 危險內容偵測（使用 sanitizeComment 的安全檢查，但非嚴格模式）
+            const dangerCheck = sanitizeComment(cleaned, {
+              maxLength: DISPLAY_NAME_LIMITS.MAX_LENGTH,
+              minLength: DISPLAY_NAME_LIMITS.MIN_LENGTH,
+              allowNewlines: false,
+              strictMode: false,
+              fieldName: "顯示名稱",
+            });
+
+            // 即使非嚴格模式，仍手動檢查關鍵注入模式
+            const criticalPatterns = [
+              /<script/i,
+              /javascript:/i,
+              /on\w+\s*=/i,
+              /<iframe/i,
+              /\bunion\b\s+\bselect\b/i,
+            ];
+            const hasCriticalThreat = criticalPatterns.some((p) =>
+              p.test(cleaned),
+            );
+
+            if (hasCriticalThreat) {
               logSecurityEvent("display_name_injection_attempt", {
                 userId,
-                threatType: result.threatType,
-                input: displayName.substring(0, 100),
+                input: cleaned.substring(0, 100),
               });
-            }
-            errors.push(result.errorMessage || "顯示名稱格式不正確");
-          } else {
-            // 額外檢查合法字元模式（中英數字 + 常見標點 + emoji）
-            const decoded = result.sanitizedValue
-              .replace(/&amp;/g, "&")
-              .replace(/&lt;/g, "<")
-              .replace(/&gt;/g, ">")
-              .replace(/&quot;/g, '"')
-              .replace(/&#39;/g, "'")
-              .replace(/&#x2F;/g, "/")
-              .replace(/&#x60;/g, "`")
-              .replace(/&#x3D;/g, "=");
-
-            if (!DISPLAY_NAME_LIMITS.PATTERN.test(decoded)) {
-              errors.push("顯示名稱包含不允許的特殊字元");
+              errors.push("顯示名稱包含不允許的內容");
+            } else if (!DISPLAY_NAME_LIMITS.PATTERN.test(cleaned)) {
+              errors.push("顯示名稱只能包含中英文、數字、空格和常見標點");
             } else {
-              // 存入解碼後的乾淨值（不要存 HTML entities）
-              updateData.display_name = decoded;
+              // 存入乾淨值
+              updateData.display_name = cleaned;
             }
           }
         }

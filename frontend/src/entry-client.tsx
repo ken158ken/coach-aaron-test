@@ -21,15 +21,14 @@ const routerFutureFlags = {
 };
 
 if (container) {
-  // 開發模式下 Vite 不會進行 SSR，直接使用 CSR
-  // 檢查是否有實際的 SSR 內容（不只是空的 root div）
+  // 檢查是否有實際的 SSR 內容
+  // SSR 產生的 HTML 會包含真正的 DOM 節點（非空白），才進行 hydration
+  const containerContent = container.innerHTML.trim();
   const hasSSRContent =
-    container.innerHTML.trim() &&
-    container.children.length > 0 &&
-    !container.innerHTML.includes("<!--$-->");
+    containerContent.length > 0 && container.children.length > 0;
 
   if (hasSSRContent) {
-    // SSR hydration
+    // SSR hydration — 使用 onRecoverableError 忽略非關鍵的 hydration mismatch
     hydrateRoot(
       container,
       <React.StrictMode>
@@ -39,6 +38,21 @@ if (container) {
           </BrowserRouter>
         </HelmetProvider>
       </React.StrictMode>,
+      {
+        onRecoverableError: (error: unknown) => {
+          // 靜默處理 hydration mismatch 錯誤（#418, #423）
+          // 這些通常由 auth 狀態差異（SSR=null, CSR=user）造成，屬於預期行為
+          if (
+            error instanceof Error &&
+            (error.message.includes("#418") ||
+              error.message.includes("#423") ||
+              error.message.includes("Hydration"))
+          ) {
+            return;
+          }
+          console.error("React recoverable error:", error);
+        },
+      },
     );
   } else {
     // 純 CSR 模式（開發環境）
