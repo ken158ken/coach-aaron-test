@@ -15,6 +15,46 @@ import { authService } from "@/services";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/**
+ * 將後端 auth 回傳的 camelCase 用戶物件正規化為 User 型別（snake_case）
+ *
+ * 後端 /api/auth/me、login、register 回傳的 user 使用 camelCase（displayName、userId…），
+ * 但前端 User 型別和所有元件使用 snake_case（display_name、user_id…）。
+ *
+ * @param {Record<string, unknown>} raw - 後端原始 user 物件
+ * @returns {User} 正規化的 User 物件
+ */
+const normalizeUser = (raw: Record<string, unknown>): User => {
+  return {
+    // 主鍵
+    user_id: (raw.user_id ?? raw.userId ?? 0) as number,
+    id: (raw.id ?? raw.userId ?? raw.user_id ?? 0) as number,
+    // 名稱
+    name: (raw.name ?? raw.username ?? raw.displayName ?? "") as string,
+    display_name: (raw.display_name ??
+      raw.displayName ??
+      raw.name ??
+      raw.username ??
+      "") as string,
+    // 聯絡
+    email: (raw.email ?? "") as string,
+    phone_number: (raw.phone_number ?? raw.phoneNumber ?? undefined) as
+      | string
+      | undefined,
+    // 頭像
+    avatar_url: (raw.avatar_url ?? raw.avatarUrl ?? undefined) as
+      | string
+      | undefined,
+    // 狀態
+    is_active: (raw.is_active ?? true) as boolean,
+    isAdmin: (raw.isAdmin ?? false) as boolean,
+    // 時間
+    created_at: (raw.created_at ?? raw.createdAt ?? "") as string,
+    updated_at: (raw.updated_at ?? raw.updatedAt ?? "") as string,
+    createdAt: (raw.createdAt ?? raw.created_at ?? "") as string,
+  };
+};
+
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -43,7 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       const response = await authService.checkAuth();
-      setUser(response.user);
+      setUser(
+        normalizeUser(response.user as unknown as Record<string, unknown>),
+      );
       setIsAdmin(response.isAdmin);
     } catch (error: unknown) {
       // 401 是正常的未登入狀態，靜默處理
@@ -90,7 +132,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     async (email: string, password: string) => {
       try {
         const response = await authService.login({ email, password });
-        setUser(response.user);
+        setUser(
+          normalizeUser(response.user as unknown as Record<string, unknown>),
+        );
         await checkAuth();
         return { success: true };
       } catch (error) {
@@ -109,7 +153,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = useCallback(async (data: RegisterFormData) => {
     try {
       const response = await authService.register(data);
-      setUser(response.user);
+      setUser(
+        normalizeUser(response.user as unknown as Record<string, unknown>),
+      );
       return { success: true };
     } catch (error) {
       console.error("註冊失敗:", error);

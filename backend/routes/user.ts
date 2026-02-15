@@ -143,7 +143,7 @@ router.get(
       const { data, error } = await supabaseAdmin
         .from("users")
         .select(
-          "user_id, username, email, display_name, phone_number, avatar_url, avatar_base64, gender, created_at",
+          "user_id, username, email, display_name, phone_number, avatar_url, avatar_base64, created_at",
         )
         .eq("user_id", userId)
         .single();
@@ -160,9 +160,6 @@ router.get(
     }
   },
 );
-
-/** 允許的性別值白名單 */
-const VALID_GENDERS = ["male", "female", "other", "prefer_not_to_say"] as const;
 
 /** 顯示名稱限制 */
 const DISPLAY_NAME_LIMITS = {
@@ -198,10 +195,10 @@ router.put(
         return;
       }
 
-      const { displayName, phoneNumber, gender } = req.body;
+      const { displayName, phoneNumber } = req.body;
 
       // 僅允許白名單欄位，拒絕未知欄位
-      const allowedFields = ["displayName", "phoneNumber", "gender"];
+      const allowedFields = ["displayName", "phoneNumber"];
       const unknownFields = Object.keys(req.body).filter(
         (k) => !allowedFields.includes(k),
       );
@@ -299,23 +296,6 @@ router.put(
         }
       }
 
-      // ── 性別消毒 ──
-      if (gender !== undefined) {
-        if (typeof gender !== "string") {
-          errors.push("性別必須是文字");
-        } else if (
-          !VALID_GENDERS.includes(gender as (typeof VALID_GENDERS)[number])
-        ) {
-          logSecurityEvent("invalid_gender_value", {
-            userId,
-            value: gender.substring(0, 50),
-          });
-          errors.push("性別值不在允許範圍內");
-        } else {
-          updateData.gender = gender;
-        }
-      }
-
       // 如果有驗證錯誤，回傳所有錯誤
       if (errors.length > 0) {
         res.status(400).json({ error: errors.join("；") });
@@ -341,7 +321,7 @@ router.put(
         .update(updateData)
         .eq("user_id", userId)
         .select(
-          "user_id, username, email, display_name, phone_number, avatar_url, gender",
+          "user_id, username, email, display_name, phone_number, avatar_url",
         )
         .maybeSingle();
 

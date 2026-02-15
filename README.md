@@ -122,7 +122,7 @@ coach-aaron-redesign/
 │   └── *.sql              # 其他 SQL 腳本
 │
 └── REPORTS/                # 📊 報告文件
-    ├── AVATAR_DISPLAY_NAME_FIX_ROUND3_2026-02-19T10-00-00+08-00.md
+    ├── DISPLAY_NAME_500_FIX_2026-02-15T23-00-00+08-00.md
     ├── AVATAR_DISPLAY_NAME_FIX_2026-02-15T22-00-00+08-00.md
     ├── SSR_ROUTING_AND_SEO_META_2026-02-12T23-00-00+08-00.md
     └── ...其他報告
@@ -688,23 +688,27 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
-### 2026-02-19 - Sanitize Middleware Regex 修復 + AvatarPicker 渲染優化
+### 2026-02-15 - 顯示名稱 500 錯誤修復 + 舊名稱載入修復
 
 #### 🐛 Bug 修復
 
-| 問題                                      | 根因                                                                                                              | 修復                                                               |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **Sanitize Middleware regex `lastIndex`** | `DANGEROUS_PATTERNS` 使用帶 `g` flag 的全域 regex 物件，`.test()` 連續呼叫時 `lastIndex` 不歸零導致匹配結果不穩定 | 改為 `createDangerousPatterns()` 工廠函式，每次呼叫回傳全新 RegExp |
-| **AvatarPicker DiceBear 縮圖渲染異常**    | `dangerouslySetInnerHTML` 注入 SVG 時，SVG 內部 `size=200` 超出容器 40px 導致溢出                                 | 改用 `useMemo` + Blob URL + `<img>` 標籤，瀏覽器自動縮放           |
+| 問題                           | 根因                                                                                 | 修復                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| **顯示名稱更新 500 (42703)**   | `users` 表無 `gender` 欄位，但 user.ts GET/PUT profile 都 SELECT `gender`            | 移除所有 `gender` 引用（SELECT、驗證邏輯、常數） |
+| **舊名稱未載入**               | auth/me 回傳 camelCase (`displayName`)，前端 User 型別用 snake_case (`display_name`) | AuthContext 新增 `normalizeUser` 映射函式        |
+| **Sanitize regex `lastIndex`** | `DANGEROUS_PATTERNS` 全域 regex 的 `g` flag 導致 `.test()` 結果不穩定                | 改為工廠函式 `createDangerousPatterns()`         |
+| **AvatarPicker 縮圖溢出**      | `dangerouslySetInnerHTML` 注入的 SVG `size=200` 超出 40px 容器                       | 改用 Blob URL + `<img>` + `useMemo` 快取         |
 
 #### 修改檔案
 
-- **backend/middleware/sanitize.ts**: regex 全域物件→工廠函式、`detectSuspiciousRequest` 加入 try-catch
-- **AvatarPicker.tsx**: DiceBear 縮圖改用 Blob URL + `<img>`、加入 `useMemo` 快取 + `useEffect` cleanup
+- **backend/routes/user.ts**: 移除 `gender` 欄位引用（SELECT / 驗證 / 常數）
+- **frontend/src/context/AuthContext.tsx**: 新增 `normalizeUser` camelCase→snake_case 映射
+- **backend/middleware/sanitize.ts**: regex 改為工廠函式
+- **AvatarPicker.tsx**: DiceBear 縮圖改用 `<img>` + Blob URL
 
 #### 完整報告
 
-- 詳見 `REPORTS/AVATAR_DISPLAY_NAME_FIX_ROUND3_2026-02-19T10-00-00+08-00.md`
+- 詳見 `REPORTS/DISPLAY_NAME_500_FIX_2026-02-15T23-00-00+08-00.md`
 
 ---
 
