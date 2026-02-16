@@ -688,6 +688,34 @@ npm run generate:coach-photos
 
 ## 📝 更新日誌
 
+### 2026-02-19 - Landing Page Builder (GrapesJS Demo 版)
+
+#### 🚀 新功能
+
+- **GrapesJS 視覺化頁面編輯器**：拖放式 Landing Page 建構工具
+- **自訂頁面管理**：卡片式管理頁面（搜尋 / 篩選 / 三種檢視模式）
+- **裝置預覽**：桌面 / 平板 / 手機切換預覽
+- **LUXE 深色主題**：完整覆寫 GrapesJS 預設樣式
+- **導航整合**：Navbar dropdown + AdminSidebar + i18n（中/英）
+
+#### 新增檔案
+
+- **frontend/src/pages/admin/LandingPageManager.tsx** — 卡片式管理列表（Demo 資料）
+- **frontend/src/pages/admin/LandingPageEditor.tsx** — GrapesJS 全螢幕編輯器
+
+#### 修改檔案
+
+- **App.tsx** — 新增 `/admin/landing-pages`、`/new`、`/:id/edit` 路由
+- **Navbar.tsx** — 桌面版 + 手機版 dropdown 新增「自訂頁面」按鈕
+- **AdminSidebar.tsx** — 後台側邊欄新增導航項
+- **LanguageContext.tsx** — 新增 `landingPages` 翻譯
+
+#### 完整報告
+
+📄 [REPORTS/LANDING_PAGE_GRAPESJS_DEMO_2026-02-19T02-00-00+08-00.md](REPORTS/LANDING_PAGE_GRAPESJS_DEMO_2026-02-19T02-00-00+08-00.md)
+
+---
+
 ### 2026-02-15 - 顯示名稱 500 錯誤修復 + 舊名稱載入修復
 
 #### 🐛 Bug 修復

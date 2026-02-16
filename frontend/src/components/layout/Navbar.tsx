@@ -356,6 +356,29 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ isOpen, onClose }) => {
               </button>
             )}
 
+            {/* 自訂頁面編輯器（管理員限定） */}
+            {isAdmin && (
+              <button
+                onClick={() => handleNav("/admin/landing-pages")}
+                className={itemClass}
+                role="menuitem"
+              >
+                <svg
+                  className="w-4 h-4 text-luxe-gold"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"
+                  />
+                </svg>
+                <span className="text-luxe-gold">{t.nav.landingPages}</span>
+              </button>
+            )}
             <div className={divider} />
 
             {/* 登出 */}
@@ -603,6 +626,28 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                   />
                 </svg>
                 <span>{t.nav.admin}</span>
+              </button>
+            )}
+            {/* 自訂頁面編輯器（管理員限定） */}
+            {isAdmin && (
+              <button
+                onClick={() => handleNav("/admin/landing-pages")}
+                className="flex items-center gap-3 w-full text-left text-sm text-luxe-gold py-2.5 px-3 rounded-lg hover:bg-luxe-gold/5 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"
+                  />
+                </svg>
+                <span>{t.nav.landingPages}</span>
               </button>
             )}
             <button

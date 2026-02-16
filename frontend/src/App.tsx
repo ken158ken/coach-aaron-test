@@ -40,6 +40,8 @@ import AdminWhitelist from "@/pages/admin/AdminWhitelist";
 import AdminArticles from "@/pages/admin/AdminArticles";
 import ArticleEditor from "@/pages/admin/ArticleEditor";
 import CourseEditor from "@/pages/admin/CourseEditor";
+import LandingPageManager from "@/pages/admin/LandingPageManager";
+import LandingPageEditor from "@/pages/admin/LandingPageEditor";
 
 /**
  * App 根元件
@@ -104,6 +106,7 @@ function App(): JSX.Element {
                 <Route path="videos" element={<AdminVideos />} />
                 <Route path="content" element={<AdminContent />} />
                 <Route path="articles" element={<AdminArticles />} />
+                <Route path="landing-pages" element={<LandingPageManager />} />
                 <Route path="whitelist" element={<AdminWhitelist />} />
               </Route>
 
@@ -137,6 +140,24 @@ function App(): JSX.Element {
                 element={
                   <RequireAdmin>
                     <CourseEditor />
+                  </RequireAdmin>
+                }
+              />
+
+              {/* Landing Page 編輯器（全螢幕） */}
+              <Route
+                path="/admin/landing-pages/new"
+                element={
+                  <RequireAdmin>
+                    <LandingPageEditor />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/landing-pages/:id/edit"
+                element={
+                  <RequireAdmin>
+                    <LandingPageEditor />
                   </RequireAdmin>
                 }
               />

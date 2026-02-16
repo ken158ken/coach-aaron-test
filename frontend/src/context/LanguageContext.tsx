@@ -29,6 +29,7 @@ export interface Translations {
     register: string;
     memberCenter: string;
     admin: string;
+    landingPages: string;
   };
   // 通用
   common: {
@@ -101,6 +102,7 @@ export interface Translations {
     articles: string;
     videos: string;
     whitelist: string;
+    landingPages: string;
     newArticle: string;
     newCourse: string;
     saveDraft: string;
@@ -123,6 +125,7 @@ const zhTW: Translations = {
     register: "註冊",
     memberCenter: "會員中心",
     admin: "後台",
+    landingPages: "自訂頁面",
   },
   common: {
     loading: "載入中...",
@@ -190,6 +193,7 @@ const zhTW: Translations = {
     articles: "文章管理",
     videos: "影片管理",
     whitelist: "白名單管理",
+    landingPages: "自訂頁面",
     newArticle: "新增文章",
     newCourse: "新增課程",
     saveDraft: "儲存草稿",
@@ -212,6 +216,7 @@ const en: Translations = {
     register: "Register",
     memberCenter: "Member Center",
     admin: "Admin",
+    landingPages: "Landing Pages",
   },
   common: {
     loading: "Loading...",
@@ -279,6 +284,7 @@ const en: Translations = {
     articles: "Articles",
     videos: "Videos",
     whitelist: "Whitelist",
+    landingPages: "Landing Pages",
     newArticle: "New Article",
     newCourse: "New Course",
     saveDraft: "Save Draft",

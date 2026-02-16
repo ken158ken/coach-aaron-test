@@ -42,6 +42,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     courses: t.admin.courses,
     videos: t.admin.videos,
     articles: t.admin.articles,
+    landingPages: t.admin.landingPages,
     whitelist: t.admin.whitelist,
     content: isZhTW ? "內容管理" : "Content",
   };
@@ -158,6 +159,25 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
               strokeLinejoin="round"
               strokeWidth={2}
               d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+            />
+          </svg>
+        ),
+      },
+      {
+        path: "/admin/landing-pages",
+        labelKey: "landingPages",
+        icon: (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"
             />
           </svg>
         ),
