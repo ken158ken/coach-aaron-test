@@ -8,6 +8,7 @@ import { hydrateRoot, createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./index.css";
 
 const container = document.getElementById("root");
@@ -32,11 +33,13 @@ if (container) {
     hydrateRoot(
       container,
       <React.StrictMode>
-        <HelmetProvider>
-          <BrowserRouter {...routerFutureFlags}>
-            <App />
-          </BrowserRouter>
-        </HelmetProvider>
+        <ErrorBoundary>
+          <HelmetProvider>
+            <BrowserRouter {...routerFutureFlags}>
+              <App />
+            </BrowserRouter>
+          </HelmetProvider>
+        </ErrorBoundary>
       </React.StrictMode>,
       {
         onRecoverableError: (error: unknown) => {
@@ -58,11 +61,13 @@ if (container) {
     // 純 CSR 模式（開發環境）
     createRoot(container).render(
       <React.StrictMode>
-        <HelmetProvider>
-          <BrowserRouter {...routerFutureFlags}>
-            <App />
-          </BrowserRouter>
-        </HelmetProvider>
+        <ErrorBoundary>
+          <HelmetProvider>
+            <BrowserRouter {...routerFutureFlags}>
+              <App />
+            </BrowserRouter>
+          </HelmetProvider>
+        </ErrorBoundary>
       </React.StrictMode>,
     );
   }
