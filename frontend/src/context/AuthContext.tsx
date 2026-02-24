@@ -130,17 +130,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const login = useCallback(
     async (email: string, password: string) => {
-      try {
-        const response = await authService.login({ email, password });
-        setUser(
-          normalizeUser(response.user as unknown as Record<string, unknown>),
-        );
-        await checkAuth();
-        return { success: true };
-      } catch (error) {
-        console.error("登入失敗:", error);
-        return { success: false, message: "登入失敗" };
-      }
+      const response = await authService.login({ email, password });
+      setUser(
+        normalizeUser(response.user as unknown as Record<string, unknown>),
+      );
+      await checkAuth();
     },
     [checkAuth],
   );

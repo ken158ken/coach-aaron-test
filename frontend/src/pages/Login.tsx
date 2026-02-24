@@ -52,8 +52,13 @@ const Login: React.FC = () => {
     try {
       await login(formData.email, formData.password);
       navigate("/member");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "登入失敗，請檢查帳號密碼");
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; error?: string } } };
+      const msg = axiosErr?.response?.data?.message
+        || axiosErr?.response?.data?.error
+        || (err instanceof Error ? err.message : null)
+        || "登入失敗，請檢查帳號密碼";
+      setError(msg);
     } finally {
       setLoading(false);
     }

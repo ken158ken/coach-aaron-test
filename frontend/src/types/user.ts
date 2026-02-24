@@ -56,10 +56,7 @@ export interface AuthContextType {
   /** auth 已就緒：mounted 且 loading 結束，可安全做 auth 判斷 */
   authReady: boolean;
   mounted: boolean;
-  login: (
-    email: string,
-    password: string,
-  ) => Promise<{ success: boolean; message?: string }>;
+  login: (email: string, password: string) => Promise<void>;
   register: (
     data: RegisterFormData,
   ) => Promise<{ success: boolean; message?: string }>;
