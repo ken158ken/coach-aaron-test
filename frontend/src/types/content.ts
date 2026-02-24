@@ -95,17 +95,6 @@ export interface Video {
   sortOrder?: number;
 }
 
-/** 相簿介面 */
-export interface Album {
-  album: string;
-  photos: string[];
-}
-
-/** 相簿清單資料介面 */
-export interface CoachPhotosManifest {
-  albums?: Album[];
-}
-
 /** 文章狀態 */
 export type ArticleStatus = "draft" | "published" | "archived";
 

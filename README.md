@@ -10,7 +10,7 @@
 | ----------- | ------- | ----------- | ----------------------------------------------------------------------- |
 | 🌊 深海探索 | `abyss` | 青藍 + 紫光 | 首頁 (含 AbyssScene 水母球體背景)                                       |
 | 💎 水晶稜鏡 | `prism` | 紫藍色調    | 課程、影片、文章、登入、註冊、結帳等前台頁面 (含 PrismScene 水晶體背景) |
-| ✨ 高端質感 | `luxe`  | 金黑組合    | 寫真、會員中心、後台管理                                                |
+| ✨ 高端質感 | `luxe`  | 金黑組合    | 會員中心、後台管理                                                      |
 
 ## 🚀 快速開始
 
@@ -246,7 +246,6 @@ GET /api/search?q=關鍵字
 | `/articles`       | 文章列表 | prism |
 | `/articles/:slug` | 文章詳情 | prism |
 | `/videos`         | 影片列表 | prism |
-| `/coach-photos`   | 教練寫真 | luxe  |
 | `/contact`        | 聯絡頁面 | luxe  |
 | `/login`          | 登入頁面 | luxe  |
 
@@ -505,7 +504,7 @@ COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 | 類型     | 頁面                                     | SEO 行為                                          |
 | -------- | ---------------------------------------- | ------------------------------------------------- |
 | 公開頁面 | 首頁、聯絡、課程、文章、影片             | 完整 SEO meta（title, description, keywords, OG） |
-| 私密頁面 | 登入、註冊、會員中心、管理後台、教練寫真 | `noIndex` 防止搜尋引擎索引                        |
+| 私密頁面 | 登入、註冊、會員中心、管理後台           | `noIndex` 防止搜尋引擎索引                        |
 
 核心 SEO 關鍵字：`私人教練銷售`、`健身教練銷售`、`皮拉提斯銷售`、`阿倫教官`、`私人教練變現`、`銷售心理學`
 
@@ -653,38 +652,12 @@ frontend/src/components/ui/block-editor/
 
 - **課程列表**: 響應式網格 (1/2/3 欄)，搜尋框全寬適配
 - **影片列表**: 響應式網格 (1/2/3/4 欄)，分頁控制優化
-- **教練寫真 (`/coach-photos`)**: 瀑布流佈局 (1/2/3/4 欄)，輪播橫幅，Intersection Observer 懶載入
-
 ### 後台頁面 RWD 特性
 
 - **DataTable**: 桌面版表格 / 手機版卡片式列表
 - **頁面標題**: 自動堆疊排列 (flex-col → flex-row)
 - **搜尋/篩選**: 自動換行，全寬適配小螢幕
 - **按鈕**: 手機版全寬，桌面版自適應
-- **用戶管理**: 支援私密相簿權限 (sex toggle) 管理
-
-## 🖼️ 教練寫真相簿
-
-### 生成相簿清單
-
-相簿資料存放於 `frontend/src/data/coachPhotos.json`，可透過以下指令重新生成：
-
-```bash
-cd frontend
-npm run generate:coach-photos
-```
-
-### 相簿存放位置
-
-- **圖片資料夾**: `frontend/public/coach-photos/`
-- **資料清單**: `frontend/src/data/coachPhotos.json`
-
-### 頁面特性
-
-- **瀑布流佈局**: CSS columns 實現響應式瀑布流 (1/2/3/4 欄)
-- **輪播橫幅**: 隨機選取 5 張照片自動輪播
-- **懶載入**: Intersection Observer 延遲載入提升效能
-- **放大查看**: 點擊照片可全螢幕放大瀏覽
 
 ## 📝 更新日誌
 
@@ -1647,7 +1620,7 @@ npm install react-moveable moveable @scena/react-guides uuid
 
 | 類別             | 問題                                                                                                                                         | 影響範圍                                                     |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| **Export 衝突**  | `ui/index.ts` 同時從 `overlay/` 和 `Dialog.tsx` 導出同名 `Modal`/`ConfirmDialog`，Dialog.tsx 版本覆蓋了原版，但缺少 `theme`/`className` 屬性 | AdminArticles、AdminCourses、AdminUsers、CoachPhotos         |
+| **Export 衝突**  | `ui/index.ts` 同時從 `overlay/` 和 `Dialog.tsx` 導出同名 `Modal`/`ConfirmDialog`，Dialog.tsx 版本覆蓋了原版，但缺少 `theme`/`className` 屬性 | AdminArticles、AdminCourses、AdminUsers                      |
 | **本地重複型別** | AdminUsers/AdminVideos 自行定義簡陋的本地 interface，缺少 API 回傳的欄位                                                                     | AdminUsers(6 處)、AdminVideos(1 處)                          |
 | **Props 不相容** | ConfirmDialog 兩版 interface 屬性不同（`onCancel` vs `onClose`、`danger` vs `variant`）                                                      | AdminWhitelist                                               |
 | **型別不匹配**   | `keywords` 應傳 `string[]` 卻傳了 `string`；`isLoading` 不存在於 AuthContextType                                                             | AdminArticles(2 處)、Checkout                                |
@@ -1664,8 +1637,6 @@ npm install react-moveable moveable @scena/react-guides uuid
 5. **AdminVideos.tsx** — 移除本地 `AdminVideo` 定義，改用 `@/types` 導入
 6. **AdminWhitelist.tsx** — 透過 Dialog.tsx 兼容修復，`onCancel`/`danger` 直接支援
 7. **Checkout.tsx** — 移除未使用的 `useMemo`/`Input` import；`isLoading` 改為 `loading`
-8. **CoachPhotos.tsx** — 透過 Dialog.tsx Modal 修復 `theme` 屬性
-
 **SSR 水合問題修復 (4 個檔案)：**
 
 9. **overlay/Modal.tsx** — `useEffect` 內 `document`/`window` 加入 `typeof` 防護

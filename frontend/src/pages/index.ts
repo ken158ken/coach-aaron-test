@@ -10,7 +10,6 @@ export { default as CourseDetail } from "./CourseDetail";
 export { default as Videos } from "./Videos";
 export { default as Articles } from "./Articles";
 export { default as ArticleDetail } from "./ArticleDetail";
-export { default as CoachPhotos } from "./CoachPhotos";
 export { default as Contact } from "./Contact";
 export { default as Login } from "./Login";
 export { default as Register } from "./Register";

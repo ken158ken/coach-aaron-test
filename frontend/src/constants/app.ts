@@ -22,7 +22,6 @@ export const ROUTES = {
   HOME: "/",
   COURSES: "/courses",
   VIDEOS: "/videos",
-  COACH_PHOTOS: "/coach-photos",
   CONTACT: "/contact",
   LOGIN: "/login",
   REGISTER: "/register",

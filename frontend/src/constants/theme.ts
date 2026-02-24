@@ -46,7 +46,6 @@ export const PAGE_THEMES: Record<string, ThemeName> = {
   "/": "abyss",
   "/courses": "prism",
   "/videos": "prism",
-  "/coach-photos": "luxe",
   "/contact": "luxe",
   "/login": "luxe",
   "/register": "luxe",

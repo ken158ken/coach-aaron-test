@@ -186,8 +186,6 @@ scripts/**
 
 ```
 # ⚠️ 不要排除 scripts/（vercel-build.sh 需要）
-# 只排除個別不需要的腳本
-scripts/generate-coach-photos.cjs
 ```
 
 ### 7. `.gitattributes`

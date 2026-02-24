@@ -28,8 +28,7 @@ ADMIN_PAGES_MIGRATION_SUMMARY.md
 # 資料庫檔案（不需要部署）
 database/
 
-# 腳本（保留 vercel-build.sh，排除其他）
-scripts/generate-coach-photos.cjs
+# 腳本（保留 vercel-build.sh）
 
 # 其他專案檔案（如果存在）
 舊專案前端參考/

@@ -3,7 +3,7 @@
  * @module App
  */
 
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -19,7 +19,6 @@ import Home from "@/pages/Home";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import Videos from "@/pages/Videos";
-import CoachPhotos from "@/pages/CoachPhotos";
 import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -63,11 +62,6 @@ function App(): JSX.Element {
                 <Route path="videos" element={<Videos />} />
                 <Route path="articles" element={<Articles />} />
                 <Route path="articles/:slug" element={<ArticleDetail />} />
-                <Route path="coach-photos" element={<CoachPhotos />} />
-                <Route
-                  path="photos"
-                  element={<Navigate to="/coach-photos" replace />}
-                />
                 <Route path="contact" element={<Contact />} />
                 <Route path="login" element={<Login />} />
                 <Route path="register" element={<Register />} />
