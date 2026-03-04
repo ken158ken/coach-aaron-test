@@ -228,6 +228,65 @@ router.post(
 );
 
 /**
+ * 臨時診斷端點 - 檢查登入問題（用完即刪）
+ * @route POST /api/auth/debug-login
+ */
+router.post(
+  "/debug-login",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, password } = req.body;
+
+      // Step 1: 查詢使用者（不帶 is_active 和 deleted_at 條件）
+      const { data: userRaw, error: rawError } = await supabaseAdmin
+        .from("users")
+        .select("user_id, email, password_hash, is_active, deleted_at, username, display_name")
+        .eq("email", email)
+        .single();
+
+      if (rawError || !userRaw) {
+        res.json({
+          step: "user_lookup",
+          found: false,
+          error: rawError?.message || "User not found",
+        });
+        return;
+      }
+
+      // Step 2: 檢查 is_active 和 deleted_at
+      const checks = {
+        user_id: userRaw.user_id,
+        email: userRaw.email,
+        username: userRaw.username,
+        is_active: userRaw.is_active,
+        deleted_at: userRaw.deleted_at,
+        hash_prefix: userRaw.password_hash?.substring(0, 10),
+        hash_length: userRaw.password_hash?.length,
+      };
+
+      // Step 3: bcrypt compare
+      let bcryptResult = false;
+      try {
+        bcryptResult = await bcrypt.compare(password, userRaw.password_hash);
+      } catch (bcryptErr) {
+        res.json({
+          ...checks,
+          bcrypt_error: String(bcryptErr),
+        });
+        return;
+      }
+
+      res.json({
+        ...checks,
+        password_valid: bcryptResult,
+      });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  },
+);
+
+/**
  * 使用者登出
  * @route POST /api/auth/logout
  */
