@@ -15,6 +15,12 @@
       "includeFiles": "api/_ssr_template.html"
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 4,16 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
