@@ -60,7 +60,7 @@ npm run build
 
 - **框架**: Express 5.x + TypeScript
 - **資料庫**: Supabase (PostgreSQL)
-- **驗證**: JWT + bcryptjs
+- **驗證**: JWT + bcryptjs + Google OAuth + LINE Login
 - **開發工具**: tsx (TypeScript 執行器)
 
 ### 部署
@@ -102,20 +102,28 @@ coach-aaron-redesign/
 │   ├── tsconfig.json      # TypeScript 設定
 │   ├── index.ts           # 入口點
 │   ├── config/            # 設定檔
+│   │   └── oauth.ts       # Google/LINE OAuth 設定
 │   ├── routes/            # API 路由
-│   │   ├── contact.ts    # 📧 聯絡表單 (Resend 寄信)
-│   │   └── ...           # 其他路由
+│   │   ├── auth.ts        # 認證路由 (含 OAuth 狀態/社交帳號管理)
+│   │   ├── authGoogle.ts  # 🔐 Google OAuth 登入
+│   │   ├── authLine.ts    # 🔐 LINE Login 登入
+│   │   ├── contact.ts     # 📧 聯絡表單 (Resend 寄信)
+│   │   └── ...            # 其他路由
 │   ├── middleware/        # 中介軟體
 │   ├── utils/             # 工具函數
 │   │   ├── logger.ts      # 日誌工具
 │   │   ├── env.ts         # 環境變數
+│   │   ├── oauth.ts       # 🔐 OAuth 共用工具 (社交登入/帳號綁定)
 │   │   └── sanitizer.ts   # 🔐 輸入消毒與安全驗證
 │   └── dist/              # 編譯輸出
 │
 ├── database/               # 💾 SQL 腳本
 │   ├── schema.sql         # 資料表結構
 │   ├── seed.sql           # 種子資料
+│   ├── DATABASE_SCHEMA_REFERENCE.md  # 📖 完整 13 表 Schema 文件
 │   ├── migrations/        # 遷移腳本
+│   │   ├── 001_fix_and_import_courses.sql   # 修正欄位 + 匯入真實課程
+│   │   ├── 002_social_accounts.sql          # 社交帳號表 (Google/LINE)
 │   │   ├── 003_site_content_and_popup.sql   # 內容管理 + 彈窗
 │   │   ├── 004_content_templates.sql        # 預設文案範本
 │   │   └── 005_add_avatar_base64.sql        # 頭像 base64 欄位
@@ -501,10 +509,10 @@ COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 
 所有頁面均已配置 `SEOHead` 組件（基於 `react-helmet-async`）：
 
-| 類型     | 頁面                                     | SEO 行為                                          |
-| -------- | ---------------------------------------- | ------------------------------------------------- |
-| 公開頁面 | 首頁、聯絡、課程、文章、影片             | 完整 SEO meta（title, description, keywords, OG） |
-| 私密頁面 | 登入、註冊、會員中心、管理後台           | `noIndex` 防止搜尋引擎索引                        |
+| 類型     | 頁面                           | SEO 行為                                          |
+| -------- | ------------------------------ | ------------------------------------------------- |
+| 公開頁面 | 首頁、聯絡、課程、文章、影片   | 完整 SEO meta（title, description, keywords, OG） |
+| 私密頁面 | 登入、註冊、會員中心、管理後台 | `noIndex` 防止搜尋引擎索引                        |
 
 核心 SEO 關鍵字：`私人教練銷售`、`健身教練銷售`、`皮拉提斯銷售`、`阿倫教官`、`私人教練變現`、`銷售心理學`
 
@@ -652,6 +660,7 @@ frontend/src/components/ui/block-editor/
 
 - **課程列表**: 響應式網格 (1/2/3 欄)，搜尋框全寬適配
 - **影片列表**: 響應式網格 (1/2/3/4 欄)，分頁控制優化
+
 ### 後台頁面 RWD 特性
 
 - **DataTable**: 桌面版表格 / 手機版卡片式列表
@@ -660,6 +669,72 @@ frontend/src/components/ui/block-editor/
 - **按鈕**: 手機版全寬，桌面版自適應
 
 ## 📝 更新日誌
+
+### 2026-03-05 - 多元登入實作 (Google OAuth + LINE Login)
+
+#### 🚀 新功能
+
+- **Google OAuth 登入**：完整 OAuth 2.0 授權碼流程（登入、回呼、帳號綁定）
+- **LINE Login**：完整 LINE Login v2.1 流程（登入、回呼、帳號綁定、ID Token 解析取得 Email）
+- **社交帳號管理 API**：查詢已綁定帳號、解除綁定（安全檢查防止移除唯一登入方式）
+- **OAuth 狀態查詢**：`/api/auth/providers` 端點顯示各 OAuth 供應商啟用狀態
+- **詳細社交資料記錄**：`user_social_accounts` 表含 Google/LINE 各欄位（given_name、family_name、locale、status_message 等）
+- **CSRF 防護**：OAuth state 參數存於 httpOnly cookie，防止 CSRF 攻擊
+- **資料庫文件**：完整 13 表 Schema 參考文件（含 ER 圖、索引、觸發器、RLS 策略）
+- **開發者註冊指南**：Google Cloud Console + LINE Developers 完整圖文註冊教學
+
+#### 新增檔案
+
+- **backend/config/oauth.ts** — Google/LINE OAuth 設定模組
+- **backend/utils/oauth.ts** — 共用 OAuth 工具（JWT、Cookie、使用者建立、社交帳號關聯）
+- **backend/routes/authGoogle.ts** — Google OAuth 路由（GET /、GET /callback、POST /bind）
+- **backend/routes/authLine.ts** — LINE Login 路由（GET /、GET /callback、POST /bind）
+- **database/migrations/001_fix_and_import_courses.sql** — 修正 course_description 欄位 + 匯入 9 筆真實課程
+- **database/migrations/002_social_accounts.sql** — user_social_accounts 表 + users 表 auth_provider 欄位
+- **database/DATABASE_SCHEMA_REFERENCE.md** — 完整資料庫 Schema 參考文件
+- **REPORTS/OAUTH_DEVELOPER_GUIDE_2026-03-05T23-30-00+08-00.md** — Google/LINE 開發者註冊指南
+
+#### 修改檔案
+
+- **backend/index.ts** — 註冊 Google/LINE OAuth 路由
+- **backend/routes/auth.ts** — 新增 /providers、/social-accounts、DELETE /social-accounts/:provider 端點
+- **backend/utils/env.ts** — EnvConfig 加入 OAuth 欄位 + 啟動日誌
+- **backend/.env** — 新增 GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET、LINE_CHANNEL_ID、LINE_CHANNEL_SECRET、OAUTH_CALLBACK_BASE_URL
+
+#### API 端點
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| `GET` | `/api/auth/providers` | 查詢 OAuth 啟用狀態 |
+| `GET` | `/api/auth/google` | 發起 Google 登入 |
+| `GET` | `/api/auth/google/callback` | Google 回呼 |
+| `POST` | `/api/auth/google/bind` | 綁定 Google（需登入） |
+| `GET` | `/api/auth/line` | 發起 LINE 登入 |
+| `GET` | `/api/auth/line/callback` | LINE 回呼 |
+| `POST` | `/api/auth/line/bind` | 綁定 LINE（需登入） |
+| `GET` | `/api/auth/social-accounts` | 已綁定社交帳號（需登入） |
+| `DELETE` | `/api/auth/social-accounts/:provider` | 解除綁定（需登入） |
+
+---
+
+### 2026-03-05 - 多元登入規劃 & 真實課程資料
+
+#### 📋 規劃文件
+
+- **多元登入方案規劃**：完整規劃 Google OAuth、LINE Login、2FA (TOTP QR Code) 認證方案
+  - 含資料庫變更設計（`user_social_accounts` 新表、`users` 新增 2FA 欄位）
+  - 前端 UI 流程設計（登入頁、2FA 驗證頁、安全設定頁）
+  - 後端 API 端點規劃（Google/LINE OAuth + 2FA 管理共 12 個新端點）
+  - 安全性考量與加密方案
+  - 詳見 `REPORTS/MULTI_AUTH_PLANNING_2026-03-05T22-00-00+08-00.md`
+
+#### 📊 資料
+
+- **真實課程資料 SQL**：根據課程說明內容製作完整 9 筆課程 INSERT 語句
+  - 變現陪跑主方案 3 種定價（三個月 NT$32,800 / 六個月 NT$59,800 / 一年 NT$118,000）
+  - 線上課程 4 門（表達力心理學、反對問題成交話術、體驗課成交全流程、私人教練續約必修課）
+  - 一對一服務 2 門（一對一陪跑訓練、心理韌性與職涯定位）
+  - 詳見 `真資料製作/real_courses_data.sql`
 
 ### 2026-03-05 - 登入認證修復
 
@@ -1652,12 +1727,12 @@ npm install react-moveable moveable @scena/react-guides uuid
 5. **AdminVideos.tsx** — 移除本地 `AdminVideo` 定義，改用 `@/types` 導入
 6. **AdminWhitelist.tsx** — 透過 Dialog.tsx 兼容修復，`onCancel`/`danger` 直接支援
 7. **Checkout.tsx** — 移除未使用的 `useMemo`/`Input` import；`isLoading` 改為 `loading`
-**SSR 水合問題修復 (4 個檔案)：**
+   **SSR 水合問題修復 (4 個檔案)：**
 
-9. **overlay/Modal.tsx** — `useEffect` 內 `document`/`window` 加入 `typeof` 防護
-10. **overlay/Drawer.tsx** — 同上
-11. **ThemeContext.tsx** — `setTheme`/`setColorMode` 中 `localStorage` 加入 `typeof window` 防護
-12. **LanguageContext.tsx** — `setLanguage` 中 `localStorage`/`document` 加入防護；`useEffect` 初始化也加防護
+8. **overlay/Modal.tsx** — `useEffect` 內 `document`/`window` 加入 `typeof` 防護
+9. **overlay/Drawer.tsx** — 同上
+10. **ThemeContext.tsx** — `setTheme`/`setColorMode` 中 `localStorage` 加入 `typeof window` 防護
+11. **LanguageContext.tsx** — `setLanguage` 中 `localStorage`/`document` 加入防護；`useEffect` 初始化也加防護
 
 #### 測試驗證
 

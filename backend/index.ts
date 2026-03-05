@@ -13,6 +13,8 @@ import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
+import authGoogleRoutes from "./routes/authGoogle.js";
+import authLineRoutes from "./routes/authLine.js";
 import coursesRoutes from "./routes/courses.js";
 import videosRoutes from "./routes/videos.js";
 import adminRoutes from "./routes/admin.js";
@@ -94,6 +96,8 @@ app.use("/api", apiLimiter);
  * API 路由註冊
  */
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/google", authGoogleRoutes);
+app.use("/api/auth/line", authLineRoutes);
 app.use("/api/courses", coursesRoutes);
 app.use("/api/videos", videosRoutes);
 app.use("/api/articles", articlesRoutes);

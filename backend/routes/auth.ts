@@ -11,8 +11,115 @@ import { authenticateToken } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
 import { logger } from "../utils/logger.js";
 import { validateEmail } from "../middleware/sanitize.js";
+import { getOAuthStatus } from "../config/oauth.js";
 
 const router: Router = express.Router();
+
+/**
+ * 取得 OAuth 啟用狀態
+ * @route GET /api/auth/providers
+ *
+ * 前端用此端點判斷要顯示哪些社交登入按鈕
+ */
+router.get("/providers", (_req: Request, res: Response): void => {
+  const status = getOAuthStatus();
+  res.json({
+    local: true,
+    google: status.google,
+    line: status.line,
+  });
+});
+
+/**
+ * 取得已登入使用者的社交帳號綁定狀態
+ * @route GET /api/auth/social-accounts
+ */
+router.get(
+  "/social-accounts",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("user_social_accounts")
+        .select(
+          "social_account_id, provider, provider_email, provider_display_name, provider_avatar_url, created_at, last_login_at",
+        )
+        .eq("user_id", req.user?.userId);
+
+      if (error) {
+        logger.error("查詢社交帳號失敗", error as unknown as Error);
+        res.status(500).json({ error: "查詢失敗" });
+        return;
+      }
+
+      res.json({ socialAccounts: data || [] });
+    } catch (err) {
+      logger.error("取得社交帳號例外", err as Error);
+      res.status(500).json({ error: "伺服器錯誤" });
+    }
+  },
+);
+
+/**
+ * 解除社交帳號綁定
+ * @route DELETE /api/auth/social-accounts/:provider
+ */
+router.delete(
+  "/social-accounts/:provider",
+  authenticateToken,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const provider = req.params.provider as string;
+      const userId = req.user?.userId;
+
+      if (!["google", "line"].includes(provider)) {
+        res.status(400).json({ error: "不支援的提供者" });
+        return;
+      }
+
+      // 檢查使用者是否有密碼（避免解綁後無法登入）
+      const { data: user } = await supabaseAdmin
+        .from("users")
+        .select("password_hash")
+        .eq("user_id", userId)
+        .single();
+
+      const { data: socialAccounts } = await supabaseAdmin
+        .from("user_social_accounts")
+        .select("provider")
+        .eq("user_id", userId);
+
+      const hasPassword = user?.password_hash && user.password_hash.length > 0;
+      const otherSocialCount =
+        (socialAccounts?.filter((a: { provider: string }) => a.provider !== provider).length) || 0;
+
+      if (!hasPassword && otherSocialCount === 0) {
+        res.status(400).json({
+          error: "無法解除綁定：這是你唯一的登入方式。請先設定密碼後再解除綁定。",
+        });
+        return;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("user_social_accounts")
+        .delete()
+        .eq("user_id", userId)
+        .eq("provider", provider);
+
+      if (error) {
+        logger.error("解除社交帳號綁定失敗", error as unknown as Error);
+        res.status(500).json({ error: "解除綁定失敗" });
+        return;
+      }
+
+      logger.info("社交帳號解除綁定", { userId, provider });
+      res.json({ success: true, message: `${provider} 帳號已解除綁定` });
+    } catch (err) {
+      logger.error("解除綁定例外", err as Error);
+      res.status(500).json({ error: "伺服器錯誤" });
+    }
+  },
+);
 
 /**
  * 註冊新使用者

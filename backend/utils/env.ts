@@ -26,6 +26,13 @@ export interface EnvConfig {
 
   // CORS
   FRONTEND_URL?: string;
+
+  // OAuth (optional)
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  LINE_CHANNEL_ID?: string;
+  LINE_CHANNEL_SECRET?: string;
+  OAUTH_CALLBACK_BASE_URL?: string;
 }
 
 /**
@@ -94,10 +101,17 @@ export const validateEnv = (): EnvConfig => {
   };
 
   // 記錄成功訊息
+  const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  const hasLine = !!(process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET);
+
   logger.info("✅ 環境變數驗證通過", {
     port: config.PORT,
     environment: config.NODE_ENV,
     hasSupabase: !!config.SUPABASE_URL,
+    oauth: {
+      google: hasGoogle ? "已設定" : "未設定",
+      line: hasLine ? "已設定" : "未設定",
+    },
   });
 
   return config;
