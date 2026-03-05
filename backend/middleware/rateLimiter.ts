@@ -101,7 +101,7 @@ export const createRateLimiter = (
  */
 export const authLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 分鐘
-  5, // 最多 5 次
+  15, // 最多 15 次
   "登入嘗試次數過多，請 15 分鐘後再試",
 );
 

@@ -101,13 +101,18 @@ router.post(
         { expiresIn: "7d" },
       );
 
-      res.cookie("token", token, {
+      const cookieOptions: import("express").CookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        domain: process.env.COOKIE_DOMAIN,
-      });
+        path: "/",
+      };
+      // 僅在明確設定 COOKIE_DOMAIN 時才指定 domain
+      if (process.env.COOKIE_DOMAIN) {
+        cookieOptions.domain = process.env.COOKIE_DOMAIN;
+      }
+      res.cookie("token", token, cookieOptions);
 
       logger.info("使用者註冊成功", { userId: newUser.user_id, email });
 
@@ -198,13 +203,17 @@ router.post(
         { expiresIn: "7d" },
       );
 
-      res.cookie("token", token, {
+      const cookieOptions: import("express").CookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        domain: process.env.COOKIE_DOMAIN,
-      });
+        path: "/",
+      };
+      if (process.env.COOKIE_DOMAIN) {
+        cookieOptions.domain = process.env.COOKIE_DOMAIN;
+      }
+      res.cookie("token", token, cookieOptions);
 
       logger.info("使用者登入成功", { userId: user.user_id, email });
 
@@ -233,12 +242,16 @@ router.post(
  */
 router.post("/logout", (req: Request, res: Response): void => {
   logger.info("使用者登出");
-  res.clearCookie("token", {
+  const clearOptions: import("express").CookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-    domain: process.env.COOKIE_DOMAIN,
-  });
+    sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
+    path: "/",
+  };
+  if (process.env.COOKIE_DOMAIN) {
+    clearOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+  res.clearCookie("token", clearOptions);
   res.json({ success: true });
 });
 
