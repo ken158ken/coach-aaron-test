@@ -661,6 +661,21 @@ frontend/src/components/ui/block-editor/
 
 ## 📝 更新日誌
 
+### 2026-03-05 - 登入認證修復
+
+#### 🔧 修復
+
+- **Cookie SameSite 設定**：從 `none` 改為 `lax`，解決同源 Vercel 部署的 cookie 相容性問題
+- **COOKIE_DOMAIN 處理**：移除 `undefined` domain 設定，避免 cookie 寫入失敗
+- **明確設定 cookie path**：所有 cookie 操作統一加上 `path: "/"`
+- **Rate Limiter 調整**：認證端點從 5 次/15 分鐘提高到 15 次/15 分鐘，改善使用者體驗
+- **密碼重設**：修復帳號登入問題
+
+#### 修改檔案
+
+- **backend/routes/auth.ts** — 統一 cookie 設定，使用型別安全 `CookieOptions` 變數
+- **backend/middleware/rateLimiter.ts** — 放寬認證 Rate Limiter 限制
+
 ### 2026-02-19 - Landing Page Builder (GrapesJS Demo 版)
 
 #### 🚀 新功能
