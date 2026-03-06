@@ -101,8 +101,12 @@ export const validateEnv = (): EnvConfig => {
   };
 
   // 記錄成功訊息
-  const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  const hasLine = !!(process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET);
+  const hasGoogle = !!(
+    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  );
+  const hasLine = !!(
+    process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET
+  );
 
   logger.info("✅ 環境變數驗證通過", {
     port: config.PORT,

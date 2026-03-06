@@ -91,11 +91,14 @@ router.delete(
 
       const hasPassword = user?.password_hash && user.password_hash.length > 0;
       const otherSocialCount =
-        (socialAccounts?.filter((a: { provider: string }) => a.provider !== provider).length) || 0;
+        socialAccounts?.filter(
+          (a: { provider: string }) => a.provider !== provider,
+        ).length || 0;
 
       if (!hasPassword && otherSocialCount === 0) {
         res.status(400).json({
-          error: "無法解除綁定：這是你唯一的登入方式。請先設定密碼後再解除綁定。",
+          error:
+            "無法解除綁定：這是你唯一的登入方式。請先設定密碼後再解除綁定。",
         });
         return;
       }

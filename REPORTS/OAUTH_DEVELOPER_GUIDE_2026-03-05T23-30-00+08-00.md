@@ -80,17 +80,17 @@
 
 當使用者透過 Google 登入時，我們可以取得以下資料：
 
-| 欄位 | 說明 | 範例 |
-|------|------|------|
-| `sub` | Google 唯一 ID | `"102340561024567890"` |
-| `email` | 電子郵件 | `"user@gmail.com"` |
-| `email_verified` | Email 是否已驗證 | `true` |
-| `name` | 完整姓名 | `"王小明"` |
-| `given_name` | 名字 | `"小明"` |
-| `family_name` | 姓氏 | `"王"` |
-| `picture` | 大頭照 URL | `"https://lh3.googleusercontent.com/..."` |
-| `locale` | 語言設定 | `"zh-TW"` |
-| `hd` | 公司網域（Google Workspace） | `"company.com"` |
+| 欄位             | 說明                         | 範例                                      |
+| ---------------- | ---------------------------- | ----------------------------------------- |
+| `sub`            | Google 唯一 ID               | `"102340561024567890"`                    |
+| `email`          | 電子郵件                     | `"user@gmail.com"`                        |
+| `email_verified` | Email 是否已驗證             | `true`                                    |
+| `name`           | 完整姓名                     | `"王小明"`                                |
+| `given_name`     | 名字                         | `"小明"`                                  |
+| `family_name`    | 姓氏                         | `"王"`                                    |
+| `picture`        | 大頭照 URL                   | `"https://lh3.googleusercontent.com/..."` |
+| `locale`         | 語言設定                     | `"zh-TW"`                                 |
+| `hd`             | 公司網域（Google Workspace） | `"company.com"`                           |
 
 ### 1.6 發布狀態
 
@@ -170,13 +170,13 @@
 
 當使用者透過 LINE 登入時，我們可以取得以下資料：
 
-| 來源 | 欄位 | 說明 | 範例 |
-|------|------|------|------|
-| Profile API | `userId` | LINE 唯一 ID | `"U1234567890abcdef"` |
-| Profile API | `displayName` | LINE 顯示名稱 | `"王小明"` |
-| Profile API | `pictureUrl` | LINE 大頭照 URL | `"https://profile.line-scdn.net/..."` |
-| Profile API | `statusMessage` | LINE 個人狀態 | `"努力訓練中💪"` |
-| ID Token | `email` | 電子郵件（需申請） | `"user@example.com"` |
+| 來源        | 欄位            | 說明               | 範例                                  |
+| ----------- | --------------- | ------------------ | ------------------------------------- |
+| Profile API | `userId`        | LINE 唯一 ID       | `"U1234567890abcdef"`                 |
+| Profile API | `displayName`   | LINE 顯示名稱      | `"王小明"`                            |
+| Profile API | `pictureUrl`    | LINE 大頭照 URL    | `"https://profile.line-scdn.net/..."` |
+| Profile API | `statusMessage` | LINE 個人狀態      | `"努力訓練中💪"`                      |
+| ID Token    | `email`         | 電子郵件（需申請） | `"user@example.com"`                  |
 
 ### 2.8 發布狀態
 
@@ -250,12 +250,12 @@ GET http://localhost:5000/api/auth/providers
 
 確保以下 URI 都已在各平台設定：
 
-| 平台 | Redirect URI |
-|------|-------------|
-| Google (本地) | `http://localhost:5000/api/auth/google/callback` |
+| 平台          | Redirect URI                                                   |
+| ------------- | -------------------------------------------------------------- |
+| Google (本地) | `http://localhost:5000/api/auth/google/callback`               |
 | Google (生產) | `https://coach-aaron-test.vercel.app/api/auth/google/callback` |
-| LINE (本地) | `http://localhost:5000/api/auth/line/callback` |
-| LINE (生產) | `https://coach-aaron-test.vercel.app/api/auth/line/callback` |
+| LINE (本地)   | `http://localhost:5000/api/auth/line/callback`                 |
+| LINE (生產)   | `https://coach-aaron-test.vercel.app/api/auth/line/callback`   |
 
 ### 重要提醒
 
@@ -266,14 +266,14 @@ GET http://localhost:5000/api/auth/providers
 
 ### API 端點總覽
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `GET` | `/api/auth/providers` | 查詢 OAuth 啟用狀態 |
-| `GET` | `/api/auth/google` | 發起 Google 登入 |
-| `GET` | `/api/auth/google/callback` | Google 回呼 |
-| `POST` | `/api/auth/google/bind` | 綁定 Google（需登入） |
-| `GET` | `/api/auth/line` | 發起 LINE 登入 |
-| `GET` | `/api/auth/line/callback` | LINE 回呼 |
-| `POST` | `/api/auth/line/bind` | 綁定 LINE（需登入） |
-| `GET` | `/api/auth/social-accounts` | 查詢已綁定社交帳號（需登入） |
-| `DELETE` | `/api/auth/social-accounts/:provider` | 解除綁定（需登入） |
+| 方法     | 路徑                                  | 說明                         |
+| -------- | ------------------------------------- | ---------------------------- |
+| `GET`    | `/api/auth/providers`                 | 查詢 OAuth 啟用狀態          |
+| `GET`    | `/api/auth/google`                    | 發起 Google 登入             |
+| `GET`    | `/api/auth/google/callback`           | Google 回呼                  |
+| `POST`   | `/api/auth/google/bind`               | 綁定 Google（需登入）        |
+| `GET`    | `/api/auth/line`                      | 發起 LINE 登入               |
+| `GET`    | `/api/auth/line/callback`             | LINE 回呼                    |
+| `POST`   | `/api/auth/line/bind`                 | 綁定 LINE（需登入）          |
+| `GET`    | `/api/auth/social-accounts`           | 查詢已綁定社交帳號（需登入） |
+| `DELETE` | `/api/auth/social-accounts/:provider` | 解除綁定（需登入）           |

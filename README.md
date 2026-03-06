@@ -703,17 +703,17 @@ frontend/src/components/ui/block-editor/
 
 #### API 端點
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `GET` | `/api/auth/providers` | 查詢 OAuth 啟用狀態 |
-| `GET` | `/api/auth/google` | 發起 Google 登入 |
-| `GET` | `/api/auth/google/callback` | Google 回呼 |
-| `POST` | `/api/auth/google/bind` | 綁定 Google（需登入） |
-| `GET` | `/api/auth/line` | 發起 LINE 登入 |
-| `GET` | `/api/auth/line/callback` | LINE 回呼 |
-| `POST` | `/api/auth/line/bind` | 綁定 LINE（需登入） |
-| `GET` | `/api/auth/social-accounts` | 已綁定社交帳號（需登入） |
-| `DELETE` | `/api/auth/social-accounts/:provider` | 解除綁定（需登入） |
+| 方法     | 路徑                                  | 說明                     |
+| -------- | ------------------------------------- | ------------------------ |
+| `GET`    | `/api/auth/providers`                 | 查詢 OAuth 啟用狀態      |
+| `GET`    | `/api/auth/google`                    | 發起 Google 登入         |
+| `GET`    | `/api/auth/google/callback`           | Google 回呼              |
+| `POST`   | `/api/auth/google/bind`               | 綁定 Google（需登入）    |
+| `GET`    | `/api/auth/line`                      | 發起 LINE 登入           |
+| `GET`    | `/api/auth/line/callback`             | LINE 回呼                |
+| `POST`   | `/api/auth/line/bind`                 | 綁定 LINE（需登入）      |
+| `GET`    | `/api/auth/social-accounts`           | 已綁定社交帳號（需登入） |
+| `DELETE` | `/api/auth/social-accounts/:provider` | 解除綁定（需登入）       |
 
 ---
 
