@@ -10,6 +10,7 @@ import { useAuth, useTheme } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 /**
  * Register - 註冊頁面
@@ -166,12 +167,17 @@ const Register: React.FC = () => {
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
             <div className="flex-1 border-t border-luxe-gold/10" />
-            <span className="text-luxe-muted text-xs sm:text-sm">或</span>
+            <span className="text-luxe-muted text-xs sm:text-sm">
+              或使用以下方式註冊
+            </span>
             <div className="flex-1 border-t border-luxe-gold/10" />
           </div>
 
+          {/* Social Login Buttons */}
+          <SocialLoginButtons />
+
           {/* Login Link */}
-          <p className="text-center text-sm sm:text-base text-luxe-muted">
+          <p className="text-center text-sm sm:text-base text-luxe-muted mt-6">
             已經有帳號？{" "}
             <Link to="/login" className="text-luxe-gold hover:underline">
               立即登入

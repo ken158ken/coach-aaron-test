@@ -5,11 +5,12 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth, useTheme } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 /**
  * Login - 登入頁面
@@ -18,7 +19,7 @@ import SEOHead from "@/components/seo/SEOHead";
  */
 const Login: React.FC = () => {
   const { setTheme } = useTheme();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, isAuthenticated, loading: authLoading, checkAuth } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -27,10 +28,32 @@ const Login: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     setTheme("luxe");
   }, [setTheme]);
+
+  // 處理 OAuth 回呼：後端設定 cookie 後重導向到 /login?success=true
+  useEffect(() => {
+    const oauthSuccess = searchParams.get("success");
+    const oauthError = searchParams.get("error");
+
+    if (oauthSuccess === "true") {
+      // Cookie 已設定，觸發 checkAuth 重新驗證
+      checkAuth();
+    } else if (oauthError) {
+      const errorMessages: Record<string, string> = {
+        access_denied: "您已取消授權登入",
+        invalid_state: "登入驗證失敗，請重試",
+        no_code: "登入授權失敗，請重試",
+        invalid_profile: "無法取得帳號資訊",
+        create_failed: "建立帳號失敗，請稍後再試",
+        server_error: "伺服器錯誤，請稍後再試",
+      };
+      setError(errorMessages[oauthError] || "登入失敗，請重試");
+    }
+  }, [searchParams, checkAuth]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -53,11 +76,14 @@ const Login: React.FC = () => {
       await login(formData.email, formData.password);
       navigate("/member");
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string; error?: string } } };
-      const msg = axiosErr?.response?.data?.message
-        || axiosErr?.response?.data?.error
-        || (err instanceof Error ? err.message : null)
-        || "登入失敗，請檢查帳號密碼";
+      const axiosErr = err as {
+        response?: { data?: { message?: string; error?: string } };
+      };
+      const msg =
+        axiosErr?.response?.data?.message ||
+        axiosErr?.response?.data?.error ||
+        (err instanceof Error ? err.message : null) ||
+        "登入失敗，請檢查帳號密碼";
       setError(msg);
     } finally {
       setLoading(false);
@@ -132,12 +158,17 @@ const Login: React.FC = () => {
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
             <div className="flex-1 border-t border-luxe-gold/10" />
-            <span className="text-luxe-muted text-xs sm:text-sm">或</span>
+            <span className="text-luxe-muted text-xs sm:text-sm">
+              或使用以下方式登入
+            </span>
             <div className="flex-1 border-t border-luxe-gold/10" />
           </div>
 
+          {/* Social Login Buttons */}
+          <SocialLoginButtons />
+
           {/* Register Link */}
-          <p className="text-center text-sm sm:text-base text-luxe-muted">
+          <p className="text-center text-sm sm:text-base text-luxe-muted mt-6">
             還沒有帳號？{" "}
             <Link to="/register" className="text-luxe-gold hover:underline">
               立即註冊
