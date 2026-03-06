@@ -409,9 +409,14 @@ export async function handleSocialLogin(
       email: user.email,
     });
 
-    res.redirect(
-      `${frontendUrl}/login?success=true&provider=${profile.provider}`,
-    );
+    // 使用 HTML 頁面跳轉而非 302 redirect
+    // Vercel Serverless 的 redirect 回應有時不會正確保留 Set-Cookie 標頭
+    const redirectUrl = `${frontendUrl}/login?success=true&provider=${encodeURIComponent(profile.provider)}`;
+    res
+      .status(200)
+      .send(
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${redirectUrl}"><title>登入中...</title></head><body><p>登入成功，正在跳轉...</p><script>window.location.href="${redirectUrl}";</script></body></html>`,
+      );
   } catch (err) {
     logger.error("社交登入處理失敗", err as Error, {
       provider: profile.provider,
