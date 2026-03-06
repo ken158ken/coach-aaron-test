@@ -670,6 +670,27 @@ frontend/src/components/ui/block-editor/
 
 ## 📝 更新日誌
 
+### 2026-03-07 - 登入/註冊頁面加入 Google & LINE 社交登入按鈕
+
+#### 🚀 新功能
+
+- **SocialLoginButtons 元件**：自動偵測後端啟用的 OAuth 提供者，動態顯示可用按鈕
+- **登入頁 OAuth 按鈕**：Google（白底彩色 icon）+ LINE（綠底白字 icon）圓角按鈕
+- **註冊頁 OAuth 按鈕**：同樣的社交登入按鈕，方便新用戶直接用社交帳號註冊
+- **OAuth 回呼處理**：登入頁自動偵測 `?success=true` 參數，觸發 `checkAuth()` 完成登入跳轉
+- **錯誤訊息顯示**：OAuth 失敗時顯示中文錯誤訊息（取消授權、驗證失敗、伺服器錯誤等）
+
+#### 新增檔案
+
+- **frontend/src/components/auth/SocialLoginButtons.tsx** — 社交登入按鈕元件
+
+#### 修改檔案
+
+- **frontend/src/pages/Login.tsx** — 加入社交登入按鈕 + OAuth 回呼處理
+- **frontend/src/pages/Register.tsx** — 加入社交登入按鈕
+
+---
+
 ### 2026-03-06 - OAuth 部署上線 & Cron 修正
 
 #### 🚀 部署
