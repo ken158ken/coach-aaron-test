@@ -115,7 +115,15 @@ app.get("/api/health", (_req: Request, res: Response) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
-    version: "1.0.0",
+    version: "1.1.0-oauth",
+    routes: [
+      "/api/auth",
+      "/api/auth/google",
+      "/api/auth/line",
+      "/api/courses",
+      "/api/videos",
+      "/api/articles",
+    ],
   });
 });
 
