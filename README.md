@@ -670,6 +670,25 @@ frontend/src/components/ui/block-editor/
 
 ## 📝 更新日誌
 
+### 2026-03-06 - OAuth 部署上線 & Cron 修正
+
+#### 🚀 部署
+
+- **OAuth 路由正式上線**：Google OAuth + LINE Login 端點已在 Vercel 正式環境可用
+- **Vercel CLI 部署**：透過 Vercel CLI 直接部署，解決 GitHub 推送觸發部署失敗問題
+- **Health endpoint 版本標記**：`/api/health` 回傳 `version: "1.1.0-oauth"` 用於驗證部署版本
+
+#### 🔧 修正
+
+- **Cron schedule 調整**：`0 4,16 * * *`（每日兩次）→ `0 4 * * *`（每日一次），符合 Vercel Hobby 方案限制
+
+#### ✅ 已驗證
+
+- `GET /api/health` → version: `1.1.0-oauth`，routes 包含 google/line
+- `GET /api/auth/providers` → `{ local: true, google: true, line: true }`
+
+---
+
 ### 2026-03-05 - 多元登入實作 (Google OAuth + LINE Login)
 
 #### 🚀 新功能
