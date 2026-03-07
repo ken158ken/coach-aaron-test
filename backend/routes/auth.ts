@@ -16,6 +16,100 @@ import { getOAuthStatus } from "../config/oauth.js";
 const router: Router = express.Router();
 
 /**
+ * OAuth Token Exchange - 交換臨時 token 為 auth cookie
+ * @route POST /api/auth/oauth-exchange
+ *
+ * OAuth 回呼後，前端帶著短效 token 呼叫此端點，
+ * 驗證後設定與一般登入相同的 auth cookie。
+ */
+router.post(
+  "/oauth-exchange",
+  authLimiter,
+  (req: Request, res: Response): void => {
+    try {
+      const { token: exchangeToken } = req.body;
+
+      if (!exchangeToken) {
+        res.status(400).json({ error: "缺少 token" });
+        return;
+      }
+
+      // 驗證 exchange token
+      const decoded = jwt.verify(
+        exchangeToken,
+        process.env.JWT_SECRET || "",
+      ) as {
+        purpose: string;
+        userId: number;
+        username: string;
+        email: string;
+        displayName: string;
+        avatarUrl?: string;
+        sex?: boolean;
+        isAdmin: boolean;
+        provider: string;
+      };
+
+      if (decoded.purpose !== "oauth_exchange") {
+        res.status(400).json({ error: "無效的 token" });
+        return;
+      }
+
+      // 產生正式 auth JWT（7 天）
+      const authToken = jwt.sign(
+        {
+          userId: decoded.userId,
+          username: decoded.username,
+          email: decoded.email,
+          displayName: decoded.displayName,
+          avatarUrl: decoded.avatarUrl,
+          sex: decoded.sex,
+          isAdmin: decoded.isAdmin,
+        },
+        process.env.JWT_SECRET || "",
+        { expiresIn: "7d" },
+      );
+
+      const cookieOptions: import("express").CookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
+      };
+      if (process.env.COOKIE_DOMAIN) {
+        cookieOptions.domain = process.env.COOKIE_DOMAIN;
+      }
+      res.cookie("token", authToken, cookieOptions);
+
+      logger.info("OAuth exchange 成功", {
+        userId: decoded.userId,
+        provider: decoded.provider,
+      });
+
+      res.json({
+        success: true,
+        user: {
+          userId: decoded.userId,
+          username: decoded.username,
+          email: decoded.email,
+          displayName: decoded.displayName,
+          avatarUrl: decoded.avatarUrl,
+          sex: decoded.sex,
+          isAdmin: decoded.isAdmin,
+        },
+        isAdmin: decoded.isAdmin,
+      });
+    } catch (err) {
+      logger.warn("OAuth exchange 失敗", {
+        error: (err as Error).message,
+      });
+      res.status(401).json({ error: "token 已過期或無效，請重新登入" });
+    }
+  },
+);
+
+/**
  * 取得 OAuth 啟用狀態
  * @route GET /api/auth/providers
  *

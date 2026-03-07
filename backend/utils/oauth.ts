@@ -387,36 +387,36 @@ export async function handleSocialLogin(
       await upsertSocialAccount(user.user_id as number, profile);
     }
 
-    // Step 4: 設定 JWT Cookie 並重導向
+    // Step 4: 產生短效 OAuth exchange token 並重導向至前端
+    // Vercel Serverless 的 redirect/HTML 回應無法可靠保留 Set-Cookie，
+    // 改用 token exchange 模式：redirect 帶臨時 token → 前端用 XHR 交換 cookie
     const isAdmin = await checkIsAdmin(user.email as string);
-    setAuthCookie(
-      res,
-      user as {
-        user_id: number;
-        username: string;
-        email: string;
-        display_name: string;
-        avatar_url?: string;
-        avatar_base64?: string;
-        sex?: boolean;
+
+    const exchangeToken = jwt.sign(
+      {
+        purpose: "oauth_exchange",
+        userId: user.user_id,
+        username: user.username,
+        email: user.email,
+        displayName: user.display_name,
+        avatarUrl:
+          (user as Record<string, unknown>).avatar_base64 || user.avatar_url,
+        sex: (user as Record<string, unknown>).sex,
+        isAdmin,
+        provider: profile.provider,
       },
-      isAdmin,
+      process.env.JWT_SECRET || "",
+      { expiresIn: "60s" },
     );
 
-    logger.info("社交登入成功", {
+    logger.info("社交登入成功 - 產生 exchange token", {
       provider: profile.provider,
       userId: user.user_id,
       email: user.email,
     });
 
-    // 使用 HTML 頁面跳轉而非 302 redirect
-    // Vercel Serverless 的 redirect 回應有時不會正確保留 Set-Cookie 標頭
-    const redirectUrl = `${frontendUrl}/login?success=true&provider=${encodeURIComponent(profile.provider)}`;
-    res
-      .status(200)
-      .send(
-        `<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${redirectUrl}"><title>登入中...</title></head><body><p>登入成功，正在跳轉...</p><script>window.location.href="${redirectUrl}";</script></body></html>`,
-      );
+    const redirectUrl = `${frontendUrl}/login?auth_token=${encodeURIComponent(exchangeToken)}&provider=${encodeURIComponent(profile.provider)}`;
+    res.redirect(redirectUrl);
   } catch (err) {
     logger.error("社交登入處理失敗", err as Error, {
       provider: profile.provider,

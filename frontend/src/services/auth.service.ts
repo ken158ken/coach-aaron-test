@@ -47,6 +47,16 @@ export const authService = {
   checkAuth: async (): Promise<AuthResponse> => {
     return get<AuthResponse>("/api/auth/me");
   },
+
+  /**
+   * OAuth Token Exchange - 交換臨時 token 為 auth cookie
+   *
+   * @param {string} token - OAuth 回呼產生的短效 JWT
+   * @returns {Promise<AuthResponse>} 認證回應
+   */
+  exchangeOAuthToken: async (token: string): Promise<AuthResponse> => {
+    return post<AuthResponse>("/api/auth/oauth-exchange", { token });
+  },
 };
 
 export default authService;

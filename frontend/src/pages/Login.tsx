@@ -11,6 +11,7 @@ import { Input, PillButton, Toast } from "@/components/ui";
 import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+import { authService } from "@/services";
 
 /**
  * Login - 登入頁面
@@ -34,14 +35,26 @@ const Login: React.FC = () => {
     setTheme("luxe");
   }, [setTheme]);
 
-  // 處理 OAuth 回呼：後端設定 cookie 後重導向到 /login?success=true
+  // 處理 OAuth 回呼：後端 redirect 帶 auth_token → 前端用 XHR 交換 cookie
   useEffect(() => {
-    const oauthSuccess = searchParams.get("success");
+    const authToken = searchParams.get("auth_token");
     const oauthError = searchParams.get("error");
 
-    if (oauthSuccess === "true") {
-      // Cookie 已設定，觸發 checkAuth 重新驗證
-      checkAuth();
+    if (authToken) {
+      setLoading(true);
+      authService
+        .exchangeOAuthToken(authToken)
+        .then(() => {
+          checkAuth();
+        })
+        .catch(() => {
+          setError("登入驗證失敗，請重試");
+        })
+        .finally(() => {
+          setLoading(false);
+          // 清除 URL 參數
+          window.history.replaceState({}, "", "/login");
+        });
     } else if (oauthError) {
       const errorMessages: Record<string, string> = {
         access_denied: "您已取消授權登入",
