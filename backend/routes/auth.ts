@@ -12,21 +12,21 @@ import { authLimiter } from "../middleware/rateLimiter.js";
 import { logger } from "../utils/logger.js";
 import { validateEmail } from "../middleware/sanitize.js";
 import { getOAuthStatus } from "../config/oauth.js";
-import { consumeExchangeCode } from "../utils/oauth.js";
+import { verifyExchangeToken } from "../utils/oauth.js";
 
 const router: Router = express.Router();
 
 /**
- * OAuth Code Exchange - 交換短隨機 code 為 auth cookie
+ * OAuth Code Exchange - 交換最小 JWT 為完整 auth token
  * @route POST /api/auth/oauth-exchange
  *
- * OAuth 回呼後，前端帶著短 code 呼叫此端點，
- * 驗證後設定與一般登入相同的 auth cookie。
+ * OAuth 回呼後，前端帶著 URL 中的短 JWT 呼叫此端點，
+ * 從 DB 查詢完整使用者資料，回傳 auth token。
  */
 router.post(
   "/oauth-exchange",
   authLimiter,
-  (req: Request, res: Response): void => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const { code } = req.body;
 
@@ -35,23 +35,47 @@ router.post(
         return;
       }
 
-      // 從暫存區取回並刪除（一次性）
-      const userData = consumeExchangeCode(code);
-      if (!userData) {
+      // 驗證最小 JWT，取得 userId
+      const userId = verifyExchangeToken(code);
+      if (!userId) {
         res.status(401).json({ error: "code 已過期或無效，請重新登入" });
         return;
       }
 
+      // 從資料庫查詢完整使用者資料
+      const { data: user, error: dbError } = await supabaseAdmin
+        .from("users")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .single();
+
+      if (dbError || !user) {
+        res.status(401).json({ error: "使用者不存在" });
+        return;
+      }
+
+      // 檢查管理員權限
+      const { data: adminCheck } = await supabaseAdmin
+        .from("admin_whitelist")
+        .select("*")
+        .eq("email", user.email)
+        .eq("is_active", true)
+        .single();
+
+      const isAdmin = !!adminCheck;
+
       // 產生正式 auth JWT（7 天）
       const authToken = jwt.sign(
         {
-          userId: userData.userId,
-          username: userData.username,
-          email: userData.email,
-          displayName: userData.displayName,
-          avatarUrl: userData.avatarUrl,
-          sex: userData.sex,
-          isAdmin: userData.isAdmin,
+          userId: user.user_id,
+          username: user.username,
+          email: user.email,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_base64 || user.avatar_url,
+          sex: user.sex,
+          isAdmin,
         },
         process.env.JWT_SECRET || "",
         { expiresIn: "7d" },
@@ -70,22 +94,23 @@ router.post(
       res.cookie("token", authToken, cookieOptions);
 
       logger.info("OAuth exchange 成功", {
-        userId: userData.userId,
-        provider: userData.provider,
+        userId: user.user_id,
+        email: user.email,
       });
 
       res.json({
         success: true,
+        token: authToken,
         user: {
-          userId: userData.userId,
-          username: userData.username,
-          email: userData.email,
-          displayName: userData.displayName,
-          avatarUrl: userData.avatarUrl,
-          sex: userData.sex,
-          isAdmin: userData.isAdmin,
+          userId: user.user_id,
+          username: user.username,
+          email: user.email,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_base64 || user.avatar_url,
+          sex: user.sex,
+          isAdmin,
         },
-        isAdmin: userData.isAdmin,
+        isAdmin,
       });
     } catch (err) {
       logger.warn("OAuth exchange 失敗", {
@@ -309,6 +334,7 @@ router.post(
 
       res.json({
         success: true,
+        token,
         user: {
           userId: newUser.user_id,
           username: newUser.username,
@@ -410,6 +436,7 @@ router.post(
 
       res.json({
         success: true,
+        token,
         user: {
           userId: user.user_id,
           username: user.username,

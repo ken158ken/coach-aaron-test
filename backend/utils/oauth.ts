@@ -9,69 +9,48 @@
  * @module utils/oauth
  */
 
-import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { Response } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { logger } from "./logger.js";
 
 /**
- * OAuth Exchange Code 暫存區
+ * OAuth Exchange — 使用最小 JWT（僅含 userId）取代 in-memory Map
  *
- * 使用短隨機 code 取代 JWT-in-URL，避免 414 URI Too Long。
- * code 有效期為 60 秒，使用後立即刪除（一次性）。
+ * Vercel Serverless 無狀態，in-memory 資料無法跨 instance 共享。
+ * 改用極短 JWT（~150 chars），僅包含 userId + purpose，
+ * exchange 端點再從資料庫查詢完整使用者資料。
  */
-export interface OAuthExchangeData {
-  userId: number;
-  username: string;
-  email: string;
-  displayName: string;
-  avatarUrl?: string;
-  sex?: boolean;
-  isAdmin: boolean;
-  provider: string;
-  createdAt: number;
+
+/**
+ * 產生最小 OAuth exchange token（僅含 userId）
+ *
+ * @param userId - 使用者 ID
+ * @returns 短 JWT（~150 字元）
+ */
+export function generateExchangeCode(userId: number): string {
+  return jwt.sign({ sub: userId, p: "ox" }, process.env.JWT_SECRET || "", {
+    expiresIn: "60s",
+  });
 }
 
-const EXCHANGE_CODE_TTL_MS = 60_000; // 60 秒
-const exchangeCodeStore = new Map<string, OAuthExchangeData>();
-
-/** 定期清理過期 code（每 30 秒） */
-setInterval(() => {
-  const now = Date.now();
-  for (const [code, data] of exchangeCodeStore) {
-    if (now - data.createdAt > EXCHANGE_CODE_TTL_MS) {
-      exchangeCodeStore.delete(code);
-    }
+/**
+ * 驗證並解析 exchange token，回傳 userId
+ *
+ * @param token - exchange JWT
+ * @returns userId 或 null
+ */
+export function verifyExchangeToken(token: string): number | null {
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "",
+    ) as unknown as { sub: number; p: string };
+    if (decoded.p !== "ox") return null;
+    return decoded.sub;
+  } catch {
+    return null;
   }
-}, 30_000);
-
-/**
- * 產生短隨機 OAuth exchange code 並存入暫存區
- *
- * @param data - 使用者資料
- * @returns 32 字元的隨機 hex code
- */
-export function generateExchangeCode(
-  data: Omit<OAuthExchangeData, "createdAt">,
-): string {
-  const code = crypto.randomBytes(16).toString("hex"); // 32 chars
-  exchangeCodeStore.set(code, { ...data, createdAt: Date.now() });
-  return code;
-}
-
-/**
- * 取回並刪除 exchange code 對應的資料（一次性使用）
- *
- * @param code - 先前產生的 exchange code
- * @returns 使用者資料，或 null（已過期/不存在/已使用）
- */
-export function consumeExchangeCode(code: string): OAuthExchangeData | null {
-  const data = exchangeCodeStore.get(code);
-  if (!data) return null;
-  exchangeCodeStore.delete(code);
-  if (Date.now() - data.createdAt > EXCHANGE_CODE_TTL_MS) return null;
-  return data;
 }
 
 /**
@@ -447,31 +426,17 @@ export async function handleSocialLogin(
       await upsertSocialAccount(user.user_id as number, profile);
     }
 
-    // Step 4: 產生短隨機 code 並重導向至前端
-    // 使用短 code（32 字元）取代 JWT-in-URL，避免 414 URI Too Long
-    const isAdmin = await checkIsAdmin(user.email as string);
+    // Step 4: 產生最小 exchange JWT（僅含 userId，~150 字元）並重導向至前端
+    // Vercel Serverless 無狀態，不能用 in-memory Map，改用極短 JWT
+    const exchangeToken = generateExchangeCode(user.user_id as number);
 
-    const code = generateExchangeCode({
-      userId: user.user_id as number,
-      username: user.username as string,
-      email: user.email as string,
-      displayName: (user.display_name as string) || "",
-      avatarUrl:
-        ((user as Record<string, unknown>).avatar_base64 as string) ||
-        (user.avatar_url as string) ||
-        undefined,
-      sex: (user as Record<string, unknown>).sex as boolean | undefined,
-      isAdmin,
-      provider: profile.provider,
-    });
-
-    logger.info("社交登入成功 - 產生 exchange code", {
+    logger.info("社交登入成功 - 產生 exchange token", {
       provider: profile.provider,
       userId: user.user_id,
       email: user.email,
     });
 
-    const redirectUrl = `${frontendUrl}/login?auth_code=${code}&provider=${encodeURIComponent(profile.provider)}`;
+    const redirectUrl = `${frontendUrl}/login?auth_code=${exchangeToken}&provider=${encodeURIComponent(profile.provider)}`;
     res.redirect(redirectUrl);
   } catch (err) {
     logger.error("社交登入處理失敗", err as Error, {

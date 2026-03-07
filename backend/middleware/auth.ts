@@ -38,6 +38,25 @@ declare global {
 }
 
 /**
+ * 從請求中取得 JWT token
+ * 支援兩種認證方式：
+ * 1. Cookie: token=xxx
+ * 2. Authorization: Bearer xxx
+ *
+ * @param req - Express Request
+ * @returns JWT token 或 null
+ */
+function extractToken(req: Request): string | null {
+  // 優先檢查 Authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+  // 其次檢查 cookie
+  return req.cookies?.token || null;
+}
+
+/**
  * 驗證 JWT Token
  *
  * @param req - Express request
@@ -50,7 +69,7 @@ export const authenticateToken = (
   next: NextFunction,
 ): void => {
   try {
-    const token = req.cookies.token;
+    const token = extractToken(req);
     if (!token) {
       res.status(401).json({ error: "未登入" });
       return;
@@ -131,7 +150,7 @@ export const optionalAuth = (
   res: Response,
   next: NextFunction,
 ): void => {
-  const token = req.cookies.token;
+  const token = extractToken(req);
   if (!token) {
     req.user = undefined;
     next();

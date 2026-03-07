@@ -3,8 +3,25 @@
  * @module services/auth.service
  */
 
-import { post, get } from "./api";
+import { post, get, setAuthToken } from "./api";
 import type { LoginFormData, RegisterFormData, AuthResponse } from "@/types";
+
+/**
+ * 認證回應 + token（後端回傳 token in body）
+ */
+interface AuthResponseWithToken extends AuthResponse {
+  token?: string;
+}
+
+/**
+ * 儲存 token 到記憶體（用於 Bearer header）
+ */
+function storeToken(response: AuthResponseWithToken): AuthResponse {
+  if (response.token) {
+    setAuthToken(response.token);
+  }
+  return response;
+}
 
 /**
  * 認證服務物件
@@ -17,7 +34,8 @@ export const authService = {
    * @returns {Promise<AuthResponse>} 認證回應
    */
   login: async (data: LoginFormData): Promise<AuthResponse> => {
-    return post<AuthResponse>("/api/auth/login", data);
+    const res = await post<AuthResponseWithToken>("/api/auth/login", data);
+    return storeToken(res);
   },
 
   /**
@@ -27,7 +45,8 @@ export const authService = {
    * @returns {Promise<AuthResponse>} 認證回應
    */
   register: async (data: RegisterFormData): Promise<AuthResponse> => {
-    return post<AuthResponse>("/api/auth/register", data);
+    const res = await post<AuthResponseWithToken>("/api/auth/register", data);
+    return storeToken(res);
   },
 
   /**
@@ -36,6 +55,7 @@ export const authService = {
    * @returns {Promise<void>}
    */
   logout: async (): Promise<void> => {
+    setAuthToken(null);
     return post("/api/auth/logout");
   },
 
@@ -49,13 +69,16 @@ export const authService = {
   },
 
   /**
-   * OAuth Code Exchange - 交換短隨機 code 為 auth cookie
+   * OAuth Code Exchange - 交換 exchange token 為完整 auth token
    *
-   * @param {string} code - OAuth 回呼產生的短隨機 code
+   * @param {string} code - OAuth 回呼的 exchange token
    * @returns {Promise<AuthResponse>} 認證回應
    */
   exchangeOAuthCode: async (code: string): Promise<AuthResponse> => {
-    return post<AuthResponse>("/api/auth/oauth-exchange", { code });
+    const res = await post<AuthResponseWithToken>("/api/auth/oauth-exchange", {
+      code,
+    });
+    return storeToken(res);
   },
 };
 

@@ -7,6 +7,20 @@ import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from "axios";
 import type { ApiErrorResponse } from "@/types";
 
 /**
+ * 記憶體 Token 管理
+ * 用於 Authorization: Bearer header（繞過 Vercel cookie 問題）
+ */
+let _authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  _authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return _authToken;
+}
+
+/**
  * 取得 API baseURL
  *
  * - 有明確設定 VITE_API_URL → 使用它
@@ -32,10 +46,13 @@ const apiClient: AxiosInstance = axios.create({
 });
 
 /**
- * 請求攔截器
+ * 請求攔截器 — 附加 Authorization header
  */
 apiClient.interceptors.request.use(
   (config) => {
+    if (_authToken) {
+      config.headers.Authorization = `Bearer ${_authToken}`;
+    }
     return config;
   },
   (error: AxiosError) => {

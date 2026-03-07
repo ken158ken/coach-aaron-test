@@ -12,6 +12,7 @@ import React, {
 } from "react";
 import type { User, AuthContextType, RegisterFormData } from "@/types";
 import { authService } from "@/services";
+import { setAuthToken } from "@/services/api";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -139,16 +140,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    * @param {string} email - 電子郵件
    * @param {string} password - 密碼
    */
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const response = await authService.login({ email, password });
-      setUser(
-        normalizeUser(response.user as unknown as Record<string, unknown>),
-      );
-      await checkAuth();
-    },
-    [checkAuth],
-  );
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await authService.login({ email, password });
+    setUser(normalizeUser(response.user as unknown as Record<string, unknown>));
+    setIsAdmin(response.isAdmin ?? false);
+  }, []);
 
   /**
    * 註冊
@@ -161,6 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(
         normalizeUser(response.user as unknown as Record<string, unknown>),
       );
+      setIsAdmin(response.isAdmin ?? false);
       return { success: true };
     } catch (error) {
       console.error("註冊失敗:", error);
@@ -177,6 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("登出失敗:", error);
     } finally {
+      setAuthToken(null);
       setUser(null);
       setIsAdmin(false);
     }
