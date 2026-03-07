@@ -7,10 +7,23 @@ import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from "axios";
 import type { ApiErrorResponse } from "@/types";
 
 /**
+ * 取得 API baseURL
+ *
+ * - 有明確設定 VITE_API_URL → 使用它
+ * - Production 環境 → "" (same-origin，透過 Vercel rewrites)
+ * - 開發環境 → http://localhost:5000
+ */
+const getBaseURL = (): string => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.PROD) return "";
+  return "http://localhost:5000";
+};
+
+/**
  * API 客戶端實例
  */
 const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL: getBaseURL(),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
