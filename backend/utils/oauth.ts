@@ -106,7 +106,6 @@ export function setAuthCookie(
       username: user.username,
       email: user.email,
       displayName: user.display_name,
-      avatarUrl: user.avatar_base64 || user.avatar_url,
       sex: user.sex,
       isAdmin,
     },
