@@ -20,7 +20,12 @@ import { authService } from "@/services";
  */
 const Login: React.FC = () => {
   const { setTheme } = useTheme();
-  const { login, isAuthenticated, loading: authLoading, checkAuth } = useAuth();
+  const {
+    login,
+    isAuthenticated,
+    loading: authLoading,
+    loginFromOAuth,
+  } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -44,8 +49,8 @@ const Login: React.FC = () => {
       setLoading(true);
       authService
         .exchangeOAuthCode(authCode)
-        .then(() => {
-          checkAuth();
+        .then((response) => {
+          loginFromOAuth(response);
         })
         .catch(() => {
           setError("登入驗證失敗，請重試");
@@ -66,7 +71,7 @@ const Login: React.FC = () => {
       };
       setError(errorMessages[oauthError] || "登入失敗，請重試");
     }
-  }, [searchParams, checkAuth]);
+  }, [searchParams, loginFromOAuth]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {

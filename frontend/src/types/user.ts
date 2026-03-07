@@ -62,6 +62,8 @@ export interface AuthContextType {
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  /** OAuth 登入成功後直接設定 auth state（不需額外 API 呼叫） */
+  loginFromOAuth: (response: AuthResponse) => void;
   /** 局部更新 user state（如頭像上傳後） */
   updateUser: (partial: Partial<User>) => void;
 }

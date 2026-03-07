@@ -115,9 +115,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   /**
    * 初始化認證狀態 - 在 hydration 後執行
+   * 注意：當 URL 帶有 auth_code（OAuth 回呼），跳過初始 checkAuth，
+   * 由 Login 頁面的 OAuth 流程自行處理認證。
    */
   useEffect(() => {
     if (isHydrated) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("auth_code")) {
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // SSR 環境
+      }
       checkAuth();
     }
   }, [isHydrated, checkAuth]);
@@ -180,6 +191,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser((prev) => (prev ? { ...prev, ...partial } : prev));
   }, []);
 
+  /**
+   * OAuth 登入 — 直接用 exchange 回應設定 auth state
+   * 避免再呼叫 checkAuth 造成 race condition
+   */
+  const loginFromOAuth = useCallback(
+    (response: { user: unknown; isAdmin: boolean }) => {
+      setUser(normalizeUser(response.user as Record<string, unknown>));
+      setIsAdmin(response.isAdmin);
+      setLoading(false);
+    },
+    [],
+  );
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -191,6 +215,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     checkAuth,
+    loginFromOAuth,
     updateUser,
   };
 
