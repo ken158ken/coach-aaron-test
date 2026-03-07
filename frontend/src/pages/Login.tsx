@@ -35,15 +35,15 @@ const Login: React.FC = () => {
     setTheme("luxe");
   }, [setTheme]);
 
-  // 處理 OAuth 回呼：後端 redirect 帶 auth_token → 前端用 XHR 交換 cookie
+  // 處理 OAuth 回呼：後端 redirect 帶 auth_code → 前端用 XHR 交換 cookie
   useEffect(() => {
-    const authToken = searchParams.get("auth_token");
+    const authCode = searchParams.get("auth_code");
     const oauthError = searchParams.get("error");
 
-    if (authToken) {
+    if (authCode) {
       setLoading(true);
       authService
-        .exchangeOAuthToken(authToken)
+        .exchangeOAuthCode(authCode)
         .then(() => {
           checkAuth();
         })

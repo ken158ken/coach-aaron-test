@@ -49,13 +49,13 @@ export const authService = {
   },
 
   /**
-   * OAuth Token Exchange - 交換臨時 token 為 auth cookie
+   * OAuth Code Exchange - 交換短隨機 code 為 auth cookie
    *
-   * @param {string} token - OAuth 回呼產生的短效 JWT
+   * @param {string} code - OAuth 回呼產生的短隨機 code
    * @returns {Promise<AuthResponse>} 認證回應
    */
-  exchangeOAuthToken: async (token: string): Promise<AuthResponse> => {
-    return post<AuthResponse>("/api/auth/oauth-exchange", { token });
+  exchangeOAuthCode: async (code: string): Promise<AuthResponse> => {
+    return post<AuthResponse>("/api/auth/oauth-exchange", { code });
   },
 };
 

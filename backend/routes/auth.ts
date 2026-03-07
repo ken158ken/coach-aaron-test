@@ -12,14 +12,15 @@ import { authLimiter } from "../middleware/rateLimiter.js";
 import { logger } from "../utils/logger.js";
 import { validateEmail } from "../middleware/sanitize.js";
 import { getOAuthStatus } from "../config/oauth.js";
+import { consumeExchangeCode } from "../utils/oauth.js";
 
 const router: Router = express.Router();
 
 /**
- * OAuth Token Exchange - 交換臨時 token 為 auth cookie
+ * OAuth Code Exchange - 交換短隨機 code 為 auth cookie
  * @route POST /api/auth/oauth-exchange
  *
- * OAuth 回呼後，前端帶著短效 token 呼叫此端點，
+ * OAuth 回呼後，前端帶著短 code 呼叫此端點，
  * 驗證後設定與一般登入相同的 auth cookie。
  */
 router.post(
@@ -27,44 +28,30 @@ router.post(
   authLimiter,
   (req: Request, res: Response): void => {
     try {
-      const { token: exchangeToken } = req.body;
+      const { code } = req.body;
 
-      if (!exchangeToken) {
-        res.status(400).json({ error: "缺少 token" });
+      if (!code || typeof code !== "string") {
+        res.status(400).json({ error: "缺少 code" });
         return;
       }
 
-      // 驗證 exchange token
-      const decoded = jwt.verify(
-        exchangeToken,
-        process.env.JWT_SECRET || "",
-      ) as {
-        purpose: string;
-        userId: number;
-        username: string;
-        email: string;
-        displayName: string;
-        avatarUrl?: string;
-        sex?: boolean;
-        isAdmin: boolean;
-        provider: string;
-      };
-
-      if (decoded.purpose !== "oauth_exchange") {
-        res.status(400).json({ error: "無效的 token" });
+      // 從暫存區取回並刪除（一次性）
+      const userData = consumeExchangeCode(code);
+      if (!userData) {
+        res.status(401).json({ error: "code 已過期或無效，請重新登入" });
         return;
       }
 
       // 產生正式 auth JWT（7 天）
       const authToken = jwt.sign(
         {
-          userId: decoded.userId,
-          username: decoded.username,
-          email: decoded.email,
-          displayName: decoded.displayName,
-          avatarUrl: decoded.avatarUrl,
-          sex: decoded.sex,
-          isAdmin: decoded.isAdmin,
+          userId: userData.userId,
+          username: userData.username,
+          email: userData.email,
+          displayName: userData.displayName,
+          avatarUrl: userData.avatarUrl,
+          sex: userData.sex,
+          isAdmin: userData.isAdmin,
         },
         process.env.JWT_SECRET || "",
         { expiresIn: "7d" },
@@ -83,28 +70,28 @@ router.post(
       res.cookie("token", authToken, cookieOptions);
 
       logger.info("OAuth exchange 成功", {
-        userId: decoded.userId,
-        provider: decoded.provider,
+        userId: userData.userId,
+        provider: userData.provider,
       });
 
       res.json({
         success: true,
         user: {
-          userId: decoded.userId,
-          username: decoded.username,
-          email: decoded.email,
-          displayName: decoded.displayName,
-          avatarUrl: decoded.avatarUrl,
-          sex: decoded.sex,
-          isAdmin: decoded.isAdmin,
+          userId: userData.userId,
+          username: userData.username,
+          email: userData.email,
+          displayName: userData.displayName,
+          avatarUrl: userData.avatarUrl,
+          sex: userData.sex,
+          isAdmin: userData.isAdmin,
         },
-        isAdmin: decoded.isAdmin,
+        isAdmin: userData.isAdmin,
       });
     } catch (err) {
       logger.warn("OAuth exchange 失敗", {
         error: (err as Error).message,
       });
-      res.status(401).json({ error: "token 已過期或無效，請重新登入" });
+      res.status(500).json({ error: "交換 code 時發生錯誤" });
     }
   },
 );
