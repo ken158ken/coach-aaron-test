@@ -294,6 +294,27 @@ router.post(
         return;
       }
 
+      // 為新使用者建立所有課程的售價可見性記錄（預設 false）
+      try {
+        const { data: allCourses } = await supabaseAdmin
+          .from("courses")
+          .select("course_id")
+          .is("deleted_at", null);
+
+        if (allCourses && allCourses.length > 0) {
+          const rows = allCourses.map((c: { course_id: number }) => ({
+            user_id: newUser.user_id,
+            course_id: c.course_id,
+            show_price: false,
+          }));
+          await supabaseAdmin
+            .from("user_course_price_visibility")
+            .upsert(rows, { onConflict: "user_id,course_id" });
+        }
+      } catch (visErr) {
+        logger.error("建立售價可見性記錄失敗", visErr as Error);
+      }
+
       // 檢查是否為管理員
       const { data: adminCheck } = await supabaseAdmin
         .from("admin_whitelist")

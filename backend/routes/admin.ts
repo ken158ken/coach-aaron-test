@@ -400,6 +400,129 @@ router.put(
 
 // ===== 統計數據 =====
 
+// ===== 課程售價顯示管理 =====
+
+/**
+ * 取得指定使用者的所有課程售價可見性設定
+ * @route GET /api/admin/price-visibility/:userId
+ */
+router.get(
+  "/price-visibility/:userId",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = Number(req.params.userId);
+      if (!userId || isNaN(userId)) {
+        res.status(400).json({ error: "無效的使用者 ID" });
+        return;
+      }
+
+      // 取得所有未刪除課程及該使用者的可見性設定
+      const { data: courses, error: courseErr } = await supabaseAdmin
+        .from("courses")
+        .select("course_id, course_title, price, status")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+
+      if (courseErr) throw courseErr;
+
+      const { data: visibility, error: visErr } = await supabaseAdmin
+        .from("user_course_price_visibility")
+        .select("course_id, show_price")
+        .eq("user_id", userId);
+
+      if (visErr) throw visErr;
+
+      const visMap = new Map(
+        (visibility || []).map((v: { course_id: number; show_price: boolean }) => [
+          v.course_id,
+          v.show_price,
+        ]),
+      );
+
+      const result = (courses || []).map(
+        (c: { course_id: number; course_title: string; price: number; status: string }) => ({
+          course_id: c.course_id,
+          course_title: c.course_title,
+          price: c.price,
+          status: c.status,
+          show_price: visMap.get(c.course_id) ?? false,
+        }),
+      );
+
+      res.json(result);
+    } catch (err) {
+      console.error("Get price visibility error:", err);
+      res.status(500).json({ error: "取得售價可見性失敗" });
+    }
+  },
+);
+
+/**
+ * 切換指定使用者對指定課程的售價顯示
+ * @route PUT /api/admin/price-visibility
+ */
+router.put(
+  "/price-visibility",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId, courseId, showPrice } = req.body;
+
+      if (!userId || !courseId || typeof showPrice !== "boolean") {
+        res.status(400).json({ error: "缺少必要參數 (userId, courseId, showPrice)" });
+        return;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("user_course_price_visibility")
+        .upsert(
+          {
+            user_id: userId,
+            course_id: courseId,
+            show_price: showPrice,
+          },
+          { onConflict: "user_id,course_id" },
+        );
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Update price visibility error:", err);
+      res.status(500).json({ error: "更新售價可見性失敗" });
+    }
+  },
+);
+
+/**
+ * 批次切換指定使用者的所有課程售價顯示
+ * @route PUT /api/admin/price-visibility/batch
+ */
+router.put(
+  "/price-visibility/batch",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId, showAll } = req.body;
+
+      if (!userId || typeof showAll !== "boolean") {
+        res.status(400).json({ error: "缺少必要參數 (userId, showAll)" });
+        return;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("user_course_price_visibility")
+        .update({ show_price: showAll })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Batch update price visibility error:", err);
+      res.status(500).json({ error: "批次更新售價可見性失敗" });
+    }
+  },
+);
+
+// ===== 統計數據 =====
+
 /**
  * 取得統計數據
  * @route GET /api/admin/stats

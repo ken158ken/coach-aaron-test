@@ -247,6 +247,29 @@ export async function createUserFromSocial(
       return null;
     }
 
+    // 為新使用者建立所有課程的售價可見性記錄（預設 false）
+    if (data?.user_id) {
+      try {
+        const { data: allCourses } = await supabaseAdmin
+          .from("courses")
+          .select("course_id")
+          .is("deleted_at", null);
+
+        if (allCourses && allCourses.length > 0) {
+          const rows = allCourses.map((c: { course_id: number }) => ({
+            user_id: data.user_id,
+            course_id: c.course_id,
+            show_price: false,
+          }));
+          await supabaseAdmin
+            .from("user_course_price_visibility")
+            .upsert(rows, { onConflict: "user_id,course_id" });
+        }
+      } catch (visErr) {
+        logger.error("建立售價可見性記錄失敗（OAuth）", visErr as Error);
+      }
+    }
+
     return data;
   } catch (err) {
     logger.error("建立社交使用者例外", err as Error);

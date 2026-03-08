@@ -51,11 +51,12 @@ const Courses: React.FC = () => {
   };
 
   /**
-   * 格式化價格
+   * 格式化價格（僅在 show_price 為 true 時顯示）
    */
-  const formatPrice = (price?: number): string => {
-    if (!price || price === 0) return "免費";
-    return `NT$ ${price.toLocaleString()}`;
+  const formatPrice = (course: Course): string => {
+    if (!course.show_price) return "洽詢價格";
+    if (!course.price || course.price === 0) return "免費";
+    return `NT$ ${course.price.toLocaleString()}`;
   };
 
   /**
@@ -187,7 +188,7 @@ const Courses: React.FC = () => {
                       {/* Price */}
                       <div className="mt-3 pt-3 border-t border-prism-accent/10 flex items-center justify-between">
                         <span className="text-base sm:text-lg font-semibold text-prism-accent">
-                          {formatPrice(course.price)}
+                          {formatPrice(course)}
                         </span>
                         <PillButton
                           theme="prism"

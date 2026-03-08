@@ -145,9 +145,10 @@ const CourseDetail: React.FC = () => {
     }
   };
 
-  const formatPrice = (price?: number) => {
-    if (!price) return "免費";
-    return `NT$ ${price.toLocaleString()}`;
+  const formatPrice = () => {
+    if (!course?.show_price) return "洽詢價格";
+    if (!course?.price) return "免費";
+    return `NT$ ${course.price.toLocaleString()}`;
   };
 
   const levelLabels: Record<string, string> = {
@@ -273,7 +274,7 @@ const CourseDetail: React.FC = () => {
               {/* Price & CTA */}
               <div className="flex items-center gap-6">
                 <span className="text-2xl font-light text-prism-accent">
-                  {formatPrice(course.price)}
+                  {formatPrice()}
                 </span>
                 {isAuthenticated ? (
                   <PillButton theme="prism" variant="filled" size="lg">

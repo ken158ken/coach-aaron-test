@@ -27,6 +27,8 @@ export interface Course {
   rating_count?: number;
   total_enrolled?: number;
   price: number;
+  /** 售價是否對當前使用者可見（由後端依登入狀態回傳） */
+  show_price?: boolean;
   status: CourseStatus;
   created_at: string;
   updated_at: string;

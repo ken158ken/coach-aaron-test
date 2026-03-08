@@ -16,6 +16,15 @@ import {
 import { get, put } from "@/services/api";
 import type { User, PaginatedUsersResponse } from "@/types";
 
+/** 課程售價可見性介面 */
+interface CoursePriceVisibility {
+  course_id: number;
+  course_title: string;
+  price: number;
+  status: string;
+  show_price: boolean;
+}
+
 /** 日誌工具 */
 const logger = {
   info: (msg: string, data?: unknown) =>
@@ -50,6 +59,8 @@ const AdminUsers: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [priceVisibility, setPriceVisibility] = useState<CoursePriceVisibility[]>([]);
+  const [priceLoading, setPriceLoading] = useState(false);
 
   // 篩選狀態
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -124,6 +135,75 @@ const AdminUsers: React.FC = () => {
       setError("切換權限失敗");
     }
   };
+
+  /**
+   * 取得指定使用者的課程售價可見性
+   */
+  const fetchPriceVisibility = useCallback(async (userId: number) => {
+    try {
+      setPriceLoading(true);
+      const data = await get<CoursePriceVisibility[]>(
+        `/api/admin/price-visibility/${userId}`,
+      );
+      setPriceVisibility(Array.isArray(data) ? data : []);
+    } catch (err) {
+      logger.error("Failed to fetch price visibility", err);
+      setPriceVisibility([]);
+    } finally {
+      setPriceLoading(false);
+    }
+  }, []);
+
+  /**
+   * 切換單一課程售價可見性
+   */
+  const handleTogglePriceVisibility = async (
+    userId: number,
+    courseId: number,
+    showPrice: boolean,
+  ) => {
+    try {
+      await put("/api/admin/price-visibility", {
+        userId,
+        courseId,
+        showPrice,
+      });
+      setPriceVisibility((prev) =>
+        prev.map((item) =>
+          item.course_id === courseId
+            ? { ...item, show_price: showPrice }
+            : item,
+        ),
+      );
+    } catch (err) {
+      logger.error("Failed to toggle price visibility", err);
+      setError("切換售價可見性失敗");
+    }
+  };
+
+  /**
+   * 批次切換所有課程售價可見性
+   */
+  const handleBatchToggle = async (userId: number, showAll: boolean) => {
+    try {
+      await put("/api/admin/price-visibility/batch", { userId, showAll });
+      setPriceVisibility((prev) =>
+        prev.map((item) => ({ ...item, show_price: showAll })),
+      );
+    } catch (err) {
+      logger.error("Failed to batch toggle price visibility", err);
+      setError("批次切換售價可見性失敗");
+    }
+  };
+
+  // 當 detailUser 改變時自動載入售價可見性
+  useEffect(() => {
+    if (detailUser?.user_id) {
+      fetchPriceVisibility(detailUser.user_id);
+    } else {
+      setPriceVisibility([]);
+    }
+  }, [detailUser, fetchPriceVisibility]);
 
   /**
    * 渲染使用者頭像
@@ -700,6 +780,85 @@ const AdminUsers: React.FC = () => {
                   {detailUser.is_active ? "✅ 活躍" : "❌ 停用"}
                 </span>
               </div>
+            </div>
+
+            {/* ====== 課程售價顯示管理 ====== */}
+            <div className="pt-4 border-t border-luxe-gold/10">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-luxe-text">
+                  課程售價顯示管理
+                </h4>
+                {priceVisibility.length > 0 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() =>
+                        handleBatchToggle(detailUser.user_id, true)
+                      }
+                      className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+                    >
+                      全部開啟
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleBatchToggle(detailUser.user_id, false)
+                      }
+                      className="text-[11px] px-2.5 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
+                    >
+                      全部關閉
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {priceLoading ? (
+                <div className="text-xs text-luxe-muted py-4 text-center">
+                  載入中...
+                </div>
+              ) : priceVisibility.length === 0 ? (
+                <div className="text-xs text-luxe-muted py-4 text-center">
+                  尚無課程資料
+                </div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-luxe-gold/20 scrollbar-track-transparent">
+                  {priceVisibility.map((item) => (
+                    <div
+                      key={item.course_id}
+                      className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-luxe-surface/50 border border-luxe-gold/5 hover:border-luxe-gold/15 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-luxe-text truncate">
+                          {item.course_title}
+                        </p>
+                        <p className="text-[10px] text-luxe-muted">
+                          NT$ {item.price?.toLocaleString() || 0}
+                          {item.status !== "published" && (
+                            <span className="ml-1.5 text-amber-400/80">
+                              ({item.status === "draft" ? "草稿" : "已封存"})
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-[10px] ${item.show_price ? "text-emerald-400" : "text-luxe-muted"}`}
+                        >
+                          {item.show_price ? "顯示" : "隱藏"}
+                        </span>
+                        <Toggle
+                          checked={item.show_price}
+                          onChange={() =>
+                            handleTogglePriceVisibility(
+                              detailUser.user_id,
+                              item.course_id,
+                              !item.show_price,
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 操作按鈕 */}
