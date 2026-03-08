@@ -132,7 +132,6 @@ router.get("/providers", (_req: Request, res: Response): void => {
     local: true,
     google: status.google,
     line: status.line,
-    facebook: status.facebook,
   });
 });
 

@@ -12,7 +12,6 @@ import { get } from "@/services/api";
 interface OAuthProviders {
   google: boolean;
   line: boolean;
-  facebook: boolean;
 }
 
 /**
@@ -62,15 +61,6 @@ const LineIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 /**
- * Facebook SVG Icon
- */
-const FacebookIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
-  </svg>
-);
-
-/**
  * SocialLoginButtons - 社交登入按鈕組
  *
  * 自動偵測後端啟用的 OAuth 提供者，只顯示可用的按鈕。
@@ -88,8 +78,7 @@ export const SocialLoginButtons: React.FC = () => {
         if (!cancelled) setProviders(data);
       } catch {
         // 靜默處理：API 不可用時不顯示社交按鈕
-        if (!cancelled)
-          setProviders({ google: false, line: false, facebook: false });
+        if (!cancelled) setProviders({ google: false, line: false });
       }
     };
     fetchProviders();
@@ -99,14 +88,11 @@ export const SocialLoginButtons: React.FC = () => {
   }, []);
 
   // 載入中或全部未啟用時不渲染
-  if (
-    !providers ||
-    (!providers.google && !providers.line && !providers.facebook)
-  ) {
+  if (!providers || (!providers.google && !providers.line)) {
     return null;
   }
 
-  const handleOAuthLogin = (provider: "google" | "line" | "facebook") => {
+  const handleOAuthLogin = (provider: "google" | "line") => {
     window.location.href = `${baseUrl}/api/auth/${provider}`;
   };
 
@@ -124,21 +110,6 @@ export const SocialLoginButtons: React.FC = () => {
                      hover:shadow-lg hover:scale-110 active:scale-95"
         >
           <GoogleIcon className="w-6 h-6" />
-        </button>
-      )}
-
-      {providers.facebook && (
-        <button
-          type="button"
-          onClick={() => handleOAuthLogin("facebook")}
-          aria-label="使用 Facebook 帳號登入"
-          className="w-12 h-12 flex items-center justify-center
-                     bg-[#1877F2] hover:bg-[#166FE5]
-                     text-white rounded-full
-                     transition-all duration-200
-                     hover:shadow-lg hover:scale-110 active:scale-95"
-        >
-          <FacebookIcon className="w-6 h-6" />
         </button>
       )}
 
