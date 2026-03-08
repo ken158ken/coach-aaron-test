@@ -57,7 +57,7 @@ export function verifyExchangeToken(token: string): number | null {
  * 社交帳號個人資料介面
  */
 export interface SocialProfile {
-  provider: "google" | "line";
+  provider: "google" | "line" | "facebook";
   providerUserId: string;
   email?: string;
   displayName?: string;
@@ -71,6 +71,11 @@ export interface SocialProfile {
   // LINE 專用
   lineStatusMessage?: string;
   linePictureUrl?: string;
+  // Facebook 專用
+  facebookFirstName?: string;
+  facebookLastName?: string;
+  facebookLocale?: string;
+  facebookLink?: string;
   // Token
   accessToken?: string;
   refreshToken?: string;
@@ -281,6 +286,11 @@ export async function upsertSocialAccount(
       // LINE 專用
       line_status_message: profile.lineStatusMessage || null,
       line_picture_url: profile.linePictureUrl || null,
+      // Facebook 專用
+      facebook_first_name: profile.facebookFirstName || null,
+      facebook_last_name: profile.facebookLastName || null,
+      facebook_locale: profile.facebookLocale || null,
+      facebook_link: profile.facebookLink || null,
       // Token
       access_token: profile.accessToken || null,
       refresh_token: profile.refreshToken || null,
