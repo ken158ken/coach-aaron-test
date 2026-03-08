@@ -7,7 +7,11 @@
 
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
-import { authenticateToken, requireAdmin, optionalAuth } from "../middleware/auth.js";
+import {
+  authenticateToken,
+  requireAdmin,
+  optionalAuth,
+} from "../middleware/auth.js";
 import { UpdateCourseData } from "../types/database.js";
 import {
   sanitizeComment,
@@ -27,88 +31,96 @@ const router: Router = express.Router();
  * 已登入使用者會附帶各課程的售價可見性
  * @route GET /api/courses
  */
-router.get("/", optionalAuth, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("courses")
-      .select("*")
-      .eq("status", "published")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+router.get(
+  "/",
+  optionalAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("courses")
+        .select("*")
+        .eq("status", "published")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // 若已登入，附加該使用者的售價可見性
-    const userId = req.user?.userId ? Number(req.user.userId) : null;
-    if (userId && data) {
-      const { data: vis } = await supabaseAdmin
-        .from("user_course_price_visibility")
-        .select("course_id, show_price")
-        .eq("user_id", userId);
+      // 若已登入，附加該使用者的售價可見性
+      const userId = req.user?.userId ? Number(req.user.userId) : null;
+      if (userId && data) {
+        const { data: vis } = await supabaseAdmin
+          .from("user_course_price_visibility")
+          .select("course_id, show_price")
+          .eq("user_id", userId);
 
-      const visMap = new Map(
-        (vis || []).map((v: { course_id: number; show_price: boolean }) => [
-          v.course_id,
-          v.show_price,
-        ]),
-      );
+        const visMap = new Map(
+          (vis || []).map((v: { course_id: number; show_price: boolean }) => [
+            v.course_id,
+            v.show_price,
+          ]),
+        );
 
-      const enriched = data.map((c: Record<string, unknown>) => ({
-        ...c,
-        show_price: visMap.get(c.course_id as number) ?? false,
-      }));
-      res.json(enriched);
-      return;
+        const enriched = data.map((c: Record<string, unknown>) => ({
+          ...c,
+          show_price: visMap.get(c.course_id as number) ?? false,
+        }));
+        res.json(enriched);
+        return;
+      }
+
+      res.json(data);
+    } catch (err) {
+      console.error("Get courses error:", err);
+      res.status(500).json({ error: "取得課程失敗" });
     }
-
-    res.json(data);
-  } catch (err) {
-    console.error("Get courses error:", err);
-    res.status(500).json({ error: "取得課程失敗" });
-  }
-});
+  },
+);
 
 /**
  * 取得單一課程
  * 已登入使用者會附帶售價可見性
  * @route GET /api/courses/:id
  */
-router.get("/:id", optionalAuth, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const { data, error } = await supabaseAdmin
-      .from("courses")
-      .select("*")
-      .eq("course_id", id)
-      .eq("status", "published")
-      .is("deleted_at", null)
-      .single();
-
-    if (error || !data) {
-      res.status(404).json({ error: "課程不存在" });
-      return;
-    }
-
-    // 若已登入，附加售價可見性
-    const userId = req.user?.userId ? Number(req.user.userId) : null;
-    if (userId) {
-      const { data: vis } = await supabaseAdmin
-        .from("user_course_price_visibility")
-        .select("show_price")
-        .eq("user_id", userId)
+router.get(
+  "/:id",
+  optionalAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { data, error } = await supabaseAdmin
+        .from("courses")
+        .select("*")
         .eq("course_id", id)
+        .eq("status", "published")
+        .is("deleted_at", null)
         .single();
 
-      res.json({ ...data, show_price: vis?.show_price ?? false });
-      return;
-    }
+      if (error || !data) {
+        res.status(404).json({ error: "課程不存在" });
+        return;
+      }
 
-    res.json(data);
-  } catch (err) {
-    console.error("Get course error:", err);
-    res.status(500).json({ error: "取得課程失敗" });
-  }
-});
+      // 若已登入，附加售價可見性
+      const userId = req.user?.userId ? Number(req.user.userId) : null;
+      if (userId) {
+        const { data: vis } = await supabaseAdmin
+          .from("user_course_price_visibility")
+          .select("show_price")
+          .eq("user_id", userId)
+          .eq("course_id", id)
+          .single();
+
+        res.json({ ...data, show_price: vis?.show_price ?? false });
+        return;
+      }
+
+      res.json(data);
+    } catch (err) {
+      console.error("Get course error:", err);
+      res.status(500).json({ error: "取得課程失敗" });
+    }
+  },
+);
 
 /**
  * 取得課程評論

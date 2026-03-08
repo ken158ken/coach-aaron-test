@@ -59,7 +59,9 @@ const AdminUsers: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [priceVisibility, setPriceVisibility] = useState<CoursePriceVisibility[]>([]);
+  const [priceVisibility, setPriceVisibility] = useState<
+    CoursePriceVisibility[]
+  >([]);
   const [priceLoading, setPriceLoading] = useState(false);
 
   // 篩選狀態

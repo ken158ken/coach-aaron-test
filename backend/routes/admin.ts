@@ -433,14 +433,21 @@ router.get(
       if (visErr) throw visErr;
 
       const visMap = new Map(
-        (visibility || []).map((v: { course_id: number; show_price: boolean }) => [
-          v.course_id,
-          v.show_price,
-        ]),
+        (visibility || []).map(
+          (v: { course_id: number; show_price: boolean }) => [
+            v.course_id,
+            v.show_price,
+          ],
+        ),
       );
 
       const result = (courses || []).map(
-        (c: { course_id: number; course_title: string; price: number; status: string }) => ({
+        (c: {
+          course_id: number;
+          course_title: string;
+          price: number;
+          status: string;
+        }) => ({
           course_id: c.course_id,
           course_title: c.course_title,
           price: c.price,
@@ -468,7 +475,9 @@ router.put(
       const { userId, courseId, showPrice } = req.body;
 
       if (!userId || !courseId || typeof showPrice !== "boolean") {
-        res.status(400).json({ error: "缺少必要參數 (userId, courseId, showPrice)" });
+        res
+          .status(400)
+          .json({ error: "缺少必要參數 (userId, courseId, showPrice)" });
         return;
       }
 

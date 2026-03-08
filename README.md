@@ -126,7 +126,10 @@ coach-aaron-redesign/
 │   │   ├── 002_social_accounts.sql          # 社交帳號表 (Google/LINE)
 │   │   ├── 003_site_content_and_popup.sql   # 內容管理 + 彈窗
 │   │   ├── 004_content_templates.sql        # 預設文案範本
-│   │   └── 005_add_avatar_base64.sql        # 頭像 base64 欄位
+│   │   ├── 005_add_avatar_base64.sql        # 頭像 base64 欄位
+│   │   ├── 006_facebook_social_accounts.sql # (已棄用) Facebook 欄位
+│   │   ├── 007_rollback_facebook_columns.sql # 回滾 Facebook 欄位
+│   │   └── 008_user_course_price_visibility.sql # 課程售價顯示控制表
 │   └── *.sql              # 其他 SQL 腳本
 │
 └── REPORTS/                # 📊 報告文件
@@ -216,7 +219,55 @@ export function setAuthToken(token: string | null) {
 
 > ⚠️ Token 存在記憶體中，頁面重新整理會清除。重新整理後依賴 cookie 或需重新登入。
 
-## 🔐 安全性設計
+## � 課程售價顯示控制系統 (2026-03-08 新增)
+
+### 功能概述
+
+每位使用者對每堂課程擁有獨立的售價顯示開關（預設關閉）。管理員可在後台「用戶管理」中，針對個別使用者管理各課程的售價可見性。
+
+### 資料表結構
+
+```sql
+-- database/migrations/008_user_course_price_visibility.sql
+CREATE TABLE user_course_price_visibility (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER REFERENCES courses(course_id) ON DELETE CASCADE,
+  show_price BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, course_id)
+);
+```
+
+### Admin API 端點
+
+| 方法 | 路由                                  | 說明                               |
+| ---- | ------------------------------------- | ---------------------------------- |
+| GET  | `/api/admin/price-visibility/:userId` | 取得該使用者所有課程的售價顯示狀態 |
+| PUT  | `/api/admin/price-visibility`         | 切換單一使用者 × 課程的售價顯示    |
+| PUT  | `/api/admin/price-visibility/batch`   | 批次開啟/關閉該使用者所有課程售價  |
+
+### 公開 API 行為
+
+- `GET /api/courses` 和 `GET /api/courses/:id` 使用 `optionalAuth` 中介軟體
+- 已登入使用者：每個課程物件附帶 `show_price: boolean`
+- 未登入使用者：不附帶價格狀態（前端預設顯示「洽詢價格」）
+
+### 自動建立機制
+
+| 觸發時機                   | 行為                                                     |
+| -------------------------- | -------------------------------------------------------- |
+| 新使用者註冊 (Email/OAuth) | 自動為該使用者建立所有現有課程的 `show_price=false` 記錄 |
+| 新增課程                   | 自動為所有現有使用者建立該課程的 `show_price=false` 記錄 |
+
+### 前端呈現邏輯
+
+- `show_price === true` → 顯示實際價格（如 `NT$ 3,000`）
+- `show_price === false` 或未登入 → 顯示「洽詢價格」
+- 管理後台（用戶詳情 Modal）→ 每課程獨立 Toggle + 批次全部開啟/關閉
+
+## �🔐 安全性設計
 
 ### 評論系統注入防護 (2026-02-04)
 
@@ -755,6 +806,42 @@ frontend/src/components/ui/block-editor/
 - **按鈕**: 手機版全寬，桌面版自適應
 
 ## 📝 更新日誌
+
+### 2026-03-09 - 課程售價顯示控制系統 + Facebook OAuth 移除
+
+#### 💰 課程售價顯示控制
+
+- **新增 `user_course_price_visibility` 資料表** — 每位使用者 × 每堂課程的售價顯示開關（預設關閉）
+- **Admin API** — `GET/PUT /api/admin/price-visibility` 單筆與批次切換
+- **自動建立機制** — 新用戶註冊（Email/OAuth）或新增課程時，自動產生對應記錄
+- **前端條件顯示** — `show_price=false` 顯示「洽詢價格」，`true` 顯示實際金額
+- **後台管理 UI** — 用戶詳情 Modal 中，每堂課程獨立 Toggle + 批次開啟/關閉按鈕
+- **公開 API 改用 `optionalAuth`** — 已登入用戶取得 `show_price` 欄位
+
+#### 🗑️ Facebook OAuth 移除
+
+- **移除原因** — Meta 開發者審查流程過於嚴格，暫不實作
+- **清除範圍** — backend routes/config/utils、frontend SocialLoginButtons、backend/routes/authFacebook.ts (刪除)
+- **SQL 遷移** — `007_rollback_facebook_columns.sql` 安全移除 facebook\_\* 欄位
+
+#### 新增/修改檔案
+
+| 操作 | 檔案                                                                       |
+| ---- | -------------------------------------------------------------------------- |
+| 新增 | `database/migrations/007_rollback_facebook_columns.sql`                    |
+| 新增 | `database/migrations/008_user_course_price_visibility.sql`                 |
+| 刪除 | `backend/routes/authFacebook.ts`                                           |
+| 修改 | `backend/routes/admin.ts` — 新增 3 個 price-visibility 端點                |
+| 修改 | `backend/routes/courses.ts` — optionalAuth + show_price + 自動建立         |
+| 修改 | `backend/routes/auth.ts` — 註冊時自動建立 price visibility 記錄            |
+| 修改 | `backend/utils/oauth.ts` — OAuth 建立用戶時自動建立記錄 + 移除 Facebook    |
+| 修改 | `backend/config/oauth.ts` — 移除 FacebookOAuthConfig                       |
+| 修改 | `backend/index.ts` — 移除 Facebook 路由                                    |
+| 修改 | `frontend/src/types/content.ts` — Course 介面新增 `show_price`             |
+| 修改 | `frontend/src/pages/Courses.tsx` — 條件式價格顯示                          |
+| 修改 | `frontend/src/pages/CourseDetail.tsx` — 條件式價格顯示                     |
+| 修改 | `frontend/src/pages/admin/AdminUsers.tsx` — 售價顯示管理 UI                |
+| 修改 | `frontend/src/components/auth/SocialLoginButtons.tsx` — 移除 Facebook 按鈕 |
 
 ### 2026-03-08 - Bearer Token 認證重構 + OAuth 無狀態化 + JWT 瘦身
 
