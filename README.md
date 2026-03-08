@@ -208,7 +208,9 @@ function extractToken(req: Request): string | null {
 ```typescript
 // frontend/src/services/api.ts
 let _authToken: string | null = null;
-export function setAuthToken(token: string | null) { _authToken = token; }
+export function setAuthToken(token: string | null) {
+  _authToken = token;
+}
 // Axios request interceptor 自動附帶 Authorization header
 ```
 
@@ -574,20 +576,20 @@ COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 
 部署時需在 Vercel Dashboard 設定以下環境變數：
 
-| 變數名稱                    | 用途                  | 必填                        |
-| --------------------------- | --------------------- | --------------------------- |
-| `SUPABASE_URL`              | Supabase 專案 URL         | ✅                          |
-| `SUPABASE_ANON_KEY`         | Supabase 匿名金鑰         | ✅                          |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰     | ✅                          |
-| `JWT_SECRET`                | JWT 加密金鑰              | ✅                          |
-| `RESEND_API_KEY`            | Resend 郵件 API Key       | ✅ (聯絡表單)               |
-| `COACH_EMAIL`               | 教練收件信箱              | ⚡ (預設 s330221@gmail.com) |
-| `FRONTEND_URL`              | 前端 URL (OAuth 回導用)   | ✅ (OAuth)                  |
-| `OAUTH_CALLBACK_BASE_URL`   | OAuth 回呼基底 URL        | ✅ (OAuth)                  |
-| `GOOGLE_CLIENT_ID`          | Google OAuth Client ID    | ⚡ (Google 登入)            |
-| `GOOGLE_CLIENT_SECRET`      | Google OAuth Client Secret| ⚡ (Google 登入)            |
-| `LINE_CHANNEL_ID`           | LINE Login Channel ID     | ⚡ (LINE 登入)              |
-| `LINE_CHANNEL_SECRET`       | LINE Login Channel Secret | ⚡ (LINE 登入)              |
+| 變數名稱                    | 用途                       | 必填                        |
+| --------------------------- | -------------------------- | --------------------------- |
+| `SUPABASE_URL`              | Supabase 專案 URL          | ✅                          |
+| `SUPABASE_ANON_KEY`         | Supabase 匿名金鑰          | ✅                          |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰      | ✅                          |
+| `JWT_SECRET`                | JWT 加密金鑰               | ✅                          |
+| `RESEND_API_KEY`            | Resend 郵件 API Key        | ✅ (聯絡表單)               |
+| `COACH_EMAIL`               | 教練收件信箱               | ⚡ (預設 s330221@gmail.com) |
+| `FRONTEND_URL`              | 前端 URL (OAuth 回導用)    | ✅ (OAuth)                  |
+| `OAUTH_CALLBACK_BASE_URL`   | OAuth 回呼基底 URL         | ✅ (OAuth)                  |
+| `GOOGLE_CLIENT_ID`          | Google OAuth Client ID     | ⚡ (Google 登入)            |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth Client Secret | ⚡ (Google 登入)            |
+| `LINE_CHANNEL_ID`           | LINE Login Channel ID      | ⚡ (LINE 登入)              |
+| `LINE_CHANNEL_SECRET`       | LINE Login Channel Secret  | ⚡ (LINE 登入)              |
 
 ### SEO 配置 (2026-02-12 新增)
 
@@ -758,33 +760,33 @@ frontend/src/components/ui/block-editor/
 
 #### 🐛 問題根因
 
-| 問題                         | 根因                                                           |
-| ---------------------------- | -------------------------------------------------------------- |
-| **OAuth 登入返回 401**       | OAuth exchange code 存在 in-memory Map，Vercel Serverless 跨 instance 無法共享 |
-| **一般 Email 登入也壞**      | Cookie 設定後無法在後續請求中可靠讀取（Vercel Serverless 環境） |
-| **Bearer Token 報 414/431**  | JWT payload 包含 `avatarUrl: user.avatar_base64`，base64 圖片使 token 達 56KB |
+| 問題                        | 根因                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| **OAuth 登入返回 401**      | OAuth exchange code 存在 in-memory Map，Vercel Serverless 跨 instance 無法共享 |
+| **一般 Email 登入也壞**     | Cookie 設定後無法在後續請求中可靠讀取（Vercel Serverless 環境）                |
+| **Bearer Token 報 414/431** | JWT payload 包含 `avatarUrl: user.avatar_base64`，base64 圖片使 token 達 56KB  |
 
 #### ⚡ 修正方案
 
-| 修正                              | 說明                                                           |
-| --------------------------------- | -------------------------------------------------------------- |
-| Bearer Token 認證                 | 後端 `extractToken()` 支援 Authorization header + cookie 雙模式 |
-| 前端 token 記憶體管理             | `api.ts` 新增 `_authToken` + axios interceptor 自動附帶 Bearer  |
-| OAuth 無狀態 JWT exchange         | 移除 in-memory Map，改用 60s 短效 JWT `{sub: userId, p: "ox"}` |
-| Login/Register 回傳 token         | JSON body 含 `token` 欄位，前端不再依賴 cookie                  |
-| AuthContext 直接使用 response      | login/register 不再呼叫 checkAuth()，直接用 response 設定狀態    |
-| JWT payload 移除 avatarUrl        | Token 從 56KB 縮減至 ~271 chars，避免 header 過大               |
+| 修正                          | 說明                                                            |
+| ----------------------------- | --------------------------------------------------------------- |
+| Bearer Token 認證             | 後端 `extractToken()` 支援 Authorization header + cookie 雙模式 |
+| 前端 token 記憶體管理         | `api.ts` 新增 `_authToken` + axios interceptor 自動附帶 Bearer  |
+| OAuth 無狀態 JWT exchange     | 移除 in-memory Map，改用 60s 短效 JWT `{sub: userId, p: "ox"}`  |
+| Login/Register 回傳 token     | JSON body 含 `token` 欄位，前端不再依賴 cookie                  |
+| AuthContext 直接使用 response | login/register 不再呼叫 checkAuth()，直接用 response 設定狀態   |
+| JWT payload 移除 avatarUrl    | Token 從 56KB 縮減至 ~271 chars，避免 header 過大               |
 
 #### 📁 修改檔案
 
-| 檔案                                | 改動                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------- |
-| `backend/middleware/auth.ts`        | 新增 `extractToken()` helper，`authenticateToken` + `optionalAuth` 使用 |
-| `backend/routes/auth.ts`            | 移除 stale import、OAuth exchange 改 async DB lookup、回傳 token in JSON |
-| `backend/utils/oauth.ts`            | 移除 in-memory Map、新增 `generateExchangeCode` / `verifyExchangeToken` |
-| `frontend/src/services/api.ts`      | 新增 `_authToken` + `setAuthToken()` + Bearer interceptor               |
-| `frontend/src/services/auth.service.ts` | 新增 `storeToken()` helper、所有 auth API 呼叫存 token              |
-| `frontend/src/context/AuthContext.tsx`  | login/register 直接用 response、logout 清除 token                   |
+| 檔案                                    | 改動                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| `backend/middleware/auth.ts`            | 新增 `extractToken()` helper，`authenticateToken` + `optionalAuth` 使用  |
+| `backend/routes/auth.ts`                | 移除 stale import、OAuth exchange 改 async DB lookup、回傳 token in JSON |
+| `backend/utils/oauth.ts`                | 移除 in-memory Map、新增 `generateExchangeCode` / `verifyExchangeToken`  |
+| `frontend/src/services/api.ts`          | 新增 `_authToken` + `setAuthToken()` + Bearer interceptor                |
+| `frontend/src/services/auth.service.ts` | 新增 `storeToken()` helper、所有 auth API 呼叫存 token                   |
+| `frontend/src/context/AuthContext.tsx`  | login/register 直接用 response、logout 清除 token                        |
 
 #### ✅ 驗證結果
 

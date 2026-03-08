@@ -97,12 +97,23 @@ export const createRateLimiter = (
 
 /**
  * 認證端點的 Rate Limiter（較嚴格）
- * 15 分鐘內最多 5 次嘗試
+ * 15 分鐘內最多 15 次嘗試
  */
 export const authLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 分鐘
   15, // 最多 15 次
   "登入嘗試次數過多，請 15 分鐘後再試",
+);
+
+/**
+ * OAuth 端點的 Rate Limiter（較寬鬆）
+ * OAuth 本身由第三方供應商控管安全性，不需要太嚴格
+ * 15 分鐘內最多 50 次
+ */
+export const oauthLimiter = createRateLimiter(
+  15 * 60 * 1000, // 15 分鐘
+  50, // 最多 50 次
+  "OAuth 登入嘗試次數過多，請 15 分鐘後再試",
 );
 
 /**

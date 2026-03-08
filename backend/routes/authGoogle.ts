@@ -12,7 +12,7 @@
 import express, { Request, Response, Router } from "express";
 import { getGoogleOAuthConfig, getFrontendUrl } from "../config/oauth.js";
 import { authenticateToken } from "../middleware/auth.js";
-import { authLimiter } from "../middleware/rateLimiter.js";
+import { oauthLimiter } from "../middleware/rateLimiter.js";
 import {
   handleSocialLogin,
   upsertSocialAccount,
@@ -165,7 +165,7 @@ function mapToSocialProfile(
  *
  * 產生 state 並重導向至 Google 授權頁面
  */
-router.get("/", authLimiter, (req: Request, res: Response): void => {
+router.get("/", oauthLimiter, (req: Request, res: Response): void => {
   try {
     const config = getGoogleOAuthConfig();
     if (!config.clientId || !config.clientSecret) {
