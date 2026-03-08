@@ -97,20 +97,19 @@ export const SocialLoginButtons: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex items-center justify-center gap-4">
       {providers.google && (
         <button
           type="button"
           onClick={() => handleOAuthLogin("google")}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3
+          aria-label="使用 Google 帳號登入"
+          className="w-12 h-12 flex items-center justify-center
                      bg-white hover:bg-gray-50
-                     text-gray-700 font-medium text-sm
                      rounded-full border border-gray-300
                      transition-all duration-200
-                     hover:shadow-md active:scale-[0.98]"
+                     hover:shadow-lg hover:scale-110 active:scale-95"
         >
-          <GoogleIcon className="w-5 h-5" />
-          使用 Google 帳號繼續
+          <GoogleIcon className="w-6 h-6" />
         </button>
       )}
 
@@ -118,15 +117,14 @@ export const SocialLoginButtons: React.FC = () => {
         <button
           type="button"
           onClick={() => handleOAuthLogin("line")}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3
+          aria-label="使用 LINE 帳號登入"
+          className="w-12 h-12 flex items-center justify-center
                      bg-[#06C755] hover:bg-[#05b34d]
-                     text-white font-medium text-sm
-                     rounded-full border border-[#06C755]
+                     text-white rounded-full
                      transition-all duration-200
-                     hover:shadow-md active:scale-[0.98]"
+                     hover:shadow-lg hover:scale-110 active:scale-95"
         >
-          <LineIcon className="w-5 h-5" />
-          使用 LINE 帳號繼續
+          <LineIcon className="w-6 h-6" />
         </button>
       )}
     </div>
