@@ -136,6 +136,84 @@ coach-aaron-redesign/
     └── ...其他報告
 ```
 
+## 🔐 認證架構 (2026-03-08 重構)
+
+### 雙重認證模式：Cookie + Bearer Token
+
+由於 Vercel Serverless Functions 環境下 httpOnly Cookie 無法跨 Serverless instance 可靠傳遞，本專案採用 **雙重認證模式**：
+
+```
+前端登入 → 後端回傳 JSON { user, token } + Set-Cookie
+         → 前端存 token 在記憶體 (_authToken)
+         → 每次請求附帶 Authorization: Bearer <token>
+         → 後端 extractToken() 優先讀 Authorization header，fallback 讀 cookie
+```
+
+### 認證流程
+
+#### Email/Password 登入
+
+```
+POST /api/auth/login { email, password }
+  → 驗證帳密 → 產生 JWT (userId, email, username, displayName, sex, isAdmin)
+  → 回傳 { user, isAdmin, token } + Set-Cookie
+  → 前端 setAuthToken(token) 存入記憶體
+  → 後續請求自動附帶 Authorization: Bearer header
+```
+
+#### OAuth 登入 (Google / LINE)
+
+```
+GET /api/auth/google → Google 授權頁面 → /api/auth/google/callback
+  → handleSocialLogin() 查找/建立用戶
+  → generateExchangeCode(userId) 產生短效 JWT {sub, p:"ox"} (60s)
+  → 302 Redirect → /login?auth_code=<exchangeToken>&provider=google
+  → 前端 exchangeOAuthCode(code) → POST /api/auth/oauth-exchange
+  → verifyExchangeToken(code) → 取得 userId → 查詢完整用戶資料
+  → 回傳 { user, isAdmin, token } → 前端存 token → 登入完成
+```
+
+### JWT Payload 設計
+
+為避免 Vercel `REQUEST_HEADER_TOO_LARGE` 錯誤，JWT payload 僅包含必要欄位：
+
+```json
+{
+  "userId": 1,
+  "email": "user@example.com",
+  "username": "使用者名稱",
+  "displayName": "顯示名稱",
+  "sex": "male",
+  "isAdmin": true
+}
+```
+
+> ⚠️ **重要**：JWT 不包含 `avatarUrl`（base64 頭像可達 50KB+），頭像資料改由 `/api/auth/me` 從資料庫取得。
+
+### 後端 Token 提取邏輯 (extractToken)
+
+```typescript
+// backend/middleware/auth.ts
+function extractToken(req: Request): string | null {
+  // 1. 優先讀取 Authorization: Bearer <token>
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+  // 2. Fallback 讀取 cookie
+  return req.cookies?.token || null;
+}
+```
+
+### 前端 Token 管理
+
+```typescript
+// frontend/src/services/api.ts
+let _authToken: string | null = null;
+export function setAuthToken(token: string | null) { _authToken = token; }
+// Axios request interceptor 自動附帶 Authorization header
+```
+
+> ⚠️ Token 存在記憶體中，頁面重新整理會清除。重新整理後依賴 cookie 或需重新登入。
+
 ## 🔐 安全性設計
 
 ### 評論系統注入防護 (2026-02-04)
@@ -498,12 +576,18 @@ COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 
 | 變數名稱                    | 用途                  | 必填                        |
 | --------------------------- | --------------------- | --------------------------- |
-| `SUPABASE_URL`              | Supabase 專案 URL     | ✅                          |
-| `SUPABASE_ANON_KEY`         | Supabase 匿名金鑰     | ✅                          |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰 | ✅                          |
-| `JWT_SECRET`                | JWT 加密金鑰          | ✅                          |
-| `RESEND_API_KEY`            | Resend 郵件 API Key   | ✅ (聯絡表單)               |
-| `COACH_EMAIL`               | 教練收件信箱          | ⚡ (預設 s330221@gmail.com) |
+| `SUPABASE_URL`              | Supabase 專案 URL         | ✅                          |
+| `SUPABASE_ANON_KEY`         | Supabase 匿名金鑰         | ✅                          |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服務角色金鑰     | ✅                          |
+| `JWT_SECRET`                | JWT 加密金鑰              | ✅                          |
+| `RESEND_API_KEY`            | Resend 郵件 API Key       | ✅ (聯絡表單)               |
+| `COACH_EMAIL`               | 教練收件信箱              | ⚡ (預設 s330221@gmail.com) |
+| `FRONTEND_URL`              | 前端 URL (OAuth 回導用)   | ✅ (OAuth)                  |
+| `OAUTH_CALLBACK_BASE_URL`   | OAuth 回呼基底 URL        | ✅ (OAuth)                  |
+| `GOOGLE_CLIENT_ID`          | Google OAuth Client ID    | ⚡ (Google 登入)            |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth Client Secret| ⚡ (Google 登入)            |
+| `LINE_CHANNEL_ID`           | LINE Login Channel ID     | ⚡ (LINE 登入)              |
+| `LINE_CHANNEL_SECRET`       | LINE Login Channel Secret | ⚡ (LINE 登入)              |
 
 ### SEO 配置 (2026-02-12 新增)
 
@@ -581,7 +665,7 @@ const { language, toggleLanguage, t } = useLanguage();
 
 ---
 
-**最後更新**: 2026-01-20T14-00-00+08:00
+**最後更新**: 2026-03-08T22-00-00+08:00
 
 ## 🧱 區塊編輯器 (Block Editor)
 
@@ -669,6 +753,47 @@ frontend/src/components/ui/block-editor/
 - **按鈕**: 手機版全寬，桌面版自適應
 
 ## 📝 更新日誌
+
+### 2026-03-08 - Bearer Token 認證重構 + OAuth 無狀態化 + JWT 瘦身
+
+#### 🐛 問題根因
+
+| 問題                         | 根因                                                           |
+| ---------------------------- | -------------------------------------------------------------- |
+| **OAuth 登入返回 401**       | OAuth exchange code 存在 in-memory Map，Vercel Serverless 跨 instance 無法共享 |
+| **一般 Email 登入也壞**      | Cookie 設定後無法在後續請求中可靠讀取（Vercel Serverless 環境） |
+| **Bearer Token 報 414/431**  | JWT payload 包含 `avatarUrl: user.avatar_base64`，base64 圖片使 token 達 56KB |
+
+#### ⚡ 修正方案
+
+| 修正                              | 說明                                                           |
+| --------------------------------- | -------------------------------------------------------------- |
+| Bearer Token 認證                 | 後端 `extractToken()` 支援 Authorization header + cookie 雙模式 |
+| 前端 token 記憶體管理             | `api.ts` 新增 `_authToken` + axios interceptor 自動附帶 Bearer  |
+| OAuth 無狀態 JWT exchange         | 移除 in-memory Map，改用 60s 短效 JWT `{sub: userId, p: "ox"}` |
+| Login/Register 回傳 token         | JSON body 含 `token` 欄位，前端不再依賴 cookie                  |
+| AuthContext 直接使用 response      | login/register 不再呼叫 checkAuth()，直接用 response 設定狀態    |
+| JWT payload 移除 avatarUrl        | Token 從 56KB 縮減至 ~271 chars，避免 header 過大               |
+
+#### 📁 修改檔案
+
+| 檔案                                | 改動                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| `backend/middleware/auth.ts`        | 新增 `extractToken()` helper，`authenticateToken` + `optionalAuth` 使用 |
+| `backend/routes/auth.ts`            | 移除 stale import、OAuth exchange 改 async DB lookup、回傳 token in JSON |
+| `backend/utils/oauth.ts`            | 移除 in-memory Map、新增 `generateExchangeCode` / `verifyExchangeToken` |
+| `frontend/src/services/api.ts`      | 新增 `_authToken` + `setAuthToken()` + Bearer interceptor               |
+| `frontend/src/services/auth.service.ts` | 新增 `storeToken()` helper、所有 auth API 呼叫存 token              |
+| `frontend/src/context/AuthContext.tsx`  | login/register 直接用 response、logout 清除 token                   |
+
+#### ✅ 驗證結果
+
+- Token 長度：271 chars（原 56KB）
+- `POST /api/auth/login` → 200 + token in body ✓
+- `GET /api/auth/me` (Bearer header) → 200 + 完整用戶資料 ✓
+- Vercel 生產環境部署驗證通過 ✓
+
+---
 
 ### 2026-03-07 - 登入/註冊頁面加入 Google & LINE 社交登入按鈕
 
