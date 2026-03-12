@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
-import { authLimiter } from "../middleware/rateLimiter.js";
+import { authLimiter, oauthLimiter } from "../middleware/rateLimiter.js";
 import { logger } from "../utils/logger.js";
 import { validateEmail } from "../middleware/sanitize.js";
 import { getOAuthStatus } from "../config/oauth.js";
@@ -25,7 +25,7 @@ const router: Router = express.Router();
  */
 router.post(
   "/oauth-exchange",
-  authLimiter,
+  oauthLimiter,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { code } = req.body;
