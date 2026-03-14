@@ -443,6 +443,23 @@
    Tailwind @layer utilities without needing !important.
    ══════════════════════════════════════════════════════ */
 
+/* ── 0. Body & base text colour ── */
+[data-theme="studio-light"] body {
+  color: rgba(20,16,12,0.88);
+}
+
+/* ── 0b. studio-card (PrismCard / AbyssCard) → light glass in light mode ── */
+[data-theme="studio-light"] .studio-card {
+  background: rgba(255,255,255,0.80);
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+[data-theme="studio-light"] .studio-card:hover {
+  border-color: rgba(0,0,0,0.18);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+  transform: translateY(-3px);
+}
+
 /* ── 1. Banner fallback: warm stone bg + charcoal blade ── */
 [data-theme="studio-light"] .banner-fallback {
   background: linear-gradient(160deg, #e6e2da 0%, #d8d4cc 30%, #ccc8c0 65%, #c2beb6 100%);
@@ -460,11 +477,15 @@
   );
 }
 
-/* ── 2. Silver-heading → charcoal sweep in light mode ── */
+/* ── 2. Silver-heading → solid dark text in light mode ── */
 [data-theme="studio-light"] .silver-heading {
-  background: linear-gradient(90deg, #3a3835 0%, #1a1715 25%, #0d0c0a 50%, #1a1715 75%, #3a3835 100%);
-  background-size: 200% auto;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: rgba(14,11,8,0.88);
+  color: rgba(14,11,8,0.88);
+  filter: none;
+  animation: none;
 }
 
 /* ── 3. Prose: light mode text colours ── */
