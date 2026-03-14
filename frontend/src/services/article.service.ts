@@ -163,6 +163,7 @@ export const articleService = {
     description?: string;
     content?: string;
     thumbnailUrl?: string;
+    bannerUrl?: string;
     keywords?: string[];
     category?: string;
     status?: string;
@@ -182,6 +183,7 @@ export const articleService = {
       description: string;
       content: string;
       thumbnailUrl: string;
+      bannerUrl: string;
       keywords: string[];
       category: string;
       status: string;

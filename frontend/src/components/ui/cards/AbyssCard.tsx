@@ -31,16 +31,16 @@ const AbyssCard: React.FC<AbyssCardProps> = ({
   };
 
   const glowBorder = {
-    cyan: "border-abyss-accent",
-    purple: "border-abyss-glow",
+    cyan: "border-white/15",
+    purple: "border-white/15",
     none: "border-transparent",
   };
 
   return (
     <div
       className={`
-        abyss-card
-        bg-abyss-bg/50
+        studio-card
+        bg-[#050505]/50
         backdrop-blur-sm
         rounded-xl
         border

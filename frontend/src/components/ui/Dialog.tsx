@@ -36,7 +36,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
-  theme?: "abyss" | "prism" | "luxe";
+  theme?: string;
   className?: string;
 }
 

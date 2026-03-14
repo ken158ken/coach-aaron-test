@@ -1,5 +1,5 @@
 /**
- * 主要佈局元件
+ * 主要佈局元件 - Studio 風格
  * @module components/layout/Layout
  */
 
@@ -9,14 +9,12 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import PageTransition from "./PageTransition";
 
-/**
- * Layout 元件
- *
- * @returns {JSX.Element} 佈局元件（含頁面過渡動畫）
- */
 const Layout: React.FC = (): JSX.Element => {
   return (
     <div className="flex flex-col min-h-screen">
+      {/* 全頁靜態背景 */}
+      <div className="studio-bg" aria-hidden="true" />
+
       <Navbar />
       <main className="flex-grow">
         <PageTransition>

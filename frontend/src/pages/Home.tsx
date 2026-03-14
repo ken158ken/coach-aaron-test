@@ -5,10 +5,8 @@
  */
 
 import React, { useEffect } from "react";
-import AOS from "aos";
-import "aos/dist/aos.css";
-import { useTheme } from "@/context";
-import { AbyssScene } from "@/components/three";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   HeroSection,
   CoachIntroSection,
@@ -17,6 +15,8 @@ import {
 } from "@/components/sections";
 import HomePopup from "@/components/sections/HomePopup";
 import SEOHead from "@/components/seo/SEOHead";
+
+gsap.registerPlugin(ScrollTrigger);
 
 /** 日誌工具 */
 const logger = {
@@ -29,36 +29,35 @@ const logger = {
  * @returns {JSX.Element} 首頁
  */
 const Home: React.FC = () => {
-  const { setTheme } = useTheme();
-
+  /** GSAP ScrollTrigger 滾動入場動畫 */
   useEffect(() => {
-    setTheme("abyss");
-  }, [setTheme]);
-
-  /** 初始化 AOS 滾動動畫 */
-  useEffect(() => {
-    try {
-      AOS.init({
-        duration: 800,
-        easing: "ease-out-cubic",
-        once: true,
-        offset: 80,
-        delay: 0,
-        anchorPlacement: "top-bottom",
-      });
-      logger.info("AOS 滾動動畫已初始化");
-    } catch (err) {
-      console.error("[Home] AOS 初始化失敗:", err);
-    }
+    const els = document.querySelectorAll<HTMLElement>(".section-reveal");
+    els.forEach((el) => {
+      gsap.fromTo(
+        el,
+        { y: 40, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.7,
+          ease: "expo.out",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 90%",
+            toggleActions: "play none none none",
+          },
+        },
+      );
+    });
+    logger.info("ScrollTrigger 動畫已初始化");
 
     return () => {
-      // 清理 AOS 監聽器
-      AOS.refreshHard();
+      ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-abyss-bg">
+    <div className="relative min-h-screen bg-transparent">
       {/* SEO Meta 標籤 */}
       <SEOHead
         title="私教變現專家 | 銷售心理學助健身教練月入8萬"
@@ -86,34 +85,24 @@ const Home: React.FC = () => {
         author="阿倫教官"
       />
 
-      {/* Three.js Background */}
-      <AbyssScene />
-
       {/* 首頁自定義彈窗 */}
       <HomePopup />
 
-      {/* Hero Section - 淡入 + 上滑 */}
-      <div data-aos="fade-up" data-aos-duration="1000">
-        <HeroSection />
-      </div>
+      {/* Hero Section - GSAP handles its own animation */}
+      <HeroSection />
 
-      {/* Coach Introduction (Luxe Style) - 淡入 + 上滑 */}
-      <div
-        className="relative z-10 bg-luxe-bg"
-        data-aos="fade-up"
-        data-aos-duration="900"
-        data-aos-delay="100"
-      >
+      {/* Coach Introduction */}
+      <div className="section-reveal relative z-10 bg-transparent">
         <CoachIntroSection />
       </div>
 
-      {/* Podcast Section (Abyss Style) - 淡入 + 上滑 */}
-      <div data-aos="fade-up" data-aos-duration="900" data-aos-delay="100">
+      {/* Podcast Section */}
+      <div className="section-reveal">
         <PodcastSection />
       </div>
 
-      {/* Review Section (Prism Style) - 淡入 + 上滑 */}
-      <div data-aos="fade-up" data-aos-duration="900" data-aos-delay="100">
+      {/* Review Section */}
+      <div className="section-reveal">
         <ReviewSection />
       </div>
     </div>

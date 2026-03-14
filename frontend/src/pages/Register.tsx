@@ -6,9 +6,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth, useTheme } from "@/context";
+import { useAuth } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
-import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
@@ -18,7 +17,6 @@ import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
  * @returns {JSX.Element} 註冊頁面
  */
 const Register: React.FC = () => {
-  const { setTheme } = useTheme();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -31,10 +29,6 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -79,26 +73,23 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-8 sm:py-12 relative">
+    <div className="min-h-screen bg-transparent flex items-center justify-center px-4 pt-24 pb-8 sm:pt-28 sm:pb-12 relative">
       <SEOHead title="註冊 | 阿倫教官" noIndex={true} />
-      {/* Three.js Background */}
-      <PrismScene />
-
       <div className="w-full max-w-md relative z-10">
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-light text-luxe-gold tracking-widest">
+            <h1 className="text-3xl sm:text-4xl font-light text-[#c5a059] tracking-widest">
               AARON
             </h1>
           </Link>
-          <p className="text-sm sm:text-base text-luxe-muted mt-2 font-light">
+          <p className="text-sm sm:text-base text-[#888] mt-2 font-light">
             建立您的帳號
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-luxe-surface p-5 sm:p-8 rounded-lg border border-luxe-gold/10">
+        <div className="bg-[#141414] p-5 sm:p-8 rounded-lg border border-[#c5a059]/10">
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <Input
               name="name"
@@ -106,7 +97,7 @@ const Register: React.FC = () => {
               placeholder="請輸入您的姓名"
               value={formData.name}
               onChange={handleChange}
-              theme="luxe"
+              theme="studio"
               required
             />
             <Input
@@ -116,7 +107,7 @@ const Register: React.FC = () => {
               placeholder="請輸入電子郵件"
               value={formData.email}
               onChange={handleChange}
-              theme="luxe"
+              theme="studio"
               required
             />
             <Input
@@ -126,7 +117,7 @@ const Register: React.FC = () => {
               placeholder="請輸入密碼 (至少 6 個字元)"
               value={formData.password}
               onChange={handleChange}
-              theme="luxe"
+              theme="studio"
               required
             />
             <Input
@@ -136,14 +127,14 @@ const Register: React.FC = () => {
               placeholder="請再次輸入密碼"
               value={formData.confirmPassword}
               onChange={handleChange}
-              theme="luxe"
+              theme="studio"
               required
             />
 
             <PillButton
               type="submit"
-              variant="outline"
-              theme="luxe"
+              variant="default"
+              theme="studio"
               size="lg"
               disabled={loading}
               className="w-full"
@@ -153,33 +144,33 @@ const Register: React.FC = () => {
           </form>
 
           {/* Terms */}
-          <p className="text-center text-luxe-muted text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
+          <p className="text-center text-[#888] text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
             註冊即表示您同意我們的{" "}
-            <Link to="/terms" className="text-luxe-gold hover:underline">
+            <Link to="/terms" className="text-[#c5a059] hover:underline">
               服務條款
             </Link>{" "}
             與{" "}
-            <Link to="/privacy" className="text-luxe-gold hover:underline">
+            <Link to="/privacy" className="text-[#c5a059] hover:underline">
               隱私政策
             </Link>
           </p>
 
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
-            <div className="flex-1 border-t border-luxe-gold/10" />
-            <span className="text-luxe-muted text-xs sm:text-sm">
+            <div className="flex-1 border-t border-[#c5a059]/10" />
+            <span className="text-[#888] text-xs sm:text-sm">
               或使用以下方式註冊
             </span>
-            <div className="flex-1 border-t border-luxe-gold/10" />
+            <div className="flex-1 border-t border-[#c5a059]/10" />
           </div>
 
           {/* Social Login Buttons */}
           <SocialLoginButtons />
 
           {/* Login Link */}
-          <p className="text-center text-sm sm:text-base text-luxe-muted mt-6">
+          <p className="text-center text-sm sm:text-base text-[#888] mt-6">
             已經有帳號？{" "}
-            <Link to="/login" className="text-luxe-gold hover:underline">
+            <Link to="/login" className="text-[#c5a059] hover:underline">
               立即登入
             </Link>
           </p>

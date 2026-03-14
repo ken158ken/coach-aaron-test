@@ -1,96 +1,53 @@
 /**
- * FilterPill 元件 - 篩選膠囊
+ * FilterPill - Studio 篩選膠囊
  * @module components/ui/navigation/FilterPill
  */
-
 import React from "react";
 
-interface FilterOption {
-  value: string;
-  label: string;
-}
+interface FilterOption { value: string; label: string; }
 
 interface FilterPillProps {
-  options: FilterOption[];
-  value: string;
-  onChange: (value: string) => void;
-  theme?: "abyss" | "prism" | "luxe";
+  /** Single pill mode */
+  label?: string;
+  active?: boolean;
+  onClick?: () => void;
+  /** Multi-pill / select mode */
+  options?: FilterOption[];
+  value?: string;
+  onChange?: (v: string) => void;
   className?: string;
+  theme?: string;
 }
 
-/**
- * FilterPill - 篩選選項膠囊元件
- *
- * @param {FilterPillProps} props - 元件屬性
- * @returns {JSX.Element} 篩選膠囊
- */
 const FilterPill: React.FC<FilterPillProps> = ({
-  options,
-  value,
-  onChange,
-  theme = "prism",
+  label, active = false, onClick,
+  options, value, onChange,
   className = "",
 }) => {
-  const themes = {
-    abyss: {
-      container: "bg-abyss-bg/50 border-abyss-accent/30",
-      active:
-        "bg-abyss-accent text-black font-semibold shadow-lg shadow-abyss-accent/30",
-      inactive:
-        "text-abyss-text/70 hover:text-abyss-accent border border-transparent",
-    },
-    prism: {
-      container: "bg-prism-bg/50 border-prism-accent/30",
-      active:
-        "bg-prism-accent text-black font-semibold shadow-lg shadow-prism-accent/30",
-      inactive:
-        "text-prism-text/70 hover:text-prism-accent border border-transparent",
-    },
-    luxe: {
-      container: "bg-luxe-surface border-luxe-gold/30",
-      active:
-        "bg-luxe-gold text-black font-semibold shadow-lg shadow-luxe-gold/30",
-      inactive:
-        "text-luxe-muted hover:text-luxe-gold border border-transparent hover:border-luxe-gold/50",
-    },
-  };
-
-  const styles = themes[theme];
-
+  // Multi-option mode
+  if (options && onChange !== undefined) {
+    return (
+      <div className={`flex flex-wrap gap-2 ${className}`}>
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`filter-pill ${value === opt.value ? "active" : ""}`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+  // Single pill mode
   return (
-    <div
-      className={`
-        filter-pill
-        inline-flex
-        p-0.5
-        sm:p-1
-        rounded-full
-        border
-        ${styles.container}
-        ${className}
-      `}
+    <button
+      onClick={onClick}
+      className={`filter-pill ${active ? "active" : ""} ${className}`}
     >
-      {options.map((option) => (
-        <button
-          key={option.value}
-          onClick={() => onChange(option.value)}
-          className={`
-            px-3
-            sm:px-4
-            py-1.5
-            sm:py-2
-            text-xs
-            sm:text-sm
-            rounded-full
-            transition-all
-            duration-300
-            ${value === option.value ? styles.active : styles.inactive}
-          `}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
+      {label}
+    </button>
   );
 };
 

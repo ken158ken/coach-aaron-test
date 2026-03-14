@@ -8,35 +8,41 @@ import React from "react";
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  label?: string;
   actions?: React.ReactNode;
   className?: string;
 }
 
 /**
- * PageHeader - 頁面標題元件
- *
- * @param {string} title - 標題
- * @param {string} subtitle - 副標題
- * @param {React.ReactNode} actions - 操作區塊
- * @param {string} className - 額外樣式
- * @returns {JSX.Element} 頁面標題
+ * PageHeader - 頁面標題元件（統一樣式：英文小標 → h1 → 副標題）
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
+  label,
   actions,
   className = "",
 }) => {
   return (
-    <div
-      className={`
-        pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 text-center
-        ${className}
-      `}
-    >
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-light text-luxe-text mb-2 sm:mb-3">{title}</h1>
-      {subtitle && <p className="text-sm sm:text-base text-luxe-muted max-w-xl mx-auto">{subtitle}</p>}
-      {actions && <div className="flex justify-center gap-2 sm:gap-3 mt-4 sm:mt-6">{actions}</div>}
+    <div className={`text-center mb-8 sm:mb-12 ${className}`}>
+      {label && (
+        <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
+          {label}
+        </span>
+      )}
+      <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
+        {title}
+      </h1>
+      {subtitle && (
+        <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
+          {subtitle}
+        </p>
+      )}
+      {actions && (
+        <div className="flex justify-center gap-2 sm:gap-3 mt-4 sm:mt-6">
+          {actions}
+        </div>
+      )}
     </div>
   );
 };

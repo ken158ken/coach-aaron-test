@@ -5,10 +5,8 @@
  * @description 包含聯絡表單（透過 Resend 發送郵件）、教練個人資訊與社群連結
  */
 
-import React, { useEffect, useState } from "react";
-import { useTheme } from "@/context";
+import React, { useState } from "react";
 import { Input, Textarea, PillButton, Toast } from "@/components/ui";
-import { PrismScene } from "@/components/three";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
 
@@ -36,17 +34,12 @@ const INITIAL_FORM_DATA: ContactFormData = {
  * @returns {JSX.Element} 聯絡頁面
  */
 const Contact: React.FC = () => {
-  const { setTheme } = useTheme();
   const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
-
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
 
   /**
    * 前端輸入基礎驗證
@@ -188,7 +181,7 @@ const Contact: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-luxe-bg relative">
+    <div className="min-h-screen bg-transparent relative">
       {/* SEO Meta 標籤 */}
       <SEOHead
         title="聯絡阿倫教官 - 免費40分鐘1對1諮詢 | 私教變現專家"
@@ -206,49 +199,45 @@ const Contact: React.FC = () => {
         ]}
         url="/contact"
       />
-
-      {/* Three.js Background */}
-      <PrismScene />
-
       <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
-        <div className="max-w-5xl mx-auto">
+        <div className="studio-container">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">
-            <span className="inline-block text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
+            <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
               Contact
             </span>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-light text-luxe-text mb-3 sm:mb-4">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
               聯絡阿倫教官
             </h1>
-            <p className="text-sm sm:text-base text-luxe-muted max-w-xl mx-auto font-light px-2">
+            <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
               想提升教練業績？100天月入8萬起，免費 40 分鐘 1 對 1 諮詢
             </p>
           </div>
 
           {/* Coach Info Banner */}
-          <div className="mb-8 sm:mb-10 p-5 sm:p-8 bg-luxe-surface rounded-xl border border-luxe-gold/20">
+          <div className="mb-8 sm:mb-10 p-5 sm:p-8 bg-[#141414] rounded-xl border border-[#c5a059]/20">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-luxe-gold/10 border-2 border-luxe-gold/40 flex items-center justify-center flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#c5a059]/10 border-2 border-[#c5a059]/40 flex items-center justify-center flex-shrink-0">
                 <span className="text-3xl sm:text-4xl">🏆</span>
               </div>
               <div className="flex-1">
-                <h2 className="text-lg sm:text-xl text-luxe-text font-medium mb-1">
+                <h2 className="text-lg sm:text-xl text-white/90 font-medium mb-1">
                   {COACH_INFO.NAME}
                 </h2>
-                <p className="text-sm text-luxe-gold mb-2">
+                <p className="text-sm text-[#c5a059] mb-2">
                   {COACH_INFO.TITLE}
                 </p>
-                <div className="flex flex-wrap gap-2 text-xs text-luxe-muted">
-                  <span className="bg-luxe-gold/10 px-2 py-1 rounded">
+                <div className="flex flex-wrap gap-2 text-xs text-[#888]">
+                  <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
                     NSCA-CPT 認證
                   </span>
-                  <span className="bg-luxe-gold/10 px-2 py-1 rounded">
+                  <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
                     TQUK 心理諮詢師
                   </span>
-                  <span className="bg-luxe-gold/10 px-2 py-1 rounded">
+                  <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
                     NLP 心理執行師
                   </span>
-                  <span className="bg-luxe-gold/10 px-2 py-1 rounded">
+                  <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
                     130+ 教練培訓
                   </span>
                 </div>
@@ -259,7 +248,7 @@ const Contact: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12">
             {/* Contact Form */}
             <div>
-              <h2 className="text-lg sm:text-xl text-luxe-text mb-4 sm:mb-6 font-light">
+              <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 傳送訊息
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
@@ -269,7 +258,7 @@ const Contact: React.FC = () => {
                   placeholder="請輸入您的姓名"
                   value={formData.name}
                   onChange={handleChange}
-                  theme="luxe"
+                  theme="studio"
                   required
                 />
                 <Input
@@ -279,7 +268,7 @@ const Contact: React.FC = () => {
                   placeholder="請輸入您的電子郵件"
                   value={formData.email}
                   onChange={handleChange}
-                  theme="luxe"
+                  theme="studio"
                   required
                 />
                 <Input
@@ -289,7 +278,7 @@ const Contact: React.FC = () => {
                   placeholder="例如：0912-345-678"
                   value={formData.phone}
                   onChange={handleChange}
-                  theme="luxe"
+                  theme="studio"
                 />
                 <Input
                   name="subject"
@@ -297,7 +286,7 @@ const Contact: React.FC = () => {
                   placeholder="例如：想了解教練培訓課程"
                   value={formData.subject}
                   onChange={handleChange}
-                  theme="luxe"
+                  theme="studio"
                   required
                 />
                 <Textarea
@@ -306,20 +295,20 @@ const Contact: React.FC = () => {
                   placeholder="請描述您的需求或問題，我們會盡快回覆您..."
                   value={formData.message}
                   onChange={handleChange}
-                  theme="luxe"
+                  theme="studio"
                   required
                 />
                 <PillButton
                   type="submit"
-                  variant="outline"
-                  theme="luxe"
+                  variant="default"
+                  theme="studio"
                   size="lg"
                   disabled={loading}
                   className="w-full"
                 >
                   {loading ? "送出中..." : "📩 送出訊息"}
                 </PillButton>
-                <p className="text-xs text-luxe-muted text-center">
+                <p className="text-xs text-[#888] text-center">
                   送出後將由 Email 通知阿倫教官，通常 24 小時內回覆
                 </p>
               </form>
@@ -327,7 +316,7 @@ const Contact: React.FC = () => {
 
             {/* Contact Info & Social */}
             <div>
-              <h2 className="text-lg sm:text-xl text-luxe-text mb-4 sm:mb-6 font-light">
+              <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 聯絡方式
               </h2>
 
@@ -346,7 +335,7 @@ const Contact: React.FC = () => {
                       <h3 className="text-[#06C755] text-sm font-medium mb-0.5">
                         LINE 官方帳號（最快回覆）
                       </h3>
-                      <p className="text-sm text-luxe-text">
+                      <p className="text-sm text-white/90">
                         ID: {COACH_INFO.LINE_ID}
                       </p>
                     </div>
@@ -354,28 +343,28 @@ const Contact: React.FC = () => {
                 </a>
 
                 {/* Email */}
-                <div className="p-4 sm:p-5 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 transition-all duration-300">
-                  <h3 className="text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
+                <div className="p-4 sm:p-5 bg-[#141414] rounded-lg border border-[#c5a059]/10 hover:border-[#c5a059]/30 transition-all duration-300">
+                  <h3 className="text-[#c5a059] text-xs sm:text-sm uppercase tracking-widest mb-1.5">
                     Email
                   </h3>
-                  <p className="text-sm sm:text-base text-luxe-text break-all">
+                  <p className="text-sm sm:text-base text-white/90 break-all">
                     {COACH_INFO.EMAIL}
                   </p>
                 </div>
 
                 {/* 營業時間 */}
-                <div className="p-4 sm:p-5 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/30 transition-all duration-300">
-                  <h3 className="text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
+                <div className="p-4 sm:p-5 bg-[#141414] rounded-lg border border-[#c5a059]/10 hover:border-[#c5a059]/30 transition-all duration-300">
+                  <h3 className="text-[#c5a059] text-xs sm:text-sm uppercase tracking-widest mb-1.5">
                     營業時間
                   </h3>
-                  <p className="text-sm sm:text-base text-luxe-text">
+                  <p className="text-sm sm:text-base text-white/90">
                     {COACH_INFO.BUSINESS_HOURS}
                   </p>
                 </div>
               </div>
 
               {/* Social Links */}
-              <h3 className="text-sm sm:text-base text-luxe-text mb-3 sm:mb-4 font-light">
+              <h3 className="text-sm sm:text-base text-white/90 mb-3 sm:mb-4 font-light">
                 社群媒體
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -385,14 +374,14 @@ const Contact: React.FC = () => {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10 hover:border-luxe-gold/40 hover:shadow-lg hover:shadow-luxe-gold/10 hover:-translate-y-1 transition-all duration-300"
+                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-[#141414] rounded-lg border border-[#c5a059]/10 hover:border-[#c5a059]/40 hover:shadow-lg hover:shadow-[#c5a059]/10 hover:-translate-y-1 transition-all duration-300"
                   >
                     <span className="text-xl sm:text-2xl">{item.icon}</span>
                     <div className="min-w-0">
-                      <span className="text-sm text-luxe-text block">
+                      <span className="text-sm text-white/90 block">
                         {item.name}
                       </span>
-                      <span className="text-xs text-luxe-muted truncate block">
+                      <span className="text-xs text-[#888] truncate block">
                         {item.desc}
                       </span>
                     </div>

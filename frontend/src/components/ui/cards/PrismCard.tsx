@@ -25,9 +25,8 @@ const PrismCard: React.FC<PrismCardProps> = ({
   hover = true,
 }) => {
   const variantStyles = {
-    glass:
-      "prism-card bg-prism-bg/40 backdrop-blur-md border border-prism-accent/30",
-    solid: "bg-prism-bg/80 border border-prism-muted/20",
+    glass: "studio-card bg-[#050505]/40 backdrop-blur-md border border-white/10",
+    solid: "studio-card bg-[#050505]/80 border border-white/10",
   };
 
   return (
@@ -39,7 +38,7 @@ const PrismCard: React.FC<PrismCardProps> = ({
         sm:p-6
         transition-all
         duration-300
-        ${hover ? "hover:border-prism-accent/60 hover:-translate-y-1" : ""}
+        ${hover ? "hover:border-white/25 hover:-translate-y-1" : ""}
         ${className}
       `}
     >

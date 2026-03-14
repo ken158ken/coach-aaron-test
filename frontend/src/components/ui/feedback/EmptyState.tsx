@@ -37,10 +37,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         ${className}
       `}
     >
-      {icon && <div className="text-6xl text-luxe-muted/30 mb-4">{icon}</div>}
-      <h3 className="text-lg font-medium text-luxe-text/70 mb-2">{title}</h3>
+      {icon && <div className="text-6xl text-[#888]/30 mb-4">{icon}</div>}
+      <h3 className="text-lg font-medium text-white/60 mb-2">{title}</h3>
       {description && (
-        <p className="text-sm text-luxe-muted max-w-sm">{description}</p>
+        <p className="text-sm text-[#888] max-w-sm">{description}</p>
       )}
       {action && <div className="mt-6">{action}</div>}
     </div>

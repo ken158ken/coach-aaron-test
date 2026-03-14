@@ -6,9 +6,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth, useTheme } from "@/context";
+import { useAuth } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
-import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { authService } from "@/services";
@@ -19,7 +18,6 @@ import { authService } from "@/services";
  * @returns {JSX.Element} 登入頁面
  */
 const Login: React.FC = () => {
-  const { setTheme } = useTheme();
   const {
     login,
     isAuthenticated,
@@ -35,10 +33,6 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
 
   // 處理 OAuth 回呼：後端 redirect 帶 auth_code → 前端用 XHR 交換 cookie
   useEffect(() => {
@@ -109,26 +103,23 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-luxe-bg flex items-center justify-center px-4 py-8 sm:py-12 relative">
+    <div className="min-h-screen bg-transparent flex items-center justify-center px-4 pt-24 pb-8 sm:pt-28 sm:pb-12 relative">
       <SEOHead title="登入 | 阿倫教官" noIndex={true} />
-      {/* Three.js Background */}
-      <PrismScene />
-
       <div className="w-full max-w-md relative z-10">
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-light text-luxe-gold tracking-widest">
+            <h1 className="text-3xl sm:text-4xl font-light text-[#c5a059] tracking-widest">
               AARON
             </h1>
           </Link>
-          <p className="text-sm sm:text-base text-luxe-muted mt-2 font-light">
+          <p className="text-sm sm:text-base text-[#888] mt-2 font-light">
             登入您的帳號
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-luxe-surface p-5 sm:p-8 rounded-lg border border-luxe-gold/10">
+        <div className="bg-[#141414] p-5 sm:p-8 rounded-lg border border-[#c5a059]/10">
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <Input
               name="email"
@@ -137,7 +128,7 @@ const Login: React.FC = () => {
               placeholder="請輸入電子郵件"
               value={formData.email}
               onChange={handleChange}
-              theme="luxe"
+              theme="studio"
               required
             />
             <Input
@@ -147,7 +138,7 @@ const Login: React.FC = () => {
               placeholder="請輸入密碼"
               value={formData.password}
               onChange={handleChange}
-              theme="luxe"
+              theme="studio"
               required
             />
 
@@ -155,7 +146,7 @@ const Login: React.FC = () => {
             <div className="text-right">
               <Link
                 to="/forgot-password"
-                className="text-xs sm:text-sm text-luxe-muted hover:text-luxe-gold transition-colors"
+                className="text-xs sm:text-sm text-[#888] hover:text-[#c5a059] transition-colors"
               >
                 忘記密碼？
               </Link>
@@ -163,8 +154,8 @@ const Login: React.FC = () => {
 
             <PillButton
               type="submit"
-              variant="outline"
-              theme="luxe"
+              variant="default"
+              theme="studio"
               size="lg"
               disabled={loading}
               className="w-full"
@@ -175,20 +166,20 @@ const Login: React.FC = () => {
 
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
-            <div className="flex-1 border-t border-luxe-gold/10" />
-            <span className="text-luxe-muted text-xs sm:text-sm">
+            <div className="flex-1 border-t border-[#c5a059]/10" />
+            <span className="text-[#888] text-xs sm:text-sm">
               或使用以下方式登入
             </span>
-            <div className="flex-1 border-t border-luxe-gold/10" />
+            <div className="flex-1 border-t border-[#c5a059]/10" />
           </div>
 
           {/* Social Login Buttons */}
           <SocialLoginButtons />
 
           {/* Register Link */}
-          <p className="text-center text-sm sm:text-base text-luxe-muted mt-6">
+          <p className="text-center text-sm sm:text-base text-[#888] mt-6">
             還沒有帳號？{" "}
-            <Link to="/register" className="text-luxe-gold hover:underline">
+            <Link to="/register" className="text-[#c5a059] hover:underline">
               立即註冊
             </Link>
           </p>

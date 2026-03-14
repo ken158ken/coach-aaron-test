@@ -6,10 +6,9 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useAuth, useTheme } from "@/context";
+import { useAuth } from "@/context";
 import { StatCard, PillButton, Input, Toast, Modal } from "@/components/ui";
 import { AvatarPicker } from "@/components/ui/avatar";
-import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 import { userService } from "@/services";
 import { put } from "@/services/api";
@@ -27,7 +26,6 @@ const logger = {
  * @returns {JSX.Element} 會員中心頁面
  */
 const MemberCenter: React.FC = () => {
-  const { setTheme } = useTheme();
   const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "profile" | "courses" | "settings"
@@ -40,10 +38,6 @@ const MemberCenter: React.FC = () => {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
-
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
 
   // 初始化表單值
   useEffect(() => {
@@ -215,30 +209,29 @@ const MemberCenter: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-luxe-bg relative">
+    <div className="min-h-screen bg-transparent relative">
       <SEOHead title="會員中心 | 阿倫教官" noIndex={true} />
-      {/* Three.js Background */}
-      <PrismScene />
-
       <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
-        <div className="max-w-5xl mx-auto">
+        <div className="studio-container">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-8 sm:mb-12">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-1 sm:mb-2">
+              <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-2">
+                Member Center
+              </span>
+              <h1 className="text-2xl sm:text-4xl font-bold text-white/90 mb-1 sm:mb-2">
                 會員中心
               </h1>
               <p
-                className="text-sm sm:text-base text-luxe-muted truncate max-w-[250px] sm:max-w-none"
+                className="text-sm sm:text-base text-white/50 truncate max-w-[250px] sm:max-w-none"
                 suppressHydrationWarning
               >
-                歡迎回來，
-                {user?.display_name || user?.name || user?.email || ""}
+                歡迎回來，{user?.display_name || user?.name || user?.email || ""}
               </p>
             </div>
             <button
               onClick={logout}
-              className="self-start sm:self-auto text-luxe-muted hover:text-luxe-gold transition-colors text-xs sm:text-sm"
+              className="self-start sm:self-auto text-[#888] hover:text-[#c5a059] transition-colors text-xs sm:text-sm"
             >
               登出
             </button>
@@ -251,13 +244,13 @@ const MemberCenter: React.FC = () => {
                 key={stat.label}
                 value={stat.value}
                 label={stat.label}
-                theme="luxe"
+                theme="studio"
               />
             ))}
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-0.5 sm:gap-1 mb-6 sm:mb-8 border-b border-luxe-gold/10 overflow-x-auto">
+          <div className="flex gap-0.5 sm:gap-1 mb-6 sm:mb-8 border-b border-[#c5a059]/10 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -273,8 +266,8 @@ const MemberCenter: React.FC = () => {
                   whitespace-nowrap
                   ${
                     activeTab === tab.key
-                      ? "text-luxe-gold border-b-2 border-luxe-gold"
-                      : "text-luxe-muted hover:text-luxe-text"
+                      ? "text-[#c5a059] border-b-2 border-[#c5a059]"
+                      : "text-[#888] hover:text-white/90"
                   }
                 `}
               >
@@ -284,17 +277,17 @@ const MemberCenter: React.FC = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-6">
+          <div className="bg-[#141414] rounded-lg border border-[#c5a059]/10 p-4 sm:p-6">
             {activeTab === "profile" && (
               <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl text-luxe-text font-light mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
                   個人資料
                 </h2>
                 <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
                   {/* 頭像區域 — 點擊開啟 AvatarPicker */}
                   <div className="relative group flex-shrink-0">
                     {/* 頭像圓形 */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-luxe-gold/40 avatar-glow">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-[#c5a059]/40 avatar-glow">
                       {user?.avatar_url ? (
                         <img
                           src={user.avatar_url}
@@ -302,8 +295,8 @@ const MemberCenter: React.FC = () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-luxe-gold/20 flex items-center justify-center">
-                          <span className="text-luxe-gold text-xl sm:text-2xl font-semibold">
+                        <div className="w-full h-full bg-[rgba(197,160,89,0.2)] flex items-center justify-center">
+                          <span className="text-[#c5a059] text-xl sm:text-2xl font-semibold">
                             {user?.name?.charAt(0) || "U"}
                           </span>
                         </div>
@@ -360,10 +353,10 @@ const MemberCenter: React.FC = () => {
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-base sm:text-lg text-luxe-text truncate">
+                    <p className="text-base sm:text-lg text-white/90 truncate">
                       {user?.display_name || user?.name || "會員"}
                     </p>
-                    <p className="text-xs sm:text-sm text-luxe-muted truncate">
+                    <p className="text-xs sm:text-sm text-[#888] truncate">
                       {user?.email}
                     </p>
                   </div>
@@ -379,26 +372,26 @@ const MemberCenter: React.FC = () => {
                       setProfileDisplayName(e.target.value.slice(0, 30))
                     }
                     placeholder="設定您的顯示名稱"
-                    theme="luxe"
+                    theme="studio"
                     maxLength={30}
                     autoComplete="name"
                     spellCheck={false}
                   />
-                  <p className="text-[10px] text-luxe-muted -mt-2">
+                  <p className="text-[10px] text-[#888] -mt-2">
                     {profileDisplayName.length}/30
                     字元，只允許中英文、數字、空格和常見標點
                   </p>
                   <Input
                     label="電子郵件"
                     value={user?.email || ""}
-                    theme="luxe"
+                    theme="studio"
                     disabled
                     readOnly
                     tabIndex={-1}
                   />
                   <PillButton
-                    theme="luxe"
-                    variant="outline"
+                    theme="studio"
+                    variant="default"
                     type="submit"
                     disabled={profileSaving || !profileChanged}
                   >
@@ -410,15 +403,15 @@ const MemberCenter: React.FC = () => {
 
             {activeTab === "courses" && (
               <div>
-                <h2 className="text-lg sm:text-xl text-luxe-text font-light mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
                   我的課程
                 </h2>
                 <div className="text-center py-8 sm:py-12">
-                  <p className="text-sm sm:text-base text-luxe-muted mb-3 sm:mb-4">
+                  <p className="text-sm sm:text-base text-[#888] mb-3 sm:mb-4">
                     您尚未購買任何課程
                   </p>
                   <Link to="/courses">
-                    <PillButton theme="luxe" variant="outline">
+                    <PillButton theme="studio" variant="default">
                       瀏覽課程
                     </PillButton>
                   </Link>
@@ -428,7 +421,7 @@ const MemberCenter: React.FC = () => {
 
             {activeTab === "settings" && (
               <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl text-luxe-text font-light mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
                   帳號設定
                 </h2>
                 <form className="space-y-3 sm:space-y-4 max-w-md">
@@ -436,21 +429,21 @@ const MemberCenter: React.FC = () => {
                     type="password"
                     label="目前密碼"
                     placeholder="請輸入目前密碼"
-                    theme="luxe"
+                    theme="studio"
                   />
                   <Input
                     type="password"
                     label="新密碼"
                     placeholder="請輸入新密碼"
-                    theme="luxe"
+                    theme="studio"
                   />
                   <Input
                     type="password"
                     label="確認新密碼"
                     placeholder="請再次輸入新密碼"
-                    theme="luxe"
+                    theme="studio"
                   />
-                  <PillButton theme="luxe" variant="outline">
+                  <PillButton theme="studio" variant="default">
                     更新密碼
                   </PillButton>
                 </form>
@@ -466,7 +459,7 @@ const MemberCenter: React.FC = () => {
         onClose={() => !avatarUploading && setShowAvatarPicker(false)}
         title="選擇頭像"
         size="md"
-        theme="luxe"
+        theme="studio"
       >
         <AvatarPicker
           onSelect={handleAvatarSelect}

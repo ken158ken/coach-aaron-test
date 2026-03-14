@@ -11,7 +11,7 @@ interface DrawerProps {
   title?: string;
   children: React.ReactNode;
   position?: "left" | "right";
-  theme?: "abyss" | "prism" | "luxe";
+  theme?: string;
   className?: string;
 }
 
@@ -27,7 +27,6 @@ const Drawer: React.FC<DrawerProps> = ({
   title,
   children,
   position = "right",
-  theme = "luxe",
   className = "",
 }) => {
   useEffect(() => {
@@ -42,25 +41,7 @@ const Drawer: React.FC<DrawerProps> = ({
     };
   }, [isOpen]);
 
-  const themes = {
-    abyss: {
-      container: "bg-abyss-bg border-abyss-accent/30",
-      title: "text-abyss-text border-abyss-accent/20",
-      close: "text-abyss-text/50 hover:text-abyss-accent",
-    },
-    prism: {
-      container: "bg-prism-bg border-prism-accent/30",
-      title: "text-prism-text border-prism-accent/20",
-      close: "text-prism-text/50 hover:text-prism-accent",
-    },
-    luxe: {
-      container: "bg-luxe-bg border-luxe-gold/20",
-      title: "text-luxe-text border-luxe-gold/10",
-      close: "text-luxe-muted hover:text-luxe-gold",
-    },
-  };
 
-  const styles = themes[theme];
 
   const positionStyles = {
     left: {
@@ -104,19 +85,19 @@ const Drawer: React.FC<DrawerProps> = ({
           ease-out
           ${positionStyles[position].container}
           ${positionStyles[position].translate}
-          ${styles.container}
+          bg-[#0f0f0f] border-white/15
           ${className}
         `}
       >
         {/* Header */}
         {title && (
           <div
-            className={`flex items-center justify-between px-4 py-4 border-b ${styles.title}`}
+            className="flex items-center justify-between px-4 py-4 border-b text-white/90 border-white/10"
           >
             <h2 className="text-lg font-medium">{title}</h2>
             <button
               onClick={onClose}
-              className={`p-1 transition-colors ${styles.close}`}
+              className="p-1 transition-colors text-white/40 hover:text-white"
             >
               <svg
                 className="w-5 h-5"

@@ -9,9 +9,16 @@ interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  theme?: "abyss" | "prism" | "luxe";
+  theme?: string;
   className?: string;
 }
+
+const styles = {
+  active: "bg-white/10 text-white border border-white/40 shadow-sm",
+  inactive:
+    "text-white/50 hover:text-white hover:bg-white/5 hover:scale-105 transition-all duration-200",
+  disabled: "text-white/20 cursor-not-allowed",
+};
 
 /**
  * Pagination - 分頁元件
@@ -23,31 +30,8 @@ const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
   onPageChange,
-  theme = "luxe",
   className = "",
 }) => {
-  const themes = {
-    abyss: {
-      active: "bg-abyss-accent text-abyss-bg shadow-lg shadow-abyss-accent/30",
-      inactive:
-        "text-abyss-text/70 hover:text-abyss-accent hover:bg-abyss-accent/10 hover:scale-110 transition-all duration-300",
-      disabled: "text-abyss-text/30 cursor-not-allowed",
-    },
-    prism: {
-      active: "bg-prism-accent text-prism-bg shadow-lg shadow-prism-accent/30",
-      inactive:
-        "text-prism-text/70 hover:text-prism-accent hover:bg-prism-accent/10 hover:scale-110 transition-all duration-300",
-      disabled: "text-prism-text/30 cursor-not-allowed",
-    },
-    luxe: {
-      active: "bg-luxe-gold text-black shadow-lg shadow-luxe-gold/30",
-      inactive:
-        "text-luxe-muted hover:text-luxe-gold hover:bg-luxe-gold/10 hover:scale-110 transition-all duration-300",
-      disabled: "text-luxe-muted/30 cursor-not-allowed",
-    },
-  };
-
-  const styles = themes[theme];
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];

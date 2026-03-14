@@ -52,32 +52,26 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Title animation
-      gsap.from(titleRef.current, {
-        y: 50,
-        opacity: 0,
-        duration: 1,
-        ease: "power3.out",
-        delay: 0.3,
-      });
+      // Title — 快速切入，小位移，略帶斜角
+      gsap.fromTo(
+        titleRef.current,
+        { y: 24, opacity: 0, skewX: -2 },
+        { y: 0, opacity: 1, skewX: 0, duration: 0.6, ease: "expo.out", delay: 0.15 },
+      );
 
-      // Subtitle animation
-      gsap.from(subtitleRef.current, {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        ease: "power3.out",
-        delay: 0.6,
-      });
+      // Subtitle — 接連切入
+      gsap.fromTo(
+        subtitleRef.current,
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: "expo.out", delay: 0.35 },
+      );
 
-      // CTA animation
-      gsap.from(ctaRef.current, {
-        y: 20,
-        opacity: 0,
-        duration: 0.8,
-        ease: "power3.out",
-        delay: 0.9,
-      });
+      // CTA — 最後收尾
+      gsap.fromTo(
+        ctaRef.current,
+        { y: 12, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: "expo.out", delay: 0.5 },
+      );
     }, containerRef);
 
     return () => ctx.revert();
@@ -86,24 +80,18 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   return (
     <section
       ref={containerRef}
-      className={`
-        relative
-        min-h-screen
-        flex
-        flex-col
-        items-center
-        justify-center
-        text-center
-        px-4
-        ${className}
-      `}
+      className={`studio-hero relative min-h-screen flex flex-col items-center justify-center text-center px-4 ${className}`}
     >
+      {/* Studio 攝影棚背景 */}
+      <div className="studio-hero-bg" aria-hidden="true" />
+      <div className="studio-floor-line" aria-hidden="true" />
+
       {/* Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-2 sm:px-4">
         {/* Title */}
         <h1
           ref={titleRef}
-          className="text-3xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 text-abyss-text leading-tight"
+          className="silver-heading font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight tracking-[4px] sm:tracking-[6px] uppercase"
         >
           {heroTitle.split("\n").map((line, i) => (
             <React.Fragment key={i}>
@@ -116,7 +104,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
         {/* Subtitle */}
         <p
           ref={subtitleRef}
-          className="text-base sm:text-xl md:text-2xl text-abyss-text/70 mb-8 sm:mb-10 max-w-2xl mx-auto font-light"
+          className="text-sm sm:text-base md:text-lg text-white/50 mb-8 sm:mb-10 max-w-xl mx-auto font-light tracking-[2px]"
         >
           {heroSubtitle.split("\n").map((line, i) => (
             <React.Fragment key={i}>
@@ -139,7 +127,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           <GlowButton to="/courses" size="lg">
             探索課程
           </GlowButton>
-          <TextButton to="/contact" theme="abyss">
+          <TextButton to="/contact" theme="studio">
             預約諮詢
           </TextButton>
         </div>
@@ -147,9 +135,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
 
       {/* Scroll Indicator */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2">
-        <div className="flex flex-col items-center gap-2 text-abyss-text/50">
+        <div className="flex flex-col items-center gap-2 text-white/40">
           <span className="text-xs uppercase tracking-widest">Scroll</span>
-          <div className="w-px h-12 bg-gradient-to-b from-abyss-accent to-transparent animate-pulse" />
+          <div className="w-px h-12 bg-linear-to-b from-white/40 to-transparent animate-pulse" />
         </div>
       </div>
     </section>

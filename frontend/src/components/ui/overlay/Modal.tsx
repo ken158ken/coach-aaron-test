@@ -11,7 +11,7 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
-  theme?: "abyss" | "prism" | "luxe";
+  theme?: string;
   className?: string;
 }
 
@@ -27,7 +27,6 @@ const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = "md",
-  theme = "luxe",
   className = "",
 }) => {
   useEffect(() => {
@@ -66,25 +65,7 @@ const Modal: React.FC<ModalProps> = ({
     full: "max-w-[1440px]",
   };
 
-  const themes = {
-    abyss: {
-      container: "bg-abyss-bg border-abyss-accent/30",
-      title: "text-abyss-text border-abyss-accent/20",
-      close: "text-abyss-text/50 hover:text-abyss-accent",
-    },
-    prism: {
-      container: "bg-prism-bg border-prism-accent/30",
-      title: "text-prism-text border-prism-accent/20",
-      close: "text-prism-text/50 hover:text-prism-accent",
-    },
-    luxe: {
-      container: "bg-luxe-bg border-luxe-gold/20",
-      title: "text-luxe-text border-luxe-gold/10",
-      close: "text-luxe-muted hover:text-luxe-gold",
-    },
-  };
 
-  const styles = themes[theme];
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 px-3 sm:p-4">
@@ -105,19 +86,19 @@ const Modal: React.FC<ModalProps> = ({
           rounded-xl
           overflow-hidden
           animate-fade-in
-          ${styles.container}
+          bg-[#0f0f0f] border-white/15
           ${className}
         `}
       >
         {/* Header */}
         {title && (
           <div
-            className={`flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b ${styles.title}`}
+            className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b text-white/90 border-white/10"
           >
             <h2 className="text-base sm:text-lg font-medium">{title}</h2>
             <button
               onClick={onClose}
-              className={`p-1 transition-colors ${styles.close}`}
+              className="p-1 transition-colors text-white/40 hover:text-white"
             >
               <svg
                 className="w-5 h-5"

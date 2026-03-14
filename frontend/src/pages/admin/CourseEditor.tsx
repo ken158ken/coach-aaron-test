@@ -49,6 +49,7 @@ interface CourseData {
   category: string;
   tags: string[];
   coverImage: string;
+  bannerImage: string;
   videoUrl: string;
   content: string;
   price: string;
@@ -106,6 +107,7 @@ const CourseEditor: React.FC = () => {
     category: "",
     tags: [],
     coverImage: "",
+    bannerImage: "",
     videoUrl: "",
     content: "",
     price: "",
@@ -282,6 +284,7 @@ const CourseEditor: React.FC = () => {
           category: data.course_category || data.category || "",
           tags: keywordsArray,
           coverImage: data.course_thumbnail_url || data.thumbnail || "",
+          bannerImage: data.course_banner_url || "",
           videoUrl: "",
           content: data.course_content || data.content || "",
           price: data.price ? String(data.price) : "",
@@ -533,6 +536,24 @@ const CourseEditor: React.FC = () => {
       return;
     }
 
+    // 驗證圖片網址必須是 Cloudinary
+    if (course.coverImage && !isValidCloudinaryUrl(course.coverImage)) {
+      await dialog.alert({
+        title: "圖片網址錯誤",
+        message: "封面圖片必須使用 Cloudinary 網址（https://res.cloudinary.com/...）",
+        type: "error",
+      });
+      return;
+    }
+    if (course.bannerImage && !isValidCloudinaryUrl(course.bannerImage)) {
+      await dialog.alert({
+        title: "圖片網址錯誤",
+        message: "Banner 圖片必須使用 Cloudinary 網址（https://res.cloudinary.com/...）",
+        type: "error",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const slug = course.slug || generateSlug();
@@ -543,6 +564,7 @@ const CourseEditor: React.FC = () => {
         courseContent: course.content,
         courseVideoUrl: course.videoUrl,
         courseThumbnailUrl: course.coverImage,
+        courseBannerUrl: course.bannerImage,
         courseKeywords: course.tags,
         courseCategory: course.category,
         price: Number(course.price) || 0,
@@ -931,10 +953,11 @@ const CourseEditor: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 封面圖片 */}
+                {/* 封面圖片 (縮圖) */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    封面圖片
+                    封面縮圖
+                    <span className="ml-1 text-gray-600">（列表卡片用）</span>
                   </label>
                   <input
                     type="url"
@@ -947,13 +970,58 @@ const CourseEditor: React.FC = () => {
                       setHasChanges(true);
                     }}
                     placeholder="https://res.cloudinary.com/..."
-                    className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
+                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
+                      course.coverImage && !isValidCloudinaryUrl(course.coverImage)
+                        ? "border-red-500 focus:border-red-400"
+                        : "border-luxe-gold/30 focus:border-luxe-gold"
+                    }`}
                   />
-                  {course.coverImage && (
+                  {course.coverImage && !isValidCloudinaryUrl(course.coverImage) && (
+                    <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
+                  )}
+                  {course.coverImage && isValidCloudinaryUrl(course.coverImage) && (
                     <img
                       src={course.coverImage}
                       alt="封面預覽"
-                      className="mt-2 w-full h-32 object-cover rounded-lg"
+                      className="mt-2 w-full h-24 object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Banner 圖片 (大圖) */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">
+                    Banner 大圖
+                    <span className="ml-1 text-gray-600">（內頁頂部橫幅用）</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={course.bannerImage}
+                    onChange={(e) => {
+                      setCourse((prev) => ({
+                        ...prev,
+                        bannerImage: e.target.value,
+                      }));
+                      setHasChanges(true);
+                    }}
+                    placeholder="https://res.cloudinary.com/..."
+                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
+                      course.bannerImage && !isValidCloudinaryUrl(course.bannerImage)
+                        ? "border-red-500 focus:border-red-400"
+                        : "border-luxe-gold/30 focus:border-luxe-gold"
+                    }`}
+                  />
+                  {course.bannerImage && !isValidCloudinaryUrl(course.bannerImage) && (
+                    <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
+                  )}
+                  {course.bannerImage && isValidCloudinaryUrl(course.bannerImage) && (
+                    <img
+                      src={course.bannerImage}
+                      alt="Banner 預覽"
+                      className="mt-2 w-full h-24 object-cover rounded-lg"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}

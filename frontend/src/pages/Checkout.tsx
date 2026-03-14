@@ -7,13 +7,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useTheme } from "@/context";
 import { useAuth } from "@/context/AuthContext";
 import { GlowButton, PillButton, Loading, Modal } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { SEOHead } from "@/components/seo";
-import { PrismScene } from "@/components/three";
-
 /** 支付方式類型 */
 type PaymentMethod =
   | "linepay"
@@ -122,7 +119,6 @@ const COACHING_PLANS: Record<string, CoachingPlan> = {
  * @returns {JSX.Element} 結帳頁面
  */
 const Checkout: React.FC = () => {
-  const { setTheme } = useTheme();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -142,10 +138,6 @@ const Checkout: React.FC = () => {
   // 取得方案 ID
   const planId = searchParams.get("plan") || "6-months";
   const selectedPlan = COACHING_PLANS[planId] || COACHING_PLANS["6-months"];
-
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
 
   // 檢查登入狀態
   useEffect(() => {
@@ -257,17 +249,14 @@ const Checkout: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-luxe-bg flex items-center justify-center">
-        <Loading theme="luxe" text="載入中..." />
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <Loading theme="studio" text="載入中..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-luxe-bg pt-20 pb-12 px-4 relative">
-      {/* Three.js Background */}
-      <PrismScene />
-
+    <div className="min-h-screen bg-transparent pt-20 pb-12 px-4 relative">
       {/* SEO Meta 標籤 */}
       <SEOHead
         title={`結帳 - ${selectedPlan.title}`}
@@ -275,13 +264,13 @@ const Checkout: React.FC = () => {
         url="/checkout"
       />
 
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="studio-container relative z-10">
         {/* 頁面標題 */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-2">
+          <h1 className="text-2xl sm:text-3xl font-light text-white/90 mb-2">
             確認訂單
           </h1>
-          <p className="text-luxe-muted">請確認您的訂單資訊並選擇支付方式</p>
+          <p className="text-[#888]">請確認您的訂單資訊並選擇支付方式</p>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-8">
@@ -290,30 +279,30 @@ const Checkout: React.FC = () => {
             {/* 步驟指示器 */}
             <div className="flex items-center justify-center gap-4 mb-8">
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-luxe-gold text-luxe-bg flex items-center justify-center text-sm font-medium">
+                <span className="w-8 h-8 rounded-full bg-[#c5a059] text-[#0a0a0a] flex items-center justify-center text-sm font-medium">
                   1
                 </span>
-                <span className="text-luxe-text text-sm">選擇方案</span>
+                <span className="text-white/90 text-sm">選擇方案</span>
               </div>
-              <div className="w-12 h-px bg-luxe-gold/50" />
+              <div className="w-12 h-px bg-[#c5a059]/50" />
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-luxe-gold text-luxe-bg flex items-center justify-center text-sm font-medium">
+                <span className="w-8 h-8 rounded-full bg-[#c5a059] text-[#0a0a0a] flex items-center justify-center text-sm font-medium">
                   2
                 </span>
-                <span className="text-luxe-text text-sm">選擇支付</span>
+                <span className="text-white/90 text-sm">選擇支付</span>
               </div>
               <div className="w-12 h-px bg-luxe-muted/30" />
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-luxe-muted/30 text-luxe-muted flex items-center justify-center text-sm font-medium">
+                <span className="w-8 h-8 rounded-full bg-luxe-muted/30 text-[#888] flex items-center justify-center text-sm font-medium">
                   3
                 </span>
-                <span className="text-luxe-muted text-sm">完成付款</span>
+                <span className="text-[#888] text-sm">完成付款</span>
               </div>
             </div>
 
             {/* 支付方式列表 */}
-            <div className="bg-luxe-black/50 border border-luxe-gold/20 rounded-xl p-6">
-              <h2 className="text-lg font-medium text-luxe-text mb-4">
+            <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6">
+              <h2 className="text-lg font-medium text-white/90 mb-4">
                 選擇支付方式
               </h2>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -326,8 +315,8 @@ const Checkout: React.FC = () => {
                       relative p-4 rounded-xl border-2 text-left transition-all duration-200
                       ${
                         selectedPayment === option.id
-                          ? "border-luxe-gold bg-luxe-gold/10"
-                          : "border-luxe-gold/20 hover:border-luxe-gold/50"
+                          ? "border-[#c5a059] bg-[#c5a059]/10"
+                          : "border-[#c5a059]/20 hover:border-[#c5a059]/50"
                       }
                       ${!option.available ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                     `}
@@ -335,7 +324,7 @@ const Checkout: React.FC = () => {
                     {selectedPayment === option.id && (
                       <div className="absolute top-2 right-2">
                         <svg
-                          className="w-5 h-5 text-luxe-gold"
+                          className="w-5 h-5 text-[#c5a059]"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -350,16 +339,16 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{option.icon}</span>
                       <div>
-                        <p className="text-luxe-text font-medium">
+                        <p className="text-white/90 font-medium">
                           {option.name}
                         </p>
-                        <p className="text-luxe-muted text-xs">
+                        <p className="text-[#888] text-xs">
                           {option.description}
                         </p>
                       </div>
                     </div>
                     {!option.available && (
-                      <span className="absolute top-2 right-2 text-xs text-luxe-muted">
+                      <span className="absolute top-2 right-2 text-xs text-[#888]">
                         即將推出
                       </span>
                     )}
@@ -369,15 +358,15 @@ const Checkout: React.FC = () => {
             </div>
 
             {/* 備註 */}
-            <div className="bg-luxe-black/50 border border-luxe-gold/20 rounded-xl p-6">
-              <h2 className="text-lg font-medium text-luxe-text mb-4">
+            <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6">
+              <h2 className="text-lg font-medium text-white/90 mb-4">
                 訂單備註（選填）
               </h2>
               <textarea
                 value={orderNote}
                 onChange={(e) => setOrderNote(e.target.value)}
                 placeholder="如有特殊需求請在此說明..."
-                className="w-full h-24 px-4 py-3 bg-luxe-bg border border-luxe-gold/20 rounded-lg text-luxe-text placeholder-luxe-muted/50 resize-none focus:outline-none focus:border-luxe-gold/50"
+                className="w-full h-24 px-4 py-3 bg-transparent border border-[#c5a059]/20 rounded-lg text-white/90 placeholder-[#888]/50 resize-none focus:outline-none focus:border-[#c5a059]/50"
               />
             </div>
 
@@ -391,20 +380,20 @@ const Checkout: React.FC = () => {
 
           {/* 右側：訂單摘要 */}
           <div className="lg:col-span-2">
-            <div className="bg-luxe-black/50 border border-luxe-gold/20 rounded-xl p-6 sticky top-24">
-              <h2 className="text-lg font-medium text-luxe-text mb-4">
+            <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6 sticky top-24">
+              <h2 className="text-lg font-medium text-white/90 mb-4">
                 訂單摘要
               </h2>
 
               {/* 方案資訊 */}
-              <div className="border-b border-luxe-gold/10 pb-4 mb-4">
-                <h3 className="text-luxe-text font-medium mb-1">
+              <div className="border-b border-[#c5a059]/10 pb-4 mb-4">
+                <h3 className="text-white/90 font-medium mb-1">
                   {selectedPlan.title}
                 </h3>
-                <p className="text-luxe-muted text-sm mb-2">
+                <p className="text-[#888] text-sm mb-2">
                   {selectedPlan.description}
                 </p>
-                <div className="flex items-center gap-2 text-sm text-luxe-muted">
+                <div className="flex items-center gap-2 text-sm text-[#888]">
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -424,21 +413,21 @@ const Checkout: React.FC = () => {
 
               {/* 價格明細 */}
               <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-luxe-muted">
+                <div className="flex justify-between text-[#888]">
                   <span>方案費用</span>
                   <span>NT$ {selectedPlan.price.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-luxe-muted">
+                <div className="flex justify-between text-[#888]">
                   <span>附贈課程</span>
                   <span className="text-green-400">含在方案內</span>
                 </div>
               </div>
 
               {/* 總計 */}
-              <div className="border-t border-luxe-gold/10 pt-4 mb-6">
+              <div className="border-t border-[#c5a059]/10 pt-4 mb-6">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-luxe-text font-medium">應付金額</span>
-                  <span className="text-2xl font-bold text-luxe-gold">
+                  <span className="text-white/90 font-medium">應付金額</span>
+                  <span className="text-2xl font-bold text-[#c5a059]">
                     NT$ {selectedPlan.price.toLocaleString()}
                   </span>
                 </div>
@@ -478,15 +467,15 @@ const Checkout: React.FC = () => {
                 </GlowButton>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-center text-luxe-muted text-sm">
+                  <p className="text-center text-[#888] text-sm">
                     請先登入以完成購買
                   </p>
                   <GlowButton onClick={handleGoToLogin} className="w-full">
                     登入
                   </GlowButton>
                   <PillButton
-                    theme="luxe"
-                    variant="outline"
+                    theme="studio"
+                    variant="default"
                     onClick={handleGoToRegister}
                     className="w-full"
                   >
@@ -496,7 +485,7 @@ const Checkout: React.FC = () => {
               )}
 
               {/* 安全提示 */}
-              <div className="mt-4 flex items-center justify-center gap-2 text-luxe-muted text-xs">
+              <div className="mt-4 flex items-center justify-center gap-2 text-[#888] text-xs">
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -520,7 +509,7 @@ const Checkout: React.FC = () => {
         <div className="mt-8 text-center">
           <Link
             to="/courses"
-            className="text-luxe-gold hover:underline text-sm"
+            className="text-[#c5a059] hover:underline text-sm"
           >
             ← 返回課程頁面
           </Link>
@@ -535,17 +524,17 @@ const Checkout: React.FC = () => {
       >
         <div className="text-center py-4">
           <div className="text-6xl mb-4">🔐</div>
-          <h3 className="text-lg font-medium text-luxe-text mb-2">
+          <h3 className="text-lg font-medium text-white/90 mb-2">
             如要購買課程，請先註冊或登入
           </h3>
-          <p className="text-luxe-muted text-sm mb-6">
+          <p className="text-[#888] text-sm mb-6">
             登入後即可選擇支付方式並完成購買
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <GlowButton onClick={handleGoToLogin}>立即登入</GlowButton>
             <PillButton
-              theme="luxe"
-              variant="outline"
+              theme="studio"
+              variant="default"
               onClick={handleGoToRegister}
             >
               註冊新帳號

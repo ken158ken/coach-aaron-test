@@ -551,6 +551,7 @@ router.post(
         description,
         content,
         thumbnailUrl,
+        bannerUrl,
         keywords,
         category,
         status,
@@ -573,6 +574,7 @@ router.post(
           article_description: description,
           article_content: content,
           article_thumbnail_url: thumbnailUrl,
+          article_banner_url: bannerUrl,
           article_keywords: keywords,
           article_category: category,
           status: status || "draft",
@@ -609,6 +611,7 @@ router.put(
         description,
         content,
         thumbnailUrl,
+        bannerUrl,
         keywords,
         category,
         status,
@@ -631,6 +634,8 @@ router.put(
       if (content !== undefined) updateData.article_content = content;
       if (thumbnailUrl !== undefined)
         updateData.article_thumbnail_url = thumbnailUrl;
+      if (bannerUrl !== undefined)
+        updateData.article_banner_url = bannerUrl;
       if (keywords !== undefined) updateData.article_keywords = keywords;
       if (category !== undefined) updateData.article_category = category;
       if (status !== undefined) updateData.status = status;

@@ -31,7 +31,7 @@ interface DataTableProps<T> {
   data: T[];
   keyExtractor: (item: T) => string | number;
   onRowClick?: (item: T) => void;
-  theme?: "abyss" | "prism" | "luxe";
+  theme?: string;
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
@@ -50,7 +50,6 @@ function DataTable<T>({
   data,
   keyExtractor,
   onRowClick,
-  theme = "luxe",
   loading = false,
   emptyMessage = "沒有資料",
   className = "",
@@ -59,37 +58,7 @@ function DataTable<T>({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
 
-  const themes = {
-    abyss: {
-      container: "bg-abyss-bg/30 border-abyss-accent/20",
-      header: "bg-abyss-bg/50 text-abyss-text/70 border-abyss-accent/20",
-      row: "border-abyss-accent/10 hover:bg-abyss-accent/10 transition-all duration-200",
-      text: "text-abyss-text",
-      muted: "text-abyss-text/60",
-      card: "bg-abyss-bg/40 border-abyss-accent/20 hover:border-abyss-accent/40 hover:shadow-md transition-all duration-300",
-      sortActive: "text-abyss-accent",
-    },
-    prism: {
-      container: "bg-prism-bg/30 border-prism-accent/20",
-      header: "bg-prism-bg/50 text-prism-text/70 border-prism-accent/20",
-      row: "border-prism-accent/10 hover:bg-prism-accent/10 transition-all duration-200",
-      text: "text-prism-text",
-      muted: "text-prism-text/60",
-      card: "bg-prism-bg/40 border-prism-accent/20 hover:border-prism-accent/40 hover:shadow-md transition-all duration-300",
-      sortActive: "text-prism-accent",
-    },
-    luxe: {
-      container: "bg-luxe-surface border-luxe-gold/10",
-      header: "bg-luxe-bg text-luxe-muted border-luxe-gold/10",
-      row: "border-luxe-gold/5 hover:bg-luxe-gold/10 transition-all duration-200",
-      text: "text-luxe-text",
-      muted: "text-luxe-muted",
-      card: "bg-luxe-surface border-luxe-gold/10 hover:border-luxe-gold/30 hover:shadow-lg hover:shadow-luxe-gold/5 transition-all duration-300",
-      sortActive: "text-luxe-gold",
-    },
-  };
 
-  const styles = themes[theme];
 
   /** 取得巢狀物件值 */
   const getValue = useCallback((item: T, key: string): unknown => {
@@ -155,7 +124,7 @@ function DataTable<T>({
     const isActive = sortKey === colKey;
     return (
       <span
-        className={`ml-1 inline-flex flex-col text-[10px] leading-none ${isActive ? styles.sortActive : "opacity-30"}`}
+        className={`ml-1 inline-flex flex-col text-[10px] leading-none ${isActive ? "text-white" : "opacity-30"}`}
       >
         <span
           className={
@@ -177,7 +146,7 @@ function DataTable<T>({
 
   if (loading) {
     return (
-      <div className={`rounded-lg border ${styles.container} ${className}`}>
+      <div className={`rounded-lg border border-white/10 overflow-hidden ${className}`}>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full" />
         </div>
@@ -187,8 +156,8 @@ function DataTable<T>({
 
   if (sortedData.length === 0) {
     return (
-      <div className={`rounded-lg border ${styles.container} ${className}`}>
-        <div className={`px-4 py-12 text-center ${styles.text}`}>
+      <div className={`rounded-lg border border-white/10 overflow-hidden ${className}`}>
+        <div className={`px-4 py-12 text-center text-white/80`}>
           {emptyMessage}
         </div>
       </div>
@@ -206,12 +175,12 @@ function DataTable<T>({
     <>
       {/* 桌面版表格 */}
       <div
-        className={`hidden md:block rounded-lg border ${styles.container} ${className}`}
+        className={`hidden md:block rounded-lg border border-white/10 overflow-hidden ${className}`}
       >
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full">
             <thead className="relative">
-              <tr className={`border-b ${styles.header}`}>
+              <tr className={`border-b bg-white/3 text-[#888] text-xs uppercase tracking-wider border-b border-white/10`}>
                 {columns.map((column) => {
                   const colKey = String(column.key);
                   const canSort =
@@ -243,14 +212,14 @@ function DataTable<T>({
                   className={`
                     border-b
                     transition-colors
-                    ${styles.row}
+                    border-white/5 hover:bg-white/3 transition-all duration-200
                     ${onRowClick ? "cursor-pointer" : ""}
                   `}
                 >
                   {columns.map((column) => (
                     <td
                       key={String(column.key)}
-                      className={`px-4 py-3 text-sm ${styles.text} ${column.className || ""}`}
+                      className={`px-4 py-3 text-sm text-white/80 ${column.className || ""}`}
                     >
                       {column.render
                         ? column.render(item)
@@ -269,7 +238,7 @@ function DataTable<T>({
         {/* 手機版排序選擇器 */}
         {sortable && (
           <div className="flex items-center gap-2 px-1">
-            <span className={`text-xs ${styles.muted}`}>排序：</span>
+            <span className={`text-xs text-[#888]`}>排序：</span>
             <select
               value={sortKey ? `${sortKey}:${sortDir}` : ""}
               onChange={(e) => {
@@ -282,7 +251,7 @@ function DataTable<T>({
                   setSortDir(dir as SortDirection);
                 }
               }}
-              className={`text-xs rounded border px-2 py-1.5 bg-transparent ${styles.muted} border-luxe-gold/20 focus:outline-none focus:border-luxe-gold/50`}
+              className={`text-xs rounded border px-2 py-1.5 bg-transparent text-[#888] border-[#c5a059]/20 focus:outline-none focus:border-[#c5a059]/50`}
             >
               <option value="">預設</option>
               {columns
@@ -309,14 +278,14 @@ function DataTable<T>({
             onClick={() => onRowClick?.(item)}
             className={`
               p-3 sm:p-4 rounded-lg border
-              ${styles.card}
+              studio-card
               ${onRowClick ? "cursor-pointer active:scale-[0.98]" : ""}
               transition-transform
             `}
           >
             {/* 主要資訊 + 操作按鈕 */}
             <div className="flex items-start justify-between gap-2 mb-2">
-              <div className={`font-medium min-w-0 break-words ${styles.text}`}>
+              <div className={`font-medium min-w-0 break-words text-white/80`}>
                 {primaryColumn.render
                   ? primaryColumn.render(item)
                   : String(getValue(item, String(primaryColumn.key)) ?? "")}
@@ -333,10 +302,10 @@ function DataTable<T>({
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                 {secondaryColumns.map((column) => (
                   <div key={String(column.key)} className="min-w-0">
-                    <span className={`${styles.muted} text-xs`}>
+                    <span className={`text-[#888] text-xs`}>
                       {column.headerText ?? column.header}
                     </span>
-                    <div className={`${styles.text} truncate`}>
+                    <div className={`text-white/80 truncate`}>
                       {column.render
                         ? column.render(item)
                         : String(getValue(item, String(column.key)) ?? "-")}

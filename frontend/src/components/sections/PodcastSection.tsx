@@ -82,18 +82,14 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".podcast-card", {
-        y: 50,
-        opacity: 0,
-        duration: 0.6,
-        stagger: 0.15,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 70%",
-          toggleActions: "play none none reverse",
+      gsap.fromTo(
+        ".podcast-card",
+        { y: 30, opacity: 0 },
+        {
+          y: 0, opacity: 1, duration: 0.65, stagger: 0.1, ease: "expo.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 85%", toggleActions: "play none none none" },
         },
-      });
+      );
     }, sectionRef);
 
     return () => ctx.revert();
@@ -107,18 +103,18 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
         sm:py-20
         md:py-24
         px-4
-        bg-abyss-bg
+        bg-transparent
         ${className}
       `}
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[1440px] mx-auto">
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
-          <span className="inline-block text-abyss-accent text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
+          <span className="inline-block text-white text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
             Podcast
           </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-abyss-text mb-3 sm:mb-4">深海電台</h2>
-          <p className="text-sm sm:text-base text-abyss-text/60 max-w-xl mx-auto px-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white/90 mb-3 sm:mb-4">深海電台</h2>
+          <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
             每週更新健身知識、訓練技巧與生活態度分享
           </p>
         </div>
@@ -129,7 +125,7 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
             options={filterOptions}
             value={filter}
             onChange={setFilter}
-            theme="abyss"
+            theme="studio"
           />
         </div>
 
@@ -143,9 +139,9 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
             >
               <div className="flex flex-col h-full">
                 {/* Play Icon */}
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-abyss-accent/20 flex items-center justify-center mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 sm:mb-4">
                   <svg
-                    className="w-4 h-4 sm:w-5 sm:h-5 text-abyss-accent ml-0.5 sm:ml-1"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-white ml-0.5 sm:ml-1"
                     fill="currentColor"
                     viewBox="0 0 24 24"
                   >
@@ -154,15 +150,15 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                 </div>
 
                 {/* Content */}
-                <h3 className="text-base sm:text-lg font-medium text-abyss-text mb-2">
+                <h3 className="text-base sm:text-lg font-medium text-white/90 mb-2">
                   {episode.title}
                 </h3>
-                <p className="text-abyss-text/60 text-xs sm:text-sm mb-3 sm:mb-4 flex-grow">
+                <p className="text-white/50 text-xs sm:text-sm mb-3 sm:mb-4 flex-grow">
                   {episode.description}
                 </p>
 
                 {/* Meta */}
-                <div className="flex items-center justify-between text-[10px] sm:text-xs text-abyss-text/50">
+                <div className="flex items-center justify-between text-[10px] sm:text-xs text-white/40">
                   <span>🎧 {episode.duration}</span>
                   <span>{episode.date}</span>
                 </div>

@@ -5,34 +5,23 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useTheme } from "@/context";
 import { GlowButton, PillButton } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
-import { PrismScene } from "@/components/three";
-
 /**
  * CheckoutSuccess - 結帳成功頁面
  *
  * @returns {JSX.Element} 結帳成功頁面
  */
 const CheckoutSuccess: React.FC = () => {
-  const { setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const orderNumber = searchParams.get("order") || "ORD" + Date.now();
 
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
-
   return (
-    <div className="min-h-screen bg-luxe-bg pt-20 pb-12 px-4 flex items-center justify-center relative">
-      {/* Three.js Background */}
-      <PrismScene />
-
+    <div className="min-h-screen bg-transparent pt-20 pb-12 px-4 flex items-center justify-center relative">
       {/* SEO Meta 標籤 */}
       <SEOHead
         title="付款成功"
@@ -61,45 +50,45 @@ const CheckoutSuccess: React.FC = () => {
         </div>
 
         {/* 標題 */}
-        <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-2">
+        <h1 className="text-2xl sm:text-3xl font-light text-white/90 mb-2">
           付款成功！
         </h1>
-        <p className="text-luxe-muted mb-6">感謝您的購買，我們已收到您的訂單</p>
+        <p className="text-[#888] mb-6">感謝您的購買，我們已收到您的訂單</p>
 
         {/* 訂單資訊 */}
-        <div className="bg-luxe-black/50 border border-luxe-gold/20 rounded-xl p-6 mb-8">
-          <div className="flex justify-between items-center py-2 border-b border-luxe-gold/10">
-            <span className="text-luxe-muted">訂單編號</span>
-            <span className="text-luxe-text font-mono">{orderNumber}</span>
+        <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6 mb-8">
+          <div className="flex justify-between items-center py-2 border-b border-[#c5a059]/10">
+            <span className="text-[#888]">訂單編號</span>
+            <span className="text-white/90 font-mono">{orderNumber}</span>
           </div>
-          <div className="flex justify-between items-center py-2 border-b border-luxe-gold/10">
-            <span className="text-luxe-muted">訂單狀態</span>
+          <div className="flex justify-between items-center py-2 border-b border-[#c5a059]/10">
+            <span className="text-[#888]">訂單狀態</span>
             <span className="text-green-400">已付款</span>
           </div>
           <div className="flex justify-between items-center py-2">
-            <span className="text-luxe-muted">訂單時間</span>
-            <span className="text-luxe-text">
+            <span className="text-[#888]">訂單時間</span>
+            <span className="text-white/90">
               {new Date().toLocaleString("zh-TW")}
             </span>
           </div>
         </div>
 
         {/* 下一步說明 */}
-        <div className="bg-luxe-gold/10 border border-luxe-gold/30 rounded-xl p-6 mb-8 text-left">
-          <h2 className="text-luxe-gold font-medium mb-3">
+        <div className="bg-[#c5a059]/10 border border-[#c5a059]/30 rounded-xl p-6 mb-8 text-left">
+          <h2 className="text-[#c5a059] font-medium mb-3">
             接下來會發生什麼？
           </h2>
-          <ol className="space-y-2 text-luxe-text/80 text-sm">
+          <ol className="space-y-2 text-white/90/80 text-sm">
             <li className="flex items-start gap-2">
-              <span className="text-luxe-gold">1.</span>
+              <span className="text-[#c5a059]">1.</span>
               <span>我們會在 24 小時內與您聯繫，確認培訓時間</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-luxe-gold">2.</span>
+              <span className="text-[#c5a059]">2.</span>
               <span>您將收到一封確認信件，包含培訓相關資訊</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-luxe-gold">3.</span>
+              <span className="text-[#c5a059]">3.</span>
               <span>您可以在會員中心查看課程進度與培訓記錄</span>
             </li>
           </ol>
@@ -111,8 +100,8 @@ const CheckoutSuccess: React.FC = () => {
             前往會員中心
           </GlowButton>
           <PillButton
-            theme="luxe"
-            variant="outline"
+            theme="studio"
+            variant="default"
             onClick={() => navigate("/")}
           >
             返回首頁
@@ -120,9 +109,9 @@ const CheckoutSuccess: React.FC = () => {
         </div>
 
         {/* 聯絡資訊 */}
-        <p className="mt-8 text-luxe-muted text-sm">
+        <p className="mt-8 text-[#888] text-sm">
           如有任何問題，請
-          <Link to="/contact" className="text-luxe-gold hover:underline">
+          <Link to="/contact" className="text-[#c5a059] hover:underline">
             聯絡我們
           </Link>
         </p>

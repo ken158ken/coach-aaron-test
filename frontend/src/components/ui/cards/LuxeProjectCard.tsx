@@ -56,7 +56,7 @@ const LuxeProjectCard: React.FC<LuxeProjectCardProps> = ({
           className="
             absolute
             inset-0
-            bg-luxe-bg/60
+            bg-[#0a0a0a]/60
             opacity-0
             group-hover:opacity-100
             transition-opacity
@@ -66,21 +66,21 @@ const LuxeProjectCard: React.FC<LuxeProjectCardProps> = ({
             justify-center
           "
         >
-          <span className="text-luxe-text uppercase tracking-widest text-sm">
+          <span className="text-white/90 uppercase tracking-widest text-sm">
             View Project
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <p className="text-luxe-muted text-xs uppercase tracking-wider mb-1">
+      <p className="text-[#888] text-xs uppercase tracking-wider mb-1">
         {category}
       </p>
-      <h3 className="text-luxe-text text-lg font-light tracking-wide mb-2">
+      <h3 className="text-white/90 text-lg font-light tracking-wide mb-2">
         {title}
       </h3>
       {description && (
-        <p className="text-luxe-muted text-sm font-light">{description}</p>
+        <p className="text-[#888] text-sm font-light">{description}</p>
       )}
     </div>
   );

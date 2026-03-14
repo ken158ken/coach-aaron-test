@@ -50,6 +50,7 @@ interface ArticleData {
   category: string;
   tags: string[];
   coverImage: string;
+  bannerImage: string;
   content: string;
   status: "draft" | "published";
 }
@@ -102,6 +103,7 @@ const ArticleEditor: React.FC = () => {
     category: "",
     tags: [],
     coverImage: "",
+    bannerImage: "",
     content: "",
     status: "draft",
   });
@@ -279,6 +281,7 @@ const ArticleEditor: React.FC = () => {
           category: data.article_category || "",
           tags: keywordsArray,
           coverImage: data.article_thumbnail_url || "",
+          bannerImage: data.article_banner_url || "",
           content: data.article_content || "",
           status: (data.status as "draft" | "published") || "draft",
         };
@@ -541,6 +544,24 @@ const ArticleEditor: React.FC = () => {
       return;
     }
 
+    // 驗證圖片網址必須是 Cloudinary
+    if (article.coverImage && !isValidCloudinaryUrl(article.coverImage)) {
+      await dialog.alert({
+        title: "圖片網址錯誤",
+        message: "封面圖片必須使用 Cloudinary 網址（https://res.cloudinary.com/...）",
+        type: "error",
+      });
+      return;
+    }
+    if (article.bannerImage && !isValidCloudinaryUrl(article.bannerImage)) {
+      await dialog.alert({
+        title: "圖片網址錯誤",
+        message: "Banner 圖片必須使用 Cloudinary 網址（https://res.cloudinary.com/...）",
+        type: "error",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const slug = article.slug || generateSlug();
@@ -550,6 +571,7 @@ const ArticleEditor: React.FC = () => {
         description: article.excerpt,
         content: article.content,
         thumbnailUrl: article.coverImage,
+        bannerUrl: article.bannerImage,
         keywords: article.tags,
         category: article.category,
         status: "published",
@@ -974,10 +996,11 @@ const ArticleEditor: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 封面圖片 */}
+                {/* 封面縮圖 */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    封面圖片
+                    封面縮圖
+                    <span className="ml-1 text-gray-600">（列表卡片用）</span>
                   </label>
                   <input
                     type="url"
@@ -990,13 +1013,58 @@ const ArticleEditor: React.FC = () => {
                       setHasChanges(true);
                     }}
                     placeholder="https://res.cloudinary.com/..."
-                    className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
+                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
+                      article.coverImage && !isValidCloudinaryUrl(article.coverImage)
+                        ? "border-red-500 focus:border-red-400"
+                        : "border-luxe-gold/30 focus:border-luxe-gold"
+                    }`}
                   />
-                  {article.coverImage && (
+                  {article.coverImage && !isValidCloudinaryUrl(article.coverImage) && (
+                    <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
+                  )}
+                  {article.coverImage && isValidCloudinaryUrl(article.coverImage) && (
                     <img
                       src={article.coverImage}
                       alt="封面預覽"
-                      className="mt-2 w-full h-32 object-cover rounded-lg"
+                      className="mt-2 w-full h-24 object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Banner 大圖 */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">
+                    Banner 大圖
+                    <span className="ml-1 text-gray-600">（內頁頂部橫幅用）</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={article.bannerImage}
+                    onChange={(e) => {
+                      setArticle((prev) => ({
+                        ...prev,
+                        bannerImage: e.target.value,
+                      }));
+                      setHasChanges(true);
+                    }}
+                    placeholder="https://res.cloudinary.com/..."
+                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
+                      article.bannerImage && !isValidCloudinaryUrl(article.bannerImage)
+                        ? "border-red-500 focus:border-red-400"
+                        : "border-luxe-gold/30 focus:border-luxe-gold"
+                    }`}
+                  />
+                  {article.bannerImage && !isValidCloudinaryUrl(article.bannerImage) && (
+                    <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
+                  )}
+                  {article.bannerImage && isValidCloudinaryUrl(article.bannerImage) && (
+                    <img
+                      src={article.bannerImage}
+                      alt="Banner 預覽"
+                      className="mt-2 w-full h-24 object-cover rounded-lg"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}

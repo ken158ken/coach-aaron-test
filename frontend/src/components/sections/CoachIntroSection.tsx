@@ -52,33 +52,24 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   useEffect(() => {
     const ctx = gsap.context(() => {
       // Image animation
-      gsap.from(imageRef.current, {
-        x: -100,
-        opacity: 0,
-        duration: 1,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 80%",
-          end: "top 20%",
-          toggleActions: "play none none reverse",
+      gsap.fromTo(
+        imageRef.current,
+        { x: -60, opacity: 0 },
+        {
+          x: 0, opacity: 1, duration: 0.8, ease: "expo.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 85%", toggleActions: "play none none none" },
         },
-      });
+      );
 
       // Content animation
-      gsap.from(contentRef.current?.children || [], {
-        y: 50,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.2,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 70%",
-          end: "top 20%",
-          toggleActions: "play none none reverse",
+      gsap.fromTo(
+        contentRef.current?.children || [],
+        { y: 30, opacity: 0 },
+        {
+          y: 0, opacity: 1, duration: 0.65, stagger: 0.12, ease: "expo.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 80%", toggleActions: "play none none none" },
         },
-      });
+      );
     }, sectionRef);
 
     return () => ctx.revert();
@@ -95,7 +86,7 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
         ${className}
       `}
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[1440px] mx-auto">
         <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12 items-center">
           {/* Image */}
           <div
@@ -110,21 +101,21 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
               />
             </div>
             {/* Decorative Elements */}
-            <div className="absolute -bottom-3 -right-3 sm:-bottom-4 sm:-right-4 w-16 h-16 sm:w-24 sm:h-24 border border-luxe-gold/30 rounded-xl -z-10" />
-            <div className="absolute -top-3 -left-3 sm:-top-4 sm:-left-4 w-12 h-12 sm:w-16 sm:h-16 bg-luxe-gold/10 rounded-xl -z-10" />
+            <div className="absolute -bottom-3 -right-3 sm:-bottom-4 sm:-right-4 w-16 h-16 sm:w-24 sm:h-24 border border-[#c5a059]/30 rounded-xl -z-10" />
+            <div className="absolute -top-3 -left-3 sm:-top-4 sm:-left-4 w-12 h-12 sm:w-16 sm:h-16 bg-gold/10 rounded-xl -z-10" />
           </div>
 
           {/* Content */}
           <div ref={contentRef} className="text-center md:text-left">
-            <span className="inline-block text-luxe-gold text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
+            <span className="inline-block text-[#c5a059] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
               關於教練
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-luxe-text mb-4 sm:mb-6 leading-tight">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white/90 mb-4 sm:mb-6 leading-tight">
               Aaron 教練
               <br />
-              <span className="text-luxe-gold">專業健身指導</span>
+              <span className="text-[#c5a059]">專業健身指導</span>
             </h2>
-            <p className="text-luxe-muted text-base sm:text-lg font-light leading-relaxed mb-4 sm:mb-6">
+            <p className="text-[#888] text-base sm:text-lg font-light leading-relaxed mb-4 sm:mb-6">
               {aboutCoach}
             </p>
             <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 text-left max-w-md mx-auto md:mx-0">
@@ -136,14 +127,14 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
               ].map((item, index) => (
                 <li
                   key={index}
-                  className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-luxe-text/80"
+                  className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-white/70"
                 >
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-luxe-gold rounded-full flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gold rounded-full shrink-0" />
                   {item}
                 </li>
               ))}
             </ul>
-            <TextButton to="/about" theme="luxe">
+            <TextButton to="/about" theme="studio">
               了解更多
             </TextButton>
           </div>

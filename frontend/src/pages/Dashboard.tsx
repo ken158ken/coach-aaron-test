@@ -4,11 +4,10 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { useAuth, useTheme } from "@/context";
+import { useAuth } from "@/context";
 import { StatCard, PillButton } from "@/components/ui";
-import { PrismScene } from "@/components/three";
 import SEOHead from "@/components/seo/SEOHead";
 
 /**
@@ -17,12 +16,7 @@ import SEOHead from "@/components/seo/SEOHead";
  * @returns {JSX.Element} 儀表板頁面
  */
 const Dashboard: React.FC = () => {
-  const { setTheme } = useTheme();
   const { user } = useAuth();
-
-  useEffect(() => {
-    setTheme("luxe");
-  }, [setTheme]);
 
   // Auth guard 已由 App.tsx RequireAuth 統一處理
 
@@ -55,19 +49,19 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-luxe-bg relative">
+    <div className="min-h-screen bg-transparent relative">
       <SEOHead title="管理後台 | 阿倫教官" noIndex={true} />
-      {/* Three.js Background */}
-      <PrismScene />
-
-      <div className="pt-24 pb-16 px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
+      <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
+        <div className="studio-container">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-light text-luxe-text mb-2">
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
+              Dashboard
+            </span>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
               歡迎回來，{user?.name || "學員"}
             </h1>
-            <p className="text-luxe-muted">繼續您的健身之旅</p>
+            <p className="text-sm sm:text-base text-white/50">繼續您的健身之旅</p>
           </div>
 
           {/* Stats Grid */}
@@ -78,15 +72,15 @@ const Dashboard: React.FC = () => {
                 value={stat.value}
                 label={stat.label}
                 trend={stat.trend}
-                theme="luxe"
+                theme="studio"
               />
             ))}
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Recent Courses */}
-            <div className="md:col-span-2 bg-luxe-surface rounded-lg border border-luxe-gold/10 p-6">
-              <h2 className="text-xl text-luxe-text font-light mb-6">
+            <div className="md:col-span-2 bg-[#141414] rounded-lg border border-[#c5a059]/10 p-6">
+              <h2 className="text-xl text-white/90 font-light mb-6">
                 繼續學習
               </h2>
               {recentCourses.length > 0 ? (
@@ -95,27 +89,27 @@ const Dashboard: React.FC = () => {
                     <Link
                       key={course.id}
                       to={`/courses/${course.id}`}
-                      className="flex items-center gap-4 p-4 bg-luxe-bg/50 rounded-lg hover:bg-luxe-bg transition-colors"
+                      className="flex items-center gap-4 p-4 bg-transparent/50 rounded-lg hover:bg-transparent transition-colors"
                     >
-                      <div className="w-16 h-16 rounded-lg bg-luxe-gold/20 flex items-center justify-center">
-                        <span className="text-luxe-gold">📚</span>
+                      <div className="w-16 h-16 rounded-lg bg-[rgba(197,160,89,0.2)] flex items-center justify-center">
+                        <span className="text-[#c5a059]">📚</span>
                       </div>
                       <div className="flex-grow">
-                        <h3 className="text-luxe-text font-medium">
+                        <h3 className="text-white/90 font-medium">
                           {course.title}
                         </h3>
-                        <p className="text-luxe-muted text-sm">
+                        <p className="text-[#888] text-sm">
                           {course.lastAccess}學習
                         </p>
                         {/* Progress Bar */}
-                        <div className="mt-2 h-1.5 bg-luxe-bg rounded-full overflow-hidden">
+                        <div className="mt-2 h-1.5 bg-transparent rounded-full overflow-hidden">
                           <div
                             className="h-full bg-luxe-gold rounded-full transition-all"
                             style={{ width: `${course.progress}%` }}
                           />
                         </div>
                       </div>
-                      <span className="text-luxe-gold font-medium">
+                      <span className="text-[#c5a059] font-medium">
                         {course.progress}%
                       </span>
                     </Link>
@@ -123,9 +117,9 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-luxe-muted mb-4">尚未開始任何課程</p>
+                  <p className="text-[#888] mb-4">尚未開始任何課程</p>
                   <Link to="/courses">
-                    <PillButton theme="luxe" variant="outline">
+                    <PillButton theme="studio" variant="default">
                       瀏覽課程
                     </PillButton>
                   </Link>
@@ -134,38 +128,38 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-6">
-              <h2 className="text-xl text-luxe-text font-light mb-6">
+            <div className="bg-[#141414] rounded-lg border border-[#c5a059]/10 p-6">
+              <h2 className="text-xl text-white/90 font-light mb-6">
                 快速操作
               </h2>
               <div className="space-y-3">
                 <Link
                   to="/courses"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-luxe-bg transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">📚</span>
-                  <span className="text-luxe-text">瀏覽課程</span>
+                  <span className="text-white/90">瀏覽課程</span>
                 </Link>
                 <Link
                   to="/videos"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-luxe-bg transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">🎬</span>
-                  <span className="text-luxe-text">觀看影片</span>
+                  <span className="text-white/90">觀看影片</span>
                 </Link>
                 <Link
                   to="/member"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-luxe-bg transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">👤</span>
-                  <span className="text-luxe-text">會員中心</span>
+                  <span className="text-white/90">會員中心</span>
                 </Link>
                 <Link
                   to="/contact"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-luxe-bg transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">✉️</span>
-                  <span className="text-luxe-text">聯絡教練</span>
+                  <span className="text-white/90">聯絡教練</span>
                 </Link>
               </div>
             </div>

@@ -54,8 +54,8 @@ const BubbleNav: React.FC<BubbleNavProps> = ({ items, className = "" }) => {
                   duration-300
                   ${
                     isActive
-                      ? "bg-abyss-accent/20 border-abyss-accent text-abyss-accent"
-                      : "border-abyss-accent/50 text-abyss-text hover:border-abyss-accent hover:text-abyss-accent"
+                      ? "bg-abyss-accent/20 border-white/40 text-white"
+                      : "border-white/40/50 text-white/90 hover:border-white/40 hover:text-white"
                   }
                   ${isHovered ? "scale-110" : ""}
                 `}
@@ -77,9 +77,9 @@ const BubbleNav: React.FC<BubbleNavProps> = ({ items, className = "" }) => {
                     px-3
                     py-1
                     text-xs
-                    bg-abyss-bg
+                    bg-[#050505]
                     border
-                    border-abyss-accent/50
+                    border-white/40/50
                     rounded
                     whitespace-nowrap
                     transition-opacity
