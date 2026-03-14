@@ -144,9 +144,11 @@ const Navbar: React.FC = (): JSX.Element => {
         ref={navRef}
         className="fixed top-0 left-0 right-0 z-50 px-8 lg:px-12 py-5"
         style={{
-          background: "rgba(10, 10, 10, 0.88)",
+          background: isDark ? "rgba(10,10,10,0.88)" : "rgba(246,243,238,0.92)",
           backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          borderBottom: isDark
+            ? "1px solid rgba(255,255,255,0.10)"
+            : "1px solid rgba(0,0,0,0.08)",
         }}
       >
         {/* Navbar glare 動畫條 — 獨立 overflow:hidden 容器 */}
@@ -156,13 +158,18 @@ const Navbar: React.FC = (): JSX.Element => {
             position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none",
           }}
         >
-          <div style={{
-            position: "absolute", top: 0, left: "-100%", width: "50%", height: "100%",
-            background: "linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%)",
-            transform: "skewX(-45deg)",
-            animation: "navbarGlare 6s infinite 2s",
-            opacity: 0.4,
-          }} />
+          <div
+            className="navbar-glare-strip"
+            style={{
+              position: "absolute", top: 0, left: "-100%", width: "50%", height: "100%",
+              background: isDark
+                ? "linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%)"
+                : "linear-gradient(90deg,rgba(0,0,0,0) 0%,rgba(38,36,33,0.20) 50%,rgba(0,0,0,0) 100%)",
+              transform: "skewX(-45deg)",
+              animation: "navbarGlare 6s infinite 2s",
+              opacity: isDark ? 0.4 : 0.55,
+            }}
+          />
         </div>
 
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-6">
@@ -218,15 +225,17 @@ const Navbar: React.FC = (): JSX.Element => {
                 <div
                   className="absolute right-0 mt-2 w-52 py-2 rounded shadow-2xl z-50"
                   style={{
-                    background: "rgba(15,15,15,0.95)",
+                    background: isDark ? "rgba(15,15,15,0.95)" : "rgba(250,248,244,0.97)",
                     backdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    border: isDark
+                      ? "1px solid rgba(255,255,255,0.12)"
+                      : "1px solid rgba(0,0,0,0.10)",
                   }}
                 >
                   {/* 日夜切換 */}
                   <button
                     onClick={() => { toggleColorMode(); setUserDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-white hover:bg-white/5 transition-colors"
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                   >
                     {isDark ? <SunIcon /> : <MoonIcon />}
                     <span>{isDark ? "切換亮色模式" : "切換深色模式"}</span>
@@ -235,7 +244,7 @@ const Navbar: React.FC = (): JSX.Element => {
                   {/* 語言切換 */}
                   <button
                     onClick={() => { setLanguage(language === "zh-TW" ? "en" : "zh-TW"); setUserDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-white hover:bg-white/5 transition-colors"
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                   >
                     <span className="text-base">🌐</span>
                     <span>{language === "zh-TW" ? "English" : "中文"}</span>
@@ -248,7 +257,7 @@ const Navbar: React.FC = (): JSX.Element => {
                       <Link
                         to="/member"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-white hover:bg-white/5 transition-colors"
+                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                       >
                         <UserIcon className="w-4 h-4" />
                         <span>會員中心</span>
@@ -258,18 +267,18 @@ const Navbar: React.FC = (): JSX.Element => {
                         <Link
                           to="/admin"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-white hover:bg-white/5 transition-colors"
+                          className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                         >
                           <AdminIcon />
                           <span>後台管理</span>
                         </Link>
                       )}
 
-                      <div className="my-1 border-t border-white/10" />
+                      <div className={`my-1 border-t ${isDark ? "border-white/10" : "border-black/8"}`} />
 
                       <button
                         onClick={() => { handleLogout(); setUserDropdownOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-white hover:bg-white/5 transition-colors"
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                       >
                         <LogoutIcon />
                         <span>登出</span>
@@ -279,7 +288,7 @@ const Navbar: React.FC = (): JSX.Element => {
                     <Link
                       to="/login"
                       onClick={() => setUserDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-white hover:bg-white/5 transition-colors"
+                      className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                     >
                       <UserIcon className="w-4 h-4" />
                       <span>登入 / 註冊</span>
@@ -306,7 +315,7 @@ const Navbar: React.FC = (): JSX.Element => {
         <div
           className="fixed inset-0 z-40 flex flex-col pt-20 px-6 pb-8 lg:hidden"
           style={{
-            background: "rgba(8,8,8,0.97)",
+            background: isDark ? "rgba(8,8,8,0.97)" : "rgba(244,241,236,0.97)",
             backdropFilter: "blur(20px)",
           }}
         >
@@ -316,7 +325,9 @@ const Navbar: React.FC = (): JSX.Element => {
                 <Link
                   to={link.path}
                   className={`block text-lg font-display tracking-[2px] uppercase transition-colors duration-300 ${
-                    isActive(link.path) ? "text-white" : "text-[#888] hover:text-white"
+                    isActive(link.path)
+                      ? isDark ? "text-white" : "text-[#111]"
+                      : isDark ? "text-[#888] hover:text-white" : "text-[#666] hover:text-[#111]"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -326,10 +337,10 @@ const Navbar: React.FC = (): JSX.Element => {
             ))}
           </ul>
 
-          <div className="mt-auto pt-6 border-t border-white/10 flex items-center gap-4">
+          <div className={`mt-auto pt-6 border-t flex items-center gap-4 ${isDark ? "border-white/10" : "border-black/10"}`}>
             <button
               onClick={toggleColorMode}
-              className="w-9 h-9 flex items-center justify-center border border-white/20 rounded text-[#888] hover:text-white hover:border-white/50 transition-all"
+              className={`w-9 h-9 flex items-center justify-center border rounded transition-all ${isDark ? "border-white/20 text-[#888] hover:text-white hover:border-white/50" : "border-black/20 text-[#666] hover:text-[#111] hover:border-black/50"}`}
             >
               {isDark ? <SunIcon /> : <MoonIcon />}
             </button>

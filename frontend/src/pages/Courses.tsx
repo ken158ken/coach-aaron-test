@@ -23,6 +23,8 @@ const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const coursesRef = useScrollReveal();
 
   useEffect(() => {
@@ -64,6 +66,16 @@ const Courses: React.FC = () => {
     advanced: "專家",
   };
 
+  // 從課程資料提取所有分類
+  const categories = [...new Set(courses.map((c) => c.course_category).filter((c): c is string => !!c))];
+
+  // 套用篩選
+  const filteredCourses = courses.filter((c) => {
+    if (selectedLevel && c.course_level !== selectedLevel) return false;
+    if (selectedCategory && c.course_category !== selectedCategory) return false;
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
@@ -88,6 +100,64 @@ const Courses: React.FC = () => {
           title="課程中心"
           subtitle="探索專業健身課程，開啟你的訓練旅程"
         />
+          {/* ── Filter Bar ── */}
+          {(courses.length > 0) && (
+            <div className="mb-6 sm:mb-8 space-y-3">
+              {/* Level filter */}
+              <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                {(["", "beginner", "intermediate", "advanced"] as const).map((lv) => (
+                  <button
+                    key={lv}
+                    onClick={() => setSelectedLevel(lv)}
+                    className={`level-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide border transition-all duration-200 ${selectedLevel === lv ? "active" : ""}`}
+                    style={selectedLevel !== lv ? {
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "rgba(255,255,255,0.55)",
+                    } : {
+                      background: "rgba(255,255,255,0.12)",
+                      border: "1px solid rgba(255,255,255,0.50)",
+                      color: "#fff",
+                    }}
+                  >
+                    {lv === "" ? "全部等級" : levelLabels[lv]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Category filter — only if categories exist */}
+              {categories.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                  <button
+                    onClick={() => setSelectedCategory("")}
+                    className={`page-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide border transition-all duration-200 ${selectedCategory === "" ? "active" : ""}`}
+                    style={selectedCategory !== "" ? {
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "rgba(255,255,255,0.55)",
+                    } : undefined}
+                  >
+                    全部分類
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`page-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide border transition-all duration-200 ${selectedCategory === cat ? "active" : ""}`}
+                      style={selectedCategory !== cat ? {
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        color: "rgba(255,255,255,0.55)",
+                      } : undefined}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-sm sm:text-base text-red-400 text-center">
@@ -96,21 +166,21 @@ const Courses: React.FC = () => {
           )}
 
           {/* Courses Grid */}
-          {courses.length > 0 ? (
+          {filteredCourses.length > 0 ? (
             <div
               ref={coursesRef}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5"
             >
-              {courses.map((course, index) => (
+              {filteredCourses.map((course, index) => (
                 <Link
                   key={course.course_id}
                   to={`/courses/${course.course_id}`}
                   className={`group scroll-reveal ${getStaggerClass(index)}`}
                 >
-                  <article className="bg-transparent/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                  <article className="course-card-item backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
                     {course.course_thumbnail_url ? (
-                      <div className="aspect-[16/10] overflow-hidden">
+                      <div className="aspect-16/10 overflow-hidden">
                         <img
                           src={course.course_thumbnail_url}
                           alt={course.course_title}
@@ -118,7 +188,7 @@ const Courses: React.FC = () => {
                         />
                       </div>
                     ) : (
-                      <div className="aspect-[16/10] bg-white/5 flex items-center justify-center">
+                      <div className="no-thumb aspect-16/10 bg-white/5 flex items-center justify-center">
                         <span className="text-3xl sm:text-4xl text-[#d4d4d4]/30">
                           📚
                         </span>
@@ -130,9 +200,8 @@ const Courses: React.FC = () => {
                       {/* Level & Category */}
                       <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                         {course.course_level && (
-                          <span className="px-2 py-1 bg-white/5 text-[#d4d4d4] text-xs rounded-full">
-                            {levelLabels[course.course_level] ||
-                              course.course_level}
+                          <span className="level-tag px-2 py-1 bg-white/5 text-[#d4d4d4] text-xs rounded-full">
+                            {levelLabels[course.course_level] || course.course_level}
                           </span>
                         )}
                         {course.course_category && (
@@ -162,13 +231,11 @@ const Courses: React.FC = () => {
                               📖 {course.lessons_count} 堂課
                             </span>
                           )}
-                          {course.rating_count !== undefined &&
-                            course.rating_count > 0 && (
-                              <span className="whitespace-nowrap">
-                                ⭐ {(course.rating_average ?? 0).toFixed(1)} (
-                                {course.rating_count})
-                              </span>
-                            )}
+                          {course.rating_count !== undefined && course.rating_count > 0 && (
+                            <span className="whitespace-nowrap">
+                              ⭐ {(course.rating_average ?? 0).toFixed(1)} ({course.rating_count})
+                            </span>
+                          )}
                         </div>
                         {course.total_enrolled !== undefined && (
                           <span className="whitespace-nowrap">
@@ -178,17 +245,15 @@ const Courses: React.FC = () => {
                       </div>
 
                       {/* Price */}
-                      <div className="mt-3 pt-3 border-t border-white/8 flex items-center justify-between">
-                        <span className="text-base sm:text-lg font-semibold text-[#d4d4d4]">
+                      <div className="card-divider mt-3 pt-3 border-t border-white/8 flex items-center justify-between">
+                        <span className="price-label text-base sm:text-lg font-semibold text-[#d4d4d4]">
                           {formatPrice(course)}
                         </span>
                         <PillButton
                           theme="studio"
                           variant="default"
                           size="sm"
-                          onClick={() => {
-                            navigate(`/courses/${course.course_id}`);
-                          }}
+                          onClick={() => navigate(`/courses/${course.course_id}`)}
                         >
                           查看詳情
                         </PillButton>
@@ -201,16 +266,23 @@ const Courses: React.FC = () => {
           ) : (
             <div className="text-center py-16">
               <span className="text-6xl mb-4 block">📚</span>
-              <p className="text-white/50 mb-4">目前沒有可用的課程</p>
-              <p className="text-white/30 text-sm">
-                課程即將推出，敬請期待！
+              <p className="text-white/50 mb-4">
+                {courses.length > 0 ? "沒有符合條件的課程" : "目前沒有可用的課程"}
               </p>
+              {courses.length > 0 && (
+                <button
+                  onClick={() => { setSelectedLevel(""); setSelectedCategory(""); }}
+                  className="text-white/40 hover:text-white/70 text-sm underline underline-offset-2 transition-colors"
+                >
+                  清除篩選
+                </button>
+              )}
             </div>
           )}
 
           {/* Contact CTA */}
           <section className="mt-16 sm:mt-20 text-center scroll-reveal">
-            <div className="bg-transparent/30 backdrop-blur-sm border border-white/10 rounded-2xl p-8 sm:p-12 max-w-2xl mx-auto">
+            <div className="page-cta-box bg-transparent/30 backdrop-blur-sm border border-white/10 rounded-2xl p-8 sm:p-12 max-w-2xl mx-auto">
               <h2 className="text-2xl sm:text-3xl font-bold text-white/90 mb-4">
                 需要客製化訓練計畫？
               </h2>

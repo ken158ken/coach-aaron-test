@@ -102,34 +102,30 @@ const Articles: React.FC = () => {
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="studio-container">
         <PageHeader label="Knowledge" title="專業知識" subtitle="健身教練的專業分享與訓練心得" />
-          {/* Category Filter */}
+          {/* Category Filter — 橫向 scroll，永遠顯示「全部」 */}
           {categories.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6 sm:mb-8 justify-center">
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-6 sm:mb-8 hide-scrollbar">
               <button
-                onClick={() => {
-                  setSelectedCategory("");
-                  setCurrentPage(1);
-                }}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 ${
-                  selectedCategory === ""
-                    ? "bg-[#c5a059] text-[#0a0a0a] shadow-lg shadow-[#c5a059]/30"
-                    : "bg-[#141414] text-[#888] hover:text-[#c5a059] hover:border-[#c5a059]/50 border border-transparent"
-                }`}
+                onClick={() => { setSelectedCategory(""); setCurrentPage(1); }}
+                className={`page-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 ${selectedCategory === "" ? "active" : ""}`}
+                style={selectedCategory !== "" ? {
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.55)",
+                } : undefined}
               >
                 全部
               </button>
               {categories.map((cat) => (
                 <button
                   key={cat}
-                  onClick={() => {
-                    setSelectedCategory(cat);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 ${
-                    selectedCategory === cat
-                      ? "bg-[#c5a059] text-[#0a0a0a] shadow-lg shadow-[#c5a059]/30"
-                      : "bg-[#141414] text-[#888] hover:text-[#c5a059] hover:border-[#c5a059]/50 border border-transparent"
-                  }`}
+                  onClick={() => { setSelectedCategory(cat); setCurrentPage(1); }}
+                  className={`page-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 ${selectedCategory === cat ? "active" : ""}`}
+                  style={selectedCategory !== cat ? {
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "rgba(255,255,255,0.55)",
+                  } : undefined}
                 >
                   {cat}
                 </button>
@@ -156,10 +152,10 @@ const Articles: React.FC = () => {
                   to={`/articles/${article.article_slug || article.article_id}`}
                   className={`group scroll-reveal ${getStaggerClass(index)}`}
                 >
-                  <article className="bg-[#141414] rounded-lg overflow-hidden border border-[#c5a059]/10 hover:border-[#c5a059]/40 hover:shadow-xl hover:shadow-[#c5a059]/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                  <article className="article-card-item bg-[#141414] rounded-lg overflow-hidden border border-[#c5a059]/10 hover:border-[#c5a059]/40 hover:shadow-xl hover:shadow-[#c5a059]/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
                     {article.article_thumbnail_url ? (
-                      <div className="aspect-[16/10] overflow-hidden">
+                      <div className="aspect-16/10 overflow-hidden">
                         <img
                           src={article.article_thumbnail_url}
                           alt={article.article_title}
@@ -167,7 +163,7 @@ const Articles: React.FC = () => {
                         />
                       </div>
                     ) : (
-                      <div className="aspect-[16/10] bg-[#c5a059]/10 flex items-center justify-center">
+                      <div className="no-thumb aspect-16/10 bg-[#c5a059]/10 flex items-center justify-center">
                         <span className="text-3xl sm:text-4xl text-[#c5a059]/30">
                           📝
                         </span>
@@ -179,7 +175,7 @@ const Articles: React.FC = () => {
                       {/* Category & Featured */}
                       <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                         {article.article_category && (
-                          <span className="text-[10px] sm:text-xs text-[#c5a059]">
+                          <span className="cat-label text-[10px] sm:text-xs text-[#c5a059]">
                             {article.article_category}
                           </span>
                         )}
@@ -205,9 +201,7 @@ const Articles: React.FC = () => {
                       {/* Meta */}
                       <div className="flex items-center justify-between text-[10px] sm:text-xs text-[#888] mt-auto gap-2">
                         <span className="whitespace-nowrap">
-                          {formatDate(
-                            article.published_at || article.created_at,
-                          )}
+                          {formatDate(article.published_at || article.created_at)}
                         </span>
                         <div className="flex items-center gap-2 sm:gap-4">
                           <span className="whitespace-nowrap">
@@ -215,8 +209,7 @@ const Articles: React.FC = () => {
                           </span>
                           {article.rating_count > 0 && (
                             <span className="whitespace-nowrap hidden sm:inline">
-                              ★ {article.rating_average.toFixed(1)} (
-                              {article.rating_count})
+                              ★ {article.rating_average.toFixed(1)} ({article.rating_count})
                             </span>
                           )}
                         </div>

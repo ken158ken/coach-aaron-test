@@ -236,7 +236,7 @@ const ArticleDetail: React.FC = () => {
       <div
         className="relative w-full flex items-end pt-20"
         style={{
-          height: "60vh",
+          height: "clamp(280px, 55vw, 580px)",
           maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
           WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
         }}
@@ -293,7 +293,7 @@ const ArticleDetail: React.FC = () => {
       </div>
 
       {/* ── Main Layout: 2fr / 1fr ── */}
-      <div className="px-4 sm:px-6 lg:px-12 relative z-10 -mt-6 pb-20">
+      <div className="detail-body px-4 sm:px-6 lg:px-12 relative z-10 -mt-6 pb-20">
         <div className="max-w-300 mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 lg:gap-12">
 
           {/* ── Left: Article Content ── */}
@@ -375,7 +375,7 @@ const ArticleDetail: React.FC = () => {
           </div>
 
           {/* ── Right: Sticky Info Card ── */}
-          <div className="lg:sticky lg:top-28 h-fit space-y-5">
+          <div className="detail-sidebar lg:sticky lg:top-28 h-fit space-y-5">
 
             {/* Author Card */}
             <div

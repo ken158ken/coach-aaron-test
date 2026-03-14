@@ -436,3 +436,179 @@
 .prose th { background: rgba(255,255,255,0.05); padding: 0.6em 0.8em; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.15); }
 .prose td { padding: 0.55em 0.8em; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .prose img { border-radius: 6px; margin: 1.5em 0; }
+
+/* ══════════════════════════════════════════════════════
+   Light-mode overrides  [data-theme="studio-light"]
+   These rules are outside @layer so they win over
+   Tailwind @layer utilities without needing !important.
+   ══════════════════════════════════════════════════════ */
+
+/* ── 1. Banner fallback: warm stone bg + charcoal blade ── */
+[data-theme="studio-light"] .banner-fallback {
+  background: linear-gradient(160deg, #e6e2da 0%, #d8d4cc 30%, #ccc8c0 65%, #c2beb6 100%);
+}
+[data-theme="studio-light"] .banner-fallback::before {
+  background: radial-gradient(ellipse 90% 55% at 50% -5%, rgba(197,160,89,0.20) 0%, transparent 70%);
+}
+[data-theme="studio-light"] .banner-fallback::after {
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(38,36,33,0.04) 20%,
+    rgba(38,36,33,0.30) 50%,
+    rgba(38,36,33,0.04) 80%,
+    transparent 100%
+  );
+}
+
+/* ── 2. Silver-heading → charcoal sweep in light mode ── */
+[data-theme="studio-light"] .silver-heading {
+  background: linear-gradient(90deg, #3a3835 0%, #1a1715 25%, #0d0c0a 50%, #1a1715 75%, #3a3835 100%);
+  background-size: 200% auto;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+}
+
+/* ── 3. Prose: light mode text colours ── */
+[data-theme="studio-light"] .prose {
+  --tw-prose-body:          rgba(28,24,20,0.80);
+  --tw-prose-headings:      rgba(14,11,8,0.92);
+  --tw-prose-lead:          rgba(28,24,20,0.60);
+  --tw-prose-links:         #7a5520;
+  --tw-prose-bold:          rgba(14,11,8,0.90);
+  --tw-prose-counters:      rgba(28,24,20,0.50);
+  --tw-prose-bullets:       rgba(28,24,20,0.35);
+  --tw-prose-hr:            rgba(0,0,0,0.10);
+  --tw-prose-quotes:        rgba(28,24,20,0.80);
+  --tw-prose-quote-borders: rgba(0,0,0,0.20);
+  --tw-prose-captions:      rgba(28,24,20,0.45);
+  --tw-prose-code:          rgba(14,11,8,0.85);
+  --tw-prose-pre-code:      rgba(14,11,8,0.85);
+  --tw-prose-pre-bg:        rgba(0,0,0,0.04);
+  --tw-prose-th-borders:    rgba(0,0,0,0.12);
+  --tw-prose-td-borders:    rgba(0,0,0,0.07);
+}
+[data-theme="studio-light"] .prose h2 { border-bottom-color: rgba(0,0,0,0.10); }
+[data-theme="studio-light"] .prose ul > li::marker { color: rgba(0,0,0,0.40); }
+[data-theme="studio-light"] .prose ol > li::marker { color: rgba(0,0,0,0.50); }
+[data-theme="studio-light"] .prose blockquote { border-left-color: rgba(0,0,0,0.20); }
+[data-theme="studio-light"] .prose code    { background: rgba(0,0,0,0.06); }
+[data-theme="studio-light"] .prose pre     { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.10); }
+[data-theme="studio-light"] .prose a       { color: #8b6030; }
+[data-theme="studio-light"] .prose a:hover { color: #5a3e1e; }
+[data-theme="studio-light"] .prose hr      { border-color: rgba(0,0,0,0.10); }
+[data-theme="studio-light"] .prose th      { background: rgba(0,0,0,0.04); border-bottom-color: rgba(0,0,0,0.12); }
+[data-theme="studio-light"] .prose td      { border-bottom-color: rgba(0,0,0,0.07); }
+
+/* ── 4. Home hero background ── */
+[data-theme="studio-light"] .studio-hero-bg {
+  background: radial-gradient(circle at 50% 0%, #cac6be 0%, #b4b0a8 60%, #aaaaa2 100%);
+}
+[data-theme="studio-light"] .studio-floor-line {
+  background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 40%);
+  border-top-color: rgba(0,0,0,0.06);
+}
+
+/* ── 5. Detail page body (.detail-body)
+        Sections keep dark-glass so existing white text stays
+        readable — floating dark cards on light page bg.         ── */
+[data-theme="studio-light"] .detail-body section {
+  background: rgba(14,11,8,0.80);
+  border-color: rgba(255,255,255,0.09);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+[data-theme="studio-light"] .detail-body [class*="bg-white"] {
+  background: rgba(255,255,255,0.05);
+}
+[data-theme="studio-light"] .detail-body [class*="border-white"] {
+  border-color: rgba(255,255,255,0.10);
+}
+[data-theme="studio-light"] .detail-sidebar > div {
+  background: rgba(14,11,8,0.82);
+  border-color: rgba(255,255,255,0.09);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+/* ── 6. Article list card (.article-card-item) ── */
+[data-theme="studio-light"] .article-card-item {
+  background: #f8f5f0;
+  border-color: rgba(197,160,89,0.18);
+}
+[data-theme="studio-light"] .article-card-item:hover {
+  border-color: rgba(197,160,89,0.50);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.08);
+}
+[data-theme="studio-light"] .article-card-item h2   { color: rgba(14,11,8,0.88); }
+[data-theme="studio-light"] .article-card-item p    { color: rgba(28,24,20,0.58); }
+[data-theme="studio-light"] .article-card-item span { color: rgba(28,24,20,0.50); }
+[data-theme="studio-light"] .article-card-item .cat-label  { color: #c5a059; }
+[data-theme="studio-light"] .article-card-item .no-thumb   { background: rgba(197,160,89,0.08); }
+
+/* ── 7. Course list card (.course-card-item) ── */
+[data-theme="studio-light"] .course-card-item {
+  background: rgba(255,255,255,0.72);
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+[data-theme="studio-light"] .course-card-item:hover {
+  border-color: rgba(0,0,0,0.22);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.10);
+}
+[data-theme="studio-light"] .course-card-item h2          { color: rgba(14,11,8,0.88); }
+[data-theme="studio-light"] .course-card-item p           { color: rgba(28,24,20,0.58); }
+[data-theme="studio-light"] .course-card-item span        { color: rgba(28,24,20,0.50); }
+[data-theme="studio-light"] .course-card-item .level-tag  { background: rgba(0,0,0,0.06); color: rgba(14,11,8,0.70); }
+[data-theme="studio-light"] .course-card-item .price-label { color: rgba(14,11,8,0.85); }
+[data-theme="studio-light"] .course-card-item .no-thumb   { background: rgba(0,0,0,0.04); }
+[data-theme="studio-light"] .course-card-item .card-divider { border-top-color: rgba(0,0,0,0.08); }
+
+/* ── 8. Page filter pills (.page-filter-pill) ── */
+[data-theme="studio-light"] .page-filter-pill {
+  background: rgba(255,255,255,0.60);
+  color: rgba(40,36,30,0.65);
+  border-color: rgba(0,0,0,0.12);
+}
+[data-theme="studio-light"] .page-filter-pill:hover {
+  background: rgba(255,255,255,0.90);
+  color: rgba(14,11,8,0.90);
+  border-color: rgba(0,0,0,0.30);
+}
+[data-theme="studio-light"] .page-filter-pill.active {
+  background: #c5a059;
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(197,160,89,0.30);
+}
+[data-theme="studio-light"] .level-filter-pill {
+  background: rgba(255,255,255,0.55);
+  color: rgba(40,36,30,0.65);
+  border-color: rgba(0,0,0,0.12);
+}
+[data-theme="studio-light"] .level-filter-pill:hover {
+  background: rgba(255,255,255,0.88);
+  color: rgba(14,11,8,0.90);
+}
+[data-theme="studio-light"] .level-filter-pill.active {
+  background: rgba(14,11,8,0.82);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.20);
+}
+
+/* ── 9. CTA section at bottom of list pages ── */
+[data-theme="studio-light"] .page-cta-box {
+  background: rgba(255,255,255,0.55);
+  border-color: rgba(0,0,0,0.10);
+}
+[data-theme="studio-light"] .page-cta-box h2 { color: rgba(14,11,8,0.88); }
+[data-theme="studio-light"] .page-cta-box p  { color: rgba(28,24,20,0.60); }
+
+/* ── 10. Navbar glare strip: charcoal blade in light mode ── */
+[data-theme="studio-light"] .navbar-glare-strip {
+  background: linear-gradient(90deg,
+    rgba(0,0,0,0) 0%,
+    rgba(38,36,33,0.20) 50%,
+    rgba(0,0,0,0) 100%
+  );
+  opacity: 0.55;
+}
