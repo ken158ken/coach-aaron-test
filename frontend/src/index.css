@@ -507,26 +507,24 @@
   border-top-color: rgba(0,0,0,0.06);
 }
 
-/* ── 5. Detail page body (.detail-body)
-        Sections keep dark-glass so existing white text stays
-        readable — floating dark cards on light page bg.         ── */
+/* ── 5. Detail page body (.detail-body) — light glass cards ── */
 [data-theme="studio-light"] .detail-body section {
-  background: rgba(14,11,8,0.80);
-  border-color: rgba(255,255,255,0.09);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  background: rgba(255,255,255,0.72);
+  border-color: rgba(0,0,0,0.08);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
 [data-theme="studio-light"] .detail-body [class*="bg-white"] {
-  background: rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.03);
 }
 [data-theme="studio-light"] .detail-body [class*="border-white"] {
-  border-color: rgba(255,255,255,0.10);
+  border-color: rgba(0,0,0,0.08);
 }
 [data-theme="studio-light"] .detail-sidebar > div {
-  background: rgba(14,11,8,0.82);
-  border-color: rgba(255,255,255,0.09);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  background: rgba(255,255,255,0.72);
+  border-color: rgba(0,0,0,0.08);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
 
 /* ── 6. Article list card (.article-card-item) ── */
@@ -612,3 +610,65 @@
   );
   opacity: 0.55;
 }
+
+/* ══════════════════════════════════════════════════════
+   GLOBAL LIGHT-MODE: text-white/* → dark ink
+   These are outside @layer, so they win over Tailwind
+   @layer utilities without needing !important.
+   Banner areas are re-exempted via .banner-area.
+   ══════════════════════════════════════════════════════ */
+
+/* ── text-white variants ── */
+[data-theme="studio-light"] .text-white      { color: rgba(14,11,8,0.92); }
+[data-theme="studio-light"] .text-white\/90  { color: rgba(14,11,8,0.84); }
+[data-theme="studio-light"] .text-white\/80  { color: rgba(14,11,8,0.76); }
+[data-theme="studio-light"] .text-white\/70  { color: rgba(14,11,8,0.68); }
+[data-theme="studio-light"] .text-white\/60  { color: rgba(14,11,8,0.60); }
+[data-theme="studio-light"] .text-white\/55  { color: rgba(14,11,8,0.55); }
+[data-theme="studio-light"] .text-white\/50  { color: rgba(14,11,8,0.50); }
+[data-theme="studio-light"] .text-white\/40  { color: rgba(14,11,8,0.40); }
+[data-theme="studio-light"] .text-white\/30  { color: rgba(14,11,8,0.32); }
+[data-theme="studio-light"] .text-white\/20  { color: rgba(14,11,8,0.22); }
+[data-theme="studio-light"] .text-white\/10  { color: rgba(14,11,8,0.12); }
+[data-theme="studio-light"] .text-white\/5   { color: rgba(14,11,8,0.06); }
+[data-theme="studio-light"] .hover\:text-white:hover { color: rgba(14,11,8,0.92); }
+
+/* ── border-white variants ── */
+[data-theme="studio-light"] .border-white\/5   { border-color: rgba(14,11,8,0.06); }
+[data-theme="studio-light"] .border-white\/8   { border-color: rgba(14,11,8,0.08); }
+[data-theme="studio-light"] .border-white\/10  { border-color: rgba(14,11,8,0.10); }
+[data-theme="studio-light"] .border-white\/15  { border-color: rgba(14,11,8,0.14); }
+[data-theme="studio-light"] .border-white\/20  { border-color: rgba(14,11,8,0.16); }
+[data-theme="studio-light"] .border-white\/25  { border-color: rgba(14,11,8,0.18); }
+[data-theme="studio-light"] .border-white\/30  { border-color: rgba(14,11,8,0.22); }
+[data-theme="studio-light"] .border-white\/40  { border-color: rgba(14,11,8,0.28); }
+[data-theme="studio-light"] .border-white\/50  { border-color: rgba(14,11,8,0.36); }
+[data-theme="studio-light"] .hover\:border-white\/30:hover { border-color: rgba(14,11,8,0.22); }
+[data-theme="studio-light"] .hover\:border-white\/50:hover { border-color: rgba(14,11,8,0.36); }
+[data-theme="studio-light"] .focus\:border-white\/30:focus { border-color: rgba(14,11,8,0.30); }
+[data-theme="studio-light"] .focus\:border-white\/40:focus { border-color: rgba(14,11,8,0.36); }
+
+/* ── bg-white/* → subtle dark-tinted surface (keeps depth on light bg) ── */
+[data-theme="studio-light"] .bg-white\/2   { background-color: rgba(0,0,0,0.03); }
+[data-theme="studio-light"] .bg-white\/3   { background-color: rgba(0,0,0,0.04); }
+[data-theme="studio-light"] .bg-white\/5   { background-color: rgba(0,0,0,0.05); }
+[data-theme="studio-light"] .bg-white\/8   { background-color: rgba(0,0,0,0.06); }
+[data-theme="studio-light"] .bg-white\/10  { background-color: rgba(0,0,0,0.08); }
+[data-theme="studio-light"] .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.05); }
+
+/* ── common hardcoded hex text colours ── */
+[data-theme="studio-light"] .text-\[#888\]    { color: rgba(30,26,20,0.58); }
+[data-theme="studio-light"] .text-\[#d4d4d4\] { color: rgba(14,11,8,0.75); }
+[data-theme="studio-light"] .text-\[#aaa\]    { color: rgba(30,26,20,0.52); }
+
+/* ── .banner-area: restore white text — banner always has dark overlay ── */
+[data-theme="studio-light"] .banner-area .text-white     { color: rgba(255,255,255,1.00); }
+[data-theme="studio-light"] .banner-area .text-white\/90 { color: rgba(255,255,255,0.90); }
+[data-theme="studio-light"] .banner-area .text-white\/80 { color: rgba(255,255,255,0.80); }
+[data-theme="studio-light"] .banner-area .text-white\/70 { color: rgba(255,255,255,0.70); }
+[data-theme="studio-light"] .banner-area .text-white\/60 { color: rgba(255,255,255,0.60); }
+[data-theme="studio-light"] .banner-area .text-white\/55 { color: rgba(255,255,255,0.55); }
+[data-theme="studio-light"] .banner-area .text-white\/50 { color: rgba(255,255,255,0.50); }
+[data-theme="studio-light"] .banner-area .text-white\/40 { color: rgba(255,255,255,0.40); }
+[data-theme="studio-light"] .banner-area .text-white\/30 { color: rgba(255,255,255,0.30); }
+[data-theme="studio-light"] .banner-area .border-white\/40 { border-color: rgba(255,255,255,0.40); }

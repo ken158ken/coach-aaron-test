@@ -234,7 +234,7 @@ const ArticleDetail: React.FC = () => {
 
       {/* ── Full-width Banner ── */}
       <div
-        className="relative w-full flex items-end pt-20"
+        className="banner-area relative w-full flex items-end pt-20"
         style={{
           height: "clamp(280px, 55vw, 580px)",
           maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
