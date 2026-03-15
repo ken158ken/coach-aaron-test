@@ -465,6 +465,7 @@ router.post(
           sex: user.sex,
           isAdmin: !!adminCheck,
         },
+        isAdmin: !!adminCheck,
       });
     } catch (err) {
       logger.error("登入伺服器錯誤", err as Error);

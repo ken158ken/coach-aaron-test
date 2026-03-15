@@ -66,7 +66,7 @@ const CloseIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) 
 
 /* ── Navbar ── */
 const Navbar: React.FC = (): JSX.Element => {
-  const { user, logout, mounted } = useAuth();
+  const { user, logout, mounted, isAdmin } = useAuth();
   const { isDark, toggleColorMode } = useTheme();
   const { t, language, setLanguage } = useLanguage();
   const navRef = useRef<HTMLDivElement>(null);
@@ -263,7 +263,7 @@ const Navbar: React.FC = (): JSX.Element => {
                         <span>會員中心</span>
                       </Link>
 
-                      {user.role === "admin" && (
+                      {isAdmin && (
                         <Link
                           to="/admin"
                           onClick={() => setUserDropdownOpen(false)}

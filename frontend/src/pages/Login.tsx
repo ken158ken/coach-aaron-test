@@ -11,6 +11,7 @@ import { Input, PillButton, Toast } from "@/components/ui";
 import SEOHead from "@/components/seo/SEOHead";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { authService } from "@/services";
+import { useLanguage } from "@/context/LanguageContext";
 
 /**
  * Login - 登入頁面
@@ -25,6 +26,7 @@ const Login: React.FC = () => {
     loginFromOAuth,
   } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -114,7 +116,7 @@ const Login: React.FC = () => {
             </h1>
           </Link>
           <p className="text-sm sm:text-base text-muted mt-2 font-light">
-            登入您的帳號
+            {t.login.subtitle}
           </p>
         </div>
 
@@ -124,8 +126,8 @@ const Login: React.FC = () => {
             <Input
               name="email"
               type="email"
-              label="電子郵件"
-              placeholder="請輸入電子郵件"
+              label={t.login.email}
+              placeholder={t.login.email}
               value={formData.email}
               onChange={handleChange}
               theme="studio"
@@ -134,8 +136,8 @@ const Login: React.FC = () => {
             <Input
               name="password"
               type="password"
-              label="密碼"
-              placeholder="請輸入密碼"
+              label={t.login.password}
+              placeholder={t.login.password}
               value={formData.password}
               onChange={handleChange}
               theme="studio"
@@ -148,7 +150,7 @@ const Login: React.FC = () => {
                 to="/forgot-password"
                 className="text-xs sm:text-sm text-muted hover:text-gold transition-colors"
               >
-                忘記密碼？
+                {t.login.forgotPassword}
               </Link>
             </div>
 
@@ -160,7 +162,7 @@ const Login: React.FC = () => {
               disabled={loading}
               className="w-full"
             >
-              {loading ? "登入中..." : "登入"}
+              {loading ? t.login.submitting : t.login.submit}
             </PillButton>
           </form>
 
@@ -168,7 +170,7 @@ const Login: React.FC = () => {
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
             <div className="flex-1 border-t border-gold/10" />
             <span className="text-muted text-xs sm:text-sm">
-              或使用以下方式登入
+              {t.login.orContinueWith}
             </span>
             <div className="flex-1 border-t border-gold/10" />
           </div>
@@ -178,9 +180,9 @@ const Login: React.FC = () => {
 
           {/* Register Link */}
           <p className="text-center text-sm sm:text-base text-muted mt-6">
-            還沒有帳號？{" "}
+            {t.login.noAccount}{" "}
             <Link to="/register" className="text-gold hover:underline">
-              立即註冊
+              {t.login.registerNow}
             </Link>
           </p>
         </div>

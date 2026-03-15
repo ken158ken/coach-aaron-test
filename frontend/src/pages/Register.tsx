@@ -10,6 +10,7 @@ import { useAuth } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
 import SEOHead from "@/components/seo/SEOHead";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+import { useLanguage } from "@/context/LanguageContext";
 
 /**
  * Register - 註冊頁面
@@ -19,6 +20,7 @@ import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 const Register: React.FC = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -49,13 +51,13 @@ const Register: React.FC = () => {
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError("密碼確認不一致");
+      setError(t.register.passwordMismatch);
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError("密碼長度至少需要 6 個字元");
+      setError(t.register.passwordTooShort);
       setLoading(false);
       return;
     }
@@ -66,7 +68,7 @@ const Register: React.FC = () => {
       setSuccess(true);
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "註冊失敗，請稍後再試");
+      setError(err instanceof Error ? err.message : t.common.error);
     } finally {
       setLoading(false);
     }
@@ -84,7 +86,7 @@ const Register: React.FC = () => {
             </h1>
           </Link>
           <p className="text-sm sm:text-base text-muted mt-2 font-light">
-            建立您的帳號
+            {t.register.subtitle}
           </p>
         </div>
 
@@ -93,8 +95,8 @@ const Register: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <Input
               name="name"
-              label="姓名"
-              placeholder="請輸入您的姓名"
+              label={t.register.name}
+              placeholder={t.register.name}
               value={formData.name}
               onChange={handleChange}
               theme="studio"
@@ -103,8 +105,8 @@ const Register: React.FC = () => {
             <Input
               name="email"
               type="email"
-              label="電子郵件"
-              placeholder="請輸入電子郵件"
+              label={t.register.email}
+              placeholder={t.register.email}
               value={formData.email}
               onChange={handleChange}
               theme="studio"
@@ -113,8 +115,8 @@ const Register: React.FC = () => {
             <Input
               name="password"
               type="password"
-              label="密碼"
-              placeholder="請輸入密碼 (至少 6 個字元)"
+              label={t.register.password}
+              placeholder={t.register.passwordPlaceholder}
               value={formData.password}
               onChange={handleChange}
               theme="studio"
@@ -123,8 +125,8 @@ const Register: React.FC = () => {
             <Input
               name="confirmPassword"
               type="password"
-              label="確認密碼"
-              placeholder="請再次輸入密碼"
+              label={t.register.confirmPassword}
+              placeholder={t.register.confirmPassword}
               value={formData.confirmPassword}
               onChange={handleChange}
               theme="studio"
@@ -139,27 +141,20 @@ const Register: React.FC = () => {
               disabled={loading}
               className="w-full"
             >
-              {loading ? "註冊中..." : "註冊"}
+              {loading ? t.register.submitting : t.register.submit}
             </PillButton>
           </form>
 
           {/* Terms */}
           <p className="text-center text-muted text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
-            註冊即表示您同意我們的{" "}
-            <Link to="/terms" className="text-gold hover:underline">
-              服務條款
-            </Link>{" "}
-            與{" "}
-            <Link to="/privacy" className="text-gold hover:underline">
-              隱私政策
-            </Link>
+            {t.register.terms}
           </p>
 
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
             <div className="flex-1 border-t border-gold/10" />
             <span className="text-muted text-xs sm:text-sm">
-              或使用以下方式註冊
+              {t.register.orWith}
             </span>
             <div className="flex-1 border-t border-gold/10" />
           </div>
@@ -169,9 +164,9 @@ const Register: React.FC = () => {
 
           {/* Login Link */}
           <p className="text-center text-sm sm:text-base text-muted mt-6">
-            已經有帳號？{" "}
+            {t.register.hasAccount}{" "}
             <Link to="/login" className="text-gold hover:underline">
-              立即登入
+              {t.register.loginNow}
             </Link>
           </p>
         </div>
@@ -184,7 +179,7 @@ const Register: React.FC = () => {
 
       {/* Success Toast */}
       {success && (
-        <Toast message="註冊成功！即將跳轉至登入頁面..." type="success" />
+        <Toast message={t.register.successMsg} type="success" />
       )}
     </div>
   );

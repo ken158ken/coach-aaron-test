@@ -14,6 +14,8 @@ import {
 } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { videoService } from "@/services";
+import { useLanguage } from "@/context/LanguageContext";
+import { useLocalize } from "@/hooks";
 import type { Video } from "@/types";
 
 /** 每頁顯示數量 */
@@ -25,6 +27,8 @@ const ITEMS_PER_PAGE = 8;
  * @returns {JSX.Element} 影片頁面
  */
 const Videos: React.FC = () => {
+  const { t, language } = useLanguage();
+  const { loc } = useLocalize();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -32,10 +36,10 @@ const Videos: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const filterOptions = [
-    { value: "all", label: "全部" },
-    { value: "training", label: "訓練" },
-    { value: "nutrition", label: "營養" },
-    { value: "lifestyle", label: "生活" },
+    { value: "all", label: t.common.all },
+    { value: "training", label: t.videos.filterTraining },
+    { value: "nutrition", label: t.videos.filterNutrition },
+    { value: "lifestyle", label: t.videos.filterLifestyle },
   ];
 
   useEffect(() => {
@@ -134,7 +138,7 @@ const Videos: React.FC = () => {
       const term = searchTerm.toLowerCase();
       result = result.filter(
         (v) =>
-          v.title?.toLowerCase().includes(term) ||
+          loc(v as unknown as Record<string, unknown>, "title").toLowerCase().includes(term) ||
           v.description?.toLowerCase().includes(term),
       );
     }
@@ -158,9 +162,9 @@ const Videos: React.FC = () => {
     <div className="relative min-h-screen bg-transparent">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title="教學影片"
-        description="免費的健身知識分享，提供訓練教學、營養指南、生活建議等多元影片內容。"
-        keywords={["健身影片", "訓練教學", "營養指南", "健身知識"]}
+        title={t.videos.heading}
+        description={language === "en" ? "Free fitness knowledge — training tutorials, nutrition guides, lifestyle tips." : "免費的健身知識分享，提供訓練教學、營養指南、生活建議等多元影片內容。"}
+        keywords={language === "en" ? ["fitness videos", "training tutorials", "nutrition guide", "fitness knowledge"] : ["健身影片", "訓練教學", "營養指南", "健身知識"]}
         url="/videos"
       />
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
@@ -171,10 +175,10 @@ const Videos: React.FC = () => {
               Videos
             </span>
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
-              教學影片
+              {t.videos.heading}
             </h1>
             <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
-              免費的健身知識分享，隨時隨地學習
+              {t.videos.subheading}
             </p>
           </div>
 
@@ -183,7 +187,7 @@ const Videos: React.FC = () => {
             {/* 搜尋框 */}
             <div className="w-full sm:w-auto">
               <Input
-                placeholder="搜尋影片..."
+                placeholder={t.videos.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 theme="studio"
@@ -220,21 +224,19 @@ const Videos: React.FC = () => {
           {/* Content */}
           {loading ? (
             <div className="flex justify-center py-12 sm:py-20">
-              <Loading theme="studio" text="載入影片中..." />
+              <Loading theme="studio" text={t.common.loading} />
             </div>
           ) : paginatedVideos.length === 0 ? (
             <div className="text-center py-12 sm:py-20">
               <p className="text-sm sm:text-base text-white/50">
-                {searchTerm
-                  ? `找不到符合「${searchTerm}」的影片`
-                  : "目前沒有符合條件的影片"}
+                {searchTerm ? t.videos.noSearchResults : t.videos.noVideos}
               </p>
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
                   className="mt-3 sm:mt-4 text-sm sm:text-base text-[#d4d4d4] hover:underline"
                 >
-                  清除搜尋
+                  {t.videos.clearSearch}
                 </button>
               )}
             </div>
@@ -242,8 +244,10 @@ const Videos: React.FC = () => {
             <>
               {/* 結果統計 */}
               <p className="text-white/40 text-xs sm:text-sm text-center mb-4 sm:mb-6">
-                共 {filteredVideos.length} 部影片
-                {totalPages > 1 && ` · 第 ${currentPage} / ${totalPages} 頁`}
+                {language === "en"
+                  ? `${filteredVideos.length} ${t.videos.totalCount}${totalPages > 1 ? ` · ${t.videos.pageInfo} ${currentPage} / ${totalPages}` : ""}`
+                  : `共 ${filteredVideos.length} ${t.videos.totalCount}${totalPages > 1 ? ` · 第 ${currentPage} / ${totalPages} 頁` : ""}`
+                }
               </p>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">

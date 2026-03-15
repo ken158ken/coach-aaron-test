@@ -10,6 +10,8 @@ import { articleService } from "@/services/article.service";
 import { PageHeader, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";
+import { useLanguage } from "@/context/LanguageContext";
+import { useLocalize } from "@/hooks/useLocalize";
 import type { Article } from "@/types";
 
 /**
@@ -18,6 +20,8 @@ import type { Article } from "@/types";
  * @returns {JSX.Element} 文章列表頁面
  */
 const Articles: React.FC = () => {
+  const { t, language } = useLanguage();
+  const { loc } = useLocalize();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,18 +75,17 @@ const Articles: React.FC = () => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("zh-TW", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return new Date(dateString).toLocaleDateString(
+      language === "en" ? "en-US" : "zh-TW",
+      { year: "numeric", month: "long", day: "numeric" },
+    );
   };
 
   if (loading && articles.length === 0) {
     return (
       <div className="min-h-screen bg-transparent relative">
         <div className="relative z-10 flex items-center justify-center min-h-screen">
-          <Loading text="載入中..." />
+          <Loading text={t.common.loading} />
         </div>
       </div>
     );
@@ -92,7 +95,7 @@ const Articles: React.FC = () => {
     <div className="min-h-screen bg-transparent relative">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title="專業知識"
+        title={t.article.pageLabel}
         description="健身教練的專業分享與訓練心得，提供健身新手入門指南、訓練技巧、營養建議等實用內容"
         keywords={["健身", "訓練", "教練", "健身知識", "運動"]}
         url="/articles"
@@ -101,15 +104,15 @@ const Articles: React.FC = () => {
       {/* 主要內容 */}
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="studio-container">
-        <PageHeader label="Knowledge" title="專業知識" subtitle="健身教練的專業分享與訓練心得" />
-          {/* Category Filter — 橫向 scroll，永遠顯示「全部」 */}
+          <PageHeader label="Knowledge" title={t.article.pageLabel} subtitle={language === "en" ? "Professional insights and training tips from Coach Aaron" : "健身教練的專業分享與訓練心得"} />
+          {/* Category Filter */}
           {categories.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 sm:mb-8 hide-scrollbar">
               <button
                 onClick={() => { setSelectedCategory(""); setCurrentPage(1); }}
                 className={`page-filter-pill shrink-0 ${selectedCategory === "" ? "active" : ""}`}
               >
-                全部
+                {t.common.all}
               </button>
               {categories.map((cat) => (
                 <button
@@ -166,25 +169,25 @@ const Articles: React.FC = () => {
                       <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                         {article.article_category && (
                           <span className="cat-label text-[10px] sm:text-xs text-gold">
-                            {article.article_category}
+                            {loc(article as unknown as Record<string, unknown>, "article_category")}
                           </span>
                         )}
                         {article.is_featured && (
                           <span className="text-[10px] sm:text-xs text-yellow-500">
-                            ★ 精選
+                            ★ {t.article.featured}
                           </span>
                         )}
                       </div>
 
                       {/* Title */}
                       <h2 className="text-sm sm:text-base font-light text-white/90 mb-1.5 sm:mb-2 group-hover:text-gold transition-colors line-clamp-2">
-                        {article.article_title}
+                        {loc(article as unknown as Record<string, unknown>, "article_title")}
                       </h2>
 
                       {/* Description */}
                       {article.article_description && (
                         <p className="text-muted text-xs sm:text-sm mb-2 sm:mb-3 flex-1 line-clamp-1 sm:line-clamp-2">
-                          {article.article_description}
+                          {loc(article as unknown as Record<string, unknown>, "article_description")}
                         </p>
                       )}
 
@@ -195,7 +198,7 @@ const Articles: React.FC = () => {
                         </span>
                         <div className="flex items-center gap-2 sm:gap-4">
                           <span className="whitespace-nowrap">
-                            {article.view_count || 0} 瀏覽
+                            {article.view_count || 0} {t.common.views}
                           </span>
                           {article.rating_count > 0 && (
                             <span className="whitespace-nowrap hidden sm:inline">
@@ -211,9 +214,7 @@ const Articles: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-12 sm:py-16">
-              <p className="text-sm sm:text-base text-muted">
-                目前沒有文章
-              </p>
+              <p className="text-sm sm:text-base text-muted">{t.common.noData}</p>
             </div>
           )}
 
@@ -223,21 +224,19 @@ const Articles: React.FC = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-[#141414] text-sm sm:text-base text-white/90 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[rgba(197,160,89,0.2)] hover:border-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-surface text-sm sm:text-base text-white/90 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[rgba(197,160,89,0.2)] hover:border-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
               >
-                上一頁
+                {t.common.prev}
               </button>
               <span className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-muted">
                 {currentPage} / {totalPages}
               </span>
               <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-[#141414] text-sm sm:text-base text-white/90 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[rgba(197,160,89,0.2)] hover:border-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-surface text-sm sm:text-base text-white/90 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[rgba(197,160,89,0.2)] hover:border-gold/50 hover:scale-105 border border-transparent transition-all duration-300"
               >
-                下一頁
+                {t.common.next}
               </button>
             </div>
           )}

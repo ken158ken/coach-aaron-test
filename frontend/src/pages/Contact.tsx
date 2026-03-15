@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import { Input, Textarea, PillButton, Toast } from "@/components/ui";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** 表單資料介面 */
 interface ContactFormData {
@@ -34,6 +35,7 @@ const INITIAL_FORM_DATA: ContactFormData = {
  * @returns {JSX.Element} 聯絡頁面
  */
 const Contact: React.FC = () => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{
@@ -127,7 +129,7 @@ const Contact: React.FC = () => {
       }
 
       setToast({
-        message: "訊息已送出！阿倫教官會盡快回覆您 📩",
+        message: t.contact.formSuccess,
         type: "success",
       });
       setFormData(INITIAL_FORM_DATA);
@@ -184,8 +186,8 @@ const Contact: React.FC = () => {
     <div className="min-h-screen bg-transparent relative">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title="聯絡阿倫教官 - 免費40分鐘1對1諮詢 | 私教變現專家"
-        description="想提升教練業績？立即預約阿倫教官免費諮詢。威豪健身總教官，NSCA+TQUK+NLP認證，已協助130+教練月收穩定8萬以上。LINE官方帳號：@667nqldx"
+        title={t.contact.heading}
+        description={t.contact.subtitle}
         keywords={[
           "聯絡阿倫教官",
           "教練諮詢",
@@ -204,13 +206,13 @@ const Contact: React.FC = () => {
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">
             <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
-              Contact
+              {t.contact.pageLabel}
             </span>
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
-              聯絡阿倫教官
+              {t.contact.heading}
             </h1>
             <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
-              想提升教練業績？100天月入8萬起，免費 40 分鐘 1 對 1 諮詢
+              {t.contact.subtitle}
             </p>
           </div>
 
@@ -249,13 +251,13 @@ const Contact: React.FC = () => {
             {/* Contact Form */}
             <div>
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
-                傳送訊息
+                {t.contact.formSection}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <Input
                   name="name"
-                  label="姓名"
-                  placeholder="請輸入您的姓名"
+                  label={t.contact.formName}
+                  placeholder={t.contact.namePlaceholder}
                   value={formData.name}
                   onChange={handleChange}
                   theme="studio"
@@ -264,8 +266,8 @@ const Contact: React.FC = () => {
                 <Input
                   name="email"
                   type="email"
-                  label="電子郵件"
-                  placeholder="請輸入您的電子郵件"
+                  label={t.contact.formEmail}
+                  placeholder={t.contact.emailPlaceholder}
                   value={formData.email}
                   onChange={handleChange}
                   theme="studio"
@@ -274,16 +276,16 @@ const Contact: React.FC = () => {
                 <Input
                   name="phone"
                   type="tel"
-                  label="電話（選填）"
-                  placeholder="例如：0912-345-678"
+                  label={t.contact.formPhone}
+                  placeholder={t.contact.phonePlaceholder}
                   value={formData.phone}
                   onChange={handleChange}
                   theme="studio"
                 />
                 <Input
                   name="subject"
-                  label="主旨"
-                  placeholder="例如：想了解教練培訓課程"
+                  label={t.contact.formSubject}
+                  placeholder={t.contact.subjectPlaceholder}
                   value={formData.subject}
                   onChange={handleChange}
                   theme="studio"
@@ -291,8 +293,8 @@ const Contact: React.FC = () => {
                 />
                 <Textarea
                   name="message"
-                  label="訊息內容"
-                  placeholder="請描述您的需求或問題，我們會盡快回覆您..."
+                  label={t.contact.formMessage}
+                  placeholder={t.contact.messagePlaceholder}
                   value={formData.message}
                   onChange={handleChange}
                   theme="studio"
@@ -306,10 +308,10 @@ const Contact: React.FC = () => {
                   disabled={loading}
                   className="w-full"
                 >
-                  {loading ? "送出中..." : "📩 送出訊息"}
+                  {loading ? t.common.submit + "..." : t.contact.formSubmit}
                 </PillButton>
                 <p className="text-xs text-muted text-center">
-                  送出後將由 Email 通知阿倫教官，通常 24 小時內回覆
+                  {t.contact.formNote}
                 </p>
               </form>
             </div>
@@ -317,7 +319,7 @@ const Contact: React.FC = () => {
             {/* Contact Info & Social */}
             <div>
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
-                聯絡方式
+                {t.contact.infoSection}
               </h2>
 
               {/* Info Cards */}
@@ -333,7 +335,7 @@ const Contact: React.FC = () => {
                     <span className="text-2xl">💬</span>
                     <div>
                       <h3 className="text-[#06C755] text-sm font-medium mb-0.5">
-                        LINE 官方帳號（最快回覆）
+                        {t.contact.lineQuickContact}
                       </h3>
                       <p className="text-sm text-white/90">
                         ID: {COACH_INFO.LINE_ID}
@@ -345,7 +347,7 @@ const Contact: React.FC = () => {
                 {/* Email */}
                 <div className="p-4 sm:p-5 bg-surface rounded-lg border border-gold/10 hover:border-gold/30 transition-all duration-300">
                   <h3 className="text-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
-                    Email
+                    {t.contact.email}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90 break-all">
                     {COACH_INFO.EMAIL}
@@ -355,7 +357,7 @@ const Contact: React.FC = () => {
                 {/* 營業時間 */}
                 <div className="p-4 sm:p-5 bg-surface rounded-lg border border-gold/10 hover:border-gold/30 transition-all duration-300">
                   <h3 className="text-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
-                    營業時間
+                    {t.contact.businessHours}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90">
                     {COACH_INFO.BUSINESS_HOURS}
@@ -365,7 +367,7 @@ const Contact: React.FC = () => {
 
               {/* Social Links */}
               <h3 className="text-sm sm:text-base text-white/90 mb-3 sm:mb-4 font-light">
-                社群媒體
+                {t.contact.socialSection}
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {socialItems.map((item) => (

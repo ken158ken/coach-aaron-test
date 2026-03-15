@@ -12,6 +12,7 @@ import { AvatarPicker } from "@/components/ui/avatar";
 import SEOHead from "@/components/seo/SEOHead";
 import { userService } from "@/services";
 import { put } from "@/services/api";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** 日誌工具 */
 const logger = {
@@ -27,6 +28,7 @@ const logger = {
  */
 const MemberCenter: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<
     "profile" | "courses" | "settings"
   >("profile");
@@ -75,21 +77,21 @@ const MemberCenter: React.FC = () => {
 
       // 前端驗證
       if (!cleanName || cleanName.length < 1) {
-        setToast({ message: "顯示名稱不可為空", type: "error" });
+        setToast({ message: t.member.displayNameEmpty, type: "error" });
         return;
       }
       if (cleanName.length > 30) {
-        setToast({ message: "顯示名稱不可超過 30 字元", type: "error" });
+        setToast({ message: t.member.displayNameTooLong, type: "error" });
         return;
       }
       if (DANGEROUS_INPUT_PATTERN.test(cleanName)) {
-        setToast({ message: "顯示名稱包含不允許的字元", type: "error" });
+        setToast({ message: t.member.displayNameInvalid, type: "error" });
         logger.error("前端偵測到危險輸入", cleanName.substring(0, 50));
         return;
       }
       if (!DISPLAY_NAME_PATTERN.test(cleanName)) {
         setToast({
-          message: "顯示名稱只能包含中英文、數字、空格和常見標點",
+          message: t.member.displayNameCharset,
           type: "error",
         });
         return;
@@ -105,7 +107,7 @@ const MemberCenter: React.FC = () => {
 
         if (result.success) {
           updateUser({ display_name: result.data.display_name });
-          setToast({ message: "個人資料更新成功！", type: "success" });
+          setToast({ message: t.member.profileUpdateSuccess, type: "success" });
           logger.info("個人資料更新成功");
         }
       } catch (err: unknown) {
@@ -132,13 +134,13 @@ const MemberCenter: React.FC = () => {
         });
         const errorMsg =
           serverMsg ||
-          (err instanceof Error ? err.message : "更新失敗，請稍後再試");
+          (err instanceof Error ? err.message : t.common.error);
         setToast({ message: errorMsg, type: "error" });
       } finally {
         setProfileSaving(false);
       }
     },
-    [profileDisplayName, sanitizeInput, updateUser],
+    [profileDisplayName, sanitizeInput, updateUser, t],
   );
 
   /** 顯示名稱是否已修改 */
@@ -161,18 +163,18 @@ const MemberCenter: React.FC = () => {
         );
         if (result.success && result.avatarUrl) {
           updateUser({ avatar_url: result.avatarUrl });
-          setToast({ message: "頭像更新成功！", type: "success" });
+          setToast({ message: t.member.avatarUpdateSuccess, type: "success" });
           setShowAvatarPicker(false);
           logger.info("頭像更新成功");
         }
       } catch (err) {
         logger.error("頭像上傳失敗", err);
-        setToast({ message: "頭像上傳失敗，請稍後再試", type: "error" });
+        setToast({ message: t.member.avatarUpdateFailed, type: "error" });
       } finally {
         setAvatarUploading(false);
       }
     },
-    [updateUser],
+    [updateUser, t],
   );
 
   /**
@@ -184,28 +186,28 @@ const MemberCenter: React.FC = () => {
       const result = await userService.deleteAvatar();
       if (result.success) {
         updateUser({ avatar_url: undefined });
-        setToast({ message: "頭像已移除", type: "success" });
+        setToast({ message: t.member.avatarRemoved, type: "success" });
       }
     } catch (err) {
       logger.error("刪除頭像失敗", err);
-      setToast({ message: "刪除頭像失敗", type: "error" });
+      setToast({ message: t.member.avatarDeleteFailed, type: "error" });
     } finally {
       setAvatarUploading(false);
     }
-  }, [updateUser]);
+  }, [updateUser, t]);
 
   // Auth guard 已由 App.tsx RequireAuth 統一處理
 
   const tabs = [
-    { key: "profile" as const, label: "個人資料" },
-    { key: "courses" as const, label: "我的課程" },
-    { key: "settings" as const, label: "帳號設定" },
+    { key: "profile" as const, label: t.member.personalInfo },
+    { key: "courses" as const, label: t.member.myCourses },
+    { key: "settings" as const, label: t.member.accountSettings },
   ];
 
   const stats = [
-    { value: "3", label: "已購課程" },
-    { value: "12", label: "完成課堂" },
-    { value: "28", label: "學習天數" },
+    { value: "3", label: t.member.purchasedCourses },
+    { value: "12", label: t.member.completedLessons },
+    { value: "28", label: t.member.studyDays },
   ];
 
   return (
@@ -220,20 +222,20 @@ const MemberCenter: React.FC = () => {
                 Member Center
               </span>
               <h1 className="text-2xl sm:text-4xl font-bold text-white/90 mb-1 sm:mb-2">
-                會員中心
+                {t.member.heading}
               </h1>
               <p
                 className="text-sm sm:text-base text-white/50 truncate max-w-[250px] sm:max-w-none"
                 suppressHydrationWarning
               >
-                歡迎回來，{user?.display_name || user?.name || user?.email || ""}
+                {t.member.welcome}，{user?.display_name || user?.name || user?.email || ""}
               </p>
             </div>
             <button
               onClick={logout}
               className="self-start sm:self-auto text-[#888] hover:text-[#c5a059] transition-colors text-xs sm:text-sm"
             >
-              登出
+              {t.nav.logout}
             </button>
           </div>
 
@@ -281,7 +283,7 @@ const MemberCenter: React.FC = () => {
             {activeTab === "profile" && (
               <div className="space-y-4 sm:space-y-6">
                 <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
-                  個人資料
+                  {t.member.personalInfo}
                 </h2>
                 <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
                   {/* 頭像區域 — 點擊開啟 AvatarPicker */}
@@ -334,7 +336,7 @@ const MemberCenter: React.FC = () => {
                             />
                           </svg>
                           <span className="text-[9px] sm:text-[10px] text-white/90">
-                            更換頭貼
+                            {t.member.changeAvatar}
                           </span>
                         </>
                       )}
@@ -345,7 +347,7 @@ const MemberCenter: React.FC = () => {
                       <button
                         onClick={handleAvatarDelete}
                         className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[10px]"
-                        title="移除頭像"
+                        title={t.member.removeAvatar}
                       >
                         ✕
                       </button>
@@ -354,7 +356,7 @@ const MemberCenter: React.FC = () => {
 
                   <div className="min-w-0">
                     <p className="text-base sm:text-lg text-white/90 truncate">
-                      {user?.display_name || user?.name || "會員"}
+                      {user?.display_name || user?.name || t.member.member}
                     </p>
                     <p className="text-xs sm:text-sm text-[#888] truncate">
                       {user?.email}
@@ -366,12 +368,12 @@ const MemberCenter: React.FC = () => {
                   onSubmit={handleProfileSubmit}
                 >
                   <Input
-                    label="顯示名稱"
+                    label={t.member.displayName}
                     value={profileDisplayName}
                     onChange={(e) =>
                       setProfileDisplayName(e.target.value.slice(0, 30))
                     }
-                    placeholder="設定您的顯示名稱"
+                    placeholder={t.member.displayName}
                     theme="studio"
                     maxLength={30}
                     autoComplete="name"
@@ -379,10 +381,9 @@ const MemberCenter: React.FC = () => {
                   />
                   <p className="text-[10px] text-[#888] -mt-2">
                     {profileDisplayName.length}/30
-                    字元，只允許中英文、數字、空格和常見標點
                   </p>
                   <Input
-                    label="電子郵件"
+                    label={t.login.email}
                     value={user?.email || ""}
                     theme="studio"
                     disabled
@@ -395,7 +396,7 @@ const MemberCenter: React.FC = () => {
                     type="submit"
                     disabled={profileSaving || !profileChanged}
                   >
-                    {profileSaving ? "更新中…" : "更新資料"}
+                    {profileSaving ? t.member.updating : t.member.updateProfile}
                   </PillButton>
                 </form>
               </div>
@@ -404,15 +405,15 @@ const MemberCenter: React.FC = () => {
             {activeTab === "courses" && (
               <div>
                 <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
-                  我的課程
+                  {t.member.myCourses}
                 </h2>
                 <div className="text-center py-8 sm:py-12">
                   <p className="text-sm sm:text-base text-[#888] mb-3 sm:mb-4">
-                    您尚未購買任何課程
+                    {t.member.noCourses}
                   </p>
                   <Link to="/courses">
                     <PillButton theme="studio" variant="default">
-                      瀏覽課程
+                      {t.member.browseCourses}
                     </PillButton>
                   </Link>
                 </div>
@@ -422,29 +423,29 @@ const MemberCenter: React.FC = () => {
             {activeTab === "settings" && (
               <div className="space-y-4 sm:space-y-6">
                 <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
-                  帳號設定
+                  {t.member.accountSettings}
                 </h2>
                 <form className="space-y-3 sm:space-y-4 max-w-md">
                   <Input
                     type="password"
-                    label="目前密碼"
-                    placeholder="請輸入目前密碼"
+                    label={t.member.currentPassword}
+                    placeholder={t.member.currentPassword}
                     theme="studio"
                   />
                   <Input
                     type="password"
-                    label="新密碼"
-                    placeholder="請輸入新密碼"
+                    label={t.member.newPassword}
+                    placeholder={t.member.newPassword}
                     theme="studio"
                   />
                   <Input
                     type="password"
-                    label="確認新密碼"
-                    placeholder="請再次輸入新密碼"
+                    label={t.member.confirmPassword}
+                    placeholder={t.member.confirmPassword}
                     theme="studio"
                   />
                   <PillButton theme="studio" variant="default">
-                    更新密碼
+                    {t.member.changePassword}
                   </PillButton>
                 </form>
               </div>
@@ -457,7 +458,7 @@ const MemberCenter: React.FC = () => {
       <Modal
         isOpen={showAvatarPicker}
         onClose={() => !avatarUploading && setShowAvatarPicker(false)}
-        title="選擇頭像"
+        title={t.member.selectAvatar}
         size="md"
         theme="studio"
       >

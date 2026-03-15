@@ -6,6 +6,7 @@
 import React from "react";
 import type { Video } from "@/types";
 import { formatDate } from "@/lib/ui";
+import { useLocalize } from "@/hooks";
 
 interface VideoCardProps {
   video: Video;
@@ -22,6 +23,9 @@ const PlayIcon = () => (
 );
 
 const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick }) => {
+  const { loc } = useLocalize();
+  const localizedTitle = loc(video as unknown as Record<string, unknown>, "title");
+
   return (
     <div
       className={`studio-card flex flex-col ${className}`}
@@ -36,7 +40,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick })
         {video.thumbnail_url ? (
           <img
             src={video.thumbnail_url}
-            alt={video.title}
+            alt={localizedTitle}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
@@ -61,7 +65,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick })
       <div style={{ padding: "20px", flexGrow: 1, display: "flex", flexDirection: "column" }}>
         {video.category && <span className="card-tag">{video.category}</span>}
         <h3 style={{ color: "#fff", fontWeight: 600, fontSize: "1rem", marginBottom: "8px", lineHeight: 1.4 }}>
-          {video.title}
+          {localizedTitle}
         </h3>
         {video.description && (
           <p style={{ color: "#888", fontSize: "0.85rem", flexGrow: 1, lineHeight: 1.6 }}>

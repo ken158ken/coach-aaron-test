@@ -27,3 +27,6 @@ export {
 
 // 富文本編輯器 Hook
 export { useRichTextEditor } from "./useRichTextEditor";
+
+// 多語言 DB 內容本地化
+export { useLocalize, localizeField } from "./useLocalize";

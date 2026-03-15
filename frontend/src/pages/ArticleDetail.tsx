@@ -9,6 +9,8 @@ import { useParams, Link } from "react-router-dom";
 import { articleService } from "@/services/article.service";
 import { useAuth } from "@/context";
 import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
+import { useLocalize } from "@/hooks/useLocalize";
+import { useLanguage } from "@/context/LanguageContext";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import type { Article, ArticleComment, ArticleRating } from "@/types";
@@ -16,9 +18,12 @@ import type { Article, ArticleComment, ArticleRating } from "@/types";
 const ArticleDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAuthenticated } = useAuth();
+  const { t, language } = useLanguage();
+  const { loc } = useLocalize();
   const [article, setArticle] = useState<Article | null>(null);
   const [comments, setComments] = useState<ArticleComment[]>([]);
   const [, setRatings] = useState<ArticleRating[]>([]);
+  const [popularArticles, setPopularArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -50,12 +55,19 @@ const ArticleDetail: React.FC = () => {
       const data = await articleService.getByIdentifier(slug);
       if (data) {
         setArticle(data);
-        const [ratingsData, commentsData] = await Promise.all([
+        const [ratingsData, commentsData, popularData] = await Promise.all([
           articleService.getRatings(data.article_id),
           articleService.getComments(data.article_id),
+          articleService.getAll({ limit: 12 }),
         ]);
         setRatings(ratingsData || []);
         setComments(commentsData || []);
+        setPopularArticles(
+          (popularData.articles || [])
+            .filter((a) => a.article_id !== data.article_id)
+            .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+            .slice(0, 5),
+        );
         if (user) {
           const userRatingData = ratingsData?.find(
             (r: ArticleRating) => r.user_id === user.user_id,
@@ -119,9 +131,10 @@ const ArticleDetail: React.FC = () => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("zh-TW", {
-      year: "numeric", month: "long", day: "numeric",
-    });
+    return new Date(dateString).toLocaleDateString(
+      language === "en" ? "en-US" : "zh-TW",
+      { year: "numeric", month: "long", day: "numeric" },
+    );
   };
 
   const organizeComments = (flatComments: ArticleComment[]) => {
@@ -165,7 +178,7 @@ const ArticleDetail: React.FC = () => {
               onClick={() => setReplyingTo(replyingTo === comment.comment_id ? null : comment.comment_id)}
               className="text-white/40 hover:text-white/70 text-xs mt-2 transition-colors"
             >
-              {replyingTo === comment.comment_id ? "取消回覆" : "回覆"}
+              {replyingTo === comment.comment_id ? t.article.cancelReply : t.article.reply}
             </button>
           )}
           {replyingTo === comment.comment_id && (
@@ -173,7 +186,7 @@ const ArticleDetail: React.FC = () => {
               <textarea
                 value={replyText}
                 onChange={handleReplyChange}
-                placeholder="輸入回覆..."
+                placeholder={t.article.shareThoughts}
                 className={`w-full bg-transparent border rounded-lg px-3 py-2 text-white/80 text-sm focus:outline-none transition-colors resize-none ${
                   !replyValidation.isValid && replyText ? "border-red-500/50" : "border-white/10 focus:border-white/30"
                 }`}
@@ -189,7 +202,7 @@ const ArticleDetail: React.FC = () => {
                   disabled={submitting || !replyValidation.isValid}
                   className="px-4 py-1 border border-white/20 text-white/60 text-xs hover:border-white/40 disabled:opacity-40 transition-colors"
                 >
-                  {submitting ? "送出中..." : "送出回覆"}
+                  {submitting ? t.common.loading : t.article.submitReply}
                 </button>
               </div>
             </div>
@@ -200,14 +213,14 @@ const ArticleDetail: React.FC = () => {
     );
   };
 
-  if (loading) return <Loading text="載入中..." />;
+  if (loading) return <Loading text={t.common.loading} />;
 
   if (error || !article) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-center">
-          <p className="text-white/50 mb-4">{error || "找不到文章"}</p>
-          <Link to="/articles" className="text-[#d4d4d4] hover:underline">返回文章列表</Link>
+          <p className="text-white/50 mb-4">{error || t.article.noContent}</p>
+          <Link to="/articles" className="text-[#d4d4d4] hover:underline">{t.article.backToList}</Link>
         </div>
       </div>
     );
@@ -215,12 +228,13 @@ const ArticleDetail: React.FC = () => {
 
   const organizedComments = organizeComments(comments);
   const authorName = article.author?.display_name || article.users?.display_name || "Coach Aaron";
+  const articleObj = article as unknown as Record<string, unknown>;
 
   return (
     <div className="min-h-screen bg-transparent relative">
       <SEOHead
-        title={article.article_title}
-        description={article.article_description || article.article_title}
+        title={loc(articleObj, "article_title")}
+        description={loc(articleObj, "article_description") || loc(articleObj, "article_title")}
         keywords={article.article_keywords ? article.article_keywords.split(",").map((k) => k.trim()) : []}
         image={article.article_thumbnail_url}
         url={`/articles/${article.article_slug || article.article_id}`}
@@ -229,7 +243,7 @@ const ArticleDetail: React.FC = () => {
         publishedTime={article.published_at || article.created_at}
         modifiedTime={article.updated_at}
         author={authorName}
-        category={article.article_category}
+        category={loc(articleObj, "article_category")}
       />
 
       {/* ── Full-width Banner ── */}
@@ -268,25 +282,25 @@ const ArticleDetail: React.FC = () => {
             {article.article_category && (
               <div className="mb-3 sm:mb-4">
                 <span className="inline-block px-3 py-1 border border-white/40 text-white text-xs tracking-[2px] uppercase">
-                  {article.article_category}
+                  {loc(articleObj, "article_category")}
                 </span>
               </div>
             )}
 
             {/* Title */}
             <h1 className="silver-heading text-3xl sm:text-5xl md:text-6xl font-black tracking-[2px] sm:tracking-[4px] mb-4 sm:mb-5 leading-tight">
-              {article.article_title}
+              {loc(articleObj, "article_title")}
             </h1>
 
             {/* Meta */}
             <div className="flex flex-wrap gap-4 sm:gap-6 text-white/55 text-sm">
               <span>{authorName}</span>
               <span>{formatDate(article.published_at || article.created_at)}</span>
-              {article.view_count > 0 && <span>{article.view_count} 次瀏覽</span>}
+              {article.view_count > 0 && <span>{article.view_count} {t.article.views}</span>}
               {article.rating_count > 0 && (
-                <span>★ {article.rating_average.toFixed(1)} ({article.rating_count} 個評分)</span>
+                <span>★ {article.rating_average.toFixed(1)} ({article.rating_count} {t.article.ratings})</span>
               )}
-              {article.is_featured && <span className="text-yellow-400">★ 精選文章</span>}
+              {article.is_featured && <span className="text-yellow-400">★ {t.article.featured}</span>}
             </div>
           </div>
         </div>
@@ -304,7 +318,7 @@ const ArticleDetail: React.FC = () => {
               <div
                 className="prose max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: article.article_content || "<p>文章內容尚未撰寫</p>",
+                  __html: loc(articleObj, "article_content") || `<p>${t.article.noContent}</p>`,
                 }}
               />
 
@@ -322,9 +336,33 @@ const ArticleDetail: React.FC = () => {
 
             {/* Comments Section */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
-              <h2 className="text-xl sm:text-2xl font-light text-white mb-6 pb-3 border-b border-white/10">
-                留言 ({comments.filter((c) => c.is_visible).length})
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-3 border-b border-white/10">
+                <h2 className="text-xl sm:text-2xl font-light text-white">
+                  {t.article.comments} ({comments.filter((c) => c.is_visible).length})
+                </h2>
+                {/* Rating Stars */}
+                <div className="flex items-center gap-2">
+                  <span className="text-white/30 text-xs">{t.article.rateThis}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => handleRate(star)}
+                        disabled={!isAuthenticated}
+                        title={!isAuthenticated ? t.article.loginToRate : `${star} ★`}
+                        className={`text-xl transition-colors ${
+                          star <= userRating ? "text-yellow-400" : "text-white/20 hover:text-yellow-400/50"
+                        } ${!isAuthenticated ? "cursor-not-allowed" : "cursor-pointer"}`}
+                      >★</button>
+                    ))}
+                  </div>
+                  {article.rating_count > 0 && (
+                    <span className="text-white/30 text-xs">
+                      {article.rating_average.toFixed(1)} ({article.rating_count})
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {/* Add Comment */}
               {isAuthenticated ? (
@@ -332,7 +370,7 @@ const ArticleDetail: React.FC = () => {
                   <textarea
                     value={commentText}
                     onChange={handleCommentChange}
-                    placeholder="分享你的想法..."
+                    placeholder={t.article.shareThoughts}
                     className={`w-full bg-transparent border rounded-lg px-4 py-3 text-white/80 text-sm focus:outline-none transition-colors resize-none ${
                       !commentValidation.isValid && commentText
                         ? "border-red-500/50 focus:border-red-500"
@@ -354,12 +392,12 @@ const ArticleDetail: React.FC = () => {
                     disabled={submitting || !commentValidation.isValid}
                     className="px-6 py-2 border border-white/30 text-white text-sm tracking-widest hover:border-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
-                    {submitting ? "送出中..." : "送出留言"}
+                    {submitting ? t.common.loading : t.article.submitComment}
                   </button>
                 </div>
               ) : (
                 <p className="text-white/40 text-sm mb-8">
-                  <Link to="/login" className="text-[#d4d4d4] hover:underline">登入</Link>後即可留言
+                  <Link to="/login" className="text-[#d4d4d4] hover:underline">{t.login.submit}</Link>{" "}{t.article.loginToComment}
                 </p>
               )}
 
@@ -368,7 +406,7 @@ const ArticleDetail: React.FC = () => {
                 {organizedComments.length > 0 ? (
                   organizedComments.map((c) => renderComment(c))
                 ) : (
-                  <p className="text-white/30 text-center py-8 text-sm">尚無留言，成為第一個留言的人吧！</p>
+                  <p className="text-white/30 text-center py-8 text-sm">{t.article.noComments}</p>
                 )}
               </div>
             </section>
@@ -386,7 +424,7 @@ const ArticleDetail: React.FC = () => {
                 borderTop: "2px solid rgba(255,255,255,0.5)",
               }}
             >
-              <p className="text-white/30 text-xs uppercase tracking-widest mb-3">作者</p>
+              <p className="text-white/30 text-xs uppercase tracking-widest mb-3">{t.article.author}</p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
                   <span className="text-white/60 text-sm">{authorName.charAt(0)}</span>
@@ -395,11 +433,11 @@ const ArticleDetail: React.FC = () => {
               </div>
               <div className="space-y-2 text-sm text-white/50">
                 <div>{formatDate(article.published_at || article.created_at)}</div>
-                {article.view_count > 0 && <div>{article.view_count} 次瀏覽</div>}
+                {article.view_count > 0 && <div>{article.view_count} {t.article.views}</div>}
               </div>
             </div>
 
-            {/* Rating Card */}
+            {/* Popular Articles Card */}
             <div
               className="rounded-lg p-6"
               style={{
@@ -407,31 +445,29 @@ const ArticleDetail: React.FC = () => {
                 border: "1px solid rgba(255,255,255,0.1)",
               }}
             >
-              <p className="text-white/30 text-xs uppercase tracking-widest mb-4">為這篇文章評分</p>
-              <div className="flex items-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => handleRate(star)}
-                    disabled={!isAuthenticated}
-                    className={`text-2xl transition-colors ${
-                      star <= userRating ? "text-yellow-400" : "text-white/20 hover:text-yellow-400/50"
-                    } ${!isAuthenticated ? "cursor-not-allowed" : "cursor-pointer"}`}
-                  >★</button>
-                ))}
-              </div>
-              {userRating > 0 && (
-                <p className="text-white/40 text-xs">你的評分：{userRating} / 5</p>
-              )}
-              {article.rating_count > 0 && (
-                <p className="text-white/30 text-xs mt-1">
-                  平均 {article.rating_average.toFixed(1)}（{article.rating_count} 個評分）
-                </p>
-              )}
-              {!isAuthenticated && (
-                <p className="text-white/30 text-xs mt-2">
-                  <Link to="/login" className="text-[#d4d4d4] hover:underline">登入</Link>後即可評分
-                </p>
+              <p className="text-white/30 text-xs uppercase tracking-widest mb-4">{t.article.popularArticles}</p>
+              {popularArticles.length > 0 ? (
+                <div className="space-y-4">
+                  {popularArticles.map((a, idx) => (
+                    <Link
+                      key={a.article_id}
+                      to={`/articles/${a.article_slug || a.article_id}`}
+                      className="flex gap-3 group"
+                    >
+                      <span className="text-white/20 text-xs font-mono w-4 shrink-0 pt-0.5">{idx + 1}</span>
+                      <div className="min-w-0">
+                        <p className="text-white/70 text-sm leading-snug group-hover:text-white/90 transition-colors line-clamp-2">
+                          {loc(a as unknown as Record<string, unknown>, "article_title")}
+                        </p>
+                        {a.view_count > 0 && (
+                          <p className="text-white/30 text-xs mt-1">{a.view_count} {t.article.views}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/30 text-sm">{t.common.noData}</p>
               )}
             </div>
 
@@ -440,7 +476,7 @@ const ArticleDetail: React.FC = () => {
               to="/articles"
               className="block w-full py-3 border border-white/20 text-white/50 text-sm tracking-widest text-center hover:border-white/40 hover:text-white/70 transition-colors"
             >
-              ← 返回文章列表
+              ← {t.article.backToList}
             </Link>
           </div>
 

@@ -21,6 +21,12 @@ export interface Course {
   course_banner_url?: string;
   course_keywords?: string;
   course_category?: string;
+  // i18n 英文欄位（nullable，未填時 fallback 顯示中文）
+  course_title_en?: string | null;
+  course_description_en?: string | null;
+  course_content_en?: string | null;
+  course_keywords_en?: string | null;
+  course_category_en?: string | null;
   course_level?: CourseLevel;
   lessons_count?: number;
   duration_minutes?: number;
@@ -81,6 +87,7 @@ export interface Video {
   // 資料庫欄位 (snake_case)
   video_id: number;
   title: string;
+  title_en?: string | null;
   url: string;
   type: VideoType;
   thumbnail?: string;
@@ -120,6 +127,12 @@ export interface Article {
   article_banner_url?: string;
   article_keywords?: string;
   article_category?: string;
+  // i18n 英文欄位（nullable，未填時 fallback 顯示中文）
+  article_title_en?: string | null;
+  article_description_en?: string | null;
+  article_content_en?: string | null;
+  article_keywords_en?: string | null;
+  article_category_en?: string | null;
   status: ArticleStatus;
   view_count: number;
   rating_average: number;

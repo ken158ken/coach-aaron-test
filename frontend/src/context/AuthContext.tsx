@@ -142,8 +142,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const login = useCallback(async (email: string, password: string) => {
     const response = await authService.login({ email, password });
-    setUser(normalizeUser(response.user as unknown as Record<string, unknown>));
-    setIsAdmin(response.isAdmin ?? false);
+    const normalized = normalizeUser(response.user as unknown as Record<string, unknown>);
+    setUser(normalized);
+    setIsAdmin(response.isAdmin ?? normalized.isAdmin ?? false);
   }, []);
 
   /**

@@ -11,7 +11,9 @@ import {
   useSafeInput,
   useRatingInput,
   renderSafeContent,
+  useLocalize,
 } from "@/hooks";
+import { useLanguage } from "@/context/LanguageContext";
 import { courseService } from "@/services";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -22,6 +24,8 @@ const CourseDetail: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { hasPurchasedCourse, loadingPurchases } = useUser();
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
+  const { loc } = useLocalize();
   const [course, setCourse] = useState<Course | null>(null);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,15 +77,15 @@ const CourseDetail: React.FC = () => {
           setReviews([]);
         }
       } else {
-        setError("找不到課程");
+        setError(language === "en" ? "Course not found" : "找不到課程");
       }
     } catch (err) {
       console.error("Failed to fetch course:", err);
-      setError("載入課程失敗");
+      setError(t.common.error);
     } finally {
       setLoading(false);
     }
-  }, [id, user]);
+  }, [id, user, language, t]);
 
   useEffect(() => { fetchCourse(); }, [fetchCourse]);
 
@@ -101,32 +105,32 @@ const CourseDetail: React.FC = () => {
   };
 
   const formatPrice = () => {
-    if (!course?.show_price) return "洽詢價格";
-    if (!course?.price) return "免費";
+    if (!course?.show_price) return t.course.inquirePrice;
+    if (!course?.price) return t.course.free;
     return `NT$ ${course.price.toLocaleString()}`;
   };
 
   const levelLabels: Record<string, string> = {
-    beginner: "初學者",
-    intermediate: "進階",
-    advanced: "專家",
+    beginner: t.course.beginner,
+    intermediate: t.course.intermediate,
+    advanced: t.course.advanced,
   };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("zh-TW", {
+    return new Date(dateString).toLocaleDateString(language === "en" ? "en-US" : "zh-TW", {
       year: "numeric", month: "long", day: "numeric",
     });
   };
 
-  if (loading) return <Loading text="載入中..." />;
+  if (loading) return <Loading text={t.common.loading} />;
 
   if (error || !course) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-center">
-          <p className="text-white/60 mb-4">{error || "找不到課程"}</p>
-          <Link to="/courses" className="text-[#d4d4d4] hover:underline">返回課程列表</Link>
+          <p className="text-white/60 mb-4">{error || (language === "en" ? "Course not found" : "找不到課程")}</p>
+          <Link to="/courses" className="text-[#d4d4d4] hover:underline">{t.course.backToList}</Link>
         </div>
       </div>
     );
@@ -137,9 +141,9 @@ const CourseDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-transparent relative">
       <SEOHead
-        title={course.title}
-        description={course.description || course.title}
-        keywords={course.keywords || ["健身", "課程", "訓練"]}
+        title={loc(course as unknown as Record<string, unknown>, "course_title")}
+        description={loc(course as unknown as Record<string, unknown>, "course_description") || loc(course as unknown as Record<string, unknown>, "course_title")}
+        keywords={course.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])}
         image={course.thumbnail}
         url={`/courses/${course.id}`}
         type="product"
@@ -190,18 +194,18 @@ const CourseDetail: React.FC = () => {
             <h1
               className="silver-heading text-3xl sm:text-5xl md:text-6xl font-black tracking-[3px] sm:tracking-[5px] uppercase mb-4 sm:mb-5 leading-tight"
             >
-              {course.title}
+              {loc(course as unknown as Record<string, unknown>, "course_title")}
             </h1>
 
             {/* Meta */}
             <div className="flex flex-wrap gap-4 sm:gap-6 text-white/60 text-sm sm:text-base">
-              {course.lessonsCount && <span>📖 {course.lessonsCount} 堂課</span>}
+              {course.lessonsCount && <span>📖 {course.lessonsCount} {t.course.lessons}</span>}
               {course.duration && <span>⏱️ {course.duration}</span>}
               {course.ratingAverage !== undefined && course.ratingCount! > 0 && (
-                <span>⭐ {course.ratingAverage.toFixed(1)} ({course.ratingCount} 則評價)</span>
+                <span>⭐ {course.ratingAverage.toFixed(1)} ({course.ratingCount} {t.course.reviews})</span>
               )}
               {course.totalEnrolled !== undefined && (
-                <span>👥 {course.totalEnrolled} 位學員</span>
+                <span>👥 {course.totalEnrolled} {t.course.enrolled}</span>
               )}
             </div>
           </div>
@@ -218,33 +222,35 @@ const CourseDetail: React.FC = () => {
             {/* Description */}
             {course.description && (
               <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
-                <h2 className="text-xl sm:text-2xl font-light text-white mb-4 pb-3 border-b border-white/10">課程簡介</h2>
-                <p className="text-white/60 leading-relaxed text-sm sm:text-base">{course.description}</p>
+                <h2 className="text-xl sm:text-2xl font-light text-white mb-4 pb-3 border-b border-white/10">{t.course.intro}</h2>
+                <p className="text-white/60 leading-relaxed text-sm sm:text-base">
+                  {loc(course as unknown as Record<string, unknown>, "course_description")}
+                </p>
               </section>
             )}
 
             {/* Full Content */}
             {course.content && (
               <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
-                <h2 className="text-xl sm:text-2xl font-light text-white mb-4 pb-3 border-b border-white/10">課程介紹</h2>
+                <h2 className="text-xl sm:text-2xl font-light text-white mb-4 pb-3 border-b border-white/10">{t.course.courseContent}</h2>
                 <div
                   className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: course.content }}
+                  dangerouslySetInnerHTML={{ __html: loc(course as unknown as Record<string, unknown>, "course_content") || course.content }}
                 />
               </section>
             )}
 
             {/* What You'll Learn */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
-              <h2 className="text-xl sm:text-2xl font-light text-white mb-6 pb-3 border-b border-white/10">你將學到</h2>
+              <h2 className="text-xl sm:text-2xl font-light text-white mb-6 pb-3 border-b border-white/10">{t.course.whatYouLearn}</h2>
               <ul className="space-y-3">
                 {[
-                  "建立正確的訓練觀念",
-                  "學習安全有效的動作技巧",
-                  "了解肌肉生長原理",
-                  "制定個人化訓練計畫",
-                  "掌握營養補充要點",
-                  "避免常見訓練錯誤",
+                  t.course.learnItem1,
+                  t.course.learnItem2,
+                  t.course.learnItem3,
+                  t.course.learnItem4,
+                  t.course.learnItem5,
+                  t.course.learnItem6,
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-center gap-3 text-white/60 text-sm sm:text-base">
                     <span className="text-white/80 text-base">✓</span>
@@ -257,38 +263,38 @@ const CourseDetail: React.FC = () => {
             {/* Reviews */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
               <h2 className="text-xl sm:text-2xl font-light text-white mb-6 pb-3 border-b border-white/10">
-                學員評價 ({reviews.length})
+                {t.course.studentReviews} ({reviews.length})
               </h2>
 
               {/* Review Form */}
               <div className="bg-white/5 rounded-lg p-5 sm:p-6 mb-8">
                 {loadingPurchases ? (
-                  <p className="text-center text-white/50 py-4">載入中...</p>
+                  <p className="text-center text-white/50 py-4">{t.common.loading}</p>
                 ) : !isAuthenticated ? (
                   <div className="text-center py-4">
-                    <p className="text-white/50 mb-4">登入後購買此課程即可留下評價</p>
+                    <p className="text-white/50 mb-4">{t.course.loginToReview}</p>
                     <Link to="/login" className="inline-block px-6 py-2 border border-white/30 text-white text-sm tracking-widest hover:border-white transition-colors">
-                      登入
+                      {t.nav.login}
                     </Link>
                   </div>
                 ) : !hasPurchasedCourse(course.course_id!) ? (
                   <div className="text-center py-4">
-                    <p className="text-white/50 mb-4">購買此課程後即可留下評價</p>
+                    <p className="text-white/50 mb-4">{t.course.purchaseToReview}</p>
                     <button
                       onClick={() => navigate(`/checkout?course=${course.course_id}`)}
                       className="px-6 py-2 border border-white/30 text-white text-sm tracking-widest hover:border-white transition-colors"
                     >
-                      立即購買
+                      {t.course.buyNow}
                     </button>
                   </div>
                 ) : (
                   <div>
                     <h3 className="text-base font-medium text-white/90 mb-4">
-                      {hasReviewed ? "更新你的評價" : "為此課程評分"}
+                      {hasReviewed ? t.course.updateReview : t.course.rateThis}
                     </h3>
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-white/50 text-sm mr-1">評分：</span>
+                        <span className="text-white/50 text-sm mr-1">{t.course.ratingLabel}</span>
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
@@ -309,7 +315,7 @@ const CourseDetail: React.FC = () => {
                         <textarea
                           value={reviewComment}
                           onChange={handleCommentChange}
-                          placeholder="分享你對這門課程的看法（可選）..."
+                          placeholder={language === "en" ? "Share your thoughts about this course (optional)..." : "分享你對這門課程的看法（可選）..."}
                           className={`w-full bg-transparent border rounded-lg px-4 py-3 text-white/80 text-sm focus:outline-none resize-none transition-colors ${
                             !commentValidation.isValid && reviewComment
                               ? "border-red-500/50 focus:border-red-500"
@@ -332,7 +338,7 @@ const CourseDetail: React.FC = () => {
                         disabled={submitting || !isRatingValid || (!commentValidation.isValid && reviewComment.trim() !== "")}
                         className="px-6 py-2 border border-white/30 text-white text-sm tracking-widest hover:border-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
-                        {submitting ? "送出中..." : hasReviewed ? "更新評價" : "送出評價"}
+                        {submitting ? t.course.submittingReview : hasReviewed ? t.course.updateReviewBtn : t.course.submitReview}
                       </button>
                     </div>
                   </div>
@@ -353,7 +359,7 @@ const CourseDetail: React.FC = () => {
                               <span className="text-white/70 text-sm">{review.users?.display_name?.charAt(0) || "U"}</span>
                             )}
                           </div>
-                          <span className="text-white/80 text-sm">{review.users?.display_name || "匿名用戶"}</span>
+                          <span className="text-white/80 text-sm">{review.users?.display_name || t.course.anonymous}</span>
                         </div>
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map((star) => (
@@ -369,7 +375,7 @@ const CourseDetail: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-white/40 text-center py-8 text-sm">尚無評價，成為第一位評價的人吧！</p>
+                <p className="text-white/40 text-center py-8 text-sm">{t.course.noReviews}</p>
               )}
             </section>
           </div>
@@ -396,13 +402,13 @@ const CourseDetail: React.FC = () => {
                   onClick={() => navigate(`/checkout?course=${course.course_id}`)}
                   className="w-full py-4 bg-white text-black font-bold tracking-[3px] uppercase text-sm hover:bg-white/90 transition-colors relative overflow-hidden group"
                 >
-                  <span className="relative z-10">立即購買</span>
+                  <span className="relative z-10">{t.course.buyNow}</span>
                   <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-500 bg-linear-to-r from-transparent via-black/10 to-transparent skew-x-[-30deg]" />
                 </button>
               ) : (
                 <Link to="/login" className="block">
                   <button className="w-full py-4 bg-white/10 border border-white/30 text-white font-bold tracking-[3px] uppercase text-sm hover:bg-white/15 transition-colors">
-                    登入後購買
+                    {t.course.loginToBuy}
                   </button>
                 </Link>
               )}
@@ -410,10 +416,10 @@ const CourseDetail: React.FC = () => {
               {/* Includes List */}
               <ul className="mt-8 space-y-4">
                 {[
-                  course.lessonsCount ? `${course.lessonsCount} 支高畫質教學影片` : "高畫質教學影片",
-                  "專屬學員課表講義 (PDF)",
-                  "無限次數觀看權限",
-                  "專屬學員社群",
+                  course.lessonsCount ? `${course.lessonsCount} ${t.course.includesVideos}` : t.course.includesVideos,
+                  t.course.includesPdf,
+                  t.course.includesUnlimited,
+                  t.course.includesCommunity,
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-center gap-3 text-white/60 text-sm">
                     <span className="text-white/80">✓</span>
@@ -431,7 +437,7 @@ const CourseDetail: React.FC = () => {
                       <span key={s} className={s <= Math.round(course.ratingAverage!) ? "text-yellow-400 text-sm" : "text-white/20 text-sm"}>★</span>
                     ))}
                   </div>
-                  <div className="text-white/40 text-xs">{course.ratingCount} 則評價</div>
+                  <div className="text-white/40 text-xs">{course.ratingCount} {t.course.reviews}</div>
                 </div>
               )}
             </div>

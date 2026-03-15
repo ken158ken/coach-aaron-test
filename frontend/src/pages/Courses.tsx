@@ -11,6 +11,8 @@ import { courseService } from "@/services";
 import { PillButton, Loading, PageHeader } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";
+import { useLanguage } from "@/context/LanguageContext";
+import { useLocalize } from "@/hooks";
 import type { Course } from "@/types";
 
 /**
@@ -20,6 +22,8 @@ import type { Course } from "@/types";
  */
 const Courses: React.FC = () => {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
+  const { loc } = useLocalize();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,7 +46,7 @@ const Courses: React.FC = () => {
       setCourses(data || []);
     } catch (err) {
       console.error("Failed to fetch courses:", err);
-      setError("載入課程失敗");
+      setError(t.common.error);
     } finally {
       setLoading(false);
     }
@@ -52,8 +56,8 @@ const Courses: React.FC = () => {
    * 格式化價格（僅在 show_price 為 true 時顯示）
    */
   const formatPrice = (course: Course): string => {
-    if (!course.show_price) return "洽詢價格";
-    if (!course.price || course.price === 0) return "免費";
+    if (!course.show_price) return t.course.inquirePrice;
+    if (!course.price || course.price === 0) return t.course.free;
     return `NT$ ${course.price.toLocaleString()}`;
   };
 
@@ -61,9 +65,9 @@ const Courses: React.FC = () => {
    * 課程難度標籤
    */
   const levelLabels: Record<string, string> = {
-    beginner: "初學者",
-    intermediate: "進階",
-    advanced: "專家",
+    beginner: t.course.beginner,
+    intermediate: t.course.intermediate,
+    advanced: t.course.advanced,
   };
 
   // 從課程資料提取所有分類
@@ -79,7 +83,7 @@ const Courses: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <Loading theme="studio" text="載入中..." />
+        <Loading theme="studio" text={t.common.loading} />
       </div>
     );
   }
@@ -88,17 +92,17 @@ const Courses: React.FC = () => {
     <div className="relative min-h-screen bg-transparent">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title="課程中心"
-        description="探索專業健身課程，從初學者到進階訓練，找到適合你的課程"
-        keywords={["健身課程", "訓練課程", "教練課程", "線上學習"]}
+        title={t.course.pageLabel}
+        description={language === "en" ? "Explore professional fitness courses, from beginner to advanced training" : "探索專業健身課程，從初學者到進階訓練，找到適合你的課程"}
+        keywords={language === "en" ? ["fitness courses", "training courses", "coaching", "online learning"] : ["健身課程", "訓練課程", "教練課程", "線上學習"]}
         url="/courses"
       />
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="studio-container">
         <PageHeader
           label="Courses"
-          title="課程中心"
-          subtitle="探索專業健身課程，開啟你的訓練旅程"
+          title={t.course.pageLabel}
+          subtitle={language === "en" ? "Explore professional fitness courses and start your training journey" : "探索專業健身課程，開啟你的訓練旅程"}
         />
           {/* ── Filter Bar ── */}
           {(courses.length > 0) && (
@@ -111,7 +115,7 @@ const Courses: React.FC = () => {
                     onClick={() => setSelectedLevel(lv)}
                     className={`level-filter-pill shrink-0 ${selectedLevel === lv ? "active" : ""}`}
                   >
-                    {lv === "" ? "全部等級" : levelLabels[lv]}
+                    {lv === "" ? t.course.allLevels : levelLabels[lv]}
                   </button>
                 ))}
               </div>
@@ -123,7 +127,7 @@ const Courses: React.FC = () => {
                     onClick={() => setSelectedCategory("")}
                     className={`page-filter-pill shrink-0 ${selectedCategory === "" ? "active" : ""}`}
                   >
-                    全部分類
+                    {t.course.allCategories}
                   </button>
                   {categories.map((cat) => (
                     <button
@@ -187,20 +191,20 @@ const Courses: React.FC = () => {
                         )}
                         {course.course_category && (
                           <span className="text-xs text-white/40">
-                            {course.course_category}
+                            {loc(course as unknown as Record<string, unknown>, "course_category")}
                           </span>
                         )}
                       </div>
 
                       {/* Title */}
                       <h2 className="text-sm sm:text-base font-medium text-white/90 mb-1.5 sm:mb-2 group-hover:text-[#d4d4d4] transition-colors line-clamp-2">
-                        {course.course_title}
+                        {loc(course as unknown as Record<string, unknown>, "course_title")}
                       </h2>
 
                       {/* Description */}
                       {course.course_description && (
                         <p className="text-white/50 text-xs sm:text-sm mb-2 sm:mb-3 flex-1 line-clamp-1 sm:line-clamp-2">
-                          {course.course_description}
+                          {loc(course as unknown as Record<string, unknown>, "course_description")}
                         </p>
                       )}
 
@@ -209,7 +213,7 @@ const Courses: React.FC = () => {
                         <div className="flex items-center gap-2 sm:gap-4">
                           {course.lessons_count && (
                             <span className="whitespace-nowrap">
-                              📖 {course.lessons_count} 堂課
+                              📖 {course.lessons_count} {t.course.lessons}
                             </span>
                           )}
                           {course.rating_count !== undefined && course.rating_count > 0 && (
@@ -236,7 +240,7 @@ const Courses: React.FC = () => {
                           size="sm"
                           onClick={() => navigate(`/courses/${course.course_id}`)}
                         >
-                          查看詳情
+                          {t.course.viewDetail}
                         </PillButton>
                       </div>
                     </div>
@@ -248,14 +252,14 @@ const Courses: React.FC = () => {
             <div className="text-center py-16">
               <span className="text-6xl mb-4 block">📚</span>
               <p className="text-white/50 mb-4">
-                {courses.length > 0 ? "沒有符合條件的課程" : "目前沒有可用的課程"}
+                {courses.length > 0 ? t.course.noFilterMatch : t.course.noCourses}
               </p>
               {courses.length > 0 && (
                 <button
                   onClick={() => { setSelectedLevel(""); setSelectedCategory(""); }}
                   className="text-white/40 hover:text-white/70 text-sm underline underline-offset-2 transition-colors"
                 >
-                  清除篩選
+                  {t.course.clearFilters}
                 </button>
               )}
             </div>
@@ -265,10 +269,10 @@ const Courses: React.FC = () => {
           <section className="mt-16 sm:mt-20 text-center scroll-reveal">
             <div className="page-cta-box bg-transparent/30 backdrop-blur-sm border border-white/10 rounded-2xl p-8 sm:p-12 max-w-2xl mx-auto">
               <h2 className="text-2xl sm:text-3xl font-bold text-white/90 mb-4">
-                需要客製化訓練計畫？
+                {t.course.ctaTitle}
               </h2>
               <p className="text-white/60 mb-8">
-                我們提供一對一諮詢服務，根據你的目標制定專屬訓練方案
+                {t.course.ctaSubtitle}
               </p>
               <PillButton
                 theme="studio"
@@ -276,7 +280,7 @@ const Courses: React.FC = () => {
                 size="lg"
                 onClick={() => navigate("/contact")}
               >
-                預約諮詢
+                {t.course.ctaBook}
               </PillButton>
             </div>
           </section>
