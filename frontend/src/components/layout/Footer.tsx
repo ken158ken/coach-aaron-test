@@ -23,13 +23,7 @@ const Footer: React.FC = (): JSX.Element => {
   ];
 
   return (
-    <footer
-      style={{
-        background: "rgba(5, 5, 5, 0.95)",
-        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-      }}
-      className="py-5 sm:py-6 px-4 md:px-8"
-    >
+    <footer className="site-footer py-5 sm:py-6 px-4 md:px-8">
       <div className="studio-container">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
 
@@ -38,7 +32,7 @@ const Footer: React.FC = (): JSX.Element => {
             <span className="font-display font-bold tracking-[4px] silver-text text-base sm:text-lg">
               阿倫教官
             </span>
-            <span className="hidden sm:inline text-[#555] text-xs tracking-wider">
+            <span className="hidden sm:inline text-muted text-xs tracking-wider">
               心理學 × 健身講師
             </span>
           </div>
@@ -71,20 +65,7 @@ const Footer: React.FC = (): JSX.Element => {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm transition-all duration-300 hover:scale-110"
-                style={{
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: "4px",
-                  color: "#666",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(197,160,89,0.6)";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "#c5a059";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.15)";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "#666";
-                }}
+                className="footer-social-icon w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm hover:scale-110"
               >
                 <s.icon />
               </a>
@@ -93,8 +74,8 @@ const Footer: React.FC = (): JSX.Element => {
         </div>
 
         {/* Copyright */}
-        <div className="mt-4 pt-4 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <p className="text-[9px] sm:text-[10px] tracking-widest" style={{ color: "#444" }}>
+        <div className="footer-copyright mt-4 pt-4 text-center">
+          <p className="text-[9px] sm:text-[10px] tracking-widest">
             © 2026 阿倫教官 - All rights reserved
           </p>
         </div>

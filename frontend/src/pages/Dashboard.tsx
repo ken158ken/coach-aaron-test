@@ -79,7 +79,7 @@ const Dashboard: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Recent Courses */}
-            <div className="md:col-span-2 bg-[#141414] rounded-lg border border-[#c5a059]/10 p-6">
+            <div className="md:col-span-2 bg-surface rounded-lg border border-gold/10 p-6">
               <h2 className="text-xl text-white/90 font-light mb-6">
                 繼續學習
               </h2>
@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
                         <h3 className="text-white/90 font-medium">
                           {course.title}
                         </h3>
-                        <p className="text-[#888] text-sm">
+                        <p className="text-muted text-sm">
                           {course.lastAccess}學習
                         </p>
                         {/* Progress Bar */}
@@ -117,7 +117,7 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-[#888] mb-4">尚未開始任何課程</p>
+                  <p className="text-muted mb-4">尚未開始任何課程</p>
                   <Link to="/courses">
                     <PillButton theme="studio" variant="default">
                       瀏覽課程
@@ -128,7 +128,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-[#141414] rounded-lg border border-[#c5a059]/10 p-6">
+            <div className="bg-surface rounded-lg border border-gold/10 p-6">
               <h2 className="text-xl text-white/90 font-light mb-6">
                 快速操作
               </h2>

@@ -109,16 +109,7 @@ const Courses: React.FC = () => {
                   <button
                     key={lv}
                     onClick={() => setSelectedLevel(lv)}
-                    className={`level-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide border transition-all duration-200 ${selectedLevel === lv ? "active" : ""}`}
-                    style={selectedLevel !== lv ? {
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      color: "rgba(255,255,255,0.55)",
-                    } : {
-                      background: "rgba(255,255,255,0.12)",
-                      border: "1px solid rgba(255,255,255,0.50)",
-                      color: "#fff",
-                    }}
+                    className={`level-filter-pill shrink-0 ${selectedLevel === lv ? "active" : ""}`}
                   >
                     {lv === "" ? "全部等級" : levelLabels[lv]}
                   </button>
@@ -130,12 +121,7 @@ const Courses: React.FC = () => {
                 <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
                   <button
                     onClick={() => setSelectedCategory("")}
-                    className={`page-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide border transition-all duration-200 ${selectedCategory === "" ? "active" : ""}`}
-                    style={selectedCategory !== "" ? {
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      color: "rgba(255,255,255,0.55)",
-                    } : undefined}
+                    className={`page-filter-pill shrink-0 ${selectedCategory === "" ? "active" : ""}`}
                   >
                     全部分類
                   </button>
@@ -143,12 +129,7 @@ const Courses: React.FC = () => {
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`page-filter-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide border transition-all duration-200 ${selectedCategory === cat ? "active" : ""}`}
-                      style={selectedCategory !== cat ? {
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        color: "rgba(255,255,255,0.55)",
-                      } : undefined}
+                      className={`page-filter-pill shrink-0 ${selectedCategory === cat ? "active" : ""}`}
                     >
                       {cat}
                     </button>

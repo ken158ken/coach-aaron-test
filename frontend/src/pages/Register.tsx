@@ -79,17 +79,17 @@ const Register: React.FC = () => {
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-light text-[#c5a059] tracking-widest">
+            <h1 className="text-3xl sm:text-4xl font-light text-gold tracking-widest">
               AARON
             </h1>
           </Link>
-          <p className="text-sm sm:text-base text-[#888] mt-2 font-light">
+          <p className="text-sm sm:text-base text-muted mt-2 font-light">
             建立您的帳號
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-[#141414] p-5 sm:p-8 rounded-lg border border-[#c5a059]/10">
+        <div className="bg-surface p-5 sm:p-8 rounded-lg border border-gold/10">
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <Input
               name="name"
@@ -144,33 +144,33 @@ const Register: React.FC = () => {
           </form>
 
           {/* Terms */}
-          <p className="text-center text-[#888] text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
+          <p className="text-center text-muted text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
             註冊即表示您同意我們的{" "}
-            <Link to="/terms" className="text-[#c5a059] hover:underline">
+            <Link to="/terms" className="text-gold hover:underline">
               服務條款
             </Link>{" "}
             與{" "}
-            <Link to="/privacy" className="text-[#c5a059] hover:underline">
+            <Link to="/privacy" className="text-gold hover:underline">
               隱私政策
             </Link>
           </p>
 
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
-            <div className="flex-1 border-t border-[#c5a059]/10" />
-            <span className="text-[#888] text-xs sm:text-sm">
+            <div className="flex-1 border-t border-gold/10" />
+            <span className="text-muted text-xs sm:text-sm">
               或使用以下方式註冊
             </span>
-            <div className="flex-1 border-t border-[#c5a059]/10" />
+            <div className="flex-1 border-t border-gold/10" />
           </div>
 
           {/* Social Login Buttons */}
           <SocialLoginButtons />
 
           {/* Login Link */}
-          <p className="text-center text-sm sm:text-base text-[#888] mt-6">
+          <p className="text-center text-sm sm:text-base text-muted mt-6">
             已經有帳號？{" "}
-            <Link to="/login" className="text-[#c5a059] hover:underline">
+            <Link to="/login" className="text-gold hover:underline">
               立即登入
             </Link>
           </p>

@@ -107,15 +107,15 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
 
           {/* Content */}
           <div ref={contentRef} className="text-center md:text-left">
-            <span className="inline-block text-[#c5a059] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
+            <span className="inline-block text-gold text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
               關於教練
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white/90 mb-4 sm:mb-6 leading-tight">
               Aaron 教練
               <br />
-              <span className="text-[#c5a059]">專業健身指導</span>
+              <span className="text-gold">專業健身指導</span>
             </h2>
-            <p className="text-[#888] text-base sm:text-lg font-light leading-relaxed mb-4 sm:mb-6">
+            <p className="text-muted text-base sm:text-lg font-light leading-relaxed mb-4 sm:mb-6">
               {aboutCoach}
             </p>
             <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 text-left max-w-md mx-auto md:mx-0">

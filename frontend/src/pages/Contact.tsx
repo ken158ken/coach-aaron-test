@@ -215,19 +215,19 @@ const Contact: React.FC = () => {
           </div>
 
           {/* Coach Info Banner */}
-          <div className="mb-8 sm:mb-10 p-5 sm:p-8 bg-[#141414] rounded-xl border border-[#c5a059]/20">
+          <div className="mb-8 sm:mb-10 p-5 sm:p-8 bg-surface rounded-xl border border-gold/20">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#c5a059]/10 border-2 border-[#c5a059]/40 flex items-center justify-center flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#c5a059]/10 border-2 border-gold/40 flex items-center justify-center shrink-0">
                 <span className="text-3xl sm:text-4xl">🏆</span>
               </div>
               <div className="flex-1">
                 <h2 className="text-lg sm:text-xl text-white/90 font-medium mb-1">
                   {COACH_INFO.NAME}
                 </h2>
-                <p className="text-sm text-[#c5a059] mb-2">
+                <p className="text-sm text-gold mb-2">
                   {COACH_INFO.TITLE}
                 </p>
-                <div className="flex flex-wrap gap-2 text-xs text-[#888]">
+                <div className="flex flex-wrap gap-2 text-xs text-muted">
                   <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
                     NSCA-CPT 認證
                   </span>
@@ -308,7 +308,7 @@ const Contact: React.FC = () => {
                 >
                   {loading ? "送出中..." : "📩 送出訊息"}
                 </PillButton>
-                <p className="text-xs text-[#888] text-center">
+                <p className="text-xs text-muted text-center">
                   送出後將由 Email 通知阿倫教官，通常 24 小時內回覆
                 </p>
               </form>
@@ -343,8 +343,8 @@ const Contact: React.FC = () => {
                 </a>
 
                 {/* Email */}
-                <div className="p-4 sm:p-5 bg-[#141414] rounded-lg border border-[#c5a059]/10 hover:border-[#c5a059]/30 transition-all duration-300">
-                  <h3 className="text-[#c5a059] text-xs sm:text-sm uppercase tracking-widest mb-1.5">
+                <div className="p-4 sm:p-5 bg-surface rounded-lg border border-gold/10 hover:border-gold/30 transition-all duration-300">
+                  <h3 className="text-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
                     Email
                   </h3>
                   <p className="text-sm sm:text-base text-white/90 break-all">
@@ -353,8 +353,8 @@ const Contact: React.FC = () => {
                 </div>
 
                 {/* 營業時間 */}
-                <div className="p-4 sm:p-5 bg-[#141414] rounded-lg border border-[#c5a059]/10 hover:border-[#c5a059]/30 transition-all duration-300">
-                  <h3 className="text-[#c5a059] text-xs sm:text-sm uppercase tracking-widest mb-1.5">
+                <div className="p-4 sm:p-5 bg-surface rounded-lg border border-gold/10 hover:border-gold/30 transition-all duration-300">
+                  <h3 className="text-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
                     營業時間
                   </h3>
                   <p className="text-sm sm:text-base text-white/90">
@@ -374,14 +374,14 @@ const Contact: React.FC = () => {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-[#141414] rounded-lg border border-[#c5a059]/10 hover:border-[#c5a059]/40 hover:shadow-lg hover:shadow-[#c5a059]/10 hover:-translate-y-1 transition-all duration-300"
+                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface rounded-lg border border-gold/10 hover:border-gold/40 hover:shadow-lg hover:shadow-gold/10 hover:-translate-y-1 transition-all duration-300"
                   >
                     <span className="text-xl sm:text-2xl">{item.icon}</span>
                     <div className="min-w-0">
                       <span className="text-sm text-white/90 block">
                         {item.name}
                       </span>
-                      <span className="text-xs text-[#888] truncate block">
+                      <span className="text-xs text-muted truncate block">
                         {item.desc}
                       </span>
                     </div>

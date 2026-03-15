@@ -109,17 +109,17 @@ const Login: React.FC = () => {
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-light text-[#c5a059] tracking-widest">
+            <h1 className="text-3xl sm:text-4xl font-light text-gold tracking-widest">
               AARON
             </h1>
           </Link>
-          <p className="text-sm sm:text-base text-[#888] mt-2 font-light">
+          <p className="text-sm sm:text-base text-muted mt-2 font-light">
             登入您的帳號
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-[#141414] p-5 sm:p-8 rounded-lg border border-[#c5a059]/10">
+        <div className="bg-surface p-5 sm:p-8 rounded-lg border border-gold/10">
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <Input
               name="email"
@@ -146,7 +146,7 @@ const Login: React.FC = () => {
             <div className="text-right">
               <Link
                 to="/forgot-password"
-                className="text-xs sm:text-sm text-[#888] hover:text-[#c5a059] transition-colors"
+                className="text-xs sm:text-sm text-muted hover:text-gold transition-colors"
               >
                 忘記密碼？
               </Link>
@@ -166,20 +166,20 @@ const Login: React.FC = () => {
 
           {/* Divider */}
           <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8">
-            <div className="flex-1 border-t border-[#c5a059]/10" />
-            <span className="text-[#888] text-xs sm:text-sm">
+            <div className="flex-1 border-t border-gold/10" />
+            <span className="text-muted text-xs sm:text-sm">
               或使用以下方式登入
             </span>
-            <div className="flex-1 border-t border-[#c5a059]/10" />
+            <div className="flex-1 border-t border-gold/10" />
           </div>
 
           {/* Social Login Buttons */}
           <SocialLoginButtons />
 
           {/* Register Link */}
-          <p className="text-center text-sm sm:text-base text-[#888] mt-6">
+          <p className="text-center text-sm sm:text-base text-muted mt-6">
             還沒有帳號？{" "}
-            <Link to="/register" className="text-[#c5a059] hover:underline">
+            <Link to="/register" className="text-gold hover:underline">
               立即註冊
             </Link>
           </p>

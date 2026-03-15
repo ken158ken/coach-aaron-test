@@ -20,7 +20,7 @@ const Loading: React.FC<LoadingProps> = ({ text, size = "md", className = "" }) 
       role="status"
       aria-label="loading"
     />
-    {text && <p className="text-sm text-[#888] tracking-widest uppercase">{text}</p>}
+    {text && <p className="text-sm text-muted tracking-widest uppercase">{text}</p>}
   </div>
 );
 
