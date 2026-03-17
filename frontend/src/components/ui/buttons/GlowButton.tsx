@@ -4,6 +4,7 @@
  */
 import React from "react";
 import { Link } from "react-router-dom";
+import { useMagnetic } from "@/hooks/useMagnetic";
 
 export interface GlowButtonProps {
   children: React.ReactNode;
@@ -20,13 +21,32 @@ export interface GlowButtonProps {
 const GlowButton: React.FC<GlowButtonProps> = ({
   children, onClick, to, type = "button", disabled = false, className = "",
 }) => {
-  const cls = `btn-metal ${className}`;
+  const magneticRef = useMagnetic(0.35); // 磁吸強度
+  const cls = `btn-metal active:scale-95 transition-transform will-change-transform ${className}`;
   const style = disabled ? { opacity: 0.5, cursor: "not-allowed" as const } : {};
+  
   if (to) {
-    return <Link to={to} className={cls} style={style}>{children}</Link>;
+    return (
+      <Link 
+        ref={magneticRef as any}
+        to={to} 
+        className={cls} 
+        style={style}
+      >
+        {children}
+      </Link>
+    );
   }
+  
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={cls} style={style}>
+    <button 
+      ref={magneticRef as any}
+      type={type} 
+      onClick={onClick} 
+      disabled={disabled} 
+      className={cls} 
+      style={style}
+    >
       {children}
     </button>
   );

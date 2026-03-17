@@ -42,120 +42,143 @@ import CourseEditor from "@/pages/admin/CourseEditor";
 import LandingPageManager from "@/pages/admin/LandingPageManager";
 import LandingPageEditor from "@/pages/admin/LandingPageEditor";
 
+import SmoothScroll from "@/components/layout/SmoothScroll";
+import PageBlade from "@/components/layout/PageBlade";
+
 /**
  * App 根元件
  *
  * @returns {JSX.Element} 應用程式根元件
  */
+import { useEffect } from "react";
+
 function App(): JSX.Element {
-  return (
+  // 全域點擊監聽：點擊 navbar 以外的區域觸發全頁銀刃
+  useEffect(() => {
+    let lastFired = 0;
+    const handleGlobalClick = (e: MouseEvent) => {
+      const nav = document.querySelector("nav");
+      if (nav && nav.contains(e.target as Node)) return; // navbar 由自身處理
+      const now = Date.now();
+      if (now - lastFired < 600) return; // 600ms 冷卻，避免連點重複
+      lastFired = now;
+      window.dispatchEvent(new CustomEvent("trigger:pageblade"));
+    };
+    document.addEventListener("click", handleGlobalClick);
+    return () => document.removeEventListener("click", handleGlobalClick);
+  }, []);
+
+    return (
     <AuthProvider>
       <ThemeProvider>
         <LanguageProvider>
           <DialogProvider>
-            <Routes>
-              {/* 前台路由 */}
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Home />} />
-                <Route path="courses" element={<Courses />} />
-                <Route path="courses/:id" element={<CourseDetail />} />
-                <Route path="videos" element={<Videos />} />
-                <Route path="articles" element={<Articles />} />
-                <Route path="articles/:slug" element={<ArticleDetail />} />
-                <Route path="contact" element={<Contact />} />
-                <Route path="login" element={<Login />} />
-                <Route path="register" element={<Register />} />
+            <SmoothScroll>
+              <PageBlade />
+              <Routes>
+                {/* 前台路由 */}
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Home />} />
+                  <Route path="courses" element={<Courses />} />
+                  <Route path="courses/:id" element={<CourseDetail />} />
+                  <Route path="videos" element={<Videos />} />
+                  <Route path="articles" element={<Articles />} />
+                  <Route path="articles/:slug" element={<ArticleDetail />} />
+                  <Route path="contact" element={<Contact />} />
+                  <Route path="login" element={<Login />} />
+                  <Route path="register" element={<Register />} />
+                  <Route
+                    path="member"
+                    element={
+                      <RequireAuth>
+                        <MemberCenter />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="dashboard"
+                    element={
+                      <RequireAuth>
+                        <Dashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route path="checkout" element={<Checkout />} />
+                  <Route path="checkout/success" element={<CheckoutSuccess />} />
+                </Route>
+
+                {/* 後台路由 */}
                 <Route
-                  path="member"
+                  path="/admin"
                   element={
-                    <RequireAuth>
-                      <MemberCenter />
-                    </RequireAuth>
+                    <RequireAdmin>
+                      <AdminLayout />
+                    </RequireAdmin>
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="courses" element={<AdminCourses />} />
+                  <Route path="videos" element={<AdminVideos />} />
+                  <Route path="content" element={<AdminContent />} />
+                  <Route path="articles" element={<AdminArticles />} />
+                  <Route path="landing-pages" element={<LandingPageManager />} />
+                  <Route path="whitelist" element={<AdminWhitelist />} />
+                </Route>
+
+                {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}
+                <Route
+                  path="/admin/articles/new"
+                  element={
+                    <RequireAdmin>
+                      <ArticleEditor />
+                    </RequireAdmin>
                   }
                 />
                 <Route
-                  path="dashboard"
+                  path="/admin/articles/:id/edit"
                   element={
-                    <RequireAuth>
-                      <Dashboard />
-                    </RequireAuth>
+                    <RequireAdmin>
+                      <ArticleEditor />
+                    </RequireAdmin>
                   }
                 />
-                <Route path="checkout" element={<Checkout />} />
-                <Route path="checkout/success" element={<CheckoutSuccess />} />
-              </Route>
+                <Route
+                  path="/admin/courses/new"
+                  element={
+                    <RequireAdmin>
+                      <CourseEditor />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/admin/courses/:id/edit"
+                  element={
+                    <RequireAdmin>
+                      <CourseEditor />
+                    </RequireAdmin>
+                  }
+                />
 
-              {/* 後台路由 */}
-              <Route
-                path="/admin"
-                element={
-                  <RequireAdmin>
-                    <AdminLayout />
-                  </RequireAdmin>
-                }
-              >
-                <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="courses" element={<AdminCourses />} />
-                <Route path="videos" element={<AdminVideos />} />
-                <Route path="content" element={<AdminContent />} />
-                <Route path="articles" element={<AdminArticles />} />
-                <Route path="landing-pages" element={<LandingPageManager />} />
-                <Route path="whitelist" element={<AdminWhitelist />} />
-              </Route>
-
-              {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}
-              <Route
-                path="/admin/articles/new"
-                element={
-                  <RequireAdmin>
-                    <ArticleEditor />
-                  </RequireAdmin>
-                }
-              />
-              <Route
-                path="/admin/articles/:id/edit"
-                element={
-                  <RequireAdmin>
-                    <ArticleEditor />
-                  </RequireAdmin>
-                }
-              />
-              <Route
-                path="/admin/courses/new"
-                element={
-                  <RequireAdmin>
-                    <CourseEditor />
-                  </RequireAdmin>
-                }
-              />
-              <Route
-                path="/admin/courses/:id/edit"
-                element={
-                  <RequireAdmin>
-                    <CourseEditor />
-                  </RequireAdmin>
-                }
-              />
-
-              {/* Landing Page 編輯器（全螢幕） */}
-              <Route
-                path="/admin/landing-pages/new"
-                element={
-                  <RequireAdmin>
-                    <LandingPageEditor />
-                  </RequireAdmin>
-                }
-              />
-              <Route
-                path="/admin/landing-pages/:id/edit"
-                element={
-                  <RequireAdmin>
-                    <LandingPageEditor />
-                  </RequireAdmin>
-                }
-              />
-            </Routes>
+                {/* Landing Page 編輯器（全螢幕） */}
+                <Route
+                  path="/admin/landing-pages/new"
+                  element={
+                    <RequireAdmin>
+                      <LandingPageEditor />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/admin/landing-pages/:id/edit"
+                  element={
+                    <RequireAdmin>
+                      <LandingPageEditor />
+                    </RequireAdmin>
+                  }
+                />
+              </Routes>
+            </SmoothScroll>
           </DialogProvider>
         </LanguageProvider>
       </ThemeProvider>

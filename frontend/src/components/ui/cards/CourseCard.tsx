@@ -10,7 +10,6 @@ import { formatCurrency } from "@/lib/ui";
 
 interface CourseCardProps {
   course: Course;
-  /** 向後相容，已無作用 */
   theme?: string;
   className?: string;
 }

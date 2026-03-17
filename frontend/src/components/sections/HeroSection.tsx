@@ -24,8 +24,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
+  const bgRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
 
-  // ✅ SSR-safe：使用確定性範本（第一筆），避免 Math.random() hydration mismatch
+  // ✅ SSR-safe：使用確定性範本
   const [heroTitle, setHeroTitle] = useState(() =>
     getDefaultTemplate("hero_title", "打造 理想體態\n遇見更好的自己"),
   );
@@ -36,41 +38,70 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
     ),
   );
 
-  // 從後台載入內容，若 DB 回傳空值則保留隨機範本
+  // 滑鼠視差邏輯
   useEffect(() => {
-    contentService
-      .getPublicContent()
-      .then((content) => {
-        if (content.hero_title?.trim()) setHeroTitle(content.hero_title);
-        if (content.hero_subtitle?.trim())
-          setHeroSubtitle(content.hero_subtitle);
-      })
-      .catch(() => {
-        // API 失敗時保留隨機範本，不做額外處理
+    if (!containerRef.current) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+      
+      // 計算滑鼠相對於中心的位置 (-0.5 ~ 0.5)
+      const xPos = (clientX / innerWidth) - 0.5;
+      const yPos = (clientY / innerHeight) - 0.5;
+
+      // 背景微動 (反向，幅度大一點)
+      gsap.to(bgRef.current, {
+        x: xPos * -30,
+        y: yPos * -20,
+        duration: 1.2,
+        ease: "power2.out"
       });
+
+      // 線條微動 (同向，幅度適中)
+      gsap.to(lineRef.current, {
+        x: xPos * 15,
+        y: yPos * 10,
+        duration: 1.5,
+        ease: "power2.out"
+      });
+
+      // 內容微動 (反向，幅度極小)
+      gsap.to([titleRef.current, subtitleRef.current, ctaRef.current], {
+        x: xPos * -10,
+        y: yPos * -5,
+        duration: 1,
+        ease: "power2.out",
+        stagger: 0.02
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  // 原始登場動畫
   useEffect(() => {
     const ctx = gsap.context(() => {
       // Title — 快速切入，小位移，略帶斜角
       gsap.fromTo(
         titleRef.current,
-        { y: 24, opacity: 0, skewX: -2 },
-        { y: 0, opacity: 1, skewX: 0, duration: 0.6, ease: "expo.out", delay: 0.15 },
+        { y: 40, opacity: 0, skewX: -4 },
+        { y: 0, opacity: 1, skewX: 0, duration: 1.2, ease: "expo.out", delay: 0.2 },
       );
 
       // Subtitle — 接連切入
       gsap.fromTo(
         subtitleRef.current,
-        { y: 16, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, ease: "expo.out", delay: 0.35 },
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, ease: "expo.out", delay: 0.4 },
       );
 
       // CTA — 最後收尾
       gsap.fromTo(
         ctaRef.current,
-        { y: 12, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.45, ease: "expo.out", delay: 0.5 },
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, ease: "expo.out", delay: 0.6 },
       );
     }, containerRef);
 
@@ -80,18 +111,18 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   return (
     <section
       ref={containerRef}
-      className={`studio-hero relative min-h-screen flex flex-col items-center justify-center text-center px-4 ${className}`}
+      className={`studio-hero relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden ${className}`}
     >
       {/* Studio 攝影棚背景 */}
-      <div className="studio-hero-bg" aria-hidden="true" />
-      <div className="studio-floor-line" aria-hidden="true" />
+      <div ref={bgRef} className="studio-hero-bg scale-110" aria-hidden="true" />
+      <div ref={lineRef} className="studio-floor-line opacity-30" aria-hidden="true" />
 
       {/* Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-2 sm:px-4">
         {/* Title */}
         <h1
           ref={titleRef}
-          className="silver-heading font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight tracking-[4px] sm:tracking-[6px] uppercase"
+          className="silver-heading font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight tracking-[4px] sm:tracking-[6px] uppercase will-change-transform"
         >
           {heroTitle.split("\n").map((line, i) => (
             <React.Fragment key={i}>

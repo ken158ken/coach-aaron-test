@@ -76,6 +76,15 @@ const Navbar: React.FC = (): JSX.Element => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [glareKey, setGlareKey] = useState(0);
+  const [glareFast, setGlareFast] = useState(false);
+
+  // Navbar 銀刃光刷（首次 hover + 每次點擊均可觸發）
+  const triggerNavGlare = useCallback(() => {
+    setGlareKey((k) => k + 1); // 強制重新掛載讓動畫從頭播
+    setGlareFast(true);
+    setTimeout(() => setGlareFast(false), 1150);
+  }, []);
 
   // Ctrl+K 開啟搜尋
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -142,6 +151,8 @@ const Navbar: React.FC = (): JSX.Element => {
       {/* ── Navbar ── */}
       <nav
         ref={navRef}
+        onMouseEnter={triggerNavGlare}
+        onClick={(e) => { e.stopPropagation(); triggerNavGlare(); }}
         className="fixed top-0 left-0 right-0 z-50 px-8 lg:px-12 py-5"
         style={{
           background: isDark ? "rgba(10,10,10,0.88)" : "rgba(246,243,238,0.92)",
@@ -159,6 +170,7 @@ const Navbar: React.FC = (): JSX.Element => {
           }}
         >
           <div
+key={glareKey}
             className="navbar-glare-strip"
             style={{
               position: "absolute", top: 0, left: "-100%", width: "50%", height: "100%",
@@ -166,8 +178,10 @@ const Navbar: React.FC = (): JSX.Element => {
                 ? "linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%)"
                 : "linear-gradient(90deg,rgba(0,0,0,0) 0%,rgba(38,36,33,0.20) 50%,rgba(0,0,0,0) 100%)",
               transform: "skewX(-45deg)",
-              animation: "navbarGlare 6s infinite 2s",
-              opacity: isDark ? 0.4 : 0.55,
+              animation: glareFast
+                ? "navbarGlareOnce 1.1s cubic-bezier(0.22,1,0.36,1) forwards"
+                : "navbarGlare 6s infinite 2s",
+              opacity: glareFast ? (isDark ? 0.75 : 0.8) : (isDark ? 0.4 : 0.55),
             }}
           />
         </div>

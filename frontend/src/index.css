@@ -92,6 +92,14 @@
   15%  { left: 200%; }
   100% { left: 200%; }
 }
+/* 手動觸發版：光帶在 65% 時間內橫掃，更明顯 */
+@keyframes navbarGlareOnce {
+  0%   { left: -120%; opacity: 0; }
+  5%   { opacity: 1; }
+  65%  { left: 210%; opacity: 1; }
+  80%  { left: 210%; opacity: 0; }
+  100% { left: 210%; opacity: 0; }
+}
 @keyframes ambientGlare {
   0%   { transform: rotate(30deg) translateY(-100%) translateX(-100%); }
   20%  { transform: rotate(30deg) translateY(100%) translateX(100%); }
@@ -791,3 +799,87 @@
 [data-theme="studio-light"] .banner-area .text-white\/40 { color: rgba(255,255,255,0.40); }
 [data-theme="studio-light"] .banner-area .text-white\/30 { color: rgba(255,255,255,0.30); }
 [data-theme="studio-light"] .banner-area .border-white\/40 { border-color: rgba(255,255,255,0.40); }
+
+
+/* ════════════════════════════════════════════════
+   銀刃自訂滑鼠指標 (Custom Cursor)
+   僅在 pointer: fine (桌機) 裝置生效
+   ════════════════════════════════════════════════ */
+@media (hover: hover) and (pointer: fine) {
+  .custom-cursor-active,
+  .custom-cursor-active * {
+    cursor: none !important;
+  }
+}
+
+.custom-cursor-dot {
+  position: fixed;
+  top: -3px;
+  left: -3px;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  will-change: transform;
+}
+
+.custom-cursor-ring {
+  position: fixed;
+  top: -20px;
+  left: -20px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  will-change: transform;
+}
+
+/* 亮色主題下的游標顏色調整 */
+[data-theme='studio-light'] .custom-cursor-dot {
+  background: rgba(20, 20, 20, 0.75);
+}
+[data-theme='studio-light'] .custom-cursor-ring {
+  border-color: rgba(20, 20, 20, 0.28);
+}
+
+/* ════════════════════════════════════════════════
+   路由切換全頁銀刃特效 (PageBlade)
+   ════════════════════════════════════════════════ */
+@keyframes routeBladeSweep {
+  0%   { transform: translateX(-130%) skewX(-22deg); opacity: 0; }
+  8%   { opacity: 1; }
+  35%  { opacity: 1; }
+  55%  { transform: translateX(140%) skewX(-22deg); opacity: 0; }
+  100% { transform: translateX(140%) skewX(-22deg); opacity: 0; }
+}
+
+.page-blade-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9990;
+  overflow: hidden;
+}
+
+.page-blade-strip {
+  position: absolute;
+  top: -15%;
+  left: 0;
+  width: 60%;
+  height: 130%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.13) 45%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.13) 55%,
+    rgba(255, 255, 255, 0.03) 80%,
+    transparent 100%
+  );
+  animation: routeBladeSweep 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
