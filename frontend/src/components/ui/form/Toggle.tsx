@@ -1,5 +1,5 @@
 /**
- * 切換開關元件
+ * 切換開關元件 — 雙標籤式，左右同時顯示「關/開」清楚分辨狀態
  * @module components/ui/form/Toggle
  */
 
@@ -16,14 +16,8 @@ interface ToggleProps {
 }
 
 /**
- * Toggle - 切換開關元件
- *
- * @param {boolean} checked - 是否選中
- * @param {Function} onChange - 變更回調
- * @param {string} label - 標籤文字
- * @param {boolean} disabled - 是否停用
- * @param {string} className - 額外樣式
- * @returns {JSX.Element} 切換開關
+ * Toggle - 雙標籤切換開關
+ * 左側「關」右側「開」同時顯示，當前狀態高亮，一目了然
  */
 export const Toggle: React.FC<ToggleProps> = ({
   checked,
@@ -34,34 +28,41 @@ export const Toggle: React.FC<ToggleProps> = ({
 }) => {
   return (
     <label
-      className={`
-        inline-flex items-center gap-3 cursor-pointer
-        ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-        ${className}
-      `}
+      className={`inline-flex items-center gap-3 ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } ${className}`}
     >
-      <div className="relative">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => !disabled && onChange(e.target.checked)}
-          disabled={disabled}
-          className="sr-only peer"
-        />
-        <div
-          className={`
-            w-11 h-6 rounded-full transition-all duration-300
-            ${checked ? "bg-luxe-gold shadow-md shadow-luxe-gold/30" : "bg-luxe-surface border border-luxe-gold/30 hover:border-luxe-gold/60"}
-          `}
-        />
-        <div
-          className={`
-            absolute top-0.5 left-0.5 w-5 h-5 rounded-full
-            bg-white shadow transition-transform
-            ${checked ? "translate-x-5" : "translate-x-0"}
-          `}
-        />
-      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => !disabled && onChange(!checked)}
+        className={`flex rounded-full overflow-hidden border transition-all duration-200 ${
+          checked ? "border-luxe-gold/40" : "border-white/15"
+        }`}
+      >
+        {/* 關 side */}
+        <span
+          className={`px-3 py-1 text-xs font-medium transition-all duration-200 select-none ${
+            !checked
+              ? "bg-white/15 text-white/90"
+              : "bg-transparent text-white/25"
+          }`}
+        >
+          關
+        </span>
+        {/* 開 side */}
+        <span
+          className={`px-3 py-1 text-xs font-medium transition-all duration-200 select-none ${
+            checked
+              ? "bg-luxe-gold text-black font-semibold"
+              : "bg-transparent text-white/25"
+          }`}
+        >
+          開
+        </span>
+      </button>
       {label && <span className="text-sm text-luxe-text">{label}</span>}
     </label>
   );

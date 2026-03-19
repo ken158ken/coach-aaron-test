@@ -168,6 +168,77 @@ router.post(
 );
 
 /**
+ * 取得學員見證設定（管理員）— 必須在 /:id 路由之前定義，否則 "config" 會被當成 ID
+ * @route GET /api/slides/admin/testimonials/config
+ */
+router.get(
+  "/admin/testimonials/config",
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("testimonial_config")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
+      if (error) throw error;
+      res.json(data || { id: 1, interval_ms: 4000, is_published: true, card_layout: "portrait" });
+    } catch (err) {
+      console.error("Get testimonial config (admin) error:", err);
+      res.status(500).json({ error: "取得幻燈片設定失敗" });
+    }
+  },
+);
+
+/**
+ * 更新學員見證設定（interval_ms、is_published、card_layout）— 必須在 /:id 之前
+ * @route PUT /api/slides/admin/testimonials/config
+ */
+router.put(
+  "/admin/testimonials/config",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { intervalMs, isPublished, cardLayout } = req.body;
+
+      const updateData: Record<string, unknown> = {};
+      if (intervalMs !== undefined) {
+        const ms = Number(intervalMs);
+        if (isNaN(ms) || ms < 1000 || ms > 30000) {
+          res.status(400).json({ error: "輪播間隔需在 1000～30000 毫秒之間" });
+          return;
+        }
+        updateData.interval_ms = ms;
+      }
+      if (isPublished !== undefined) updateData.is_published = isPublished;
+      if (cardLayout !== undefined) {
+        if (!["portrait", "landscape"].includes(cardLayout)) {
+          res.status(400).json({ error: "card_layout 只允許 portrait 或 landscape" });
+          return;
+        }
+        updateData.card_layout = cardLayout;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("testimonial_config")
+        .update(updateData)
+        .eq("id", 1)
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      console.error("Update testimonial config error:", err);
+      res.status(500).json({ error: "更新幻燈片設定失敗" });
+    }
+  },
+);
+
+/**
  * 更新學員見證幻燈片
  * @route PUT /api/slides/admin/testimonials/:id
  */
@@ -230,77 +301,6 @@ router.delete(
     } catch (err) {
       console.error("Delete testimonial slide error:", err);
       res.status(500).json({ error: "刪除學員見證失敗" });
-    }
-  },
-);
-
-/**
- * 取得學員見證設定（管理員）
- * @route GET /api/slides/admin/testimonials/config
- */
-router.get(
-  "/admin/testimonials/config",
-  authenticateToken,
-  requireAdmin,
-  async (_req: Request, res: Response): Promise<void> => {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from("testimonial_config")
-        .select("*")
-        .eq("id", 1)
-        .single();
-
-      if (error) throw error;
-      res.json(data || { id: 1, interval_ms: 4000, is_published: true, card_layout: "portrait" });
-    } catch (err) {
-      console.error("Get testimonial config (admin) error:", err);
-      res.status(500).json({ error: "取得幻燈片設定失敗" });
-    }
-  },
-);
-
-/**
- * 更新學員見證設定（interval_ms、is_published）
- * @route PUT /api/slides/admin/testimonials/config
- */
-router.put(
-  "/admin/testimonials/config",
-  authenticateToken,
-  requireAdmin,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { intervalMs, isPublished, cardLayout } = req.body;
-
-      const updateData: Record<string, unknown> = {};
-      if (intervalMs !== undefined) {
-        const ms = Number(intervalMs);
-        if (isNaN(ms) || ms < 1000 || ms > 30000) {
-          res.status(400).json({ error: "輪播間隔需在 1000～30000 毫秒之間" });
-          return;
-        }
-        updateData.interval_ms = ms;
-      }
-      if (isPublished !== undefined) updateData.is_published = isPublished;
-      if (cardLayout !== undefined) {
-        if (!["portrait", "landscape"].includes(cardLayout)) {
-          res.status(400).json({ error: "card_layout 只允許 portrait 或 landscape" });
-          return;
-        }
-        updateData.card_layout = cardLayout;
-      }
-
-      const { data, error } = await supabaseAdmin
-        .from("testimonial_config")
-        .update(updateData)
-        .eq("id", 1)
-        .select()
-        .single();
-
-      if (error) throw error;
-      res.json(data);
-    } catch (err) {
-      console.error("Update testimonial config error:", err);
-      res.status(500).json({ error: "更新幻燈片設定失敗" });
     }
   },
 );
@@ -371,6 +371,59 @@ router.post(
 );
 
 /**
+ * 取得相片輪播設定（管理員）— 必須在 /:id 路由之前定義
+ * @route GET /api/slides/admin/gallery/config
+ */
+router.get(
+  "/admin/gallery/config",
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("gallery_config")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
+      if (error) throw error;
+      res.json(data || { id: 1, is_published: true });
+    } catch (err) {
+      console.error("Get gallery config (admin) error:", err);
+      res.status(500).json({ error: "取得相片輪播設定失敗" });
+    }
+  },
+);
+
+/**
+ * 更新相片輪播設定（is_published）— 必須在 /:id 之前
+ * @route PUT /api/slides/admin/gallery/config
+ */
+router.put(
+  "/admin/gallery/config",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { isPublished } = req.body;
+
+      const { data, error } = await supabaseAdmin
+        .from("gallery_config")
+        .update({ is_published: isPublished })
+        .eq("id", 1)
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      console.error("Update gallery config error:", err);
+      res.status(500).json({ error: "更新相片輪播設定失敗" });
+    }
+  },
+);
+
+/**
  * 更新相片輪播幻燈片
  * @route PUT /api/slides/admin/gallery/:id
  */
@@ -431,59 +484,6 @@ router.delete(
     } catch (err) {
       console.error("Delete gallery slide error:", err);
       res.status(500).json({ error: "刪除相片失敗" });
-    }
-  },
-);
-
-/**
- * 取得相片輪播設定（管理員）
- * @route GET /api/slides/admin/gallery/config
- */
-router.get(
-  "/admin/gallery/config",
-  authenticateToken,
-  requireAdmin,
-  async (_req: Request, res: Response): Promise<void> => {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from("gallery_config")
-        .select("*")
-        .eq("id", 1)
-        .single();
-
-      if (error) throw error;
-      res.json(data || { id: 1, is_published: true });
-    } catch (err) {
-      console.error("Get gallery config (admin) error:", err);
-      res.status(500).json({ error: "取得相片輪播設定失敗" });
-    }
-  },
-);
-
-/**
- * 更新相片輪播設定（is_published）
- * @route PUT /api/slides/admin/gallery/config
- */
-router.put(
-  "/admin/gallery/config",
-  authenticateToken,
-  requireAdmin,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { isPublished } = req.body;
-
-      const { data, error } = await supabaseAdmin
-        .from("gallery_config")
-        .update({ is_published: isPublished })
-        .eq("id", 1)
-        .select()
-        .single();
-
-      if (error) throw error;
-      res.json(data);
-    } catch (err) {
-      console.error("Update gallery config error:", err);
-      res.status(500).json({ error: "更新相片輪播設定失敗" });
     }
   },
 );

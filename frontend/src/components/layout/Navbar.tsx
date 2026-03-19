@@ -78,6 +78,14 @@ const Navbar: React.FC = (): JSX.Element => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [glareKey, setGlareKey] = useState(0);
   const [glareFast, setGlareFast] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // 滾動偵測：超過 20px 後 navbar 加深背景
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Navbar 銀刃光刷（首次 hover + 每次點擊均可觸發）
   const triggerNavGlare = useCallback(() => {
@@ -155,11 +163,14 @@ const Navbar: React.FC = (): JSX.Element => {
         onClick={(e) => { e.stopPropagation(); triggerNavGlare(); }}
         className="fixed top-0 left-0 right-0 z-50 px-8 lg:px-12 py-5"
         style={{
-          background: isDark ? "rgba(10,10,10,0.88)" : "rgba(246,243,238,0.92)",
-          backdropFilter: "blur(12px)",
-          borderBottom: isDark
-            ? "1px solid rgba(255,255,255,0.10)"
-            : "1px solid rgba(0,0,0,0.08)",
+          background: scrolled
+            ? (isDark ? "rgba(10,10,10,0.92)" : "rgba(246,243,238,0.96)")
+            : (isDark ? "rgba(10,10,10,0.15)" : "rgba(246,243,238,0.25)"),
+          backdropFilter: scrolled ? "blur(20px)" : "blur(6px)",
+          borderBottom: scrolled
+            ? (isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.08)")
+            : "1px solid transparent",
+          transition: "background 0.4s ease, backdrop-filter 0.4s ease, border-color 0.4s ease",
         }}
       >
         {/* Navbar glare 動畫條 — 獨立 overflow:hidden 容器 */}
@@ -314,7 +325,8 @@ key={glareKey}
 
             {/* 手機漢堡選單 */}
             <button
-              className="lg:hidden flex items-center justify-center w-9 h-9 text-[#888] hover:text-white transition-colors"
+              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 text-white/70 hover:text-white transition-all duration-200"
+              style={{ background: "rgba(255,255,255,0.05)" }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="選單"
             >
