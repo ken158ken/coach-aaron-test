@@ -161,7 +161,7 @@ const Navbar: React.FC = (): JSX.Element => {
         ref={navRef}
         onMouseEnter={triggerNavGlare}
         onClick={(e) => { e.stopPropagation(); triggerNavGlare(); }}
-        className="fixed top-0 left-0 right-0 z-50 px-8 lg:px-12 py-5"
+        className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-8 lg:px-12 py-4 sm:py-5"
         style={{
           background: scrolled
             ? (isDark ? "rgba(10,10,10,0.92)" : "rgba(246,243,238,0.96)")
@@ -197,7 +197,7 @@ key={glareKey}
           />
         </div>
 
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-6">
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-2 sm:gap-6">
 
           {/* Logo */}
           <Link to="/" className="shrink-0">
@@ -224,7 +224,7 @@ key={glareKey}
           </ul>
 
           {/* 右側工具列 */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             {/* 搜尋按鈕 */}
             <SearchButton onClick={() => setSearchOpen(true)} />
 
