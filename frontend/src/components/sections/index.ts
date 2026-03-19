@@ -7,3 +7,5 @@ export { default as HeroSection } from "./HeroSection";
 export { default as CoachIntroSection } from "./CoachIntroSection";
 export { default as PodcastSection } from "./PodcastSection";
 export { default as ReviewSection } from "./ReviewSection";
+export { default as TestimonialCarousel } from "./TestimonialCarousel";
+export { default as GallerySlider } from "./GallerySlider";

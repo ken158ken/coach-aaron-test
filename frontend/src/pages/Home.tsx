@@ -11,10 +11,12 @@ import {
   HeroSection,
   CoachIntroSection,
   PodcastSection,
-  ReviewSection,
+  TestimonialCarousel,
+  GallerySlider,
 } from "@/components/sections";
 import HomePopup from "@/components/sections/HomePopup";
 import SEOHead from "@/components/seo/SEOHead";
+import LazySection from "@/components/ui/LazySection";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -96,15 +98,20 @@ const Home: React.FC = () => {
         <CoachIntroSection />
       </div>
 
-      {/* Podcast Section */}
-      <div className="section-reveal">
+      {/* Podcast Section — 延遲渲染，捲到前 400px 才載入 DOM */}
+      <LazySection minHeight="500px" className="section-reveal">
         <PodcastSection />
-      </div>
+      </LazySection>
 
-      {/* Review Section */}
-      <div className="section-reveal">
-        <ReviewSection />
-      </div>
+      {/* 學員見證幻燈片（自動輪播）— 延遲渲染 */}
+      <LazySection minHeight="500px" className="section-reveal">
+        <TestimonialCarousel />
+      </LazySection>
+
+      {/* 相片輪播（手動翻頁）— 延遲渲染 */}
+      <LazySection minHeight="400px" className="section-reveal">
+        <GallerySlider />
+      </LazySection>
     </div>
   );
 };

@@ -21,7 +21,20 @@ import {
   type SiteContent,
   type SitePopup,
 } from "@/services/content.service";
+import {
+  slidesService,
+  type TestimonialSlide,
+  type TestimonialConfig,
+  type GallerySlide,
+  type GalleryConfig,
+} from "@/services/slides.service";
+import { TestimonialCarousel } from "@/components/sections";
+import { GallerySlider } from "@/components/sections";
 import { getTemplates, type ContentTemplate } from "@/utils/contentTemplates";
+
+/** Cloudinary 限定前綴 */
+const CLOUDINARY_PREFIX = "https://res.cloudinary.com/daejq0zo9/";
+const isValidCloudinaryUrl = (url: string) => url.startsWith(CLOUDINARY_PREFIX);
 
 /** 日誌工具 */
 const logger = {
@@ -31,7 +44,7 @@ const logger = {
     console.error(`[AdminContent] ${msg}`, err || ""),
 };
 
-type TabType = "content" | "popup";
+type TabType = "content" | "popup" | "testimonial" | "gallery";
 
 /**
  * TemplatePicker - 預設範本選擇器元件
@@ -115,6 +128,27 @@ const AdminContent: React.FC = () => {
     endDate: "",
   });
 
+  // ===== 學員見證幻燈片狀態 =====
+  const [testimonials, setTestimonials] = useState<TestimonialSlide[]>([]);
+  const [testimonialConfig, setTestimonialConfig] = useState<TestimonialConfig>({ interval_ms: 4000, is_published: true, card_layout: 'portrait' });
+  const [testimonialLoading, setTestimonialLoading] = useState(false);
+  const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [editingTestimonial, setEditingTestimonial] = useState<TestimonialSlide | null>(null);
+  const [testimonialForm, setTestimonialForm] = useState({ imageUrl: "", name: "", achievement: "", quote: "" });
+  const [testimonialUrlError, setTestimonialUrlError] = useState("");
+  const [showTestimonialPreview, setShowTestimonialPreview] = useState(false);
+  const [testimonialIntervalInput, setTestimonialIntervalInput] = useState("4000");
+
+  // ===== 相片輪播狀態 =====
+  const [gallerySlides, setGallerySlides] = useState<GallerySlide[]>([]);
+  const [galleryConfig, setGalleryConfig] = useState<GalleryConfig>({ is_published: true });
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [editingGallery, setEditingGallery] = useState<GallerySlide | null>(null);
+  const [galleryForm, setGalleryForm] = useState({ imageUrl: "", caption: "" });
+  const [galleryUrlError, setGalleryUrlError] = useState("");
+  const [showGalleryPreview, setShowGalleryPreview] = useState(false);
+
   // ===== 載入網站文案 =====
   const fetchContent = useCallback(async () => {
     try {
@@ -143,10 +177,47 @@ const AdminContent: React.FC = () => {
     }
   }, []);
 
+  // ===== 載入學員見證 =====
+  const fetchTestimonials = useCallback(async () => {
+    try {
+      setTestimonialLoading(true);
+      const [slides, cfg] = await Promise.all([
+        slidesService.getAdminTestimonials(),
+        slidesService.getAdminTestimonialsConfig(),
+      ]);
+      setTestimonials(Array.isArray(slides) ? slides : []);
+      setTestimonialConfig(cfg);
+      setTestimonialIntervalInput(String(cfg.interval_ms));
+    } catch (err) {
+      logger.error("載入學員見證失敗", err);
+    } finally {
+      setTestimonialLoading(false);
+    }
+  }, []);
+
+  // ===== 載入相片輪播 =====
+  const fetchGallery = useCallback(async () => {
+    try {
+      setGalleryLoading(true);
+      const [slides, cfg] = await Promise.all([
+        slidesService.getAdminGallery(),
+        slidesService.getAdminGalleryConfig(),
+      ]);
+      setGallerySlides(Array.isArray(slides) ? slides : []);
+      setGalleryConfig(cfg);
+    } catch (err) {
+      logger.error("載入相片輪播失敗", err);
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchContent();
     fetchPopups();
-  }, [fetchContent, fetchPopups]);
+    fetchTestimonials();
+    fetchGallery();
+  }, [fetchContent, fetchPopups, fetchTestimonials, fetchGallery]);
 
   // ===== 文案操作 =====
   const handleEdit = (section: SiteContent) => {
@@ -319,6 +390,197 @@ const AdminContent: React.FC = () => {
     }
   };
 
+  // ===== 學員見證操作 =====
+  const openTestimonialModal = (slide?: TestimonialSlide) => {
+    if (slide) {
+      setEditingTestimonial(slide);
+      setTestimonialForm({
+        imageUrl: slide.image_url,
+        name: slide.name,
+        achievement: slide.achievement,
+        quote: slide.quote,
+      });
+    } else {
+      setEditingTestimonial(null);
+      setTestimonialForm({ imageUrl: "", name: "", achievement: "", quote: "" });
+    }
+    setTestimonialUrlError("");
+    setShowTestimonialModal(true);
+  };
+
+  const handleSaveTestimonial = async () => {
+    if (!isValidCloudinaryUrl(testimonialForm.imageUrl)) {
+      setTestimonialUrlError("網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭");
+      return;
+    }
+    try {
+      setSaving(true);
+      if (editingTestimonial) {
+        await slidesService.updateTestimonial(editingTestimonial.id, {
+          imageUrl: testimonialForm.imageUrl,
+          name: testimonialForm.name,
+          achievement: testimonialForm.achievement,
+          quote: testimonialForm.quote,
+        });
+      } else {
+        await slidesService.createTestimonial({
+          imageUrl: testimonialForm.imageUrl,
+          name: testimonialForm.name,
+          achievement: testimonialForm.achievement,
+          quote: testimonialForm.quote,
+          sortOrder: testimonials.length + 1,
+        });
+      }
+      setShowTestimonialModal(false);
+      fetchTestimonials();
+    } catch (err) {
+      logger.error("儲存學員見證失敗", err);
+      setError("儲存學員見證失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleTestimonialActive = async (slide: TestimonialSlide) => {
+    try {
+      await slidesService.updateTestimonial(slide.id, { isActive: !slide.is_active });
+      fetchTestimonials();
+    } catch (err) {
+      logger.error("切換狀態失敗", err);
+    }
+  };
+
+  const handleDeleteTestimonial = async (slide: TestimonialSlide) => {
+    const confirmed = await dialog.confirm({
+      title: "刪除學員見證",
+      message: `確定要刪除「${slide.name || "此見證"}」嗎？`,
+      variant: "danger",
+      confirmText: "刪除",
+    });
+    if (!confirmed) return;
+    try {
+      await slidesService.deleteTestimonial(slide.id);
+      fetchTestimonials();
+    } catch (err) {
+      logger.error("刪除學員見證失敗", err);
+      setError("刪除學員見證失敗");
+    }
+  };
+
+  const handleSaveTestimonialConfig = async () => {
+    const ms = Number(testimonialIntervalInput);
+    if (isNaN(ms) || ms < 1000 || ms > 30000) {
+      setError("輪播間隔需在 1000～30000 毫秒之間");
+      return;
+    }
+    try {
+      setSaving(true);
+      await slidesService.updateTestimonialsConfig({ intervalMs: ms });
+      fetchTestimonials();
+    } catch (err) {
+      logger.error("更新輪播設定失敗", err);
+      setError("更新輪播設定失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleTestimonialPublish = async () => {
+    try {
+      await slidesService.updateTestimonialsConfig({ isPublished: !testimonialConfig.is_published });
+      fetchTestimonials();
+    } catch (err) {
+      logger.error("切換發布狀態失敗", err);
+    }
+  };
+
+  const handleChangeTestimonialLayout = async (layout: 'portrait' | 'landscape') => {
+    if (layout === testimonialConfig.card_layout) return;
+    try {
+      await slidesService.updateTestimonialsConfig({ cardLayout: layout });
+      fetchTestimonials();
+    } catch (err) {
+      logger.error("切換版型失敗", err);
+    }
+  };
+
+  // ===== 相片輪播操作 =====
+  const openGalleryModal = (slide?: GallerySlide) => {
+    if (slide) {
+      setEditingGallery(slide);
+      setGalleryForm({ imageUrl: slide.image_url, caption: slide.caption });
+    } else {
+      setEditingGallery(null);
+      setGalleryForm({ imageUrl: "", caption: "" });
+    }
+    setGalleryUrlError("");
+    setShowGalleryModal(true);
+  };
+
+  const handleSaveGallery = async () => {
+    if (!isValidCloudinaryUrl(galleryForm.imageUrl)) {
+      setGalleryUrlError("網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭");
+      return;
+    }
+    try {
+      setSaving(true);
+      if (editingGallery) {
+        await slidesService.updateGallery(editingGallery.id, {
+          imageUrl: galleryForm.imageUrl,
+          caption: galleryForm.caption,
+        });
+      } else {
+        await slidesService.createGallery({
+          imageUrl: galleryForm.imageUrl,
+          caption: galleryForm.caption,
+          sortOrder: gallerySlides.length + 1,
+        });
+      }
+      setShowGalleryModal(false);
+      fetchGallery();
+    } catch (err) {
+      logger.error("儲存相片失敗", err);
+      setError("儲存相片失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleGalleryActive = async (slide: GallerySlide) => {
+    try {
+      await slidesService.updateGallery(slide.id, { isActive: !slide.is_active });
+      fetchGallery();
+    } catch (err) {
+      logger.error("切換狀態失敗", err);
+    }
+  };
+
+  const handleDeleteGallery = async (slide: GallerySlide) => {
+    const confirmed = await dialog.confirm({
+      title: "刪除相片",
+      message: `確定要刪除「${slide.caption || "此相片"}」嗎？`,
+      variant: "danger",
+      confirmText: "刪除",
+    });
+    if (!confirmed) return;
+    try {
+      await slidesService.deleteGallery(slide.id);
+      fetchGallery();
+    } catch (err) {
+      logger.error("刪除相片失敗", err);
+      setError("刪除相片失敗");
+    }
+  };
+
+  const handleToggleGalleryPublish = async () => {
+    try {
+      await slidesService.updateGalleryConfig({ isPublished: !galleryConfig.is_published });
+      fetchGallery();
+    } catch (err) {
+      logger.error("切換發布狀態失敗", err);
+    }
+  };
+
   return (
     <div>
       {/* Page Header */}
@@ -328,7 +590,7 @@ const AdminContent: React.FC = () => {
             內容管理
           </h1>
           <p className="text-sm sm:text-base text-luxe-muted">
-            管理網站文案內容與首頁彈窗
+            管理網站文案、首頁彈窗與幻燈片
           </p>
         </div>
       </div>
@@ -354,6 +616,26 @@ const AdminContent: React.FC = () => {
           }`}
         >
           🪟 首頁彈窗
+        </button>
+        <button
+          onClick={() => setActiveTab("testimonial")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === "testimonial"
+              ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
+              : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+          }`}
+        >
+          🏆 學員見證幻燈片
+        </button>
+        <button
+          onClick={() => setActiveTab("gallery")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === "gallery"
+              ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
+              : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+          }`}
+        >
+          🖼️ 相片輪播
         </button>
       </div>
 
@@ -526,6 +808,232 @@ const AdminContent: React.FC = () => {
                       <button
                         onClick={() => handleDeletePopup(popup)}
                         className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== 學員見證幻燈片分頁 ===== */}
+      {activeTab === "testimonial" && (
+        <div>
+          {/* Config Bar */}
+          <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10">
+            {/* 發布狀態 */}
+            <div className="flex items-center gap-3">
+              <Toggle
+                theme="luxe"
+                checked={testimonialConfig.is_published}
+                onChange={handleToggleTestimonialPublish}
+              />
+              <span className="text-sm text-luxe-text">
+                {testimonialConfig.is_published ? "🟢 首頁顯示中" : "⚫ 已隱藏（草稿）"}
+              </span>
+            </div>
+
+            {/* 版型切換 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-luxe-muted">版型：</span>
+              <button
+                onClick={() => handleChangeTestimonialLayout('portrait')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                  testimonialConfig.card_layout === 'portrait'
+                    ? 'bg-luxe-gold/20 border-luxe-gold/50 text-luxe-gold'
+                    : 'border-luxe-gold/15 text-luxe-muted hover:border-luxe-gold/30 hover:text-luxe-text'
+                }`}
+              >
+                <svg className="w-3.5 h-4.5" viewBox="0 0 10 14" fill="currentColor">
+                  <rect x="1" y="1" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                </svg>
+                直立式
+              </button>
+              <button
+                onClick={() => handleChangeTestimonialLayout('landscape')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                  testimonialConfig.card_layout === 'landscape'
+                    ? 'bg-luxe-gold/20 border-luxe-gold/50 text-luxe-gold'
+                    : 'border-luxe-gold/15 text-luxe-muted hover:border-luxe-gold/30 hover:text-luxe-text'
+                }`}
+              >
+                <svg className="w-4.5 h-3.5" viewBox="0 0 14 10" fill="currentColor">
+                  <rect x="1" y="1" width="12" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                </svg>
+                橫式
+              </button>
+            </div>
+
+            {/* 輪播間隔 */}
+            <div className="flex items-center gap-2 ml-auto">
+              <label className="text-sm text-luxe-muted">輪播間隔（ms）</label>
+              <input
+                type="number"
+                min={1000}
+                max={30000}
+                step={500}
+                value={testimonialIntervalInput}
+                onChange={(e) => setTestimonialIntervalInput(e.target.value)}
+                className="w-24 bg-luxe-surface border border-luxe-gold/20 rounded-lg px-3 py-1.5 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50"
+              />
+              <PillButton theme="luxe" variant="outline" size="sm" onClick={handleSaveTestimonialConfig} disabled={saving}>
+                套用
+              </PillButton>
+            </div>
+
+            <PillButton theme="luxe" variant="outline" size="sm" onClick={() => setShowTestimonialPreview(true)}>
+              👁 預覽效果
+            </PillButton>
+            <PillButton theme="luxe" variant="outline" onClick={() => openTestimonialModal()}>
+              + 新增幻燈片
+            </PillButton>
+          </div>
+
+          {testimonialLoading ? (
+            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+          ) : testimonials.length === 0 ? (
+            <div className="text-center py-12 text-luxe-muted">
+              尚無幻燈片，點擊上方「新增幻燈片」開始
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {testimonials.map((slide) => (
+                <div
+                  key={slide.id}
+                  className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+                    slide.is_active ? "border-luxe-gold/15" : "border-luxe-gold/5 opacity-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Thumbnail */}
+                    <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-white/5">
+                      <img
+                        src={slide.image_url}
+                        alt={slide.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="text-luxe-text font-medium text-sm">{slide.name || "(未命名)"}</span>
+                        {slide.achievement && (
+                          <span className="text-xs bg-luxe-gold/10 text-luxe-gold px-2 py-0.5 rounded-full">
+                            {slide.achievement}
+                          </span>
+                        )}
+                        {!slide.is_active && (
+                          <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">停用</span>
+                        )}
+                      </div>
+                      {slide.quote && (
+                        <p className="text-luxe-muted text-xs line-clamp-1">「{slide.quote}」</p>
+                      )}
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Toggle
+                        theme="luxe"
+                        checked={slide.is_active}
+                        onChange={() => handleToggleTestimonialActive(slide)}
+                      />
+                      <PillButton theme="luxe" variant="outline" size="sm" onClick={() => openTestimonialModal(slide)}>
+                        編輯
+                      </PillButton>
+                      <button
+                        onClick={() => handleDeleteTestimonial(slide)}
+                        className="text-red-400 hover:text-red-300 text-sm px-1"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== 相片輪播分頁 ===== */}
+      {activeTab === "gallery" && (
+        <div>
+          {/* Config Bar */}
+          <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10">
+            <div className="flex items-center gap-3">
+              <Toggle
+                theme="luxe"
+                checked={galleryConfig.is_published}
+                onChange={handleToggleGalleryPublish}
+              />
+              <span className="text-sm text-luxe-text">
+                {galleryConfig.is_published ? "🟢 首頁顯示中" : "⚫ 已隱藏（草稿）"}
+              </span>
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <PillButton theme="luxe" variant="outline" size="sm" onClick={() => setShowGalleryPreview(true)}>
+                👁 預覽效果
+              </PillButton>
+              <PillButton theme="luxe" variant="outline" onClick={() => openGalleryModal()}>
+                + 新增相片
+              </PillButton>
+            </div>
+          </div>
+
+          {galleryLoading ? (
+            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+          ) : gallerySlides.length === 0 ? (
+            <div className="text-center py-12 text-luxe-muted">
+              尚無相片，點擊上方「新增相片」開始
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {gallerySlides.map((slide) => (
+                <div
+                  key={slide.id}
+                  className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+                    slide.is_active ? "border-luxe-gold/15" : "border-luxe-gold/5 opacity-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Thumbnail */}
+                    <div className="w-16 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5">
+                      <img
+                        src={slide.image_url}
+                        alt={slide.caption}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-luxe-text text-sm">
+                        {slide.caption || "(無說明文字)"}
+                      </p>
+                      {!slide.is_active && (
+                        <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded mt-1 inline-block">
+                          停用
+                        </span>
+                      )}
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Toggle
+                        theme="luxe"
+                        checked={slide.is_active}
+                        onChange={() => handleToggleGalleryActive(slide)}
+                      />
+                      <PillButton theme="luxe" variant="outline" size="sm" onClick={() => openGalleryModal(slide)}>
+                        編輯
+                      </PillButton>
+                      <button
+                        onClick={() => handleDeleteGallery(slide)}
+                        className="text-red-400 hover:text-red-300 text-sm px-1"
                       >
                         刪除
                       </button>
@@ -770,6 +1278,158 @@ const AdminContent: React.FC = () => {
               {saving ? "儲存中..." : "儲存"}
             </PillButton>
           </div>
+        </div>
+      </Modal>
+      {/* ===== 學員見證 新增/編輯 Modal ===== */}
+      <Modal
+        isOpen={showTestimonialModal}
+        onClose={() => setShowTestimonialModal(false)}
+        title={editingTestimonial ? "編輯學員見證" : "新增學員見證"}
+        theme="luxe"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Cloudinary URL 說明 */}
+          <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
+            📌 圖片網址限定使用 Cloudinary：<br />
+            <span className="text-luxe-gold/80 font-mono break-all">https://res.cloudinary.com/daejq0zo9/image/upload/...</span>
+          </div>
+          <div>
+            <Input
+              label="圖片網址 (Cloudinary) *"
+              value={testimonialForm.imageUrl}
+              onChange={(e) => {
+                setTestimonialForm({ ...testimonialForm, imageUrl: e.target.value });
+                setTestimonialUrlError("");
+              }}
+              placeholder="https://res.cloudinary.com/daejq0zo9/image/upload/..."
+              theme="luxe"
+            />
+            {testimonialUrlError && (
+              <p className="text-red-400 text-xs mt-1">{testimonialUrlError}</p>
+            )}
+            {/* 圖片預覽 */}
+            {testimonialForm.imageUrl && isValidCloudinaryUrl(testimonialForm.imageUrl) && (
+              <div className="mt-2 w-20 h-24 rounded-lg overflow-hidden border border-luxe-gold/20">
+                <img src={testimonialForm.imageUrl} alt="預覽" className="w-full h-full object-cover" />
+              </div>
+            )}
+          </div>
+          <Input
+            label="學員姓名 *"
+            value={testimonialForm.name}
+            onChange={(e) => setTestimonialForm({ ...testimonialForm, name: e.target.value })}
+            placeholder="例如：小美"
+            theme="luxe"
+          />
+          <Input
+            label="成就標籤（選填）"
+            value={testimonialForm.achievement}
+            onChange={(e) => setTestimonialForm({ ...testimonialForm, achievement: e.target.value })}
+            placeholder="例如：3個月減脂12公斤"
+            theme="luxe"
+          />
+          <Textarea
+            label="見證內文（選填）"
+            value={testimonialForm.quote}
+            onChange={(e) => setTestimonialForm({ ...testimonialForm, quote: e.target.value })}
+            placeholder="學員的真實感言..."
+            theme="luxe"
+            rows={4}
+          />
+          <div className="flex justify-end gap-3 pt-2">
+            <PillButton theme="luxe" variant="outline" onClick={() => setShowTestimonialModal(false)}>
+              取消
+            </PillButton>
+            <PillButton theme="luxe" variant="filled" onClick={handleSaveTestimonial} disabled={saving}>
+              {saving ? "儲存中..." : "儲存"}
+            </PillButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ===== 學員見證 預覽 Modal ===== */}
+      <Modal
+        isOpen={showTestimonialPreview}
+        onClose={() => setShowTestimonialPreview(false)}
+        title="預覽 — 學員見證幻燈片"
+        theme="luxe"
+        size="full"
+      >
+        <div className="overflow-y-auto max-h-[75vh] bg-luxe-bg rounded-xl">
+          <TestimonialCarousel
+            preview={true}
+            initialSlides={testimonials.filter((s) => s.is_active)}
+            initialConfig={testimonialConfig}
+          />
+        </div>
+      </Modal>
+
+      {/* ===== 相片輪播 新增/編輯 Modal ===== */}
+      <Modal
+        isOpen={showGalleryModal}
+        onClose={() => setShowGalleryModal(false)}
+        title={editingGallery ? "編輯相片" : "新增相片"}
+        theme="luxe"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
+            📌 圖片網址限定使用 Cloudinary：<br />
+            <span className="text-luxe-gold/80 font-mono break-all">https://res.cloudinary.com/daejq0zo9/image/upload/...</span>
+          </div>
+          <div>
+            <Input
+              label="圖片網址 (Cloudinary) *"
+              value={galleryForm.imageUrl}
+              onChange={(e) => {
+                setGalleryForm({ ...galleryForm, imageUrl: e.target.value });
+                setGalleryUrlError("");
+              }}
+              placeholder="https://res.cloudinary.com/daejq0zo9/image/upload/..."
+              theme="luxe"
+            />
+            {galleryUrlError && (
+              <p className="text-red-400 text-xs mt-1">{galleryUrlError}</p>
+            )}
+            {galleryForm.imageUrl && isValidCloudinaryUrl(galleryForm.imageUrl) && (
+              <div className="mt-2 w-32 h-20 rounded-lg overflow-hidden border border-luxe-gold/20">
+                <img src={galleryForm.imageUrl} alt="預覽" className="w-full h-full object-cover" />
+              </div>
+            )}
+          </div>
+          <Input
+            label="圖片說明文字（選填）"
+            value={galleryForm.caption}
+            onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value })}
+            placeholder="例如：培訓現場記錄"
+            theme="luxe"
+          />
+          <div className="flex justify-end gap-3 pt-2">
+            <PillButton theme="luxe" variant="outline" onClick={() => setShowGalleryModal(false)}>
+              取消
+            </PillButton>
+            <PillButton theme="luxe" variant="filled" onClick={handleSaveGallery} disabled={saving}>
+              {saving ? "儲存中..." : "儲存"}
+            </PillButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ===== 相片輪播 預覽 Modal ===== */}
+      <Modal
+        isOpen={showGalleryPreview}
+        onClose={() => setShowGalleryPreview(false)}
+        title="預覽 — 相片輪播（手動翻頁）"
+        theme="luxe"
+        size="full"
+      >
+        <div className="overflow-y-auto max-h-[75vh] bg-luxe-bg rounded-xl">
+          <GallerySlider
+            preview={true}
+            initialSlides={gallerySlides.filter((s) => s.is_active)}
+            initialConfig={galleryConfig}
+          />
         </div>
       </Modal>
     </div>
