@@ -63,6 +63,7 @@ const AdminUsers: React.FC = () => {
     CoursePriceVisibility[]
   >([]);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
 
   // 篩選狀態
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -784,103 +785,111 @@ const AdminUsers: React.FC = () => {
               </div>
             </div>
 
-            {/* ====== 課程售價顯示管理 ====== */}
-            <div className="pt-4 border-t border-luxe-gold/10">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-luxe-text">
-                  課程售價顯示管理
-                </h4>
-                {priceVisibility.length > 0 && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() =>
-                        handleBatchToggle(detailUser.user_id, true)
-                      }
-                      className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
-                    >
-                      全部開啟
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleBatchToggle(detailUser.user_id, false)
-                      }
-                      className="text-[11px] px-2.5 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
-                    >
-                      全部關閉
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {priceLoading ? (
-                <div className="text-xs text-luxe-muted py-4 text-center">
-                  載入中...
-                </div>
-              ) : priceVisibility.length === 0 ? (
-                <div className="text-xs text-luxe-muted py-4 text-center">
-                  尚無課程資料
-                </div>
-              ) : (
-                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-luxe-gold/20 scrollbar-track-transparent">
-                  {priceVisibility.map((item) => (
-                    <div
-                      key={item.course_id}
-                      className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-luxe-surface/50 border border-luxe-gold/5 hover:border-luxe-gold/15 transition-colors"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-luxe-text truncate">
-                          {item.course_title}
-                        </p>
-                        <p className="text-[10px] text-luxe-muted">
-                          NT$ {item.price?.toLocaleString() || 0}
-                          {item.status !== "published" && (
-                            <span className="ml-1.5 text-amber-400/80">
-                              ({item.status === "draft" ? "草稿" : "已封存"})
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-[10px] ${item.show_price ? "text-emerald-400" : "text-luxe-muted"}`}
-                        >
-                          {item.show_price ? "顯示" : "隱藏"}
-                        </span>
-                        <Toggle
-                          checked={item.show_price}
-                          onChange={() =>
-                            handleTogglePriceVisibility(
-                              detailUser.user_id,
-                              item.course_id,
-                              !item.show_price,
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* 操作按鈕 */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-luxe-gold/10">
+            <div className="flex flex-wrap justify-between gap-3 pt-4 border-t border-luxe-gold/10">
               <PillButton
                 theme="luxe"
                 variant="outline"
-                onClick={() => setDetailUser(null)}
+                onClick={() => setShowPriceModal(true)}
               >
-                關閉
+                💰 課程售價設定
               </PillButton>
-              <PillButton
-                theme="luxe"
-                variant="filled"
-                onClick={() => {
-                  setSelectedUser(detailUser);
-                  setDetailUser(null);
-                }}
-              >
-                編輯用戶
+              <div className="flex gap-3">
+                <PillButton
+                  theme="luxe"
+                  variant="outline"
+                  onClick={() => setDetailUser(null)}
+                >
+                  關閉
+                </PillButton>
+                <PillButton
+                  theme="luxe"
+                  variant="filled"
+                  onClick={() => {
+                    setSelectedUser(detailUser);
+                    setDetailUser(null);
+                  }}
+                >
+                  編輯用戶
+                </PillButton>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ====== 課程售價顯示管理 Modal ====== */}
+      <Modal
+        isOpen={showPriceModal && !!detailUser}
+        onClose={() => setShowPriceModal(false)}
+        title={`課程售價設定 — ${detailUser?.display_name || detailUser?.name || ""}`}
+        theme="luxe"
+        size="md"
+      >
+        {detailUser && (
+          <div className="space-y-4">
+            {priceVisibility.length > 0 && (
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => handleBatchToggle(detailUser.user_id, true)}
+                  className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+                >
+                  全部開啟
+                </button>
+                <button
+                  onClick={() => handleBatchToggle(detailUser.user_id, false)}
+                  className="text-[11px] px-2.5 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
+                >
+                  全部關閉
+                </button>
+              </div>
+            )}
+
+            {priceLoading ? (
+              <div className="text-xs text-luxe-muted py-6 text-center">載入中...</div>
+            ) : priceVisibility.length === 0 ? (
+              <div className="text-xs text-luxe-muted py-6 text-center">尚無課程資料</div>
+            ) : (
+              <div className="max-h-[60vh] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-luxe-gold/20 scrollbar-track-transparent">
+                {priceVisibility.map((item) => (
+                  <div
+                    key={item.course_id}
+                    className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-luxe-surface/50 border border-luxe-gold/5 hover:border-luxe-gold/15 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-luxe-text truncate">{item.course_title}</p>
+                      <p className="text-[10px] text-luxe-muted">
+                        NT$ {item.price?.toLocaleString() || 0}
+                        {item.status !== "published" && (
+                          <span className="ml-1.5 text-amber-400/80">
+                            ({item.status === "draft" ? "草稿" : "已封存"})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] ${item.show_price ? "text-emerald-400" : "text-luxe-muted"}`}>
+                        {item.show_price ? "顯示" : "隱藏"}
+                      </span>
+                      <Toggle
+                        checked={item.show_price}
+                        onChange={() =>
+                          handleTogglePriceVisibility(
+                            detailUser.user_id,
+                            item.course_id,
+                            !item.show_price,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-luxe-gold/10">
+              <PillButton theme="luxe" variant="outline" onClick={() => setShowPriceModal(false)}>
+                關閉
               </PillButton>
             </div>
           </div>

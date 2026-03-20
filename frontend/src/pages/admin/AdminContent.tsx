@@ -274,6 +274,16 @@ const AdminContent: React.FC = () => {
     }
   };
 
+  const handleToggleContentActive = async (section: SiteContent) => {
+    try {
+      await contentService.updateContent(section.content_id, { isActive: !section.is_active });
+      fetchContent();
+    } catch (err) {
+      logger.error("切換顯示狀態失敗", err);
+      setError("切換顯示狀態失敗");
+    }
+  };
+
   const handleDeleteContent = async (section: SiteContent) => {
     const confirmed = await dialog.confirm({
       title: "刪除內容",
@@ -676,31 +686,35 @@ const AdminContent: React.FC = () => {
               {sections.map((section) => (
                 <div
                   key={section.content_id}
-                  className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-6"
+                  className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+                    section.is_active ? "border-luxe-gold/10" : "border-luxe-gold/5 opacity-60"
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div className="flex-grow min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-luxe-text font-medium">
+                        <h3 className="text-luxe-text font-medium text-sm">
                           {section.content_name}
                         </h3>
+                        <span className="text-xs px-1.5 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
+                          {section.content_type}
+                        </span>
                         {!section.is_active && (
-                          <span className="text-xs px-2 py-0.5 bg-red-900/30 text-red-400 rounded">
+                          <span className="text-xs px-1.5 py-0.5 bg-red-900/30 text-red-400 rounded">
                             已停用
                           </span>
                         )}
-                        <span className="text-xs px-2 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
-                          {section.content_type}
-                        </span>
                       </div>
-                      <p className="text-luxe-muted text-xs mb-3">
-                        Key: {section.content_key}
-                      </p>
-                      <p className="text-luxe-text/80 text-sm line-clamp-3 whitespace-pre-wrap">
+                      <p className="text-luxe-text/70 text-xs line-clamp-2 whitespace-pre-wrap">
                         {section.content_value || "(空白)"}
                       </p>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Toggle
+                        theme="luxe"
+                        checked={section.is_active}
+                        onChange={() => handleToggleContentActive(section)}
+                      />
                       <PillButton
                         theme="luxe"
                         variant="outline"
@@ -711,7 +725,7 @@ const AdminContent: React.FC = () => {
                       </PillButton>
                       <button
                         onClick={() => handleDeleteContent(section)}
-                        className="text-red-400 hover:text-red-300 text-sm px-2"
+                        className="text-red-400 hover:text-red-300 text-sm px-1"
                       >
                         刪除
                       </button>
