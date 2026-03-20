@@ -14,13 +14,14 @@ import React, {
   useContext,
 } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ============ 共用樣式 ============
 
 const overlayClasses =
-  "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm modal-overlay-enter";
+  "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm";
 const modalClasses =
-  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden modal-content-enter my-auto";
+  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden my-auto";
 const headerClasses =
   "px-4 sm:px-6 py-3 sm:py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
 const contentClasses = "px-4 sm:px-6 py-3 sm:py-4 max-h-[70vh] overflow-y-auto";
@@ -82,7 +83,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   // 只在客戶端掛載後才渲染，避免 SSR 水合問題
-  if (!isOpen || !mounted || typeof document === "undefined") return null;
+  if (!mounted || typeof document === "undefined") return null;
 
   const sizeClasses = {
     sm: "max-w-sm",
@@ -94,21 +95,36 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return createPortal(
-    <div className={overlayClasses} onClick={handleBackdropClick}>
-      <div
-        ref={modalRef}
-        className={`${modalClasses} ${sizeClasses[size]}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {title && (
-          <div className={headerClasses}>
-            <h3 className="text-lg font-medium text-luxe-gold">{title}</h3>
-          </div>
-        )}
-        <div className={contentClasses}>{children}</div>
-        {footer && <div className={footerClasses}>{footer}</div>}
-      </div>
-    </div>,
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className={overlayClasses}
+          onClick={handleBackdropClick}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          <motion.div
+            ref={modalRef}
+            className={`${modalClasses} ${sizeClasses[size]}`}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.94, opacity: 0, y: 12 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.96, opacity: 0, y: 6 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+          >
+            {title && (
+              <div className={headerClasses}>
+                <h3 className="text-lg font-medium text-luxe-gold">{title}</h3>
+              </div>
+            )}
+            <div className={contentClasses}>{children}</div>
+            {footer && <div className={footerClasses}>{footer}</div>}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 };

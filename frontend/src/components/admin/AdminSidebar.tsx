@@ -9,6 +9,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useLanguage } from "@/context";
 
 interface AdminSidebarProps {
@@ -271,16 +272,24 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <nav className="p-2 sm:p-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
         <ul className="space-y-1">
           {navItems.map((item) => (
-            <li key={item.path}>
+            <li key={item.path} className="relative">
+              {/* Animated active background — slides between items via layoutId */}
+              {isActive(item.path) && (
+                <motion.div
+                  layoutId="admin-active-pill"
+                  className="absolute inset-0 rounded-lg bg-luxe-gold/10"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                />
+              )}
               <Link
                 to={item.path}
                 onClick={onNavigate}
                 className={`
-                  flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3
-                  rounded-lg transition-colors text-sm
+                  relative flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3
+                  rounded-lg text-sm transition-colors
                   ${
                     isActive(item.path)
-                      ? "bg-luxe-gold/10 text-luxe-gold"
+                      ? "text-luxe-gold"
                       : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-gold/5"
                   }
                 `}

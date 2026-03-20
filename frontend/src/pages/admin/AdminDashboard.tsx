@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { StatCard, Loading } from "@/components/ui";
 import { get } from "@/services/api";
 
@@ -88,8 +89,31 @@ const AdminDashboard: React.FC = () => {
     return <Loading text="載入中..." />;
   }
 
+  // Dot grid CSS — subtle background pattern
+  const dotGridStyle: React.CSSProperties = {
+    backgroundImage: "radial-gradient(circle, rgba(197,160,89,0.18) 1px, transparent 1px)",
+    backgroundSize: "24px 24px",
+  };
+
+  // Stagger variants for StatCards
+  const containerVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } },
+  };
+  const cardVariants = {
+    hidden:  { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
+  };
+
   return (
-    <div>
+    <div className="relative">
+      {/* Dot Grid background */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-40"
+        style={dotGridStyle}
+      />
+
       {/* Page Title */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
@@ -105,19 +129,25 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
+      {/* Stats Grid — stagger entrance */}
+      <motion.div
+        className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {displayStats.map((stat) => (
-          <StatCard
-            key={stat.label}
-            value={stat.value}
-            label={stat.label}
-            icon={<span>{stat.icon}</span>}
-            trend={stat.trend}
-            theme="luxe"
-          />
+          <motion.div key={stat.label} variants={cardVariants}>
+            <StatCard
+              value={stat.value}
+              label={stat.label}
+              icon={<span>{stat.icon}</span>}
+              trend={stat.trend}
+              theme="luxe"
+            />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Activities */}
@@ -162,7 +192,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div>  {/* relative wrapper */}
   );
 };
 

@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, useTheme, useLanguage } from "@/context";
 import AdminSidebar from "./AdminSidebar";
 
@@ -26,10 +27,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
   const { user } = useAuth();
   const { isDark, toggleColorMode } = useTheme();
   const { language, toggleLanguage, t } = useLanguage();
+  const location = useLocation();
 
   // SSR-safe: 預設 false，hydration 後根據螢幕寬度決定
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   /**
    * 偵測螢幕尺寸，決定 sidebar 預設狀態
@@ -48,6 +51,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [handleResize]);
+
+  // Top Bar scroll glow — 偵測主內容區捲動
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    if (!mainEl) return;
+    const handleScroll = () => setScrolled(mainEl.scrollTop > 8);
+    mainEl.addEventListener("scroll", handleScroll, { passive: true });
+    return () => mainEl.removeEventListener("scroll", handleScroll);
+  }, []);
 
   /**
    * 切換側邊欄（手機版點擊連結後自動收合）
@@ -88,15 +100,26 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
           ${!isMobile && sidebarOpen ? "lg:ml-64" : !isMobile ? "lg:ml-20" : ""}
         `}
       >
-        {/* Top Bar */}
-        <header className="sticky top-0 z-20 bg-luxe-surface border-b border-luxe-gold/10 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3">
+        {/* Top Bar — scroll-aware glow border */}
+        <motion.header
+          className="sticky top-0 z-20 bg-luxe-surface px-3 sm:px-4 md:px-6 py-2.5 sm:py-3"
+          animate={{
+            borderBottomWidth: "1px",
+            borderBottomColor: scrolled ? "rgba(197,160,89,0.35)" : "rgba(197,160,89,0.10)",
+            boxShadow: scrolled
+              ? "0 4px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(197,160,89,0.15)"
+              : "none",
+          }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          style={{ borderBottomStyle: "solid" }}
+        >
           <div className="flex items-center justify-between gap-2">
             {/* Left: Toggle + Breadcrumb */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {/* 漢堡選單 */}
               <button
                 onClick={toggleSidebar}
-                className="p-1.5 sm:p-2 text-luxe-muted hover:text-luxe-gold transition-colors flex-shrink-0"
+                className="p-1.5 sm:p-2 text-luxe-muted hover:text-luxe-gold transition-colors shrink-0"
                 aria-label="Toggle sidebar"
               >
                 <svg
@@ -117,7 +140,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
               {/* 返回前台（手機版顯示圖示，桌面版顯示文字） */}
               <Link
                 to="/"
-                className="text-luxe-muted hover:text-luxe-gold transition-colors text-xs sm:text-sm flex items-center gap-1 flex-shrink-0"
+                className="text-luxe-muted hover:text-luxe-gold transition-colors text-xs sm:text-sm flex items-center gap-1 shrink-0"
               >
                 <svg
                   className="w-4 h-4"
@@ -137,7 +160,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
             </div>
 
             {/* Right: Controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
               {/* Theme & Language Toggle */}
               <button
                 onClick={toggleColorMode}
@@ -183,22 +206,31 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
               </button>
 
               {/* User Info */}
-              <span className="hidden md:inline text-luxe-muted text-xs truncate max-w-[120px]">
+              <span className="hidden md:inline text-luxe-muted text-xs truncate max-w-30">
                 {user?.name || user?.email}
               </span>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-luxe-gold/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full bg-luxe-gold/20 flex items-center justify-center shrink-0">
                 <span className="text-luxe-gold text-[10px] sm:text-xs md:text-sm font-medium">
                   {user?.name?.charAt(0) || "A"}
                 </span>
               </div>
             </div>
           </div>
-        </header>
+        </motion.header>
 
-        {/* Page Content — 手機版減少 padding */}
-        <div className="p-3 sm:p-4 md:p-6">
-          <Outlet />
-        </div>
+        {/* Page Content — AnimatePresence page transition */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="p-3 sm:p-4 md:p-6"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );
