@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -157,22 +158,40 @@ const Navbar: React.FC = (): JSX.Element => {
   return (
     <>
       {/* ── Navbar ── */}
-      <nav
-        ref={navRef}
-        onMouseEnter={triggerNavGlare}
-        onClick={(e) => { e.stopPropagation(); triggerNavGlare(); }}
-        className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-8 lg:px-12 py-4 sm:py-5"
-        style={{
-          background: scrolled
-            ? (isDark ? "rgba(10,10,10,0.92)" : "rgba(246,243,238,0.96)")
-            : (isDark ? "rgba(10,10,10,0.15)" : "rgba(246,243,238,0.25)"),
-          backdropFilter: scrolled ? "blur(20px)" : "blur(6px)",
-          borderBottom: scrolled
-            ? (isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.08)")
-            : "1px solid transparent",
-          transition: "background 0.4s ease, backdrop-filter 0.4s ease, border-color 0.4s ease",
-        }}
-      >
+      <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+        <motion.nav
+          ref={navRef}
+          onMouseEnter={triggerNavGlare}
+          onClick={(e) => { e.stopPropagation(); triggerNavGlare(); }}
+          className="pointer-events-auto"
+          animate={scrolled ? "floating" : "top"}
+          variants={{
+            top: {
+              marginLeft: 0,
+              marginRight: 0,
+              marginTop: 0,
+              borderRadius: 0,
+              background: isDark ? "rgba(10,10,10,0.15)" : "rgba(246,243,238,0.25)",
+              backdropFilter: "blur(6px)",
+              borderBottom: "1px solid transparent",
+              paddingLeft: "12px",
+              paddingRight: "12px",
+            },
+            floating: {
+              marginLeft: 16,
+              marginRight: 16,
+              marginTop: 10,
+              borderRadius: 16,
+              background: isDark ? "rgba(10,10,10,0.88)" : "rgba(246,243,238,0.95)",
+              backdropFilter: "blur(24px)",
+              borderBottom: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.08)",
+              paddingLeft: "20px",
+              paddingRight: "20px",
+            },
+          }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          style={{ paddingTop: "16px", paddingBottom: "16px" }}
+        >
         {/* Navbar glare 動畫條 — 獨立 overflow:hidden 容器 */}
         <div
           aria-hidden="true"
@@ -334,12 +353,18 @@ key={glareKey}
             </button>
           </div>
         </div>
-      </nav>
+        </motion.nav>
+      </div>
 
       {/* ── Mobile Menu ── */}
+      <AnimatePresence>
       {mobileMenuOpen && (
-        <div
+        <motion.div
           className="fixed inset-0 z-40 flex flex-col pt-20 px-6 pb-8 lg:hidden"
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           style={{
             background: isDark ? "rgba(8,8,8,0.97)" : "rgba(244,241,236,0.97)",
             backdropFilter: "blur(20px)",
@@ -387,8 +412,9 @@ key={glareKey}
               </button>
             )}
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Global Search */}
       {searchOpen && (

@@ -7,11 +7,42 @@
  */
 
 import React, { useState, useEffect, useCallback, CSSProperties } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   slidesService,
   type TestimonialSlide,
   type TestimonialConfig,
 } from "@/services/slides.service";
+
+// ─── Aceternity AnimatedTestimonials 風格：逐字淡入 ───────────────────────
+const AnimatedQuote: React.FC<{ text: string; slideId: number }> = ({ text, slideId }) => {
+  const words = text.split(" ");
+  return (
+    <AnimatePresence mode="wait">
+      <motion.span
+        key={slideId}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        className="inline"
+      >
+        {words.map((word, i) => (
+          <motion.span
+            key={i}
+            className="inline-block mr-[0.25em]"
+            variants={{
+              hidden:  { opacity: 0, y: 8, filter: "blur(4px)" },
+              visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+            }}
+            transition={{ duration: 0.35, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {word}
+          </motion.span>
+        ))}
+      </motion.span>
+    </AnimatePresence>
+  );
+};
 
 interface TestimonialCarouselProps {
   preview?: boolean;
@@ -180,7 +211,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
                       {isCenter && slide.quote && (
                         <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-black/70 to-transparent">
                           <p className="text-white/85 text-xs sm:text-sm leading-relaxed">
-                            「{slide.quote}」
+                            「<AnimatedQuote text={slide.quote} slideId={slide.id} />」
                           </p>
                         </div>
                       )}
@@ -219,7 +250,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
                         </div>
                         {slide.quote && (
                           <p className="text-white/55 text-xs sm:text-sm leading-relaxed">
-                            「{slide.quote}」
+                            「<AnimatedQuote text={slide.quote} slideId={slide.id} />」
                           </p>
                         )}
                       </div>
