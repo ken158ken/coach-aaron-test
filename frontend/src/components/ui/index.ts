@@ -45,3 +45,6 @@ export { default as Tooltip } from "./Tooltip";
 
 // Search
 export { GlobalSearch, SearchButton } from "./GlobalSearch";
+
+// Sparkles
+export { default as Sparkles } from "./Sparkles";

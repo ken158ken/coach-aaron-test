@@ -11,6 +11,7 @@ import {
   Loading,
   Input,
   Pagination,
+  PageHeader,
 } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { videoService } from "@/services";
@@ -170,20 +171,18 @@ const Videos: React.FC = () => {
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="studio-container">
           {/* Header */}
-          <div className="text-center mb-8 sm:mb-12">
-            <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
-              Videos
-            </span>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
-              {t.videos.heading}
-            </h1>
-            <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
-              {t.videos.subheading}
-            </p>
-          </div>
+          <PageHeader
+            label="Videos"
+            title={t.videos.heading}
+            subtitle={t.videos.subheading}
+          />
 
           {/* Search & Filter */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+          <div
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10"
+            data-aos="fade-up"
+            data-aos-delay="100"
+          >
             {/* 搜尋框 */}
             <div className="w-full sm:w-auto">
               <Input
@@ -250,7 +249,7 @@ const Videos: React.FC = () => {
                 }
               </p>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6" data-aos="fade-up" data-aos-delay="150">
                 {paginatedVideos.map((video) => (
                   <VideoCard key={video.id} video={video} theme="studio" />
                 ))}

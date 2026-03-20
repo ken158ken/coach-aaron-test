@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { GlowButton, TextButton } from "@/components/ui";
 import { contentService } from "@/services/content.service";
 import { getDefaultTemplate } from "@/utils/contentTemplates";
@@ -26,6 +27,23 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const ctaRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
+
+  // Spotlight — 滑鼠跟隨聚光燈
+  const rawX = useMotionValue(0.5);
+  const rawY = useMotionValue(0.5);
+  const springX = useSpring(rawX, { stiffness: 60, damping: 18 });
+  const springY = useSpring(rawY, { stiffness: 60, damping: 18 });
+  const spotlightBg = useTransform(
+    [springX, springY],
+    ([x, y]: number[]) =>
+      `radial-gradient(700px circle at ${(x as number) * 100}% ${(y as number) * 100}%, rgba(197,160,89,0.10) 0%, rgba(197,160,89,0.03) 35%, transparent 65%)`,
+  );
+
+  const handleSpotlightMove = (e: React.MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    rawX.set((e.clientX - rect.left) / rect.width);
+    rawY.set((e.clientY - rect.top) / rect.height);
+  };
 
   // ✅ SSR-safe：使用確定性範本
   const [heroTitle, setHeroTitle] = useState(() =>
@@ -111,11 +129,28 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   return (
     <section
       ref={containerRef}
+      onMouseMove={handleSpotlightMove}
       className={`studio-hero relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden ${className}`}
     >
-      {/* Studio 攝影棚背景 */}
-      <div ref={bgRef} className="studio-hero-bg scale-110" aria-hidden="true" />
+      {/* Studio 攝影棚背景：外層 wrapper 負責滾動視差（CSS variable），內層 bgRef 負責滑鼠視差（GSAP） */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          transform: "translateY(calc(var(--scroll-y, 0) * -0.18px))",
+          willChange: "transform",
+        }}
+      >
+        <div ref={bgRef} className="studio-hero-bg scale-110" />
+      </div>
       <div ref={lineRef} className="studio-floor-line opacity-30" aria-hidden="true" />
+
+      {/* Spotlight 聚光燈 — 跟隨滑鼠位置 */}
+      <motion.div
+        aria-hidden="true"
+        style={{ background: spotlightBg }}
+        className="pointer-events-none absolute inset-0 z-1"
+      />
 
       {/* Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-2 sm:px-4">

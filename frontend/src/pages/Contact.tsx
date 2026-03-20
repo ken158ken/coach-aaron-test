@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from "react";
-import { Input, Textarea, PillButton, Toast } from "@/components/ui";
+import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
 import { useLanguage } from "@/context/LanguageContext";
@@ -204,20 +204,18 @@ const Contact: React.FC = () => {
       <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
         <div className="studio-container">
           {/* Header */}
-          <div className="text-center mb-8 sm:mb-12">
-            <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
-              {t.contact.pageLabel}
-            </span>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
-              {t.contact.heading}
-            </h1>
-            <p className="text-sm sm:text-base text-white/50 max-w-xl mx-auto px-2">
-              {t.contact.subtitle}
-            </p>
-          </div>
+          <PageHeader
+            label={t.contact.pageLabel}
+            title={t.contact.heading}
+            subtitle={t.contact.subtitle}
+          />
 
           {/* Coach Info Banner */}
-          <div className="mb-8 sm:mb-10 p-5 sm:p-8 bg-surface rounded-xl border border-gold/20">
+          <div
+            className="mb-8 sm:mb-10 p-5 sm:p-8 bg-surface rounded-xl border border-gold/20"
+            data-aos="fade-up"
+            data-aos-delay="100"
+          >
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#c5a059]/10 border-2 border-gold/40 flex items-center justify-center shrink-0">
                 <span className="text-3xl sm:text-4xl">🏆</span>
@@ -249,7 +247,7 @@ const Contact: React.FC = () => {
 
           <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12">
             {/* Contact Form */}
-            <div>
+            <div data-aos="fade-right" data-aos-delay="150">
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 {t.contact.formSection}
               </h2>
@@ -317,7 +315,7 @@ const Contact: React.FC = () => {
             </div>
 
             {/* Contact Info & Social */}
-            <div>
+            <div data-aos="fade-left" data-aos-delay="200">
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 {t.contact.infoSection}
               </h2>

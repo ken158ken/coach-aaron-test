@@ -44,6 +44,9 @@ import LandingPageEditor from "@/pages/admin/LandingPageEditor";
 
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import PageBlade from "@/components/layout/PageBlade";
+import ScrollToTop from "@/components/layout/ScrollToTop";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 /**
  * App 根元件
@@ -53,6 +56,25 @@ import PageBlade from "@/components/layout/PageBlade";
 import { useEffect } from "react";
 
 function App(): JSX.Element {
+  // 初始化 AOS
+  useEffect(() => {
+    AOS.init({
+      duration: 700,
+      easing: "ease-out-quart",
+      once: true,
+      offset: 60,
+    });
+  }, []);
+
+  // React 掛載後移除載入遮罩
+  useEffect(() => {
+    const loader = document.getElementById("app-loader");
+    if (!loader) return;
+    loader.classList.add("fade-out");
+    const t = setTimeout(() => loader.remove(), 380);
+    return () => clearTimeout(t);
+  }, []);
+
   // 全域點擊監聽：點擊 navbar 以外的區域觸發全頁銀刃
   useEffect(() => {
     let lastFired = 0;
@@ -68,12 +90,22 @@ function App(): JSX.Element {
     return () => document.removeEventListener("click", handleGlobalClick);
   }, []);
 
+  // 全域滾動監聽：設定 --scroll-y CSS variable，供視差效果使用
+  useEffect(() => {
+    const handleScroll = () => {
+      document.documentElement.style.setProperty("--scroll-y", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
     return (
     <AuthProvider>
       <ThemeProvider>
         <LanguageProvider>
           <DialogProvider>
             <SmoothScroll>
+              <ScrollToTop />
               <PageBlade />
               <Routes>
                 {/* 前台路由 */}

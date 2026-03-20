@@ -1,12 +1,15 @@
 /**
- * GallerySlider - 相片輪播 3D Coverflow 手動翻頁
+ * GallerySlider - 相片輪播 3D Coverflow + Focus Cards 聚焦效果
  * @module components/sections/GallerySlider
  * @description 左右各露出前後一張卡，透視旋轉進退 (coverflow)
+ *              hover 時聚焦中央卡，側卡 blur/dim；framer-motion spring 動畫
  *              is_published=false 時首頁隱藏；preview=true 強制顯示
  */
 
-import React, { useState, useEffect, useRef, CSSProperties } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { slidesService, type GallerySlide, type GalleryConfig } from "@/services/slides.service";
+import Sparkles from "@/components/ui/Sparkles";
 
 interface GallerySliderProps {
   preview?: boolean;
@@ -21,39 +24,133 @@ function getRelPos(i: number, current: number, total: number): number {
   return p;
 }
 
-const CARD_W  = 520;  // 卡片寬度 px（橫版較寬）
+const CARD_W  = 520;  // 卡片寬度 px
 const OFFSET  = 380;  // 左右卡中心偏移量 px
 const ROT     = 18;   // 旋轉角度 deg
 const S_SCALE = 0.80; // 側卡縮放
-const S_OPA   = 0.45; // 側卡不透明度
+const S_OPA   = 0.35; // 側卡不透明度（Focus Cards: 更暗）
 
-function cardStyle(pos: number): CSSProperties {
-  const T = 'all 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-  const base: CSSProperties = { position: 'absolute', top: 0, left: '50%', width: CARD_W, transition: T };
-
-  if (pos === 0) return {
-    ...base,
-    transform: 'translateX(-50%) perspective(1200px) rotateY(0deg) scale(1)',
-    opacity: 1, zIndex: 10, pointerEvents: 'auto',
-  };
-  if (pos === -1) return {
-    ...base,
-    transform: `translateX(calc(-50% - ${OFFSET}px)) perspective(1200px) rotateY(${ROT}deg) scale(${S_SCALE})`,
-    opacity: S_OPA, zIndex: 5, pointerEvents: 'auto', cursor: 'pointer',
-  };
-  if (pos === 1) return {
-    ...base,
-    transform: `translateX(calc(-50% + ${OFFSET}px)) perspective(1200px) rotateY(-${ROT}deg) scale(${S_SCALE})`,
-    opacity: S_OPA, zIndex: 5, pointerEvents: 'auto', cursor: 'pointer',
-  };
-  // 更遠的隱藏牌
-  const sign = pos > 0 ? '+' : '-';
-  return {
-    ...base,
-    transform: `translateX(calc(-50% ${sign} ${OFFSET * 2.2}px)) perspective(1200px) rotateY(${pos > 0 ? -ROT * 2 : ROT * 2}deg) scale(0.60)`,
-    opacity: 0, zIndex: 1, pointerEvents: 'none',
-  };
+// ─── 單張卡片（Focus Cards 3D tilt + animate position） ───────
+interface SlideCardProps {
+  slide: GallerySlide;
+  pos: number;
+  index: number;
+  isFocused: boolean;   // 整個輪播正在被 hover
+  onClick?: () => void;
 }
+
+const SlideCard: React.FC<SlideCardProps> = ({ slide, pos, index, isFocused, onClick }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // 3D tilt — 只在中央卡 (pos===0) 啟用
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [6, -6]), { stiffness: 300, damping: 30 });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-6, 6]), { stiffness: 300, damping: 30 });
+  const glareX  = useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"]);
+  const glareY  = useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"]);
+  const glareBg = useTransform(
+    [glareX, glareY],
+    ([x, y]: string[]) =>
+      `radial-gradient(circle at ${x} ${y}, rgba(255,255,255,0.10) 0%, transparent 65%)`,
+  );
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (pos !== 0) return;
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
+    mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
+  };
+  const handleMouseLeave = () => { mouseX.set(0); mouseY.set(0); };
+
+  // 位置動畫值
+  const isCenter = pos === 0;
+  const isLeft   = pos === -1;
+  const isRight  = pos ===  1;
+  const isHidden = !isCenter && !isLeft && !isRight;
+
+  const x        = isCenter ? "-50%" : isLeft ? `calc(-50% - ${OFFSET}px)` : isRight ? `calc(-50% + ${OFFSET}px)` : pos > 0 ? `calc(-50% + ${OFFSET * 2.2}px)` : `calc(-50% - ${OFFSET * 2.2}px)`;
+  const rotateY_ = isCenter ? 0 : isLeft ? ROT : isRight ? -ROT : pos > 0 ? -ROT * 2 : ROT * 2;
+  const scale    = isCenter ? 1 : isLeft || isRight ? S_SCALE : 0.6;
+
+  // Focus Cards 效果：輪播被 hover 且自己是側卡 → 更暗更模糊
+  const opacity  = isHidden ? 0 : isCenter ? 1 : isFocused ? S_OPA * 0.6 : S_OPA;
+  const blur     = isCenter ? 0 : isFocused ? 3 : 0;
+
+  return (
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: "50%",
+        width: CARD_W,
+        x,
+        rotateY: rotateY_,
+        scale,
+        opacity,
+        filter: blur > 0 ? `blur(${blur}px) brightness(0.65)` : undefined,
+        transformStyle: isCenter ? "preserve-3d" : undefined,
+        zIndex: isCenter ? 10 : isLeft || isRight ? 5 : 1,
+        pointerEvents: isHidden ? "none" : "auto",
+        cursor: isLeft || isRight ? "pointer" : "default",
+        perspective: isCenter ? "1000px" : undefined,
+      }}
+      animate={{ opacity, scale, rotateY: rotateY_ }}
+      transition={{ type: "spring", stiffness: 220, damping: 28 }}
+    >
+      {/* 3D tilt 只套在中央卡 */}
+      <motion.div style={isCenter ? { rotateX, rotateY } : {}}>
+        {/* Glare 高光 — 只在中央卡 */}
+        {isCenter && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-10 rounded-2xl"
+            style={{ background: glareBg }}
+          />
+        )}
+
+        {/* Card body */}
+        <div
+          className={`rounded-2xl border overflow-hidden shadow-xl shadow-black/40 transition-colors duration-300 ${
+            isCenter ? "border-gold/25" : "border-white/5"
+          }`}
+        >
+          {/* Image — 16:10 橫版 */}
+          <div className="relative" style={{ aspectRatio: "16/10", background: "rgba(255,255,255,0.05)" }}>
+            <img
+              src={slide.image_url}
+              alt={slide.caption || `相片 ${index + 1}`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+            {/* Caption overlay — 只在中央卡顯示 */}
+            {isCenter && slide.caption && (
+              <div className="absolute bottom-0 left-0 right-0 px-5 py-4 bg-linear-to-t from-black/70 to-transparent">
+                <p className="text-white/90 text-sm sm:text-base font-light">{slide.caption}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 側卡提示箭頭 */}
+        {(isLeft || isRight) && (
+          <div className={`absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full bg-black/55 border border-gold/20 text-white/50 ${
+            isLeft ? "right-3" : "left-3"
+          }`}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d={isLeft ? "M15 19l-7-7 7-7" : "M9 5l7 7-7 7"} />
+            </svg>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+};
 
 // ─── Component ────────────────────────────────────────────────
 const GallerySlider: React.FC<GallerySliderProps> = ({
@@ -67,6 +164,7 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
   );
   const [current, setCurrent] = useState(0);
   const [loading, setLoading] = useState(!initialSlides);
+  const [isHovered, setIsHovered] = useState(false);
 
   // 觸控滑動追蹤
   const touchStartX = useRef<number | null>(null);
@@ -101,25 +199,26 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
   // 鍵盤導航
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') prev();
-      if (e.key === 'ArrowRight') next();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   });
 
   if (!preview && !config.is_published) return null;
   if (loading) return <div className="py-20 text-center text-white/30 text-sm">載入中...</div>;
   if (!slides.length) return null;
 
-  // 舞台高度 = 卡片高度(16:10 比例) + 底部指示器
   const STAGE_H = Math.round(CARD_W * (10 / 16)) + 20;
 
   return (
     <section className="py-16 sm:py-20">
       {/* Header */}
       <div className="text-center mb-10 sm:mb-12 px-4" data-aos="fade-up">
-        <span className="text-gold text-xs uppercase tracking-widest">Gallery</span>
+        <Sparkles color="#c5a059">
+          <span className="text-gold text-xs uppercase tracking-widest">Gallery</span>
+        </Sparkles>
         <h2 className="mt-2 text-2xl sm:text-3xl font-light text-white/90">相片記錄</h2>
         <p className="mt-2 text-sm text-white/40">每張照片背後都有一個真實的蛻變故事</p>
       </div>
@@ -130,68 +229,36 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
         style={{ height: STAGE_H }}
         data-aos="fade-up"
         data-aos-delay="100"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* Cards */}
-        {slides.map((slide, i) => {
-          const pos      = getRelPos(i, current, slides.length);
-          const isLeft   = pos === -1;
-          const isRight  = pos ===  1;
-          const isCenter = pos ===  0;
-
-          return (
-            <div
-              key={slide.id}
-              style={cardStyle(pos)}
-              onClick={() => {
-                if (isLeft)  prev();
-                if (isRight) next();
-              }}
-            >
-              {/* Card body */}
-              <div
-                className={`rounded-2xl border overflow-hidden shadow-xl shadow-black/40 transition-colors duration-300 ${
-                  isCenter ? 'border-gold/25' : 'border-white/5'
-                }`}
-              >
-                {/* Image — 16:10 橫版 */}
-                <div className="relative" style={{ aspectRatio: '16/10', background: 'rgba(255,255,255,0.05)' }}>
-                  <img
-                    src={slide.image_url}
-                    alt={slide.caption || `相片 ${i + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-
-                  {/* Caption overlay — 只在中央卡顯示 */}
-                  {isCenter && slide.caption && (
-                    <div className="absolute bottom-0 left-0 right-0 px-5 py-4 bg-gradient-to-t from-black/70 to-transparent">
-                      <p className="text-white/90 text-sm sm:text-base font-light">{slide.caption}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 側卡提示箭頭 */}
-              {(isLeft || isRight) && (
-                <div className={`absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full bg-black/55 border border-gold/20 text-white/50 ${
-                  isLeft ? 'right-3' : 'left-3'
-                }`}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isLeft ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} />
-                  </svg>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        <AnimatePresence initial={false}>
+          {slides.map((slide, i) => {
+            const pos = getRelPos(i, current, slides.length);
+            return (
+              <SlideCard
+                key={slide.id}
+                slide={slide}
+                pos={pos}
+                index={i}
+                isFocused={isHovered}
+                onClick={() => {
+                  if (pos === -1) prev();
+                  if (pos ===  1) next();
+                }}
+              />
+            );
+          })}
+        </AnimatePresence>
 
         {/* Left / Right edge gradient */}
-        <div className="absolute inset-y-0 left-0 w-24 sm:w-36 bg-gradient-to-r from-black to-transparent z-20 pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-24 sm:w-36 bg-gradient-to-l from-black to-transparent z-20 pointer-events-none" />
+        <div className="absolute inset-y-0 left-0 w-24 sm:w-36 bg-linear-to-r from-black to-transparent z-20 pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-24 sm:w-36 bg-linear-to-l from-black to-transparent z-20 pointer-events-none" />
 
-        {/* Nav arrows (above gradient) */}
+        {/* Nav arrows */}
         {slides.length > 1 && (
           <>
             <button
@@ -229,7 +296,7 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
                 onClick={() => setCurrent(i)}
                 aria-label={`第 ${i + 1} 張`}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === current ? 'w-6 bg-gold' : 'w-1.5 bg-white/20 hover:bg-white/40'
+                  i === current ? "w-6 bg-gold" : "w-1.5 bg-white/20 hover:bg-white/40"
                 }`}
               />
             ))}
