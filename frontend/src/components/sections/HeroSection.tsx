@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { GlowButton, TextButton } from "@/components/ui";
 import { contentService } from "@/services/content.service";
 import { getDefaultTemplate } from "@/utils/contentTemplates";
@@ -27,6 +27,18 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const ctaRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
+
+  // Flip Words — 標題循環換字
+  const flipWords = ["體態", "自信", "健康", "未來"];
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(
+      () => setWordIndex((i) => (i + 1) % flipWords.length),
+      2500,
+    );
+    return () => clearInterval(t);
+  }, []);
 
   // Spotlight — 滑鼠跟隨聚光燈
   const rawX = useMotionValue(0.5);
@@ -159,12 +171,38 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           ref={titleRef}
           className="silver-heading font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight tracking-[4px] sm:tracking-[6px] uppercase will-change-transform"
         >
-          {heroTitle.split("\n").map((line, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <br />}
-              {line}
-            </React.Fragment>
-          ))}
+          {heroTitle.split("\n").map((line, i) => {
+            if (i === 0) {
+              // Flip Words: 最後一個詞動畫切換
+              const parts = line.trim().split(/\s+/);
+              const staticPart = parts.slice(0, -1).join(" ");
+              return (
+                <React.Fragment key={i}>
+                  {staticPart}{" "}
+                  <span className="relative inline-block">
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={wordIndex}
+                        initial={{ opacity: 0, y: 24, filter: "blur(4px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -20, filter: "blur(4px)" }}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        className="inline-block text-luxe-gold"
+                      >
+                        {flipWords[wordIndex]}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                </React.Fragment>
+              );
+            }
+            return (
+              <React.Fragment key={i}>
+                <br />
+                {line}
+              </React.Fragment>
+            );
+          })}
         </h1>
 
         {/* Subtitle */}

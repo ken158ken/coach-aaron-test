@@ -10,6 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   HeroSection,
   CoachIntroSection,
+  CertificationMarquee,
   PodcastSection,
   TestimonialCarousel,
   GallerySlider,
@@ -96,6 +97,11 @@ const Home: React.FC = () => {
       {/* Coach Introduction */}
       <div className="section-reveal relative z-10 bg-transparent">
         <CoachIntroSection />
+      </div>
+
+      {/* Certification Marquee — 認證標章無限滾動 */}
+      <div className="section-reveal relative z-10 bg-transparent">
+        <CertificationMarquee />
       </div>
 
       {/* Podcast Section — 延遲渲染，捲到前 400px 才載入 DOM */}

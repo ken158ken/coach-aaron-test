@@ -9,3 +9,4 @@ export { default as PodcastSection } from "./PodcastSection";
 export { default as ReviewSection } from "./ReviewSection";
 export { default as TestimonialCarousel } from "./TestimonialCarousel";
 export { default as GallerySlider } from "./GallerySlider";
+export { default as CertificationMarquee } from "./CertificationMarquee";

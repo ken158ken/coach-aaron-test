@@ -5,7 +5,8 @@
  * @description 包含聯絡表單（透過 Resend 發送郵件）、教練個人資訊與社群連結
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { motion, useMotionValue, useMotionTemplate, animate } from "framer-motion";
 import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
@@ -37,6 +38,18 @@ const INITIAL_FORM_DATA: ContactFormData = {
 const Contact: React.FC = () => {
   const { t } = useLanguage();
   const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
+
+  // Moving Border — 金色光點繞邊動畫
+  const rotation = useMotionValue(0);
+  const borderBg = useMotionTemplate`conic-gradient(from ${rotation}deg, transparent 65%, rgba(197,160,89,0.7) 80%, rgba(255,255,255,0.5) 87%, rgba(197,160,89,0.7) 94%, transparent 100%)`;
+  useEffect(() => {
+    const controls = animate(rotation, 360, {
+      duration: 4,
+      repeat: Infinity,
+      ease: "linear",
+    });
+    return controls.stop;
+  }, [rotation]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
@@ -251,6 +264,13 @@ const Contact: React.FC = () => {
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 {t.contact.formSection}
               </h2>
+              {/* Moving Border wrapper */}
+              <div className="relative rounded-xl p-px">
+                <motion.div
+                  className="absolute inset-0 rounded-xl"
+                  style={{ background: borderBg }}
+                />
+                <div className="relative rounded-xl bg-surface/80 p-5 sm:p-6">
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <Input
                   name="name"
@@ -312,6 +332,8 @@ const Contact: React.FC = () => {
                   {t.contact.formNote}
                 </p>
               </form>
+                </div>
+              </div>
             </div>
 
             {/* Contact Info & Social */}

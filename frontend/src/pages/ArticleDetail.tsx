@@ -4,8 +4,9 @@
  * @security 實施前端輸入消毒與驗證
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { articleService } from "@/services/article.service";
 import { useAuth } from "@/context";
 import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
@@ -30,6 +31,16 @@ const ArticleDetail: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
 
   const { rating: userRating, setRating: setUserRating } = useRatingInput(0);
+
+  // Tracing Beam — 閱讀進度金色發光線
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: contentRef,
+    offset: ["start center", "end center"],
+  });
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 200, damping: 30 });
+  const beamHeight = useTransform(smoothProgress, [0, 1], ["0%", "100%"]);
+  const dotTop = useTransform(smoothProgress, [0, 1], ["0%", "calc(100% - 12px)"]);
 
   const {
     value: commentText,
@@ -311,7 +322,28 @@ const ArticleDetail: React.FC = () => {
         <div className="max-w-300 mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 lg:gap-12">
 
           {/* ── Left: Article Content ── */}
-          <div className="space-y-10">
+          <div ref={contentRef} className="relative space-y-10">
+            {/* Tracing Beam — 左側閱讀進度金色發光線 */}
+            <div className="hidden lg:block absolute -left-5 top-0 bottom-0 w-px pointer-events-none">
+              {/* Track */}
+              <div className="absolute inset-0 bg-white/8 rounded-full" />
+              {/* Beam fill */}
+              <motion.div
+                className="absolute top-0 left-0 right-0 origin-top rounded-full"
+                style={{
+                  height: beamHeight,
+                  background: "linear-gradient(to bottom, transparent, rgba(197,160,89,0.6) 40%, rgba(197,160,89,0.9) 60%, transparent)",
+                }}
+              />
+              {/* Glowing dot */}
+              <motion.div
+                className="absolute -translate-x-1/2 left-1/2 w-2.5 h-2.5 rounded-full bg-luxe-gold"
+                style={{
+                  top: dotTop,
+                  boxShadow: "0 0 8px 2px rgba(197,160,89,0.7)",
+                }}
+              />
+            </div>
 
             {/* Article Body */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">

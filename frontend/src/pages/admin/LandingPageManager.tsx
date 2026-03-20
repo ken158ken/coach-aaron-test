@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { PillButton, Input, useDialog } from "@/components/ui";
 
 /** 日誌工具 */
@@ -408,6 +408,16 @@ const LandingPageManager: React.FC = () => {
                   >
                     編輯
                   </button>
+                  {page.status === "published" && (
+                    <Link
+                      to={`/page/${page.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline text-xs"
+                    >
+                      預覽
+                    </Link>
+                  )}
                   <button
                     onClick={() => handleToggleStatus(page)}
                     className="text-emerald-400 hover:underline text-xs"
