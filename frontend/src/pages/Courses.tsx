@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { courseService } from "@/services";
 import { PillButton, Loading, PageHeader } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -30,6 +31,7 @@ const Courses: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const coursesRef = useScrollReveal();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchCourses();
@@ -150,19 +152,30 @@ const Courses: React.FC = () => {
             </div>
           )}
 
-          {/* Courses Grid */}
+          {/* Courses Grid — Focus Cards */}
           {filteredCourses.length > 0 ? (
             <div
               ref={coursesRef}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5"
+              onMouseLeave={() => setHoveredIndex(null)}
             >
               {filteredCourses.map((course, index) => (
-                <Link
+                <motion.div
                   key={course.course_id}
-                  to={`/courses/${course.course_id}`}
-                  className={`group scroll-reveal ${getStaggerClass(index)}`}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  animate={{
+                    opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.45,
+                    filter: hoveredIndex === null || hoveredIndex === index ? "blur(0px) brightness(1)" : "blur(1.5px) brightness(0.55)",
+                    scale: hoveredIndex === index ? 1.02 : 1,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className={`scroll-reveal ${getStaggerClass(index)}`}
                 >
-                  <article className="course-card-item backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                <Link
+                  to={`/courses/${course.course_id}`}
+                  className="group block h-full"
+                >
+                  <article className="course-card-item backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
                     {course.course_thumbnail_url ? (
                       <div className="aspect-16/10 overflow-hidden">
@@ -246,6 +259,7 @@ const Courses: React.FC = () => {
                     </div>
                   </article>
                 </Link>
+                </motion.div>
               ))}
             </div>
           ) : (

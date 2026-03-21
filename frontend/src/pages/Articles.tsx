@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { articleService } from "@/services/article.service";
 import { PageHeader, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
@@ -30,6 +31,7 @@ const Articles: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
   const articlesRef = useScrollReveal();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchArticles();
@@ -133,19 +135,30 @@ const Articles: React.FC = () => {
             </div>
           )}
 
-          {/* Articles Grid */}
+          {/* Articles Grid — Focus Cards */}
           {articles.length > 0 ? (
             <div
               ref={articlesRef}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5"
+              onMouseLeave={() => setHoveredIndex(null)}
             >
               {articles.map((article, index) => (
-                <Link
+                <motion.div
                   key={article.article_id}
-                  to={`/articles/${article.article_slug || article.article_id}`}
-                  className={`group scroll-reveal ${getStaggerClass(index)}`}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  animate={{
+                    opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.45,
+                    filter: hoveredIndex === null || hoveredIndex === index ? "blur(0px) brightness(1)" : "blur(1.5px) brightness(0.55)",
+                    scale: hoveredIndex === index ? 1.02 : 1,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className={`scroll-reveal ${getStaggerClass(index)}`}
                 >
-                  <article className="article-card-item bg-surface rounded-lg overflow-hidden border border-gold/10 hover:border-gold/40 hover:shadow-xl hover:shadow-gold/10 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                <Link
+                  to={`/articles/${article.article_slug || article.article_id}`}
+                  className="group block h-full"
+                >
+                  <article className="article-card-item bg-surface rounded-lg overflow-hidden border border-gold/10 hover:border-gold/40 hover:shadow-xl hover:shadow-gold/10 transition-all duration-300 h-full flex flex-col">
                     {/* Thumbnail */}
                     {article.article_thumbnail_url ? (
                       <div className="aspect-16/10 overflow-hidden">
@@ -210,6 +223,7 @@ const Articles: React.FC = () => {
                     </div>
                   </article>
                 </Link>
+                </motion.div>
               ))}
             </div>
           ) : (

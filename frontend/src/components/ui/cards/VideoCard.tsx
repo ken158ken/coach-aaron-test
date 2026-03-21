@@ -32,14 +32,14 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick })
   // 3D tilt
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8, 8]), { stiffness: 300, damping: 30 });
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [18, -18]), { stiffness: 280, damping: 24 });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-18, 18]), { stiffness: 280, damping: 24 });
   const glareX  = useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"]);
   const glareY  = useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"]);
   const glareBg = useTransform(
     [glareX, glareY],
     ([x, y]: string[]) =>
-      `radial-gradient(circle at ${x} ${y}, rgba(255,255,255,0.10) 0%, transparent 65%)`,
+      `radial-gradient(circle at ${x} ${y}, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 40%, transparent 70%)`,
   );
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -56,7 +56,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick })
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
-      style={{ perspective: "1000px", cursor: onClick ? "pointer" : "default" }}
+      style={{ perspective: "600px", cursor: onClick ? "pointer" : "default" }}
       className={`select-none ${className}`}
     >
       <motion.div
