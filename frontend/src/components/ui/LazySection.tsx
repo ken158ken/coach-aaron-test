@@ -23,7 +23,7 @@ interface LazySectionProps {
 const LazySection: React.FC<LazySectionProps> = ({
   children,
   minHeight = "400px",
-  rootMargin = "400px",
+  rootMargin = "600px", // 原 400px → 600px：在使用者接近前 600px 就先渲染，避免捲到時才冒出
   className = "",
 }) => {
   const ref = useRef<HTMLDivElement>(null);

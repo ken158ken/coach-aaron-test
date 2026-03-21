@@ -59,13 +59,20 @@ import { useEffect } from "react";
 
 function App(): JSX.Element {
   // 初始化 AOS
+  // 注意：AOS 的 scroll listener 在 Lenis 環境下不會被觸發，
+  // 實際的 AOS.refresh() 呼叫由 SmoothScroll.tsx 中的 Lenis scroll 回調負責。
+  // 這裡的 setTimeout refresh 是為了處理 Lenis 動態載入完成前的時窗。
   useEffect(() => {
     AOS.init({
       duration: 700,
       easing: "ease-out-quart",
       once: true,
       offset: 60,
+      // disable: false — 全平台啟用，由 Lenis 驅動更新
     });
+    // 延遲 refresh：確保 Lenis 初始化 + 首屏 DOM 完成後重新計算所有 data-aos 元素位置
+    const t = setTimeout(() => AOS.refresh(), 500);
+    return () => clearTimeout(t);
   }, []);
 
   // React 掛載後移除載入遮罩

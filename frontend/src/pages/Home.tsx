@@ -4,9 +4,7 @@
  * @theme abyss (THE ABYSS 深海主題)
  */
 
-import React, { useEffect } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import React from "react";
 import {
   HeroSection,
   CoachIntroSection,
@@ -21,46 +19,23 @@ import HomePopup from "@/components/sections/HomePopup";
 import SEOHead from "@/components/seo/SEOHead";
 import LazySection from "@/components/ui/LazySection";
 
-gsap.registerPlugin(ScrollTrigger);
-
-/** 日誌工具 */
-const logger = {
-  info: (msg: string) => console.log(`[Home] ${msg}`),
-};
-
 /**
  * Home - 網站首頁
+ *
+ * 動畫策略：
+ *   - HeroSection：自帶 GSAP 進場動畫
+ *   - CoachIntroSection / CertificationMarquee：自帶 data-aos（由 Lenis+AOS 驅動）
+ *   - LazySection 下的各 section：各自用 framer-motion whileInView 或 data-aos
+ *
+ *   移除 Home 層的全域 GSAP section-reveal，原因：
+ *     1. GSAP 在 mount 時掃 DOM，但 LazySection 內容尚未渲染 → 空 wrapper 被設成
+ *        opacity:0，LazySection 渲染後 ScrollTrigger 位置已過期，trigger 在錯誤位置 fire
+ *     2. GSAP + framer-motion 同時對同一 wrapper 設 opacity 造成衝突
+ *     3. 各 section 已有自己的進場動畫，wrapper 層無需重複
  *
  * @returns {JSX.Element} 首頁
  */
 const Home: React.FC = () => {
-  /** GSAP ScrollTrigger 滾動入場動畫 */
-  useEffect(() => {
-    const els = document.querySelectorAll<HTMLElement>(".section-reveal");
-    els.forEach((el) => {
-      gsap.fromTo(
-        el,
-        { y: 40, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.7,
-          ease: "expo.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 90%",
-            toggleActions: "play none none none",
-          },
-        },
-      );
-    });
-    logger.info("ScrollTrigger 動畫已初始化");
-
-    return () => {
-      ScrollTrigger.getAll().forEach((t) => t.kill());
-    };
-  }, []);
-
   return (
     <div className="relative min-h-screen bg-transparent">
       {/* SEO Meta 標籤 */}
@@ -93,41 +68,39 @@ const Home: React.FC = () => {
       {/* 首頁自定義彈窗 */}
       <HomePopup />
 
-      {/* Hero Section - GSAP handles its own animation */}
+      {/* Hero Section — 自帶 GSAP 進場 */}
       <HeroSection />
 
-      {/* Coach Introduction */}
-      <div className="section-reveal relative z-10 bg-transparent">
+      {/* Coach Introduction — 自帶 data-aos（framer-motion motion.div） */}
+      <div className="relative z-10 bg-transparent">
         <CoachIntroSection />
       </div>
 
-      {/* Certification Marquee — 認證標章無限滾動 */}
-      <div className="section-reveal relative z-10 bg-transparent">
+      {/* Certification Marquee — CSS @keyframes marquee，無需外層動畫 */}
+      <div className="relative z-10 bg-transparent">
         <CertificationMarquee />
       </div>
 
-      {/* Podcast Section — Expandable Card 版 */}
-      <LazySection minHeight="500px" className="section-reveal">
+      {/* 以下各 section 延遲渲染（距視窗 600px 前才掛載 DOM） */}
+      {/* 各 section 內部自帶 data-aos 或 framer-motion 進場 */}
+
+      <LazySection minHeight="500px">
         <PodcastExpandable />
       </LazySection>
 
-      {/* 學員見證幻燈片（自動輪播）— 延遲渲染 */}
-      <LazySection minHeight="500px" className="section-reveal">
+      <LazySection minHeight="500px">
         <TestimonialCarousel />
       </LazySection>
 
-      {/* 學員真實評價 — Card Stack */}
-      <LazySection minHeight="400px" className="section-reveal">
+      <LazySection minHeight="400px">
         <CardStackTestimonial />
       </LazySection>
 
-      {/* 相片輪播（手動翻頁）— 延遲渲染 */}
-      <LazySection minHeight="400px" className="section-reveal">
+      <LazySection minHeight="400px">
         <GallerySlider />
       </LazySection>
 
-      {/* 精彩回顧 — Direction Aware Hover Gallery */}
-      <LazySection minHeight="400px" className="section-reveal">
+      <LazySection minHeight="400px">
         <DirectionAwareGallery />
       </LazySection>
     </div>
