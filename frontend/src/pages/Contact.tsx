@@ -144,43 +144,49 @@ const Contact: React.FC = () => {
     }
   };
 
-  /** 社群連結列表 */
+  /** 社群連結列表（含各平台品牌色背景） */
   const socialItems = [
     {
       name: "Instagram",
       href: SOCIAL_LINKS.INSTAGRAM,
       icon: "📷",
       desc: "@coach.luen",
+      bg: "linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)",
     },
     {
       name: "LINE 官方",
       href: SOCIAL_LINKS.LINE_OFFICIAL,
       icon: "💬",
       desc: COACH_INFO.LINE_ID,
+      bg: "#06C755",
     },
     {
       name: "LINE 社群",
       href: SOCIAL_LINKS.LINE_GROUP,
       icon: "👥",
       desc: "私人教練專業變現",
+      bg: "#06C755cc",
     },
     {
       name: "Facebook",
       href: SOCIAL_LINKS.FACEBOOK,
       icon: "👤",
       desc: "阿倫教官",
+      bg: "#1877F2",
     },
     {
       name: "TikTok",
       href: SOCIAL_LINKS.TIKTOK,
       icon: "🎵",
       desc: "@coachluen",
+      bg: "#010101",
     },
     {
       name: "Podcast",
       href: SOCIAL_LINKS.PODCAST,
       icon: "🎙️",
       desc: "陪你健身",
+      bg: "#9b59b6",
     },
   ];
 
@@ -378,53 +384,46 @@ const Contact: React.FC = () => {
               </div>
 
               {/* Social Links — Images Badge */}
-              <h3 className="text-sm sm:text-base text-white/90 mb-4 sm:mb-5 font-light">
+              <h3 className="text-sm sm:text-base text-white/90 mb-5 font-light">
                 {t.contact.socialSection}
               </h3>
 
-              {/* Overlapping circle badges */}
-              <div className="flex flex-wrap gap-y-6 gap-x-2 items-center justify-start">
-                {socialItems.map((item) => (
+              {/* Overlapping badge row
+                  關鍵：z-index 掛在 <a> 本身，hover:z-30 讓被 hover 的圓圈在最上層，
+                  確保每個 link 都能獨立點到 */}
+              <div className="flex items-center" style={{ paddingBottom: "56px" }}>
+                {socialItems.map((item, i) => (
                   <a
                     key={item.name}
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative group"
-                    style={{ marginRight: "-8px" }}
+                    aria-label={`${item.name}: ${item.desc}`}
+                    className="relative group hover:z-30"
+                    style={{
+                      marginLeft: i === 0 ? 0 : "-12px",
+                      zIndex: socialItems.length - i,  // 預設：左邊的在上面
+                    }}
                   >
-                    {/* Circle */}
+                    {/* Circle badge */}
                     <motion.div
-                      className="w-12 h-12 rounded-full border-2 border-studio-bg flex items-center justify-center text-xl bg-white/8 backdrop-blur-sm shadow-lg"
-                      whileHover={{ y: -6, scale: 1.15, zIndex: 20 }}
-                      transition={{ duration: 0.18 }}
-                      style={{ position: "relative", zIndex: 1 }}
+                      className="w-12 h-12 rounded-full border-2 border-[#080808] flex items-center justify-center text-xl shadow-md cursor-pointer"
+                      style={{ background: item.bg }}
+                      whileHover={{ y: -8, scale: 1.18 }}
+                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                     >
                       {item.icon}
                     </motion.div>
 
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
-                      <div className="bg-black/90 border border-white/10 rounded-lg px-3 py-1.5 shadow-xl">
+                    {/* Tooltip — pointer-events-none 確保不攔截 click */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap" style={{ zIndex: 100 }}>
+                      <div className="bg-black/90 border border-white/12 rounded-lg px-3 py-1.5 shadow-xl">
                         <p className="text-white/90 text-xs font-medium">{item.name}</p>
                         <p className="text-white/45 text-[11px]">{item.desc}</p>
                       </div>
+                      {/* Arrow */}
+                      <div className="w-2 h-2 bg-black/90 border-r border-b border-white/12 rotate-45 mx-auto -mt-1" />
                     </div>
-                  </a>
-                ))}
-              </div>
-
-              {/* Social names row */}
-              <div className="mt-6 flex flex-wrap gap-2">
-                {socialItems.map((item) => (
-                  <a
-                    key={`label-${item.name}`}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-white/40 hover:text-gold transition-colors px-2 py-1 rounded-md hover:bg-gold/8"
-                  >
-                    {item.name}
                   </a>
                 ))}
               </div>
