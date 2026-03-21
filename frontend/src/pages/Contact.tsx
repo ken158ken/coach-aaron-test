@@ -8,6 +8,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
+import { ImagesBadge, type BadgeItem } from "@/components/ui/images-badge";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
 import { useLanguage } from "@/context/LanguageContext";
@@ -144,8 +145,8 @@ const Contact: React.FC = () => {
     }
   };
 
-  /** 社群連結列表（含各平台品牌色背景） */
-  const socialItems = [
+  /** 社群連結列表（BadgeItem 格式，供 ImagesBadge 使用） */
+  const socialItems: BadgeItem[] = [
     {
       name: "Instagram",
       href: SOCIAL_LINKS.INSTAGRAM,
@@ -165,7 +166,7 @@ const Contact: React.FC = () => {
       href: SOCIAL_LINKS.LINE_GROUP,
       icon: "👥",
       desc: "私人教練專業變現",
-      bg: "#06C755cc",
+      bg: "#06a845",
     },
     {
       name: "Facebook",
@@ -179,7 +180,7 @@ const Contact: React.FC = () => {
       href: SOCIAL_LINKS.TIKTOK,
       icon: "🎵",
       desc: "@coachluen",
-      bg: "#010101",
+      bg: "#111111",
     },
     {
       name: "Podcast",
@@ -384,49 +385,18 @@ const Contact: React.FC = () => {
               </div>
 
               {/* Social Links — Images Badge */}
-              <h3 className="text-sm sm:text-base text-white/90 mb-5 font-light">
+              <h3 className="text-sm sm:text-base text-white/90 mb-2 font-light">
                 {t.contact.socialSection}
               </h3>
+              <p className="text-xs text-white/35 mb-4">Hover 查看，點擊前往</p>
 
-              {/* Overlapping badge row
-                  關鍵：z-index 掛在 <a> 本身，hover:z-30 讓被 hover 的圓圈在最上層，
-                  確保每個 link 都能獨立點到 */}
-              <div className="flex items-center" style={{ paddingBottom: "56px" }}>
-                {socialItems.map((item, i) => (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${item.name}: ${item.desc}`}
-                    className="relative group hover:z-30"
-                    style={{
-                      marginLeft: i === 0 ? 0 : "-12px",
-                      zIndex: socialItems.length - i,  // 預設：左邊的在上面
-                    }}
-                  >
-                    {/* Circle badge */}
-                    <motion.div
-                      className="w-12 h-12 rounded-full border-2 border-[#080808] flex items-center justify-center text-xl shadow-md cursor-pointer"
-                      style={{ background: item.bg }}
-                      whileHover={{ y: -8, scale: 1.18 }}
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      {item.icon}
-                    </motion.div>
-
-                    {/* Tooltip — pointer-events-none 確保不攔截 click */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap" style={{ zIndex: 100 }}>
-                      <div className="bg-black/90 border border-white/12 rounded-lg px-3 py-1.5 shadow-xl">
-                        <p className="text-white/90 text-xs font-medium">{item.name}</p>
-                        <p className="text-white/45 text-[11px]">{item.desc}</p>
-                      </div>
-                      {/* Arrow */}
-                      <div className="w-2 h-2 bg-black/90 border-r border-b border-white/12 rotate-45 mx-auto -mt-1" />
-                    </div>
-                  </a>
-                ))}
-              </div>
+              <ImagesBadge
+                items={socialItems}
+                badgeSize={48}
+                hoverTranslateY={130}
+                hoverSpread={20}
+                overlap={-14}
+              />
             </div>
           </div>
         </div>
