@@ -29,6 +29,7 @@ import ArticleDetail from "@/pages/ArticleDetail";
 import Checkout from "@/pages/Checkout";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import LandingPageViewer from "@/pages/LandingPageViewer";
+import PublishedPages from "@/pages/PublishedPages";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -139,6 +140,7 @@ function App(): JSX.Element {
                   <Route path="checkout" element={<Checkout />} />
                   <Route path="checkout/success" element={<CheckoutSuccess />} />
                   <Route path="page/:slug" element={<LandingPageViewer />} />
+                  <Route path="pages" element={<PublishedPages />} />
                 </Route>
 
                 {/* 後台路由 */}

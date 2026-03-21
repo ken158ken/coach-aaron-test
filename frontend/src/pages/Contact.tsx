@@ -5,8 +5,8 @@
  * @description 包含聯絡表單（透過 Resend 發送郵件）、教練個人資訊與社群連結
  */
 
-import React, { useState, useEffect } from "react";
-import { motion, useMotionValue, useMotionTemplate, animate } from "framer-motion";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
@@ -39,17 +39,6 @@ const Contact: React.FC = () => {
   const { t } = useLanguage();
   const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
 
-  // Moving Border — 金色光點繞邊動畫
-  const rotation = useMotionValue(0);
-  const borderBg = useMotionTemplate`conic-gradient(from ${rotation}deg, transparent 65%, rgba(197,160,89,0.7) 80%, rgba(255,255,255,0.5) 87%, rgba(197,160,89,0.7) 94%, transparent 100%)`;
-  useEffect(() => {
-    const controls = animate(rotation, 360, {
-      duration: 4,
-      repeat: Infinity,
-      ease: "linear",
-    });
-    return controls.stop;
-  }, [rotation]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
@@ -264,13 +253,7 @@ const Contact: React.FC = () => {
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 {t.contact.formSection}
               </h2>
-              {/* Moving Border wrapper */}
-              <div className="relative rounded-xl p-px">
-                <motion.div
-                  className="absolute inset-0 rounded-xl"
-                  style={{ background: borderBg }}
-                />
-                <div className="relative rounded-xl bg-surface/80 p-5 sm:p-6">
+              <div className="rounded-xl bg-black/60 border border-white/8 p-5 sm:p-6">
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <Input
                   name="name"
@@ -332,7 +315,6 @@ const Contact: React.FC = () => {
                   {t.contact.formNote}
                 </p>
               </form>
-                </div>
               </div>
             </div>
 
@@ -345,11 +327,13 @@ const Contact: React.FC = () => {
               {/* Info Cards */}
               <div className="space-y-4 mb-6 sm:mb-8">
                 {/* LINE 快速聯繫 */}
-                <a
+                <motion.a
                   href={SOCIAL_LINKS.LINE_OFFICIAL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block p-4 sm:p-5 bg-[#06C755]/10 rounded-lg border border-[#06C755]/30 hover:border-[#06C755]/60 hover:shadow-lg transition-all duration-300"
+                  className="block p-4 sm:p-5 bg-[#06C755]/8 rounded-lg border border-[#06C755]/25"
+                  whileHover={{ y: -4, boxShadow: "0 8px 32px rgba(6,199,85,0.22)", borderColor: "rgba(6,199,85,0.6)" }}
+                  transition={{ duration: 0.2 }}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">💬</span>
@@ -362,27 +346,35 @@ const Contact: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                </a>
+                </motion.a>
 
                 {/* Email */}
-                <div className="p-4 sm:p-5 bg-surface rounded-lg border border-gold/10 hover:border-gold/30 transition-all duration-300">
+                <motion.div
+                  className="p-4 sm:p-5 bg-black/40 rounded-lg border border-gold/15"
+                  whileHover={{ y: -4, boxShadow: "0 8px 32px rgba(197,160,89,0.18)", borderColor: "rgba(197,160,89,0.45)" }}
+                  transition={{ duration: 0.2 }}
+                >
                   <h3 className="text-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
                     {t.contact.email}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90 break-all">
                     {COACH_INFO.EMAIL}
                   </p>
-                </div>
+                </motion.div>
 
                 {/* 營業時間 */}
-                <div className="p-4 sm:p-5 bg-surface rounded-lg border border-gold/10 hover:border-gold/30 transition-all duration-300">
+                <motion.div
+                  className="p-4 sm:p-5 bg-black/40 rounded-lg border border-gold/15"
+                  whileHover={{ y: -4, boxShadow: "0 8px 32px rgba(197,160,89,0.18)", borderColor: "rgba(197,160,89,0.45)" }}
+                  transition={{ duration: 0.2 }}
+                >
                   <h3 className="text-gold text-xs sm:text-sm uppercase tracking-widest mb-1.5">
                     {t.contact.businessHours}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90">
                     {COACH_INFO.BUSINESS_HOURS}
                   </p>
-                </div>
+                </motion.div>
               </div>
 
               {/* Social Links */}
@@ -391,12 +383,14 @@ const Contact: React.FC = () => {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {socialItems.map((item) => (
-                  <a
+                  <motion.a
                     key={item.name}
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-surface rounded-lg border border-gold/10 hover:border-gold/40 hover:shadow-lg hover:shadow-gold/10 hover:-translate-y-1 transition-all duration-300"
+                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-black/40 rounded-lg border border-gold/15"
+                    whileHover={{ y: -5, boxShadow: "0 8px 28px rgba(197,160,89,0.22)", borderColor: "rgba(197,160,89,0.5)" }}
+                    transition={{ duration: 0.18 }}
                   >
                     <span className="text-xl sm:text-2xl">{item.icon}</span>
                     <div className="min-w-0">
@@ -407,7 +401,7 @@ const Contact: React.FC = () => {
                         {item.desc}
                       </span>
                     </div>
-                  </a>
+                  </motion.a>
                 ))}
               </div>
             </div>

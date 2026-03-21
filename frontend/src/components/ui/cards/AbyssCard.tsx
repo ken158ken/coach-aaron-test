@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { motion } from "framer-motion";
 
 interface AbyssCardProps {
   children: React.ReactNode;
@@ -24,38 +25,30 @@ const AbyssCard: React.FC<AbyssCardProps> = ({
   glow = "cyan",
   hover = true,
 }) => {
-  const glowColors = {
-    cyan: "hover:shadow-[0_0_30px_rgba(0,255,255,0.4)]",
-    purple: "hover:shadow-[0_0_30px_rgba(123,0,255,0.4)]",
-    none: "",
+  const hoverGlow = {
+    cyan: "0 8px 40px rgba(0,255,255,0.35)",
+    purple: "0 8px 40px rgba(123,0,255,0.35)",
+    none: "none",
   };
 
-  const glowBorder = {
-    cyan: "border-white/15",
-    purple: "border-white/15",
-    none: "border-transparent",
+  const glowBorderColor = {
+    cyan: "rgba(255,255,255,0.28)",
+    purple: "rgba(180,120,255,0.35)",
+    none: "transparent",
   };
 
   return (
-    <div
-      className={`
-        studio-card
-        bg-[#050505]/50
-        backdrop-blur-sm
-        rounded-xl
-        border
-        ${glowBorder[glow]}
-        p-4
-        sm:p-6
-        transition-all
-        duration-300
-        ${hover ? glowColors[glow] : ""}
-        ${hover ? "hover:-translate-y-1" : ""}
-        ${className}
-      `}
+    <motion.div
+      className={`studio-card bg-[#050505]/50 backdrop-blur-sm rounded-xl border border-white/10 p-4 sm:p-6 ${className}`}
+      whileHover={hover ? {
+        y: -8,
+        boxShadow: hoverGlow[glow],
+        borderColor: glowBorderColor[glow],
+      } : undefined}
+      transition={{ duration: 0.22 }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 };
 
