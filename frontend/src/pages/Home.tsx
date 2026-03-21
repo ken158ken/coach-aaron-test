@@ -11,9 +11,11 @@ import {
   HeroSection,
   CoachIntroSection,
   CertificationMarquee,
-  PodcastSection,
+  PodcastExpandable,
   TestimonialCarousel,
+  CardStackTestimonial,
   GallerySlider,
+  DirectionAwareGallery,
 } from "@/components/sections";
 import HomePopup from "@/components/sections/HomePopup";
 import SEOHead from "@/components/seo/SEOHead";
@@ -104,9 +106,9 @@ const Home: React.FC = () => {
         <CertificationMarquee />
       </div>
 
-      {/* Podcast Section — 延遲渲染，捲到前 400px 才載入 DOM */}
+      {/* Podcast Section — Expandable Card 版 */}
       <LazySection minHeight="500px" className="section-reveal">
-        <PodcastSection />
+        <PodcastExpandable />
       </LazySection>
 
       {/* 學員見證幻燈片（自動輪播）— 延遲渲染 */}
@@ -114,9 +116,19 @@ const Home: React.FC = () => {
         <TestimonialCarousel />
       </LazySection>
 
+      {/* 學員真實評價 — Card Stack */}
+      <LazySection minHeight="400px" className="section-reveal">
+        <CardStackTestimonial />
+      </LazySection>
+
       {/* 相片輪播（手動翻頁）— 延遲渲染 */}
       <LazySection minHeight="400px" className="section-reveal">
         <GallerySlider />
+      </LazySection>
+
+      {/* 精彩回顧 — Direction Aware Hover Gallery */}
+      <LazySection minHeight="400px" className="section-reveal">
+        <DirectionAwareGallery />
       </LazySection>
     </div>
   );

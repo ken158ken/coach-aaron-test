@@ -377,31 +377,55 @@ const Contact: React.FC = () => {
                 </motion.div>
               </div>
 
-              {/* Social Links */}
-              <h3 className="text-sm sm:text-base text-white/90 mb-3 sm:mb-4 font-light">
+              {/* Social Links — Images Badge */}
+              <h3 className="text-sm sm:text-base text-white/90 mb-4 sm:mb-5 font-light">
                 {t.contact.socialSection}
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+
+              {/* Overlapping circle badges */}
+              <div className="flex flex-wrap gap-y-6 gap-x-2 items-center justify-start">
                 {socialItems.map((item) => (
-                  <motion.a
+                  <a
                     key={item.name}
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-black/40 rounded-lg border border-gold/15"
-                    whileHover={{ y: -5, boxShadow: "0 8px 28px rgba(197,160,89,0.22)", borderColor: "rgba(197,160,89,0.5)" }}
-                    transition={{ duration: 0.18 }}
+                    className="relative group"
+                    style={{ marginRight: "-8px" }}
                   >
-                    <span className="text-xl sm:text-2xl">{item.icon}</span>
-                    <div className="min-w-0">
-                      <span className="text-sm text-white/90 block">
-                        {item.name}
-                      </span>
-                      <span className="text-xs text-muted truncate block">
-                        {item.desc}
-                      </span>
+                    {/* Circle */}
+                    <motion.div
+                      className="w-12 h-12 rounded-full border-2 border-studio-bg flex items-center justify-center text-xl bg-white/8 backdrop-blur-sm shadow-lg"
+                      whileHover={{ y: -6, scale: 1.15, zIndex: 20 }}
+                      transition={{ duration: 0.18 }}
+                      style={{ position: "relative", zIndex: 1 }}
+                    >
+                      {item.icon}
+                    </motion.div>
+
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+                      <div className="bg-black/90 border border-white/10 rounded-lg px-3 py-1.5 shadow-xl">
+                        <p className="text-white/90 text-xs font-medium">{item.name}</p>
+                        <p className="text-white/45 text-[11px]">{item.desc}</p>
+                      </div>
                     </div>
-                  </motion.a>
+                  </a>
+                ))}
+              </div>
+
+              {/* Social names row */}
+              <div className="mt-6 flex flex-wrap gap-2">
+                {socialItems.map((item) => (
+                  <a
+                    key={`label-${item.name}`}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-white/40 hover:text-gold transition-colors px-2 py-1 rounded-md hover:bg-gold/8"
+                  >
+                    {item.name}
+                  </a>
                 ))}
               </div>
             </div>
