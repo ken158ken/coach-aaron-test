@@ -252,9 +252,9 @@ const AdminVideos: React.FC = () => {
 
   // ===== 列表檢視 =====
   const renderListView = () => (
-    <div className="space-y-1">
+    <div className="space-y-1 overflow-x-auto">
       {/* 表頭 */}
-      <div className="grid grid-cols-[40px_40px_1fr_100px_80px_100px] gap-2 px-4 py-2 text-xs text-luxe-muted border-b border-luxe-gold/10">
+      <div className="grid grid-cols-[40px_40px_1fr_100px_80px_100px] gap-2 px-4 py-2 text-xs text-luxe-muted border-b border-luxe-gold/10 min-w-130">
         <span></span>
         <span>順序</span>
         <span>影片標題</span>
@@ -273,7 +273,7 @@ const AdminVideos: React.FC = () => {
           onDragOver={handleDragOver}
           onDrop={() => handleDrop(index)}
           onDragEnd={handleDragEnd}
-          className={`grid grid-cols-[40px_40px_1fr_100px_80px_100px] gap-2 px-4 py-3 rounded-lg items-center transition-all ${
+          className={`grid grid-cols-[40px_40px_1fr_100px_80px_100px] gap-2 px-4 py-3 rounded-lg items-center transition-all min-w-130 ${
             dragIndex === index
               ? "opacity-40 scale-95"
               : dragOverIndex === index
@@ -412,7 +412,7 @@ const AdminVideos: React.FC = () => {
                   <span className="text-[10px] text-luxe-muted">
                     {video.type}
                   </span>
-                  <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

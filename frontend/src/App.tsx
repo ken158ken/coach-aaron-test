@@ -47,6 +47,7 @@ import LandingPageEditor from "@/pages/admin/LandingPageEditor";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import PageBlade from "@/components/layout/PageBlade";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import { Analytics } from "@vercel/analytics/react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -114,6 +115,7 @@ function App(): JSX.Element {
         <LanguageProvider>
           <DialogProvider>
             <SmoothScroll>
+              <Analytics />
               <ScrollToTop />
               <PageBlade />
               <Routes>

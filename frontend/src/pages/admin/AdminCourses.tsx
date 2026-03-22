@@ -681,7 +681,7 @@ const AdminCourses: React.FC = () => {
                       </div>
 
                       {/* 操作按鈕（觸控裝置始終顯示，桌面 hover 顯示） */}
-                      <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5">
                         <button
                           onClick={() =>
                             navigate(`/admin/courses/${course.course_id}/edit`)

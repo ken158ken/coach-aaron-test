@@ -596,7 +596,7 @@ const AdminUsers: React.FC = () => {
                         </span>
                       </div>
                       {/* hover 操作列 */}
-                      <div className="flex gap-2 mt-3 pt-2 border-t border-luxe-gold/5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 mt-3 pt-2 border-t border-luxe-gold/5 transition-opacity">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -660,7 +660,7 @@ const AdminUsers: React.FC = () => {
                         )}
                       </div>
                       {/* hover 操作列 */}
-                      <div className="flex gap-2 mt-3 pt-2 border-t border-luxe-gold/5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 mt-3 pt-2 border-t border-luxe-gold/5 transition-opacity">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

@@ -185,7 +185,7 @@ const AdminWhitelist: React.FC = () => {
         <span className="text-luxe-text">{item.email || "-"}</span>
       ),
     },
-    { key: "note" as const, header: "備註" },
+    { key: "note" as const, header: "備註", hideOnMobile: true },
     {
       key: "isActive" as const,
       header: (
@@ -220,7 +220,7 @@ const AdminWhitelist: React.FC = () => {
         />
       ),
     },
-    { key: "createdAt" as const, header: "建立日期" },
+    { key: "createdAt" as const, header: "建立日期", hideOnMobile: true },
     {
       key: "actions" as const,
       header: "操作",

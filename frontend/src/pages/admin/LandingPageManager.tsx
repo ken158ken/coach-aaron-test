@@ -401,7 +401,7 @@ const LandingPageManager: React.FC = () => {
                 </div>
 
                 {/* 操作按鈕 */}
-                <div className="flex gap-2 mt-2 pt-2 border-t border-luxe-gold/5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-luxe-gold/5">
                   <button
                     onClick={() => handleEdit(page)}
                     className="text-luxe-gold hover:underline text-xs flex-1"

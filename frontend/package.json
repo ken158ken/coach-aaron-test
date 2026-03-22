@@ -52,6 +52,7 @@
     "@tiptap/extension-youtube": "^3.18.0",
     "@tiptap/react": "^3.18.0",
     "@tiptap/starter-kit": "^3.18.0",
+    "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-react": "^4.3.4",
     "aos": "^2.3.4",
     "axios": "^1.13.2",
