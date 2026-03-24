@@ -6,6 +6,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface PodcastEpisode {
   id: string;
@@ -64,6 +65,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const PodcastExpandable: React.FC = () => {
   const [active, setActive] = useState<PodcastEpisode | null>(null);
+
+  useScrollLock(!!active);
 
   return (
     <section className="py-16 sm:py-20 md:py-24 px-4 bg-transparent">

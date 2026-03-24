@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { contentService, type ActivePopup } from "@/services/content.service";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 /** 日誌工具 */
 const logger = {
@@ -75,6 +76,8 @@ const HomePopup: React.FC = () => {
       setPopup(null);
     }, 400);
   };
+
+  useScrollLock(visible);
 
   if (!popup || !visible) return null;
 

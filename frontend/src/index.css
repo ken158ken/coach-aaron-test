@@ -153,7 +153,7 @@
 @layer base {
   html {
     font-family: var(--font-body);
-    scroll-behavior: smooth;
+    /* scroll-behavior: smooth 由 Lenis 統一處理，避免與其衝突造成雙重平滑 */
     font-size: clamp(16px, 0.5vw + 14.5px, 20px);
     background-color: var(--color-studio-bg);
   }

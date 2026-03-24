@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/context";
 import { Loading, Tooltip } from "@/components/ui";
@@ -129,6 +130,8 @@ const CourseEditor: React.FC = () => {
 
   // 使用說明 Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  useScrollLock(showCategoryModal || showHelpModal);
 
   // Slug 狀態
   const [slugDuplicate, setSlugDuplicate] = useState(false);

@@ -11,6 +11,7 @@ import React, {
   useState,
   useEffect,
 } from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import Moveable from "react-moveable";
 import type {
   AnyBlock,
@@ -78,6 +79,8 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   const [videoUrl, setVideoUrl] = useState("");
   const [error, setError] = useState("");
   const [showPropertyPanel, setShowPropertyPanel] = useState(true);
+
+  useScrollLock(showImageModal || showVideoModal);
 
   // 載入初始內容
   useEffect(() => {

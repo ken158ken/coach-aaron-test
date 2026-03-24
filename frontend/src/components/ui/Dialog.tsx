@@ -13,6 +13,7 @@ import React, {
   createContext,
   useContext,
 } from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -56,6 +57,8 @@ export const Modal: React.FC<ModalProps> = ({
     setMounted(true);
   }, []);
 
+  useScrollLock(isOpen);
+
   // ESC 關閉
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,16 +66,10 @@ export const Modal: React.FC<ModalProps> = ({
     };
     if (isOpen && typeof window !== "undefined") {
       window.addEventListener("keydown", handleKeyDown);
-      if (typeof document !== "undefined") {
-        document.body.style.overflow = "hidden";
-      }
     }
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("keydown", handleKeyDown);
-      }
-      if (typeof document !== "undefined") {
-        document.body.style.overflow = "";
       }
     };
   }, [isOpen, onClose]);

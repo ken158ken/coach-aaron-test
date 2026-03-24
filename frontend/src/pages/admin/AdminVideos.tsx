@@ -130,6 +130,18 @@ const AdminVideos: React.FC = () => {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+
+    // 邊緣自動滾動：距視窗上/下 80px 範圍內觸發捲動
+    const EDGE = 80;
+    const SPEED = 12;
+    const { clientY } = e;
+    const { innerHeight } = window;
+
+    if (clientY < EDGE) {
+      window.scrollBy({ top: -SPEED, behavior: "instant" as ScrollBehavior });
+    } else if (clientY > innerHeight - EDGE) {
+      window.scrollBy({ top: SPEED, behavior: "instant" as ScrollBehavior });
+    }
   };
 
   const handleDrop = (dropIndex: number) => {

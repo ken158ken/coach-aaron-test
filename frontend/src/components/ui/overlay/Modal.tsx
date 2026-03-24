@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect } from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface ModalProps {
   isOpen: boolean;
@@ -29,17 +30,7 @@ const Modal: React.FC<ModalProps> = ({
   size = "md",
   className = "",
 }) => {
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      if (typeof document !== "undefined") {
-        document.body.style.overflow = "unset";
-      }
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

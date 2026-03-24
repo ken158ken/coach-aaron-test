@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -39,6 +40,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = "取消",
   danger = false,
 }) => {
+  useScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (

@@ -3,7 +3,8 @@
  * @module components/ui/overlay/Drawer
  */
 
-import React, { useEffect } from "react";
+import React from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface DrawerProps {
   isOpen: boolean;
@@ -29,19 +30,7 @@ const Drawer: React.FC<DrawerProps> = ({
   position = "right",
   className = "",
 }) => {
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      if (typeof document !== "undefined") {
-        document.body.style.overflow = "unset";
-      }
-    };
-  }, [isOpen]);
-
-
+  useScrollLock(isOpen);
 
   const positionStyles = {
     left: {

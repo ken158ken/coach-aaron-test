@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import AOS from "aos";
+import { setLenisInstance } from "@/lib/lenisInstance";
 
 /**
  * SmoothScroll 元件 - 提供全站 Lenis 平滑捲動
@@ -38,6 +39,7 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         });
 
         lenisRef.current = lenis;
+        setLenisInstance(lenis);
 
         // ── GSAP ScrollTrigger 整合 ──────────────────────────
         lenis.on("scroll", ScrollTrigger.update);
@@ -83,6 +85,7 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         lenis.destroy();
         gsap.ticker.remove(lenis.raf);
       }
+      setLenisInstance(null);
       if (ro) ro.disconnect();
     };
   }, []);
