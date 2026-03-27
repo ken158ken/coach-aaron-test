@@ -36,6 +36,13 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
+  // 顯示 token 過期提示
+  useEffect(() => {
+    if (searchParams.get("expired") === "1") {
+      setError("登入已過期，請重新登入");
+    }
+  }, [searchParams]);
+
   // 處理 OAuth 回呼：後端 redirect 帶 auth_code → 前端用 XHR 交換 cookie
   useEffect(() => {
     const authCode = searchParams.get("auth_code");
@@ -71,9 +78,11 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate("/member");
+      // 優先返回 redirect 參數指定的頁面（token 過期後重新登入）
+      const redirectTo = searchParams.get("redirect");
+      navigate(redirectTo || "/member", { replace: true });
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, navigate, searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

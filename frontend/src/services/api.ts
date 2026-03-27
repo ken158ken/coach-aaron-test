@@ -75,7 +75,8 @@ apiClient.interceptors.response.use(
         const currentPath = window.location.pathname;
         if (!currentPath.includes("/login")) {
           sessionStorage.setItem("redirectAfterLogin", currentPath);
-          console.log("登入已過期");
+          // 廣播 auth:unauthorized 事件，讓 AuthContext 清除登入狀態
+          window.dispatchEvent(new CustomEvent("auth:unauthorized"));
         }
       } catch {
         // SSR 環境

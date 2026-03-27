@@ -148,9 +148,11 @@ function App(): JSX.Element {
                   />
                   <Route path="checkout" element={<Checkout />} />
                   <Route path="checkout/success" element={<CheckoutSuccess />} />
-                  <Route path="page/:slug" element={<LandingPageViewer />} />
                   <Route path="pages" element={<PublishedPages />} />
                 </Route>
+
+                {/* Landing Page 公開預覽（不套 Layout，獨立全頁） */}
+                <Route path="/page/:slug" element={<LandingPageViewer />} />
 
                 {/* 後台路由 */}
                 <Route
