@@ -25,6 +25,7 @@ import searchRoutes from "./routes/search.js";
 import contentRoutes from "./routes/content.js";
 import contactRoutes from "./routes/contact.js";
 import slidesRoutes from "./routes/slides.js";
+import landingRoutes from "./routes/landing.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
 import {
@@ -110,6 +111,7 @@ app.use("/api/content", contentRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/slides", slidesRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/landing", landingRoutes);
 
 /**
  * 健康檢查端點
@@ -127,6 +129,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
       "/api/courses",
       "/api/videos",
       "/api/articles",
+      "/api/landing",
     ],
   });
 });

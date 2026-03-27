@@ -8,3 +8,5 @@ export { authService } from "./auth.service";
 export { userService } from "./user.service";
 export { courseService } from "./course.service";
 export { videoService } from "./video.service";
+export { landingService, PAGE_KIND_LABELS, STATUS_LABELS } from "./landing.service";
+export type { LpTemplate, LpProject, LpProjectDetail, LpPublicProject, LpResolvedField, PageKind, ProjectStatus } from "./landing.service";
