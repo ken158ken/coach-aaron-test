@@ -46,9 +46,9 @@ export const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
     return <AuthLoadingScreen />;
   }
 
-  // 未登入 → 重導向至登入頁，保留來源路徑
+  // 未登入 → 重導向至登入頁，保留來源路徑（字串，與 auth:unauthorized handler 一致）
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return <>{children}</>;
@@ -78,9 +78,9 @@ export const RequireAdmin: React.FC<RequireAdminProps> = ({ children }) => {
     return <AuthLoadingScreen />;
   }
 
-  // 未登入 → 重導向至登入頁
+  // 未登入 → 重導向至登入頁（字串，與 auth:unauthorized handler 一致）
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // 已登入但非管理員 → 重導向至首頁

@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/context";
 import { Input, PillButton, Toast } from "@/components/ui";
 import SEOHead from "@/components/seo/SEOHead";
@@ -26,7 +26,11 @@ const Login: React.FC = () => {
     loginFromOAuth,
   } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
+
+  // location.state 由 AuthContext 的 auth:unauthorized handler 傳入
+  const locationState = location.state as { expired?: boolean; from?: string } | null;
 
   const [formData, setFormData] = useState({
     email: "",
@@ -36,12 +40,12 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
-  // 顯示 token 過期提示
+  // 顯示 token 過期提示（支援 state 和 query params 兩種來源）
   useEffect(() => {
-    if (searchParams.get("expired") === "1") {
+    if (locationState?.expired || searchParams.get("expired") === "1") {
       setError("登入已過期，請重新登入");
     }
-  }, [searchParams]);
+  }, [locationState?.expired, searchParams]);
 
   // 處理 OAuth 回呼：後端 redirect 帶 auth_code → 前端用 XHR 交換 cookie
   useEffect(() => {
@@ -78,11 +82,11 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      // 優先返回 redirect 參數指定的頁面（token 過期後重新登入）
-      const redirectTo = searchParams.get("redirect");
+      // 優先用 location.state.from（auth:unauthorized 傳入），其次 query param redirect
+      const redirectTo = locationState?.from || searchParams.get("redirect");
       navigate(redirectTo || "/member", { replace: true });
     }
-  }, [authLoading, isAuthenticated, navigate, searchParams]);
+  }, [authLoading, isAuthenticated, navigate, searchParams, locationState?.from]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -97,7 +101,7 @@ const Login: React.FC = () => {
 
     try {
       await login(formData.email, formData.password);
-      navigate("/member");
+      // 跳轉由 useEffect([isAuthenticated]) 統一處理，不在此 hardcode
     } catch (err: unknown) {
       const axiosErr = err as {
         response?: { data?: { message?: string; error?: string } };

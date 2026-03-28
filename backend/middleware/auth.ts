@@ -86,7 +86,8 @@ export const authenticateToken = (
       process.env.JWT_SECRET,
       (err: jwt.VerifyErrors | null, decoded: unknown) => {
         if (err) {
-          res.status(403).json({ error: "Token 無效或已過期" });
+          // 401 = 需重新認證（token 無效或已過期）；403 保留給「有效 token 但無權限」
+          res.status(401).json({ error: "Token 無效或已過期" });
           return;
         }
         req.user = decoded as JWTPayload;

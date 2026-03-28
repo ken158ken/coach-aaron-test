@@ -523,7 +523,24 @@ router.get(
         .eq("is_active", true)
         .single();
 
+      const isAdmin = !!adminCheck;
+
+      // 重新簽發 token（讓前端頁面重整後可恢復 Bearer token）
+      const freshToken = jwt.sign(
+        {
+          userId: user.user_id,
+          username: user.username,
+          email: user.email,
+          displayName: user.display_name,
+          sex: user.sex,
+          isAdmin,
+        },
+        process.env.JWT_SECRET || "",
+        { expiresIn: "7d" },
+      );
+
       res.json({
+        token: freshToken,
         user: {
           userId: user.user_id,
           username: user.username,
@@ -532,10 +549,10 @@ router.get(
           avatarUrl: user.avatar_base64 || user.avatar_url,
           phoneNumber: user.phone_number,
           sex: user.sex,
-          isAdmin: !!adminCheck,
+          isAdmin,
           createdAt: user.created_at,
         },
-        isAdmin: !!adminCheck,
+        isAdmin,
       });
     } catch (err) {
       logger.error("取得使用者資訊失敗", err as Error, {

@@ -12,6 +12,10 @@ import type { ApiErrorResponse } from "@/types";
  */
 let _authToken: string | null = null;
 
+/** auth:unauthorized 防抖：3 秒內只觸發一次，避免多個 API 同時失敗造成迴圈 */
+let _unauthorizedFiredAt = 0;
+const UNAUTHORIZED_DEBOUNCE_MS = 3000;
+
 export function setAuthToken(token: string | null): void {
   _authToken = token;
 }
@@ -73,8 +77,12 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !isAuthCheck) {
       try {
         const currentPath = window.location.pathname;
-        if (!currentPath.includes("/login")) {
-          sessionStorage.setItem("redirectAfterLogin", currentPath);
+        const now = Date.now();
+        if (
+          !currentPath.includes("/login") &&
+          now - _unauthorizedFiredAt > UNAUTHORIZED_DEBOUNCE_MS
+        ) {
+          _unauthorizedFiredAt = now;
           // 廣播 auth:unauthorized 事件，讓 AuthContext 清除登入狀態
           window.dispatchEvent(new CustomEvent("auth:unauthorized"));
         }

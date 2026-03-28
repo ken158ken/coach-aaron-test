@@ -10,6 +10,7 @@ import React, {
   useContext,
   useCallback,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import type { User, AuthContextType, RegisterFormData } from "@/types";
 import { authService } from "@/services";
 import { setAuthToken } from "@/services/api";
@@ -67,6 +68,7 @@ interface AuthProviderProps {
  * @returns {JSX.Element} Provider 元件
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -116,18 +118,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   /**
    * 監聽 API 層廣播的 auth:unauthorized 事件
-   * 當後端回傳 401（token 過期），自動清除登入狀態並導向登入頁
+   * 當後端回傳 401（token 過期或無效），自動清除登入狀態並導向登入頁
+   * 使用 React Router navigate 避免 full page reload，保留 _authToken 繼承
    */
   useEffect(() => {
     const handleUnauthorized = () => {
       setAuthToken(null);
       setUser(null);
       setIsAdmin(false);
-      // 導向登入頁（保留目前路徑供登入後返回）
       try {
         const currentPath = window.location.pathname;
         if (!currentPath.includes("/login")) {
-          window.location.href = `/login?expired=1&redirect=${encodeURIComponent(currentPath)}`;
+          navigate("/login", {
+            state: { expired: true, from: currentPath },
+            replace: true,
+          });
         }
       } catch {
         // SSR 環境，略過
@@ -136,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     window.addEventListener("auth:unauthorized", handleUnauthorized);
     return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
-  }, []);
+  }, [navigate]);
 
   /**
    * 初始化認證狀態 - 在 hydration 後執行

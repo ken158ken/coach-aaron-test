@@ -17,7 +17,7 @@
 
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
-import { requireAdmin, optionalAuth } from "../middleware/auth.js";
+import { authenticateToken, requireAdmin, optionalAuth } from "../middleware/auth.js";
 import { sanitizeId } from "../utils/sanitizer.js";
 import { logger } from "../utils/logger.js";
 
@@ -193,7 +193,7 @@ router.get("/projects/slug/:slug", async (req: Request, res: Response): Promise<
  * GET /api/landing/projects
  * 所有專案列表（含草稿）
  */
-router.get("/projects", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.get("/projects", authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const page  = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
@@ -237,7 +237,7 @@ router.get("/projects", requireAdmin, async (req: Request, res: Response): Promi
  *
  * Body: { template_id, project_name, customer_name?, locale?, custom_slug?, ... }
  */
-router.post("/projects", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.post("/projects", authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const {
     template_id,
     project_name,
@@ -321,7 +321,7 @@ router.post("/projects", requireAdmin, async (req: Request, res: Response): Prom
  * GET /api/landing/projects/:id
  * 單一專案詳情（含解析後欄位值）
  */
-router.get("/projects/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.get("/projects/:id", authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
   if (!isValid) { sendError(res, 400, errorMessage!); return; }
 
@@ -355,7 +355,7 @@ router.get("/projects/:id", requireAdmin, async (req: Request, res: Response): P
  * PUT /api/landing/projects/:id
  * 更新專案基本資料（不含欄位覆寫值）
  */
-router.put("/projects/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.put("/projects/:id", authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
   if (!isValid) { sendError(res, 400, errorMessage!); return; }
 
@@ -419,6 +419,7 @@ router.put("/projects/:id", requireAdmin, async (req: Request, res: Response): P
  */
 router.put(
   "/projects/:id/fields",
+  authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
@@ -480,7 +481,7 @@ router.put(
  * DELETE /api/landing/projects/:id
  * 刪除專案（CASCADE 會同步清除 field_values）
  */
-router.delete("/projects/:id", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.delete("/projects/:id", authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
   if (!isValid) { sendError(res, 400, errorMessage!); return; }
 

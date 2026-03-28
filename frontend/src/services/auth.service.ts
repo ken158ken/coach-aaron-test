@@ -60,12 +60,13 @@ export const authService = {
   },
 
   /**
-   * 檢查認證狀態
+   * 檢查認證狀態，並恢復記憶體 token（頁面重整後補回 Bearer token）
    *
    * @returns {Promise<AuthResponse>} 認證回應
    */
   checkAuth: async (): Promise<AuthResponse> => {
-    return get<AuthResponse>("/api/auth/me");
+    const res = await get<AuthResponseWithToken>("/api/auth/me");
+    return storeToken(res);
   },
 
   /**
