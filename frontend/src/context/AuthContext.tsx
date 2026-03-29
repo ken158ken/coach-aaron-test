@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import type { User, AuthContextType, RegisterFormData } from "@/types";
 import { authService } from "@/services";
 import { setAuthToken } from "@/services/api";
+import { getPreloadedAuth } from "@/lib/auth-init";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -26,7 +27,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
  * @param {Record<string, unknown>} raw - 後端原始 user 物件
  * @returns {User} 正規化的 User 物件
  */
-const normalizeUser = (raw: Record<string, unknown>): User => {
+export const normalizeUser = (raw: Record<string, unknown>): User => {
   return {
     // 主鍵
     user_id: (raw.user_id ?? raw.userId ?? 0) as number,
@@ -64,23 +65,60 @@ interface AuthProviderProps {
 /**
  * Auth Provider 元件
  *
+ * 初始化策略：
+ *   - 客戶端：entry-client.tsx 的 bootstrap() 在渲染前執行 initAuth()，
+ *     auth-init 模組已持有預載結果，這裡直接用同步 lazy initializer 取得，
+ *     loading 從一開始就是 false，消除「先無登入→後有登入」的畫面閃爍。
+ *   - SSR：getPreloadedAuth() 回傳 null（initAuth 從未執行），
+ *     loading 初始為 true，authReady = false，protected routes 顯示 loading 畫面。
+ *
  * @param {AuthProviderProps} props - 元件屬性
  * @returns {JSX.Element} Provider 元件
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
 
-  /** auth 已就緒：mounted 且 loading 結束，可安全做 auth 判斷 */
-  const authReady = mounted && !loading;
+  // ─── 從預載結果同步初始化（lazy initializer 只在首次 render 執行一次）───
+  const [user, setUser] = useState<User | null>(() => {
+    const preloaded = getPreloadedAuth();
+    if (preloaded?.response) {
+      return normalizeUser(
+        preloaded.response.user as unknown as Record<string, unknown>,
+      );
+    }
+    return null;
+  });
+
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    const preloaded = getPreloadedAuth();
+    return preloaded?.response?.isAdmin ?? false;
+  });
 
   /**
-   * 檢查認證狀態 - 只在客戶端執行
-   * 注意：401 是正常的未登入狀態，不應視為錯誤
+   * loading：
+   *   - null（SSR）→ initAuth 未執行 → true（等待客戶端 checkAuth）
+   *   - 物件（客戶端）→ initAuth 完成 → false（已有資料）
+   */
+  const [loading, setLoading] = useState<boolean>(() => {
+    return getPreloadedAuth() === null;
+  });
+
+  /**
+   * mounted：SSR 安全旗標，由 useEffect 設為 true。
+   * 供 Navbar 等元件判斷是否在瀏覽器環境，防止 hydration mismatch。
+   * 不再參與 authReady 計算。
+   */
+  const [mounted, setMounted] = useState(false);
+
+  /**
+   * authReady：loading 結束即就緒。
+   * 客戶端（預載完成）：初始即 true，protected routes 直接渲染正確畫面。
+   * SSR：loading=true → false，protected routes 先顯示 loading 畫面。
+   */
+  const authReady = !loading;
+
+  /**
+   * 檢查認證狀態（手動呼叫用，例如 session 更新後）
    */
   const checkAuth = useCallback(async () => {
     setLoading(true);
@@ -103,18 +141,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  /**
-   * Hydration 完成標記 - 使用 setTimeout 確保在 Hydration 完成後才執行
-   * 重要：50ms 延遲是為了避免 React Hydration 錯誤 #418/#423
-   */
+  /** 設定 mounted 旗標（SSR 安全，useEffect 只在瀏覽器執行） */
   useEffect(() => {
     setMounted(true);
-    // 使用 setTimeout 確保在 Hydration 完成後才執行
-    const timer = setTimeout(() => {
-      setIsHydrated(true);
-    }, 50);
-    return () => clearTimeout(timer);
   }, []);
+
+  /**
+   * SSR fallback：若 initAuth() 未執行（不預期情況），在客戶端 mount 後補跑 checkAuth。
+   * 正常流程（有 bootstrap）時 loading 已是 false，此 effect 不會觸發。
+   */
+  useEffect(() => {
+    if (loading) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("auth_code")) {
+        setLoading(false);
+        return;
+      }
+      checkAuth();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在 mount 時執行一次，不追蹤 loading/checkAuth 以避免迴圈
 
   /**
    * 監聽 API 層廣播的 auth:unauthorized 事件
@@ -140,28 +186,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     window.addEventListener("auth:unauthorized", handleUnauthorized);
-    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    return () =>
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, [navigate]);
-
-  /**
-   * 初始化認證狀態 - 在 hydration 後執行
-   * 注意：當 URL 帶有 auth_code（OAuth 回呼），跳過初始 checkAuth，
-   * 由 Login 頁面的 OAuth 流程自行處理認證。
-   */
-  useEffect(() => {
-    if (isHydrated) {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        if (params.has("auth_code")) {
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // SSR 環境
-      }
-      checkAuth();
-    }
-  }, [isHydrated, checkAuth]);
 
   /**
    * 登入
@@ -171,7 +198,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const login = useCallback(async (email: string, password: string) => {
     const response = await authService.login({ email, password });
-    const normalized = normalizeUser(response.user as unknown as Record<string, unknown>);
+    const normalized = normalizeUser(
+      response.user as unknown as Record<string, unknown>,
+    );
     setUser(normalized);
     setIsAdmin(response.isAdmin ?? normalized.isAdmin ?? false);
   }, []);
