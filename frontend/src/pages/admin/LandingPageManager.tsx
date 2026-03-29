@@ -485,7 +485,11 @@ const LandingPageManager: React.FC = () => {
             ? await landingService.unpublishProject(project.id)
             : await landingService.publishProject(project.id);
         setProjects((prev) =>
-          prev.map((p) => (p.id === updated.id ? updated : p)),
+          prev.map((p) =>
+            p.id === updated.id
+              ? { ...p, status: updated.status, updated_at: updated.updated_at }
+              : p,
+          ),
         );
       } catch {
         dialog.alert({ title: "操作失敗", message: "狀態更新失敗" });

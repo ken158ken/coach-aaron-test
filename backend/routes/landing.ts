@@ -173,7 +173,8 @@ router.get("/projects/slug/:slug", async (req: Request, res: Response): Promise<
     const { data: resolvedFields, error: rfErr } = await supabaseAdmin
       .from("vw_lp_project_resolved_fields")
       .select("*")
-      .eq("project_id", project.id);
+      .eq("project_id", project.id)
+      .order("field_sort_order", { ascending: true });
 
     if (rfErr) throw rfErr;
 
@@ -396,7 +397,7 @@ router.put("/projects/:id", authenticateToken, requireAdmin, async (req: Request
       .from("lp_projects")
       .update(updates)
       .eq("id", numericValue)
-      .select()
+      .select("*, lp_templates(template_code, template_slug, thumbnail_url)")
       .single();
 
     if (error) throw error;

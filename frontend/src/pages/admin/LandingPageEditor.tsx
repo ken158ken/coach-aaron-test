@@ -359,7 +359,11 @@ const LandingPageEditor: React.FC = () => {
         project_name: projectName.trim() || project.project_name,
         custom_slug: customSlug.trim().toLowerCase() || undefined,
       });
-      setProject(updated);
+      setProject((prev) =>
+        prev
+          ? { ...prev, project_name: updated.project_name, custom_slug: updated.custom_slug, updated_at: updated.updated_at }
+          : prev,
+      );
       logger.info("專案資訊儲存成功");
     } catch (err) {
       logger.error("儲存專案資訊失敗", err);
@@ -376,7 +380,11 @@ const LandingPageEditor: React.FC = () => {
       const updated = await landingService.updateProject(projectId, {
         status: next,
       });
-      setProject(updated);
+      setProject((prev) =>
+        prev
+          ? { ...prev, status: updated.status, updated_at: updated.updated_at, published_at: updated.published_at ?? prev.published_at }
+          : prev,
+      );
     } catch (err) {
       logger.error("狀態切換失敗", err);
       alert("操作失敗");
@@ -586,7 +594,7 @@ const LandingPageEditor: React.FC = () => {
                     自訂網址 Slug
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-luxe-muted/60">/lp/</span>
+                    <span className="text-xs text-luxe-muted/60">/page/</span>
                     <input
                       type="text"
                       value={customSlug}
