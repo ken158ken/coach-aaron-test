@@ -211,6 +211,21 @@ export const landingService = {
 
   // ── Projects ───────────────────────────────────────────
 
+  /** 取已發布頁面清單（公開，無需登入） */
+  getPublishedProjects: () =>
+    get<{
+      data: Array<{
+        id: number;
+        project_name: string;
+        custom_slug: string;
+        seo_title: string | null;
+        seo_description: string | null;
+        published_at: string | null;
+        updated_at: string;
+      }>;
+      total: number;
+    }>("/api/landing/projects/published"),
+
   /** 取已發布公開頁面（by custom_slug，無需登入） */
   getProjectBySlug: (slug: string) =>
     get<{ project: LpPublicProject; resolvedFields: LpResolvedField[] }>(

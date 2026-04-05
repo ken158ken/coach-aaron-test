@@ -319,6 +319,34 @@ router.post("/projects", authenticateToken, requireAdmin, async (req: Request, r
 
 
 /**
+ * GET /api/landing/projects/published
+ * 已發布頁面清單（公開，無需登入）
+ * 回傳: { data: [...], total: number }
+ */
+router.get("/projects/published", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { data, error, count } = await supabaseAdmin
+      .from("lp_projects")
+      .select(
+        "id, project_name, custom_slug, seo_title, seo_description, published_at, updated_at",
+        { count: "exact" },
+      )
+      .eq("status", "published")
+      .not("custom_slug", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    res.json({ data: data ?? [], total: count ?? 0 });
+  } catch (err) {
+    logger.error("landing published projects 列表失敗", err);
+    sendError(res, 500, "無法取得頁面列表");
+  }
+});
+
+
+/**
  * GET /api/landing/projects/:id
  * 單一專案詳情（含解析後欄位值）
  */
