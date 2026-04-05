@@ -42,6 +42,7 @@ import AdminArticles from "@/pages/admin/AdminArticles";
 import ArticleEditor from "@/pages/admin/ArticleEditor";
 import CourseEditor from "@/pages/admin/CourseEditor";
 import LandingPageManager from "@/pages/admin/LandingPageManager";
+import LandingPageNew from "@/pages/admin/LandingPageNew";
 import LandingPageEditor from "@/pages/admin/LandingPageEditor";
 
 import SmoothScroll from "@/components/layout/SmoothScroll";
@@ -207,12 +208,12 @@ function App(): JSX.Element {
                   }
                 />
 
-                {/* Landing Page 編輯器（全螢幕） */}
+                {/* Landing Page — 模板選擇器 + 編輯器（全螢幕，不含 AdminLayout） */}
                 <Route
                   path="/admin/landing-pages/new"
                   element={
                     <RequireAdmin>
-                      <LandingPageEditor />
+                      <LandingPageNew />
                     </RequireAdmin>
                   }
                 />
