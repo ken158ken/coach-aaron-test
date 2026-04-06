@@ -21,6 +21,7 @@ import {
   PAGE_KIND_LABELS,
 } from "@/services/landing.service";
 import type { LpTemplate, PageKind } from "@/services/landing.service";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -53,6 +54,7 @@ const LIMIT = 24;
 const LandingPageNew: React.FC = () => {
   const navigate = useNavigate();
   const dialog = useDialog();
+  useScrollLock(true); // 全屏路由，永遠鎖定 body scroll
 
   // Template list state
   const [templates, setTemplates] = useState<LpTemplate[]>([]);

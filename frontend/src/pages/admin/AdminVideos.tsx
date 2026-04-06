@@ -14,9 +14,10 @@ import React, {
   useMemo,
 } from "react";
 import { PillButton, Input, useDialog } from "@/components/ui";
-import { get, put } from "@/services/api";
+import { get, post, put } from "@/services/api";
 import { videoService } from "@/services/video.service";
 import type { AdminVideo } from "@/types";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 /** 日誌工具 */
 const logger = {
@@ -67,6 +68,31 @@ const AdminVideos: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // ── 批量新增影片 Modal 狀態 ──
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileRowRef = useRef<number>(-1); // 記錄哪一列在上傳
+
+  type AddRow = {
+    id: number;
+    url: string;
+    title: string;
+    description: string;
+    type: string;
+    thumbnail: string;
+    fetchState: "idle" | "fetching" | "done" | "error";
+    fetchError: string;
+  };
+
+  const newRow = (id: number): AddRow => ({
+    id, url: "", title: "", description: "", type: "instagram",
+    thumbnail: "", fetchState: "idle", fetchError: "",
+  });
+
+  const [addRows, setAddRows] = useState<AddRow[]>(() => [newRow(0)]);
+  const nextIdRef = useRef(1);
 
   // 拖曳狀態
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -251,6 +277,114 @@ const AdminVideos: React.FC = () => {
     } catch (err) {
       logger.error("切換影片可見性失敗", err);
       setError("切換影片可見性失敗");
+    }
+  };
+
+  // ===== 批量新增影片 Modal =====
+  useScrollLock(showAddModal);
+
+  const detectPlatform = (url: string): string => {
+    if (/instagram\.com/i.test(url)) return "instagram";
+    if (/youtu\.be|youtube\.com/i.test(url)) return "youtube";
+    if (/tiktok\.com/i.test(url)) return "tiktok";
+    return "other";
+  };
+
+  const updateRow = (id: number, patch: Partial<AddRow>) =>
+    setAddRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+  const handleRowUrlChange = (id: number, url: string) => {
+    updateRow(id, { url, type: detectPlatform(url), fetchState: "idle", fetchError: "" });
+  };
+
+  const addNewRow = () => {
+    const id = nextIdRef.current++;
+    setAddRows((prev) => [...prev, newRow(id)]);
+  };
+
+  const removeRow = (id: number) => {
+    setAddRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  /** 對單一列擷取截圖 */
+  const fetchThumbnailForRow = async (row: AddRow) => {
+    if (!row.url.trim()) return;
+    updateRow(row.id, { fetchState: "fetching", fetchError: "" });
+    try {
+      const res = await post<{ base64: string }>("/api/videos/fetch-thumbnail", { url: row.url.trim() });
+      updateRow(row.id, { fetchState: "done", thumbnail: res.base64 });
+    } catch {
+      updateRow(row.id, { fetchState: "error", fetchError: "擷取失敗，可手動上傳" });
+    }
+  };
+
+  /** 批量擷取所有有 URL 但尚無截圖的列 */
+  const fetchAllThumbnails = async () => {
+    const hasIG = addRows.some((r) => r.url.trim() && /instagram\.com/i.test(r.url));
+    if (hasIG) {
+      const ok = await dialog.confirm({
+        title: "批量擷取截圖",
+        message:
+          "將依序擷取每部影片的縮圖（og:image）。\n\n" +
+          "若包含 IG 貼文，請確認貼文為公開。" +
+          "擷取失敗的項目可在後面手動上傳截圖。",
+        confirmText: "開始擷取",
+        cancelText: "取消",
+      });
+      if (!ok) return;
+    }
+    for (const row of addRows) {
+      if (row.url.trim() && !row.thumbnail && row.fetchState !== "fetching") {
+        await fetchThumbnailForRow(row);
+      }
+    }
+  };
+
+  /** 本機上傳截圖給特定列 */
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const rowId = fileRowRef.current;
+    if (!file || rowId < 0) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      updateRow(rowId, { thumbnail: (ev.target?.result as string) ?? "", fetchState: "done", fetchError: "" });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const openFilePicker = (rowId: number) => {
+    fileRowRef.current = rowId;
+    fileInputRef.current?.click();
+  };
+
+  /** 關閉 modal 並重置 */
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setAddRows([newRow(0)]);
+    nextIdRef.current = 1;
+  };
+
+  /** 提交批量新增 */
+  const handleBatchSubmit = async () => {
+    const valid = addRows.filter((r) => r.url.trim() && r.title.trim());
+    if (valid.length === 0) return;
+    setAddSubmitting(true);
+    try {
+      const payload = valid.map((r) => ({
+        title: r.title.trim(),
+        url: r.url.trim(),
+        type: r.type,
+        description: r.description.trim() || undefined,
+        thumbnail: r.thumbnail || undefined,
+      }));
+      const res = await post<{ inserted: number; data: AdminVideo[] }>("/api/videos/batch", { videos: payload });
+      setVideos((prev) => [...prev, ...res.data]);
+      closeAddModal();
+    } catch {
+      dialog.alert({ title: "新增失敗", message: "批量新增失敗，請稍後再試。" });
+    } finally {
+      setAddSubmitting(false);
     }
   };
 
@@ -475,18 +609,27 @@ const AdminVideos: React.FC = () => {
           </p>
         </div>
 
-        {/* 儲存排序按鈕 */}
-        {hasUnsavedChanges && (
+        {/* 右側按鈕群 */}
+        <div className="flex gap-2">
           <PillButton
             theme="luxe"
-            variant="filled"
-            onClick={handleSaveOrder}
-            disabled={saving}
-            className="animate-pulse"
+            variant="outline"
+            onClick={() => setShowAddModal(true)}
           >
-            {saving ? "儲存中..." : "💾 儲存排序"}
+            ＋ 新增影片
           </PillButton>
-        )}
+          {hasUnsavedChanges && (
+            <PillButton
+              theme="luxe"
+              variant="filled"
+              onClick={handleSaveOrder}
+              disabled={saving}
+              className="animate-pulse"
+            >
+              {saving ? "儲存中..." : "💾 儲存排序"}
+            </PillButton>
+          )}
+        </div>
       </div>
 
       {/* 搜尋 + 檢視切換 */}
@@ -571,6 +714,192 @@ const AdminVideos: React.FC = () => {
           {/* 內容 */}
           {viewMode === "list" ? renderListView() : renderCardView()}
         </>
+      )}
+
+      {/* 隱藏 file input（批量各列共用，由 fileRowRef 記錄目標列） */}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+
+      {/* ═══════════════════════════════════════════════════════
+          批量新增影片 Modal
+      ═══════════════════════════════════════════════════════ */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) closeAddModal(); }}
+        >
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+          <div className="relative z-10 w-full max-w-3xl bg-luxe-surface border border-luxe-gold/20 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-luxe-gold/10 shrink-0">
+              <div>
+                <h2 className="text-base font-medium text-luxe-text">批量新增影片</h2>
+                <p className="text-xs text-luxe-muted mt-0.5">可一次新增多部影片，依序填入後批量送出</p>
+              </div>
+              <button onClick={closeAddModal} className="text-luxe-muted hover:text-luxe-text text-lg leading-none">✕</button>
+            </div>
+
+            {/* 批量擷取截圖按鈕列 */}
+            <div className="flex items-center gap-3 px-6 py-3 border-b border-luxe-gold/10 bg-luxe-bg/30 shrink-0">
+              <button
+                type="button"
+                onClick={fetchAllThumbnails}
+                disabled={addRows.every((r) => !r.url.trim() || r.fetchState === "fetching")}
+                className="text-xs py-1.5 px-4 rounded-lg border border-luxe-gold/30 text-luxe-gold hover:bg-luxe-gold/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                🔍 批量擷取所有截圖
+              </button>
+              <p className="text-[10px] text-luxe-muted">先填好所有連結，再一次擷取全部截圖</p>
+            </div>
+
+            {/* 影片列清單 */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {addRows.map((row, idx) => (
+                <div key={row.id} className="bg-luxe-bg/50 border border-luxe-gold/10 rounded-xl p-4">
+                  {/* 列標題 */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-luxe-muted font-medium">影片 {idx + 1}</span>
+                    {addRows.length > 1 && (
+                      <button onClick={() => removeRow(row.id)} className="text-xs text-red-400/70 hover:text-red-400">✕ 移除</button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* 左欄：文字欄位 */}
+                    <div className="space-y-2.5">
+                      {/* URL */}
+                      <div>
+                        <label className="text-[10px] text-luxe-muted block mb-1">連結 *</label>
+                        <Input
+                          value={row.url}
+                          onChange={(e) => handleRowUrlChange(row.id, e.target.value)}
+                          placeholder="https://www.instagram.com/p/..."
+                          theme="luxe"
+                          className="w-full text-sm"
+                        />
+                        {row.url && (
+                          <p className="text-[9px] text-luxe-muted/60 mt-0.5">
+                            {row.type === "instagram" ? "📸 IG" : row.type === "youtube" ? "🎬 YT" : row.type === "tiktok" ? "🎵 TikTok" : "🎞️ 其他"}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* 標題 */}
+                      <div>
+                        <label className="text-[10px] text-luxe-muted block mb-1">標題 *</label>
+                        <Input
+                          value={row.title}
+                          onChange={(e) => updateRow(row.id, { title: e.target.value })}
+                          placeholder="影片標題"
+                          theme="luxe"
+                          className="w-full text-sm"
+                        />
+                      </div>
+
+                      {/* 說明 */}
+                      <div>
+                        <label className="text-[10px] text-luxe-muted block mb-1">說明（選填）</label>
+                        <textarea
+                          value={row.description}
+                          onChange={(e) => updateRow(row.id, { description: e.target.value })}
+                          placeholder="影片說明"
+                          rows={2}
+                          className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-3 py-2 text-xs text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:border-luxe-gold/50 resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 右欄：截圖 */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] text-luxe-muted">截圖</label>
+
+                      {/* 預覽 */}
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-luxe-bg border border-luxe-gold/10 flex items-center justify-center">
+                        {row.thumbnail ? (
+                          <>
+                            <img src={row.thumbnail} alt="" className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => updateRow(row.id, { thumbnail: "", fetchState: "idle" })}
+                              className="absolute top-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded hover:bg-black/90"
+                            >移除</button>
+                          </>
+                        ) : row.fetchState === "fetching" ? (
+                          <span className="text-xs text-luxe-muted animate-pulse">擷取中...</span>
+                        ) : (
+                          <span className="text-luxe-muted/30 text-xs">無截圖</span>
+                        )}
+
+                        {/* 狀態 badge */}
+                        {row.fetchState === "done" && row.thumbnail && (
+                          <span className="absolute bottom-1 left-1 bg-emerald-500/80 text-white text-[9px] px-1.5 py-0.5 rounded">✓ 已擷取</span>
+                        )}
+                        {row.fetchState === "error" && (
+                          <span className="absolute bottom-1 left-1 bg-red-500/80 text-white text-[9px] px-1.5 py-0.5 rounded">擷取失敗</span>
+                        )}
+                      </div>
+
+                      {row.fetchError && (
+                        <p className="text-[9px] text-red-400">{row.fetchError}</p>
+                      )}
+
+                      {/* 操作按鈕 */}
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => fetchThumbnailForRow(row)}
+                          disabled={!row.url.trim() || row.fetchState === "fetching"}
+                          className="flex-1 text-[10px] py-1.5 rounded-lg border border-luxe-gold/25 text-luxe-gold hover:bg-luxe-gold/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          {row.fetchState === "fetching" ? "..." : "🔍 自動擷取"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openFilePicker(row.id)}
+                          className="flex-1 text-[10px] py-1.5 rounded-lg border border-luxe-gold/15 text-luxe-muted hover:text-luxe-text transition-all"
+                        >
+                          📁 上傳
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* 加一列 */}
+              <button
+                type="button"
+                onClick={addNewRow}
+                className="w-full py-3 border border-dashed border-luxe-gold/20 rounded-xl text-xs text-luxe-muted/60 hover:border-luxe-gold/40 hover:text-luxe-muted transition-all"
+              >
+                ＋ 再加一部影片
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-luxe-gold/10 shrink-0">
+              <p className="text-xs text-luxe-muted">
+                {addRows.filter((r) => r.url.trim() && r.title.trim()).length} / {addRows.length} 筆可送出
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={closeAddModal}
+                  className="py-2 px-5 text-sm text-luxe-muted hover:text-luxe-text border border-luxe-gold/15 rounded-lg transition-colors"
+                >
+                  取消
+                </button>
+                <PillButton
+                  theme="luxe"
+                  variant="filled"
+                  onClick={handleBatchSubmit}
+                  disabled={addRows.every((r) => !r.url.trim() || !r.title.trim()) || addSubmitting}
+                >
+                  {addSubmitting ? "新增中..." : `新增 ${addRows.filter((r) => r.url.trim() && r.title.trim()).length} 部影片`}
+                </PillButton>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
