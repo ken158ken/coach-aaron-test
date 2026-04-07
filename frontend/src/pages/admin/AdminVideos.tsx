@@ -359,11 +359,13 @@ const AdminVideos: React.FC = () => {
 
     updateRow(row.id, { fetchState: "fetching", fetchError: "" });
     try {
-      const res = await post<{ base64: string }>("/api/videos/fetch-thumbnail", {
+      const res = await post<{ base64?: string; imageUrl?: string }>("/api/videos/fetch-thumbnail", {
         url: row.url.trim(),
         ...(isIG && igSession ? { igSession } : {}),
       });
-      updateRow(row.id, { fetchState: "done", thumbnail: res.base64 });
+      // base64 優先，CDN 限制時 fallback 為直接 URL
+      const thumbnail = res.base64 ?? res.imageUrl ?? "";
+      updateRow(row.id, { fetchState: "done", thumbnail });
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message ?? "";
       const isSessionErr = msg.includes("session") || msg.includes("登入") || msg.includes("401");

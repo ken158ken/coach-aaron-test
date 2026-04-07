@@ -226,12 +226,22 @@ router.post(
           return;
         }
 
-        // IG CDN 需要帶 Referer 才不會 403
-        const { base64, contentType } = await imageToBase64(igOgImage, {
-          "Referer": "https://www.instagram.com/",
-          "Cookie": `sessionid=${igSession!.trim()}`,
-        });
-        res.json({ base64, contentType, source: igOgImage, platform: "instagram" });
+        // IG CDN 限制嚴格，先嘗試下載轉 base64；
+        // 若 403 則直接回傳 URL，由前端 <img> 顯示（存 URL 而非 base64）
+        try {
+          const { base64, contentType } = await imageToBase64(igOgImage, {
+            "Referer": "https://www.instagram.com/",
+            "Cookie": `sessionid=${igSession!.trim()}`,
+            "sec-fetch-dest": "image",
+            "sec-fetch-mode": "no-cors",
+            "sec-fetch-site": "cross-site",
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          });
+          res.json({ base64, contentType, source: igOgImage, platform: "instagram" });
+        } catch {
+          // CDN 拒絕下載 → 改回傳 URL，前端直接顯示
+          res.json({ imageUrl: igOgImage, platform: "instagram" });
+        }
         return;
       }
 
