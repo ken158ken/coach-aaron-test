@@ -55,13 +55,18 @@ function extractFacebookVideoId(url: string): string | null {
 
 /**
  * 下載圖片並轉為 base64 data URL
+ * @param extraHeaders 額外 headers（例如 IG CDN 需要 Referer）
  */
-async function imageToBase64(imageUrl: string): Promise<{ base64: string; contentType: string }> {
+async function imageToBase64(
+  imageUrl: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<{ base64: string; contentType: string }> {
   const resp = await fetch(imageUrl, {
     headers: {
       "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) " +
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      ...extraHeaders,
     },
   });
   if (!resp.ok) throw new Error(`圖片下載失敗: ${resp.status}`);
@@ -221,7 +226,11 @@ router.post(
           return;
         }
 
-        const { base64, contentType } = await imageToBase64(igOgImage);
+        // IG CDN 需要帶 Referer 才不會 403
+        const { base64, contentType } = await imageToBase64(igOgImage, {
+          "Referer": "https://www.instagram.com/",
+          "Cookie": `sessionid=${igSession!.trim()}`,
+        });
         res.json({ base64, contentType, source: igOgImage, platform: "instagram" });
         return;
       }
