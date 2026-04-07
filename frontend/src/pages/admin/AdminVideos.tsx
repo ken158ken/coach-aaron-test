@@ -43,14 +43,11 @@ const getVideoThumbnail = (video: AdminVideo): string => {
 /** 取得平台圖示 */
 const getPlatformIcon = (type: string): string => {
   switch (type) {
-    case "youtube":
-      return "🎬";
-    case "instagram":
-      return "📸";
-    case "tiktok":
-      return "🎵";
-    default:
-      return "🎞️";
+    case "youtube":   return "🎬";
+    case "instagram": return "📸";
+    case "facebook":  return "📘";
+    case "tiktok":    return "🎵";
+    default:          return "🎞️";
   }
 };
 
@@ -68,6 +65,27 @@ const AdminVideos: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // ── IG Session (localStorage 持久化) ──
+  const IG_SESSION_KEY = "admin_ig_sessionid";
+  const [igSession, setIgSession] = useState<string>(
+    () => localStorage.getItem(IG_SESSION_KEY) ?? "",
+  );
+  const [showIgSessionPanel, setShowIgSessionPanel] = useState(false);
+  const [igSessionInput, setIgSessionInput] = useState("");
+
+  const saveIgSession = () => {
+    const val = igSessionInput.trim();
+    localStorage.setItem(IG_SESSION_KEY, val);
+    setIgSession(val);
+    setShowIgSessionPanel(false);
+    setIgSessionInput("");
+  };
+
+  const clearIgSession = () => {
+    localStorage.removeItem(IG_SESSION_KEY);
+    setIgSession("");
+  };
 
   // ── 批量新增影片 Modal 狀態 ──
   const [showAddModal, setShowAddModal] = useState(false);
@@ -286,6 +304,7 @@ const AdminVideos: React.FC = () => {
   const detectPlatform = (url: string): string => {
     if (/instagram\.com/i.test(url)) return "instagram";
     if (/youtu\.be|youtube\.com/i.test(url)) return "youtube";
+    if (/facebook\.com|fb\.watch/i.test(url)) return "facebook";
     if (/tiktok\.com/i.test(url)) return "tiktok";
     return "other";
   };
@@ -306,37 +325,98 @@ const AdminVideos: React.FC = () => {
     setAddRows((prev) => prev.filter((r) => r.id !== id));
   };
 
+  /** 判斷是否為可自動擷取的平台 */
+  const canAutoFetch = (url: string) => {
+    if (/youtu\.be|youtube\.com|facebook\.com|fb\.watch/i.test(url)) return true;
+    if (/instagram\.com/i.test(url) && igSession) return true; // 有 session 才可自動
+    return false;
+  };
+
   /** 對單一列擷取截圖 */
   const fetchThumbnailForRow = async (row: AddRow) => {
     if (!row.url.trim()) return;
+
+    const isIG = /instagram\.com/i.test(row.url);
+
+    // IG 且無 session → 提示設定
+    if (isIG && !igSession) {
+      updateRow(row.id, {
+        fetchState: "error",
+        fetchError: "需要設定 IG Session 才能自動擷取",
+      });
+      setShowIgSessionPanel(true);
+      return;
+    }
+
+    // TikTok → 只能手動
+    if (/tiktok\.com/i.test(row.url)) {
+      updateRow(row.id, {
+        fetchState: "error",
+        fetchError: "TikTok 無法自動擷取，請手動截圖後上傳",
+      });
+      return;
+    }
+
     updateRow(row.id, { fetchState: "fetching", fetchError: "" });
     try {
-      const res = await post<{ base64: string }>("/api/videos/fetch-thumbnail", { url: row.url.trim() });
+      const res = await post<{ base64: string }>("/api/videos/fetch-thumbnail", {
+        url: row.url.trim(),
+        ...(isIG && igSession ? { igSession } : {}),
+      });
       updateRow(row.id, { fetchState: "done", thumbnail: res.base64 });
-    } catch {
-      updateRow(row.id, { fetchState: "error", fetchError: "擷取失敗，可手動上傳" });
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message ?? "";
+      const isSessionErr = msg.includes("session") || msg.includes("登入") || msg.includes("401");
+      if (isSessionErr && isIG) {
+        // session 已過期
+        clearIgSession();
+        updateRow(row.id, { fetchState: "error", fetchError: "IG Session 已過期，請重新設定" });
+        setShowIgSessionPanel(true);
+      } else {
+        updateRow(row.id, { fetchState: "error", fetchError: msg || "擷取失敗，請手動上傳截圖" });
+      }
     }
   };
 
-  /** 批量擷取所有有 URL 但尚無截圖的列 */
+  /** 批量擷取 */
   const fetchAllThumbnails = async () => {
-    const hasIG = addRows.some((r) => r.url.trim() && /instagram\.com/i.test(r.url));
-    if (hasIG) {
+    const autoRows = addRows.filter((r) => r.url.trim() && canAutoFetch(r.url) && !r.thumbnail);
+    const igNoSession = addRows.filter((r) => r.url.trim() && /instagram\.com/i.test(r.url) && !igSession && !r.thumbnail);
+    const tiktokRows = addRows.filter((r) => r.url.trim() && /tiktok\.com/i.test(r.url) && !r.thumbnail);
+    const manualRows = [...igNoSession, ...tiktokRows];
+
+    if (autoRows.length === 0 && igNoSession.length > 0) {
       const ok = await dialog.confirm({
-        title: "批量擷取截圖",
-        message:
-          "將依序擷取每部影片的縮圖（og:image）。\n\n" +
-          "若包含 IG 貼文，請確認貼文為公開。" +
-          "擷取失敗的項目可在後面手動上傳截圖。",
-        confirmText: "開始擷取",
-        cancelText: "取消",
+        title: "需要 IG Session",
+        message: `有 ${igNoSession.length} 部 IG 影片需要 Session 才能自動擷取。\n\n是否現在設定？`,
+        confirmText: "設定 Session",
+        cancelText: "跳過",
       });
-      if (!ok) return;
+      if (ok) setShowIgSessionPanel(true);
+      return;
     }
-    for (const row of addRows) {
-      if (row.url.trim() && !row.thumbnail && row.fetchState !== "fetching") {
-        await fetchThumbnailForRow(row);
-      }
+    if (autoRows.length === 0) return;
+
+    const fbCount = autoRows.filter((r) => /facebook\.com|fb\.watch/i.test(r.url)).length;
+    const igCount = autoRows.filter((r) => /instagram\.com/i.test(r.url)).length;
+    const ok = await dialog.confirm({
+      title: "批量擷取截圖",
+      message:
+        `將為 ${autoRows.length} 部影片自動擷取縮圖` +
+        (igCount > 0 ? `（含 ${igCount} 部 IG）` : "") +
+        (fbCount > 0 ? `（含 ${fbCount} 部 Facebook）` : "") +
+        "。" +
+        (manualRows.length > 0 ? `\n\n${tiktokRows.length > 0 ? "TikTok 影片" : ""}需手動上傳截圖。` : ""),
+      confirmText: "開始擷取",
+      cancelText: "取消",
+    });
+    if (!ok) return;
+
+    for (const row of tiktokRows) {
+      updateRow(row.id, { fetchState: "error", fetchError: "TikTok 請手動截圖後上傳" });
+    }
+    for (const row of autoRows) {
+      await fetchThumbnailForRow(row);
     }
   };
 
@@ -445,7 +525,7 @@ const AdminVideos: React.FC = () => {
 
           {/* 標題 */}
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm flex-shrink-0">
+            <span className="text-sm shrink-0">
               {getPlatformIcon(video.type)}
             </span>
             <span className="text-sm text-luxe-text truncate">
@@ -741,7 +821,7 @@ const AdminVideos: React.FC = () => {
             </div>
 
             {/* 批量擷取截圖按鈕列 */}
-            <div className="flex items-center gap-3 px-6 py-3 border-b border-luxe-gold/10 bg-luxe-bg/30 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-luxe-gold/10 bg-luxe-bg/30 shrink-0">
               <button
                 type="button"
                 onClick={fetchAllThumbnails}
@@ -750,8 +830,105 @@ const AdminVideos: React.FC = () => {
               >
                 🔍 批量擷取所有截圖
               </button>
-              <p className="text-[10px] text-luxe-muted">先填好所有連結，再一次擷取全部截圖</p>
+
+              {/* IG Session 狀態列 */}
+              <div className="flex items-center gap-2 ml-auto">
+                {/* 狀態指示 */}
+                {igSession ? (
+                  <span className="flex items-center gap-1.5 text-[10px] text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                    IG Session 已設定
+                    <button
+                      onClick={clearIgSession}
+                      title="清除 Session"
+                      className="text-luxe-muted/50 hover:text-red-400 ml-0.5 transition-colors"
+                    >✕</button>
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-luxe-muted/40">📸 IG 截圖需設定 Session</span>
+                )}
+
+                {/* 設定按鈕 */}
+                <button
+                  type="button"
+                  onClick={() => { setIgSessionInput(igSession); setShowIgSessionPanel((v) => !v); }}
+                  className={`text-[10px] py-1 px-2.5 rounded-md border transition-all ${
+                    showIgSessionPanel
+                      ? "bg-luxe-gold/15 border-luxe-gold/40 text-luxe-gold"
+                      : "border-luxe-gold/20 text-luxe-muted hover:text-luxe-gold hover:border-luxe-gold/40"
+                  }`}
+                >
+                  {igSession ? "更新 Session" : "設定 Session"}
+                </button>
+
+                {/* ? 說明 icon */}
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className="w-5 h-5 rounded-full border border-luxe-gold/25 text-luxe-muted/60 hover:text-luxe-gold hover:border-luxe-gold/50 text-[10px] font-bold leading-none flex items-center justify-center transition-all"
+                    tabIndex={-1}
+                  >
+                    ?
+                  </button>
+                  {/* Tooltip */}
+                  <div className="absolute right-0 top-7 w-64 bg-luxe-bg border border-luxe-gold/20 rounded-xl shadow-xl p-4 z-20 hidden group-hover:block group-focus-within:block">
+                    <p className="text-[10px] font-semibold text-luxe-gold mb-3">如何取得 IG sessionid？</p>
+                    <ol className="space-y-2">
+                      {[
+                        { n: "1", text: "用此瀏覽器開啟 Instagram 並登入" },
+                        { n: "2", text: <>按 <kbd className="bg-luxe-surface border border-luxe-gold/20 rounded px-1 text-[9px]">F12</kbd> 開啟開發者工具</> },
+                        { n: "3", text: <>點上方 <span className="text-luxe-gold font-medium">Application</span> 分頁</> },
+                        { n: "4", text: <>左側展開 <span className="text-luxe-gold font-medium">Cookies</span> → 點 <span className="font-mono text-[9px] bg-luxe-surface px-1 rounded">instagram.com</span></> },
+                        { n: "5", text: <>找到 <span className="font-mono text-[9px] bg-luxe-surface px-1 rounded text-luxe-gold">sessionid</span>，複製右側 <span className="font-medium">Value</span> 欄位的值</> },
+                        { n: "6", text: "貼到左邊輸入框並儲存" },
+                      ].map((step) => (
+                        <li key={step.n} className="flex gap-2 text-[10px] text-luxe-muted leading-relaxed">
+                          <span className="shrink-0 w-4 h-4 rounded-full bg-luxe-gold/20 text-luxe-gold text-[9px] flex items-center justify-center font-bold">{step.n}</span>
+                          <span>{step.text}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="text-[9px] text-luxe-muted/40 mt-3 pt-2 border-t border-luxe-gold/10">
+                      Session 僅存於此瀏覽器，不會傳至伺服器
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* IG Session 輸入 Panel（展開式） */}
+            {showIgSessionPanel && (
+              <div className="px-6 py-4 bg-luxe-bg/60 border-b border-luxe-gold/10 shrink-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-medium text-luxe-text">📸 Instagram Session</span>
+                  <span className="text-[9px] text-luxe-muted/50 ml-auto">僅存於此瀏覽器 · 不傳至伺服器</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={igSessionInput}
+                    onChange={(e) => setIgSessionInput(e.target.value)}
+                    placeholder="貼上 sessionid 值（F12 → Application → Cookies → instagram.com → sessionid）"
+                    className="flex-1 bg-luxe-surface border border-luxe-gold/20 rounded-lg px-3 py-2 text-xs text-luxe-text placeholder:text-luxe-muted/30 focus:outline-none focus:border-luxe-gold/50 font-mono"
+                    onKeyDown={(e) => { if (e.key === "Enter") saveIgSession(); }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={saveIgSession}
+                    disabled={!igSessionInput.trim()}
+                    className="px-4 py-2 text-xs bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30 rounded-lg hover:bg-luxe-gold/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                  >
+                    儲存
+                  </button>
+                  <button
+                    onClick={() => setShowIgSessionPanel(false)}
+                    className="px-3 py-2 text-xs text-luxe-muted border border-luxe-gold/10 rounded-lg hover:text-luxe-text transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* 影片列清單 */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -780,7 +957,11 @@ const AdminVideos: React.FC = () => {
                         />
                         {row.url && (
                           <p className="text-[9px] text-luxe-muted/60 mt-0.5">
-                            {row.type === "instagram" ? "📸 IG" : row.type === "youtube" ? "🎬 YT" : row.type === "tiktok" ? "🎵 TikTok" : "🎞️ 其他"}
+                            {row.type === "instagram" ? "📸 IG"
+                              : row.type === "youtube" ? "🎬 YouTube"
+                              : row.type === "facebook" ? "📘 Facebook"
+                              : row.type === "tiktok" ? "🎵 TikTok"
+                              : "🎞️ 其他"}
                           </p>
                         )}
                       </div>
@@ -845,14 +1026,20 @@ const AdminVideos: React.FC = () => {
 
                       {/* 操作按鈕 */}
                       <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => fetchThumbnailForRow(row)}
-                          disabled={!row.url.trim() || row.fetchState === "fetching"}
-                          className="flex-1 text-[10px] py-1.5 rounded-lg border border-luxe-gold/25 text-luxe-gold hover:bg-luxe-gold/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                        >
-                          {row.fetchState === "fetching" ? "..." : "🔍 自動擷取"}
-                        </button>
+                        {canAutoFetch(row.url) ? (
+                          <button
+                            type="button"
+                            onClick={() => fetchThumbnailForRow(row)}
+                            disabled={!row.url.trim() || row.fetchState === "fetching"}
+                            className="flex-1 text-[10px] py-1.5 rounded-lg border border-luxe-gold/25 text-luxe-gold hover:bg-luxe-gold/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                          >
+                            {row.fetchState === "fetching" ? "擷取中..." : "🔍 自動擷取"}
+                          </button>
+                        ) : (
+                          <span className="flex-1 text-[10px] py-1.5 text-center rounded-lg border border-luxe-gold/10 text-luxe-muted/40">
+                            {row.url.trim() ? "IG/TikTok 請手動上傳" : "輸入連結後可擷取"}
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => openFilePicker(row.id)}
