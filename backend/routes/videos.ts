@@ -22,7 +22,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
       .from("videos")
       .select("*")
       .eq("is_visible", true)
-      .order("created_at", { ascending: false });
+      .order("sort_order", { ascending: true });
 
     if (error) throw error;
     res.json(data);
