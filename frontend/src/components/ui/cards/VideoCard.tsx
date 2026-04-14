@@ -1,10 +1,10 @@
 /**
- * VideoCard - Studio 影片卡片（Aceternity 3D Card Effect 風格）
+ * VideoCard - 影片牆卡片
+ * 平時整張卡片只有縮圖，hover 時文字從底部浮上
  * @module components/ui/cards/VideoCard
  */
 
-import React, { useRef } from "react";
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import React from "react";
 import type { Video } from "@/types";
 import { formatDate } from "@/lib/ui";
 import { useLocalize } from "@/hooks";
@@ -16,107 +16,95 @@ interface VideoCardProps {
   onClick?: () => void;
 }
 
-const PlayIcon = () => (
-  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-    <circle cx="24" cy="24" r="23" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" />
-    <path d="M19 15l18 9-18 9V15z" fill="rgba(255,255,255,0.9)" />
-  </svg>
-);
+/** 取得縮圖：優先 DB thumbnail_url，YouTube fallback */
+const getThumbnail = (video: Video): string => {
+  if (video.thumbnail_url) return video.thumbnail_url;
+  if (video.type === "youtube") {
+    const m = video.url?.match(
+      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/))([a-zA-Z0-9_-]+)/,
+    );
+    if (m) return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
+  }
+  return "";
+};
+
+const platformLabel = (type?: string) => {
+  switch (type) {
+    case "youtube": return "YOUTUBE";
+    case "instagram": return "INSTAGRAM";
+    case "facebook": return "FACEBOOK";
+    case "tiktok": return "TIKTOK";
+    default: return "VIDEO";
+  }
+};
 
 const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick }) => {
   const { loc } = useLocalize();
   const localizedTitle = loc(video as unknown as Record<string, unknown>, "title");
+  const thumb = getThumbnail(video);
 
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  // 3D tilt
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [18, -18]), { stiffness: 280, damping: 24 });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-18, 18]), { stiffness: 280, damping: 24 });
-  const glareX  = useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"]);
-  const glareY  = useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"]);
-  const glareBg = useTransform(
-    [glareX, glareY],
-    ([x, y]: string[]) =>
-      `radial-gradient(circle at ${x} ${y}, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 40%, transparent 70%)`,
-  );
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
-    mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (video.url) {
+      window.open(video.url, "_blank", "noopener");
+    }
   };
-  const handleMouseLeave = () => { mouseX.set(0); mouseY.set(0); };
 
   return (
     <div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onClick={onClick}
-      style={{ perspective: "600px", cursor: onClick ? "pointer" : "default" }}
-      className={`select-none ${className}`}
+      onClick={handleClick}
+      className={`group relative aspect-[9/16] rounded-xl overflow-hidden cursor-pointer bg-[#111] ${className}`}
     >
-      <motion.div
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        className="studio-card flex flex-col h-full"
-      >
-        {/* 高光層 */}
-        <motion.div
-          className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
-          style={{ background: glareBg }}
+      {/* 縮圖 */}
+      {thumb ? (
+        <img
+          src={thumb}
+          alt={localizedTitle}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
         />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#111]">
+          <span className="text-4xl opacity-30">🎬</span>
+        </div>
+      )}
 
-        {/* 縮圖 */}
-        <div
-          className="studio-card-img"
-          style={{ height: "180px", background: "#111", position: "relative" }}
-        >
-          {video.thumbnail_url ? (
-            <img
-              src={video.thumbnail_url}
-              alt={localizedTitle}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-          ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#111" }}>
-              <span style={{ fontSize: "3rem" }}>🎬</span>
-            </div>
-          )}
-          {/* Play overlay */}
-          <div
-            style={{
-              position: "absolute", inset: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(0,0,0,0.2)",
-              opacity: 0, transition: "opacity 0.3s ease",
-            }}
-            className="play-overlay"
-          >
-            <PlayIcon />
+      {/* 常駐底部漸層（微弱，讓卡片有層次） */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+
+      {/* Hover 遮罩 — 從底部浮上 */}
+      <div className="absolute inset-0 flex flex-col justify-end translate-y-[calc(100%-2.5rem)] group-hover:translate-y-0 transition-transform duration-400 ease-out">
+        {/* 漸層背景 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+
+        {/* 文字內容 */}
+        <div className="relative z-10 p-3 sm:p-4">
+          {/* 平台標籤 — 常駐可見 */}
+          <span className="inline-block text-[10px] tracking-wider font-medium text-white/70 bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded mb-2">
+            {platformLabel(video.type)}
+          </span>
+
+          {/* 以下 hover 才出現 */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+            <h3 className="text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2 mb-1.5">
+              {localizedTitle}
+            </h3>
+
+            {video.description && (
+              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-2">
+                {video.description}
+              </p>
+            )}
+
+            {video.created_at && (
+              <p className="text-white/40 text-[10px]">
+                {formatDate(video.created_at)}
+              </p>
+            )}
           </div>
         </div>
-
-        {/* 內容 */}
-        <div style={{ padding: "20px", flexGrow: 1, display: "flex", flexDirection: "column" }}>
-          {video.category && <span className="card-tag">{video.category}</span>}
-          <h3 style={{ color: "#fff", fontWeight: 600, fontSize: "1rem", marginBottom: "8px", lineHeight: 1.4 }}>
-            {localizedTitle}
-          </h3>
-          {video.description && (
-            <p style={{ color: "#888", fontSize: "0.85rem", flexGrow: 1, lineHeight: 1.6 }}>
-              {video.description.length > 60 ? video.description.slice(0, 60) + "..." : video.description}
-            </p>
-          )}
-          {video.created_at && (
-            <p style={{ color: "#555", fontSize: "0.75rem", marginTop: "12px" }}>
-              {formatDate(video.created_at)}
-            </p>
-          )}
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
