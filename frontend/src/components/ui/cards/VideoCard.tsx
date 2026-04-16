@@ -4,10 +4,10 @@
  * @module components/ui/cards/VideoCard
  */
 
-import React from "react";
-import type { Video } from "@/types";
-import { formatDate } from "@/lib/ui";
-import { useLocalize } from "@/hooks";
+import React, { useState, useCallback } from 'react';
+import type { Video } from '@/types';
+import { formatDate } from '@/lib/ui';
+import { useLocalize } from '@/hooks';
 
 interface VideoCardProps {
   video: Video;
@@ -19,35 +19,49 @@ interface VideoCardProps {
 /** 取得縮圖：優先 DB thumbnail_url，YouTube fallback */
 const getThumbnail = (video: Video): string => {
   if (video.thumbnail_url) return video.thumbnail_url;
-  if (video.type === "youtube") {
+  if (video.type === 'youtube') {
     const m = video.url?.match(
-      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/))([a-zA-Z0-9_-]+)/,
+      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/))([a-zA-Z0-9_-]+)/
     );
     if (m) return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
   }
-  return "";
+  return '';
 };
 
 const platformLabel = (type?: string) => {
   switch (type) {
-    case "youtube": return "YOUTUBE";
-    case "instagram": return "INSTAGRAM";
-    case "facebook": return "FACEBOOK";
-    case "tiktok": return "TIKTOK";
-    default: return "VIDEO";
+    case 'youtube':
+      return 'YOUTUBE';
+    case 'instagram':
+      return 'INSTAGRAM';
+    case 'facebook':
+      return 'FACEBOOK';
+    case 'tiktok':
+      return 'TIKTOK';
+    default:
+      return 'VIDEO';
   }
 };
 
-const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick }) => {
+const VideoCard: React.FC<VideoCardProps> = ({
+  video,
+  className = '',
+  onClick,
+}) => {
   const { loc } = useLocalize();
-  const localizedTitle = loc(video as unknown as Record<string, unknown>, "title");
+  const localizedTitle = loc(
+    video as unknown as Record<string, unknown>,
+    'title'
+  );
   const thumb = getThumbnail(video);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const handleImgLoad = useCallback(() => setImgLoaded(true), []);
 
   const handleClick = () => {
     if (onClick) {
       onClick();
     } else if (video.url) {
-      window.open(video.url, "_blank", "noopener");
+      window.open(video.url, '_blank', 'noopener');
     }
   };
 
@@ -61,8 +75,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, className = "", onClick })
         <img
           src={thumb}
           alt={localizedTitle}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105 ${imgLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'}`}
           loading="lazy"
+          onLoad={handleImgLoad}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-[#111]">
