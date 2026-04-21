@@ -3,12 +3,13 @@
  * 處理公開影片查詢及管理員影片 CRUD 操作
  */
 
-import express, { Request, Response, Router } from "express";
-import { supabaseAdmin } from "../config/supabase.js";
-import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import express, { Request, Response, Router } from 'express';
+import sharp from 'sharp';
+import { supabaseAdmin } from '../config/supabase.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router: Router = express.Router();
-
+const THUMBNAIL_BUCKET = 'thumbnails';
 
 // ===== 公開 API =====
 
@@ -16,19 +17,35 @@ const router: Router = express.Router();
  * 取得所有可見影片
  * @route GET /api/videos
  */
-router.get("/", async (req: Request, res: Response): Promise<void> => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
+    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit as string) || 50)
+    );
+
+    // Get total count
+    const { count, error: countError } = await supabaseAdmin
+      .from('videos')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_visible', true);
+
+    if (countError) throw countError;
+
+    // Get paginated data
     const { data, error } = await supabaseAdmin
-      .from("videos")
-      .select("*")
-      .eq("is_visible", true)
-      .order("sort_order", { ascending: true });
+      .from('videos')
+      .select('*')
+      .eq('is_visible', true)
+      .order('sort_order', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
-    res.json(data);
+    res.json({ data, total: count ?? 0 });
   } catch (err) {
-    console.error("Get videos error:", err);
-    res.status(500).json({ error: "取得影片失敗" });
+    console.error('Get videos error:', err);
+    res.status(500).json({ error: '取得影片失敗' });
   }
 });
 
@@ -39,25 +56,24 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
  * @route GET /api/videos/admin/all
  */
 router.get(
-  "/admin/all",
+  '/admin/all',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { data, error } = await supabaseAdmin
-        .from("videos")
-        .select("*")
-        .order("sort_order", { ascending: true });
+        .from('videos')
+        .select('*')
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
       res.json(data);
     } catch (err) {
-      console.error("Get all videos error:", err);
-      res.status(500).json({ error: "取得影片失敗" });
+      console.error('Get all videos error:', err);
+      res.status(500).json({ error: '取得影片失敗' });
     }
-  },
+  }
 );
-
 
 /**
  * 批量新增影片
@@ -65,7 +81,7 @@ router.get(
  * body: { videos: Array<{ title, url, type, description?, thumbnail?, sortOffset? }> }
  */
 router.post(
-  "/batch",
+  '/batch',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
@@ -82,15 +98,15 @@ router.post(
       };
 
       if (!Array.isArray(items) || items.length === 0) {
-        res.status(400).json({ error: "videos 陣列不可為空" });
+        res.status(400).json({ error: 'videos 陣列不可為空' });
         return;
       }
 
       // 取得目前最大 sort_order，新影片接在後面
       const { data: maxRow } = await supabaseAdmin
-        .from("videos")
-        .select("sort_order")
-        .order("sort_order", { ascending: false })
+        .from('videos')
+        .select('sort_order')
+        .order('sort_order', { ascending: false })
         .limit(1)
         .single();
 
@@ -99,7 +115,7 @@ router.post(
       const rows = items.map((item, i) => ({
         title: item.title,
         url: item.url,
-        type: item.type ?? "instagram",
+        type: item.type ?? 'instagram',
         is_visible: true,
         sort_order: baseOrder + i + 1,
         ...(item.description ? { description: item.description } : {}),
@@ -107,17 +123,17 @@ router.post(
       }));
 
       const { data, error } = await supabaseAdmin
-        .from("videos")
+        .from('videos')
         .insert(rows)
         .select();
 
       if (error) throw error;
       res.json({ inserted: data?.length ?? 0, data: data ?? [] });
     } catch (err) {
-      console.error("Batch create videos error:", err);
-      res.status(500).json({ error: "批量新增失敗" });
+      console.error('Batch create videos error:', err);
+      res.status(500).json({ error: '批量新增失敗' });
     }
-  },
+  }
 );
 
 /**
@@ -125,7 +141,7 @@ router.post(
  * @route POST /api/videos
  */
 router.post(
-  "/",
+  '/',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
@@ -133,11 +149,11 @@ router.post(
       const { title, url, type, sortOrder, description, thumbnail } = req.body;
 
       const { data, error } = await supabaseAdmin
-        .from("videos")
+        .from('videos')
         .insert({
           title,
           url,
-          type: type || "instagram",
+          type: type || 'instagram',
           sort_order: sortOrder || 0,
           is_visible: true,
           ...(description !== undefined && { description }),
@@ -149,10 +165,58 @@ router.post(
       if (error) throw error;
       res.json(data);
     } catch (err) {
-      console.error("Create video error:", err);
-      res.status(500).json({ error: "新增影片失敗" });
+      console.error('Create video error:', err);
+      res.status(500).json({ error: '新增影片失敗' });
     }
-  },
+  }
+);
+
+/**
+ * 上傳縮圖 — 前端傳 base64 data URL，後端壓縮成 WebP 並上傳到 Supabase Storage
+ * @route POST /api/videos/upload-thumbnail
+ * body: { image: string }  // "data:image/png;base64,..."
+ * response: { url: string }
+ */
+router.post(
+  '/upload-thumbnail',
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { image } = req.body as { image?: string };
+      if (!image || !image.startsWith('data:image/')) {
+        res.status(400).json({ error: '請提供有效的圖片 (base64 data URL)' });
+        return;
+      }
+
+      const base64 = image.replace(/^data:image\/\w+;base64,/, '');
+      const inputBuffer = Buffer.from(base64, 'base64');
+
+      const webpBuffer = await sharp(inputBuffer)
+        .resize({ width: 480, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+
+      const filename = `admin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from(THUMBNAIL_BUCKET)
+        .upload(filename, webpBuffer, {
+          contentType: 'image/webp',
+          upsert: false,
+        });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data } = supabaseAdmin.storage
+        .from(THUMBNAIL_BUCKET)
+        .getPublicUrl(filename);
+
+      res.json({ url: data.publicUrl });
+    } catch (err) {
+      console.error('Upload thumbnail error:', err);
+      res.status(500).json({ error: '上傳縮圖失敗' });
+    }
+  }
 );
 
 /**
@@ -160,7 +224,7 @@ router.post(
  * @route PUT /api/videos/admin/reorder
  */
 router.put(
-  "/admin/reorder",
+  '/admin/reorder',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
@@ -169,17 +233,17 @@ router.put(
 
       for (const item of orders) {
         await supabaseAdmin
-          .from("videos")
+          .from('videos')
           .update({ sort_order: item.sortOrder })
-          .eq("video_id", item.id);
+          .eq('video_id', item.id);
       }
 
       res.json({ success: true });
     } catch (err) {
-      console.error("Reorder videos error:", err);
-      res.status(500).json({ error: "更新排序失敗" });
+      console.error('Reorder videos error:', err);
+      res.status(500).json({ error: '更新排序失敗' });
     }
-  },
+  }
 );
 
 /**
@@ -187,16 +251,17 @@ router.put(
  * @route PUT /api/videos/:id
  */
 router.put(
-  "/:id",
+  '/:id',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const { title, url, type, sortOrder, isVisible, description, thumbnail } = req.body;
+      const { title, url, type, sortOrder, isVisible, description, thumbnail } =
+        req.body;
 
       const { data, error } = await supabaseAdmin
-        .from("videos")
+        .from('videos')
         .update({
           ...(title !== undefined && { title }),
           ...(url !== undefined && { url }),
@@ -206,17 +271,17 @@ router.put(
           ...(description !== undefined && { description }),
           ...(thumbnail !== undefined && { thumbnail_url: thumbnail }),
         })
-        .eq("video_id", id)
+        .eq('video_id', id)
         .select()
         .single();
 
       if (error) throw error;
       res.json(data);
     } catch (err) {
-      console.error("Update video error:", err);
-      res.status(500).json({ error: "更新影片失敗" });
+      console.error('Update video error:', err);
+      res.status(500).json({ error: '更新影片失敗' });
     }
-  },
+  }
 );
 
 /**
@@ -224,7 +289,7 @@ router.put(
  * @route DELETE /api/videos/:id
  */
 router.delete(
-  "/:id",
+  '/:id',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
@@ -232,17 +297,17 @@ router.delete(
       const { id } = req.params;
 
       const { error } = await supabaseAdmin
-        .from("videos")
+        .from('videos')
         .delete()
-        .eq("video_id", id);
+        .eq('video_id', id);
 
       if (error) throw error;
       res.json({ success: true });
     } catch (err) {
-      console.error("Delete video error:", err);
-      res.status(500).json({ error: "刪除影片失敗" });
+      console.error('Delete video error:', err);
+      res.status(500).json({ error: '刪除影片失敗' });
     }
-  },
+  }
 );
 
 export default router;

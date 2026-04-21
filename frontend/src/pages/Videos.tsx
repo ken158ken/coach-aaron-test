@@ -1,74 +1,81 @@
 /**
- * Videos 頁面 - 影片牆 (Lazy Loading + AOS + Scroll Restore)
- * IntersectionObserver 分批載入，每批 10 張
- * 點開外連後返回自動恢復捲動位置
+ * Videos 頁面 - 影片牆 (Server-side Pagination + AOS + Scroll Restore)
+ * 每次只從 API 載入 10 筆，滾動到底部自動載入下一批
  * @module pages/Videos
  * @theme prism (VOID PRISM 水晶主題)
  */
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { VideoCard, Loading, PageHeader } from '@/components/ui';
-import { SEOHead } from '@/components/seo';
-import { videoService } from '@/services';
-import { useLanguage } from '@/context/LanguageContext';
-import type { Video } from '@/types';
-import AOS from 'aos';
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { VideoCard, Loading, PageHeader } from "@/components/ui";
+import { SEOHead } from "@/components/seo";
+import { videoService } from "@/services";
+import { useLanguage } from "@/context/LanguageContext";
+import type { Video } from "@/types";
+import AOS from "aos";
 
-const BATCH_SIZE = 10;
-const STORAGE_KEY_SCROLL = 'videos_scroll_y';
-const STORAGE_KEY_COUNT = 'videos_visible_count';
+const PAGE_SIZE = 10;
+const STORAGE_KEY_SCROLL = "videos_scroll_y";
+const STORAGE_KEY_COUNT = "videos_loaded_count";
 
 const Videos: React.FC = () => {
   const { t, language } = useLanguage();
-  const [allVideos, setAllVideos] = useState<Video[]>([]);
-  const [visibleCount, setVisibleCount] = useState(() => {
-    // Restore visible count so enough cards render before scroll restore
-    const saved = sessionStorage.getItem(STORAGE_KEY_COUNT);
-    return saved ? Math.max(parseInt(saved, 10), BATCH_SIZE) : BATCH_SIZE;
-  });
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const restoredRef = useRef(false);
+  const fetchingRef = useRef(false);
 
+  // Initial load — restore previously loaded count if returning from external link
+  const initialCount = useRef(
+    Math.max(PAGE_SIZE, parseInt(sessionStorage.getItem(STORAGE_KEY_COUNT) || "0", 10))
+  );
+
+  // Fetch a page of videos
+  const fetchPage = useCallback(
+    async (offset: number, limit: number): Promise<{ data: Video[]; total: number }> => {
+      return videoService.getVideosPaginated(offset, limit);
+    },
+    []
+  );
+
+  // Initial fetch — load enough to restore scroll position
   useEffect(() => {
-    const fetchVideos = async () => {
+    const init = async () => {
       try {
-        const data = await videoService.getVideos();
-        setAllVideos(data);
+        const count = initialCount.current;
+        const result = await fetchPage(0, count);
+        setVideos(result.data);
+        setTotal(result.total);
       } catch (error) {
-        console.error('Failed to fetch videos:', error);
-        setAllVideos([]);
+        console.error("Failed to fetch videos:", error);
+        setVideos([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchVideos();
-  }, []);
+    init();
+  }, [fetchPage]);
 
-  // Persist visible count for scroll restore
+  // Restore scroll position after initial render
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY_COUNT, String(visibleCount));
-  }, [visibleCount]);
-
-  // Restore scroll position after videos render
-  useEffect(() => {
-    if (loading || allVideos.length === 0 || restoredRef.current) return;
+    if (loading || videos.length === 0 || restoredRef.current) return;
     restoredRef.current = true;
     const savedY = sessionStorage.getItem(STORAGE_KEY_SCROLL);
     if (savedY) {
       const y = parseInt(savedY, 10);
-      // Wait for cards to render + AOS init, then scroll
       requestAnimationFrame(() => {
         setTimeout(() => {
-          window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior });
+          window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
           AOS.refresh();
         }, 150);
       });
     }
-  }, [loading, allVideos.length]);
+  }, [loading, videos.length]);
 
-  // Track scroll position continuously for restore on return
+  // Track scroll position + show/hide back-to-top
   useEffect(() => {
     let ticking = false;
     const onScroll = () => {
@@ -81,61 +88,72 @@ const Videos: React.FC = () => {
         });
       }
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Load more
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => {
-      const next = Math.min(prev + BATCH_SIZE, allVideos.length);
-      setTimeout(() => AOS.refresh(), 100);
-      return next;
-    });
-  }, [allVideos.length]);
+  // Persist loaded count for scroll restore
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY_COUNT, String(videos.length));
+  }, [videos.length]);
 
-  // IntersectionObserver: load more when sentinel visible
+  // Load more
+  const loadMore = useCallback(async () => {
+    if (fetchingRef.current || videos.length >= total) return;
+    fetchingRef.current = true;
+    setLoadingMore(true);
+    try {
+      const result = await fetchPage(videos.length, PAGE_SIZE);
+      setVideos((prev) => [...prev, ...result.data]);
+      setTotal(result.total);
+      setTimeout(() => AOS.refresh(), 100);
+    } catch (err) {
+      console.error("Failed to load more:", err);
+    } finally {
+      setLoadingMore(false);
+      fetchingRef.current = false;
+    }
+  }, [videos.length, total, fetchPage]);
+
+  // IntersectionObserver for infinite scroll
   useEffect(() => {
     if (!sentinelRef.current || loading) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleCount < allVideos.length) {
-          loadMore();
-        }
+        if (entries[0].isIntersecting) loadMore();
       },
-      { rootMargin: '400px' }
+      { rootMargin: "400px" }
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-  }, [visibleCount, allVideos.length, loading, loadMore]);
+  }, [loading, loadMore]);
 
   // Refresh AOS after initial render
   useEffect(() => {
-    if (!loading && allVideos.length > 0) {
+    if (!loading && videos.length > 0) {
       setTimeout(() => AOS.refresh(), 200);
     }
-  }, [loading, allVideos.length]);
+  }, [loading, videos.length]);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const visibleVideos = allVideos.slice(0, visibleCount);
-  const hasMore = visibleCount < allVideos.length;
+  const hasMore = videos.length < total;
 
   return (
     <div className="relative min-h-screen bg-transparent">
       <SEOHead
         title={t.videos.heading}
         description={
-          language === 'en'
-            ? 'Free fitness knowledge — training tutorials, nutrition guides, lifestyle tips.'
-            : '免費的健身知識分享，提供訓練教學、營養指南、生活建議等多元影片內容。'
+          language === "en"
+            ? "Free fitness knowledge — training tutorials, nutrition guides, lifestyle tips."
+            : "免費的健身知識分享，提供訓練教學、營養指南、生活建議等多元影片內容。"
         }
         keywords={
-          language === 'en'
-            ? ['fitness videos', 'training tutorials', 'nutrition guide', 'fitness knowledge']
-            : ['健身影片', '訓練教學', '營養指南', '健身知識']
+          language === "en"
+            ? ["fitness videos", "training tutorials", "nutrition guide", "fitness knowledge"]
+            : ["健身影片", "訓練教學", "營養指南", "健身知識"]
         }
         url="/videos"
       />
@@ -151,7 +169,7 @@ const Videos: React.FC = () => {
             <div className="flex justify-center py-12 sm:py-20">
               <Loading theme="studio" text={t.common.loading} />
             </div>
-          ) : allVideos.length === 0 ? (
+          ) : videos.length === 0 ? (
             <div className="text-center py-12 sm:py-20">
               <p className="text-sm sm:text-base text-white/50">
                 {t.videos.noVideos}
@@ -163,18 +181,18 @@ const Videos: React.FC = () => {
                 className="text-white/40 text-xs sm:text-sm text-center mb-6 sm:mb-8"
                 data-aos="fade-up"
               >
-                {language === 'en'
-                  ? `${allVideos.length} videos`
-                  : `共 ${allVideos.length} 部影片`}
+                {language === "en"
+                  ? `${total} videos`
+                  : `共 ${total} 部影片`}
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                {visibleVideos.map((video, index) => (
+                {videos.map((video, index) => (
                   <div
                     key={video.video_id}
                     id={`video-${video.video_id}`}
                     data-aos="fade-up"
-                    data-aos-delay={Math.min((index % BATCH_SIZE) * 40, 360)}
+                    data-aos-delay={Math.min((index % PAGE_SIZE) * 40, 360)}
                     data-aos-duration="600"
                     data-aos-anchor-placement="top-bottom"
                   >
@@ -206,7 +224,9 @@ const Videos: React.FC = () => {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                       />
                     </svg>
-                    {language === 'en' ? 'Loading more...' : '載入更多...'}
+                    {loadingMore
+                      ? (language === "en" ? "Loading more..." : "載入更多...")
+                      : ""}
                   </div>
                 </div>
               )}
@@ -215,14 +235,14 @@ const Videos: React.FC = () => {
         </div>
       </div>
 
-      {/* Back to top button */}
+      {/* Back to top */}
       <button
         onClick={scrollToTop}
         aria-label="Back to top"
         className={`fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all duration-300 shadow-lg ${
           showTop
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-4 pointer-events-none'
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
         }`}
       >
         <svg

@@ -79,11 +79,15 @@ const AdminVideos: React.FC = () => {
     title: string;
     description: string;
     type: string;
-    thumbnail: string; // base64 data URL，由本機上傳
+    thumbnail: string;      // 預覽用：剛選檔為 base64，上傳完成後替換為 public URL
+    thumbnailUrl: string;   // 實際要送到後端儲存的 URL（Storage public URL）
+    uploading: boolean;     // 縮圖上傳中
+    uploadError: string;    // 上傳錯誤訊息
   };
 
   const newRow = (id: number): AddRow => ({
-    id, url: "", title: "", description: "", type: "instagram", thumbnail: "",
+    id, url: "", title: "", description: "", type: "instagram",
+    thumbnail: "", thumbnailUrl: "", uploading: false, uploadError: "",
   });
 
   const [addRows, setAddRows] = useState<AddRow[]>(() => [newRow(0)]);
@@ -290,7 +294,7 @@ const AdminVideos: React.FC = () => {
     setAddRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
   const handleRowUrlChange = (id: number, url: string) => {
-    updateRow(id, { url, type: detectPlatform(url), fetchState: "idle", fetchError: "" });
+    updateRow(id, { url, type: detectPlatform(url) });
   };
 
   const addNewRow = () => {
@@ -302,14 +306,42 @@ const AdminVideos: React.FC = () => {
     setAddRows((prev) => prev.filter((r) => r.id !== id));
   };
 
-  /** 本機上傳截圖給特定列 */
+  /** 本機上傳截圖給特定列：先顯示 base64 預覽，同步上傳到 Storage 取得 public URL */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     const rowId = fileRowRef.current;
     if (!file || rowId < 0) return;
+
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      updateRow(rowId, { thumbnail: (ev.target?.result as string) ?? "" });
+    reader.onload = async (ev) => {
+      const dataUrl = (ev.target?.result as string) ?? "";
+      // 1) 立即顯示本機預覽（UX 瞬間反應）
+      updateRow(rowId, {
+        thumbnail: dataUrl,
+        thumbnailUrl: "",
+        uploading: true,
+        uploadError: "",
+      });
+
+      // 2) 背景上傳到 Storage
+      try {
+        const { url } = await post<{ url: string }>(
+          "/api/videos/upload-thumbnail",
+          { image: dataUrl },
+        );
+        // 上傳成功後，用 URL 替換 base64 預覽（同時作為實際儲存值）
+        updateRow(rowId, {
+          thumbnail: url,
+          thumbnailUrl: url,
+          uploading: false,
+        });
+      } catch (err) {
+        logger.error("上傳縮圖失敗", err);
+        updateRow(rowId, {
+          uploading: false,
+          uploadError: "上傳失敗，請重試",
+        });
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -331,6 +363,13 @@ const AdminVideos: React.FC = () => {
   const handleBatchSubmit = async () => {
     const valid = addRows.filter((r) => r.url.trim() && r.title.trim());
     if (valid.length === 0) return;
+
+    // 若有縮圖仍在上傳，提示使用者等待
+    if (valid.some((r) => r.uploading)) {
+      dialog.alert({ title: "請稍候", message: "有縮圖仍在上傳中，請等候上傳完成。" });
+      return;
+    }
+
     setAddSubmitting(true);
     try {
       const payload = valid.map((r) => ({
@@ -338,7 +377,7 @@ const AdminVideos: React.FC = () => {
         url: r.url.trim(),
         type: r.type,
         description: r.description.trim() || undefined,
-        thumbnail: r.thumbnail || undefined,
+        thumbnail: r.thumbnailUrl || undefined,
       }));
       const res = await post<{ inserted: number; data: AdminVideo[] }>("/api/videos/batch", { videos: payload });
       setVideos((prev) => [...prev, ...res.data]);
@@ -773,14 +812,24 @@ const AdminVideos: React.FC = () => {
                           <>
                             <img src={row.thumbnail} alt="" className="w-full h-full object-cover" />
                             <button
-                              onClick={() => updateRow(row.id, { thumbnail: "" })}
+                              onClick={() => updateRow(row.id, { thumbnail: "", thumbnailUrl: "", uploadError: "" })}
                               className="absolute top-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded hover:bg-black/90"
                             >移除</button>
+                            {row.uploading && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <span className="text-[10px] text-white bg-black/60 px-2 py-1 rounded">上傳中…</span>
+                              </div>
+                            )}
                           </>
                         ) : (
                           <span className="text-luxe-muted/30 text-xs">無截圖</span>
                         )}
                       </div>
+
+                      {/* 錯誤訊息 */}
+                      {row.uploadError && (
+                        <p className="text-[10px] text-red-400">{row.uploadError}</p>
+                      )}
 
                       {/* 上傳按鈕 */}
                       <button

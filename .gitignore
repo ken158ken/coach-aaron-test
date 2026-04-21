@@ -38,3 +38,7 @@ api/_ssr_bundle.cjs
 api/_ssr_template.html
 .vercel
 .env*.local
+
+# One-time local migration / import scripts (may contain hardcoded keys)
+backend/import_*.mjs
+
