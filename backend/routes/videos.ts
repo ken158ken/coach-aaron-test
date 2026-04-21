@@ -102,22 +102,24 @@ router.post(
         return;
       }
 
-      // 取得目前最大 sort_order，新影片接在後面
-      const { data: maxRow } = await supabaseAdmin
+      // 取得目前最小 sort_order，新影片放到最前面（越小越前）
+      const { data: minRow } = await supabaseAdmin
         .from('videos')
         .select('sort_order')
-        .order('sort_order', { ascending: false })
+        .order('sort_order', { ascending: true })
         .limit(1)
         .single();
 
-      const baseOrder = (maxRow?.sort_order ?? 0) as number;
+      const baseOrder = (minRow?.sort_order ?? 1) as number;
 
+      // 第一筆新影片 → baseOrder - items.length (最小、最前)
+      // 最後一筆新影片 → baseOrder - 1 (仍比原先最小的還小)
       const rows = items.map((item, i) => ({
         title: item.title,
         url: item.url,
         type: item.type ?? 'instagram',
         is_visible: true,
-        sort_order: baseOrder + i + 1,
+        sort_order: baseOrder - items.length + i,
         ...(item.description ? { description: item.description } : {}),
         ...(item.thumbnail ? { thumbnail_url: item.thumbnail } : {}),
       }));
