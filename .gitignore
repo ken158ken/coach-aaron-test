@@ -41,4 +41,5 @@ api/_ssr_template.html
 
 # One-time local migration / import scripts (may contain hardcoded keys)
 backend/import_*.mjs
+backend/migrate_*.mjs
 
