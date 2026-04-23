@@ -3,12 +3,18 @@
  * @module components/sections/HeroSection
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { GlowButton, TextButton } from "@/components/ui";
-import { contentService } from "@/services/content.service";
-import { getDefaultTemplate } from "@/utils/contentTemplates";
+import React, { useEffect, useRef, useState } from 'react';
+import { gsap } from 'gsap';
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from 'framer-motion';
+import { GlowButton, TextButton } from '@/components/ui';
+import { contentService } from '@/services/content.service';
+import { getDefaultTemplate } from '@/utils/contentTemplates';
 
 interface HeroSectionProps {
   className?: string;
@@ -20,7 +26,7 @@ interface HeroSectionProps {
  * @param {HeroSectionProps} props - 元件屬性
  * @returns {JSX.Element} Hero 區塊
  */
-const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
+const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
@@ -28,14 +34,19 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const bgRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
 
-  // Flip Words — 標題循環換字
-  const flipWords = ["體態", "自信", "健康", "未來"];
+  // Flip Words — 標題循環換字（可由 DB 覆寫）
+  const [flipWords, setFlipWords] = useState<string[]>([
+    '體態',
+    '自信',
+    '健康',
+    '未來',
+  ]);
   const [wordIndex, setWordIndex] = useState(0);
 
   useEffect(() => {
     const t = setInterval(
       () => setWordIndex((i) => (i + 1) % flipWords.length),
-      2500,
+      2500
     );
     return () => clearInterval(t);
   }, []);
@@ -48,7 +59,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
   const spotlightBg = useTransform(
     [springX, springY],
     ([x, y]: number[]) =>
-      `radial-gradient(700px circle at ${(x as number) * 100}% ${(y as number) * 100}%, rgba(197,160,89,0.10) 0%, rgba(197,160,89,0.03) 35%, transparent 65%)`,
+      `radial-gradient(700px circle at ${(x as number) * 100}% ${(y as number) * 100}%, rgba(197,160,89,0.10) 0%, rgba(197,160,89,0.03) 35%, transparent 65%)`
   );
 
   const handleSpotlightMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -59,14 +70,42 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
 
   // ✅ SSR-safe：使用確定性範本
   const [heroTitle, setHeroTitle] = useState(() =>
-    getDefaultTemplate("hero_title", "打造 理想體態\n遇見更好的自己"),
+    getDefaultTemplate('hero_title', '打造 理想體態\n遇見更好的自己')
   );
   const [heroSubtitle, setHeroSubtitle] = useState(() =>
     getDefaultTemplate(
-      "hero_subtitle",
-      "專業一對一健身指導，量身打造訓練計畫\n科學化訓練 × 飲食規劃 × 心理建設",
-    ),
+      'hero_subtitle',
+      '專業一對一健身指導，量身打造訓練計畫\n科學化訓練 × 飲食規劃 × 心理建設'
+    )
   );
+  const [ctaPrimary, setCtaPrimary] = useState('探索課程');
+  const [ctaSecondary, setCtaSecondary] = useState('預約諢詢');
+
+  // 從 DB 載入文案（空值或錯誤時保留 fallback）
+  useEffect(() => {
+    contentService
+      .getPublicContent()
+      .then((content) => {
+        if (content.hero_title?.trim()) setHeroTitle(content.hero_title);
+        if (content.hero_subtitle?.trim())
+          setHeroSubtitle(content.hero_subtitle);
+        if (content.hero_cta_primary?.trim())
+          setCtaPrimary(content.hero_cta_primary);
+        if (content.hero_cta_secondary?.trim())
+          setCtaSecondary(content.hero_cta_secondary);
+        if (content.hero_flip_words) {
+          try {
+            const arr = JSON.parse(content.hero_flip_words);
+            if (Array.isArray(arr) && arr.length > 0) setFlipWords(arr);
+          } catch (err) {
+            console.warn('[HeroSection] 解析 hero_flip_words 失敗', err);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('[HeroSection] 載入網站內容失敗', err);
+      });
+  }, []);
 
   // 滑鼠視差邏輯
   useEffect(() => {
@@ -75,17 +114,17 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
     const handleMouseMove = (e: MouseEvent) => {
       const { clientX, clientY } = e;
       const { innerWidth, innerHeight } = window;
-      
+
       // 計算滑鼠相對於中心的位置 (-0.5 ~ 0.5)
-      const xPos = (clientX / innerWidth) - 0.5;
-      const yPos = (clientY / innerHeight) - 0.5;
+      const xPos = clientX / innerWidth - 0.5;
+      const yPos = clientY / innerHeight - 0.5;
 
       // 背景微動 (反向，幅度大一點)
       gsap.to(bgRef.current, {
         x: xPos * -30,
         y: yPos * -20,
         duration: 1.2,
-        ease: "power2.out"
+        ease: 'power2.out',
       });
 
       // 線條微動 (同向，幅度適中)
@@ -93,7 +132,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
         x: xPos * 15,
         y: yPos * 10,
         duration: 1.5,
-        ease: "power2.out"
+        ease: 'power2.out',
       });
 
       // 內容微動 (反向，幅度極小)
@@ -101,13 +140,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
         x: xPos * -10,
         y: yPos * -5,
         duration: 1,
-        ease: "power2.out",
-        stagger: 0.02
+        ease: 'power2.out',
+        stagger: 0.02,
       });
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   // 原始登場動畫
@@ -117,21 +156,28 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
       gsap.fromTo(
         titleRef.current,
         { y: 40, opacity: 0, skewX: -4 },
-        { y: 0, opacity: 1, skewX: 0, duration: 1.2, ease: "expo.out", delay: 0.2 },
+        {
+          y: 0,
+          opacity: 1,
+          skewX: 0,
+          duration: 1.2,
+          ease: 'expo.out',
+          delay: 0.2,
+        }
       );
 
       // Subtitle — 接連切入
       gsap.fromTo(
         subtitleRef.current,
         { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 1, ease: "expo.out", delay: 0.4 },
+        { y: 0, opacity: 1, duration: 1, ease: 'expo.out', delay: 0.4 }
       );
 
       // CTA — 最後收尾
       gsap.fromTo(
         ctaRef.current,
         { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.8, ease: "expo.out", delay: 0.6 },
+        { y: 0, opacity: 1, duration: 0.8, ease: 'expo.out', delay: 0.6 }
       );
     }, containerRef);
 
@@ -148,14 +194,20 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
       <div
         aria-hidden="true"
         style={{
-          position: "absolute", inset: 0, zIndex: 0,
-          transform: "translateY(calc(var(--scroll-y, 0) * -0.18px))",
-          willChange: "transform",
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          transform: 'translateY(calc(var(--scroll-y, 0) * -0.18px))',
+          willChange: 'transform',
         }}
       >
         <div ref={bgRef} className="studio-hero-bg scale-110" />
       </div>
-      <div ref={lineRef} className="studio-floor-line opacity-30" aria-hidden="true" />
+      <div
+        ref={lineRef}
+        className="studio-floor-line opacity-30"
+        aria-hidden="true"
+      />
 
       {/* Spotlight 聚光燈 — 跟隨滑鼠位置 */}
       <motion.div
@@ -171,21 +223,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           ref={titleRef}
           className="silver-heading font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight tracking-[4px] sm:tracking-[6px] uppercase will-change-transform"
         >
-          {heroTitle.split("\n").map((line, i) => {
+          {heroTitle.split('\n').map((line, i) => {
             if (i === 0) {
               // Flip Words: 最後一個詞動畫切換
               const parts = line.trim().split(/\s+/);
-              const staticPart = parts.slice(0, -1).join(" ");
+              const staticPart = parts.slice(0, -1).join(' ');
               return (
                 <React.Fragment key={i}>
-                  {staticPart}{" "}
+                  {staticPart}{' '}
                   <span className="relative inline-block">
                     <AnimatePresence mode="wait">
                       <motion.span
                         key={wordIndex}
-                        initial={{ opacity: 0, y: 24, filter: "blur(4px)" }}
-                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: -20, filter: "blur(4px)" }}
+                        initial={{ opacity: 0, y: 24, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
                         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         className="inline-block text-luxe-gold"
                       >
@@ -210,7 +262,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           ref={subtitleRef}
           className="text-sm sm:text-base md:text-lg text-white/50 mb-8 sm:mb-10 max-w-xl mx-auto font-light tracking-[2px]"
         >
-          {heroSubtitle.split("\n").map((line, i) => (
+          {heroSubtitle.split('\n').map((line, i) => (
             <React.Fragment key={i}>
               {i > 0 && (
                 <>
@@ -229,10 +281,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = "" }) => {
           className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <GlowButton to="/courses" size="lg">
-            探索課程
+            {ctaPrimary}
           </GlowButton>
           <TextButton to="/contact" theme="studio">
-            預約諮詢
+            {ctaSecondary}
           </TextButton>
         </div>
       </div>

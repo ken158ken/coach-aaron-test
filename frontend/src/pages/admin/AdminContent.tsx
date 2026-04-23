@@ -6,7 +6,7 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   PillButton,
   Input,
@@ -14,37 +14,104 @@ import {
   Modal,
   useDialog,
   RichTextEditor,
-} from "@/components/ui";
-import { Toggle } from "@/components/ui/form";
+} from '@/components/ui';
+import { Toggle } from '@/components/ui/form';
 import {
   contentService,
   type SiteContent,
   type SitePopup,
-} from "@/services/content.service";
+} from '@/services/content.service';
 import {
   slidesService,
   type TestimonialSlide,
   type TestimonialConfig,
   type GallerySlide,
   type GalleryConfig,
-} from "@/services/slides.service";
-import { TestimonialCarousel } from "@/components/sections";
-import { GallerySlider } from "@/components/sections";
-import { getTemplates, type ContentTemplate } from "@/utils/contentTemplates";
+} from '@/services/slides.service';
+import { TestimonialCarousel } from '@/components/sections';
+import { GallerySlider } from '@/components/sections';
+import { getTemplates, type ContentTemplate } from '@/utils/contentTemplates';
+import { HOMEPAGE_SECTIONS, KEY_TO_SECTION_ID } from '@/utils/homepageSections';
 
 /** Cloudinary 限定前綴 */
-const CLOUDINARY_PREFIX = "https://res.cloudinary.com/daejq0zo9/";
+const CLOUDINARY_PREFIX = 'https://res.cloudinary.com/daejq0zo9/';
 const isValidCloudinaryUrl = (url: string) => url.startsWith(CLOUDINARY_PREFIX);
 
 /** 日誌工具 */
 const logger = {
   info: (msg: string, data?: unknown) =>
-    console.log(`[AdminContent] ${msg}`, data || ""),
+    console.log(`[AdminContent] ${msg}`, data || ''),
   error: (msg: string, err?: unknown) =>
-    console.error(`[AdminContent] ${msg}`, err || ""),
+    console.error(`[AdminContent] ${msg}`, err || ''),
 };
 
-type TabType = "content" | "popup" | "testimonial" | "gallery";
+type TabType = 'content' | 'popup' | 'testimonial' | 'gallery';
+
+/**
+ * SectionItemRow - 單一網站文案欄位的可摺疊卡片列
+ *
+ * 單一職責：負責單列的顯示/啟用/編輯/刪除互動。
+ */
+interface SectionItemRowProps {
+  item: SiteContent;
+  onToggle: (item: SiteContent) => void;
+  onEdit: (item: SiteContent) => void;
+  onDelete: (item: SiteContent) => void;
+}
+const SectionItemRow: React.FC<SectionItemRowProps> = ({
+  item,
+  onToggle,
+  onEdit,
+  onDelete,
+}) => (
+  <div
+    className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+      item.is_active ? 'border-luxe-gold/10' : 'border-luxe-gold/5 opacity-60'
+    }`}
+  >
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex-grow min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="text-luxe-text font-medium text-sm">
+            {item.content_name}
+          </h3>
+          <span className="text-xs px-1.5 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
+            {item.content_type}
+          </span>
+          {!item.is_active && (
+            <span className="text-xs px-1.5 py-0.5 bg-red-900/30 text-red-400 rounded">
+              已停用
+            </span>
+          )}
+        </div>
+        <p className="text-luxe-text/70 text-xs line-clamp-2 whitespace-pre-wrap">
+          {item.content_value || '(空白)'}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Toggle
+          theme="luxe"
+          checked={item.is_active}
+          onChange={() => onToggle(item)}
+        />
+        <PillButton
+          theme="luxe"
+          variant="outline"
+          size="sm"
+          onClick={() => onEdit(item)}
+        >
+          編輯
+        </PillButton>
+        <button
+          onClick={() => onDelete(item)}
+          className="text-red-400 hover:text-red-300 text-sm px-1"
+        >
+          刪除
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 /**
  * TemplatePicker - 預設範本選擇器元件
@@ -76,7 +143,7 @@ const TemplatePicker: React.FC<{
             {/* Tooltip preview */}
             <span className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-luxe-surface border border-luxe-gold/30 rounded-lg text-xs text-luxe-text/80 whitespace-pre-wrap max-w-xs opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity shadow-lg">
               {tpl.value.length > 100
-                ? tpl.value.slice(0, 100) + "..."
+                ? tpl.value.slice(0, 100) + '...'
                 : tpl.value}
             </span>
           </button>
@@ -94,25 +161,26 @@ const AdminContent: React.FC = () => {
   const dialog = useDialog();
 
   // ===== 分頁狀態 =====
-  const [activeTab, setActiveTab] = useState<TabType>("content");
+  const [activeTab, setActiveTab] = useState<TabType>('content');
 
   // ===== 網站文案狀態 =====
   const [sections, setSections] = useState<SiteContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [editingSection, setEditingSection] = useState<SiteContent | null>(
-    null,
+    null
   );
-  const [editContent, setEditContent] = useState("");
+  const [editContent, setEditContent] = useState('');
+  const [editUrlError, setEditUrlError] = useState('');
   const [saving, setSaving] = useState(false);
 
   // ===== 新增文案狀態 =====
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newContentForm, setNewContentForm] = useState({
-    contentKey: "",
-    contentName: "",
-    contentValue: "",
-    contentType: "text" as "text" | "html",
+    contentKey: '',
+    contentName: '',
+    contentValue: '',
+    contentType: 'text' as 'text' | 'html' | 'json' | 'image',
   });
 
   // ===== 彈窗管理狀態 =====
@@ -121,44 +189,57 @@ const AdminContent: React.FC = () => {
   const [showPopupModal, setShowPopupModal] = useState(false);
   const [editingPopup, setEditingPopup] = useState<SitePopup | null>(null);
   const [popupForm, setPopupForm] = useState({
-    popupTitle: "",
-    popupContent: "",
+    popupTitle: '',
+    popupContent: '',
     showOnce: true,
-    startDate: "",
-    endDate: "",
+    startDate: '',
+    endDate: '',
   });
 
   // ===== 學員見證幻燈片狀態 =====
   const [testimonials, setTestimonials] = useState<TestimonialSlide[]>([]);
-  const [testimonialConfig, setTestimonialConfig] = useState<TestimonialConfig>({ interval_ms: 4000, is_published: true, card_layout: 'portrait' });
+  const [testimonialConfig, setTestimonialConfig] = useState<TestimonialConfig>(
+    { interval_ms: 4000, is_published: true, card_layout: 'portrait' }
+  );
   const [testimonialLoading, setTestimonialLoading] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
-  const [editingTestimonial, setEditingTestimonial] = useState<TestimonialSlide | null>(null);
-  const [testimonialForm, setTestimonialForm] = useState({ imageUrl: "", name: "", achievement: "", quote: "" });
-  const [testimonialUrlError, setTestimonialUrlError] = useState("");
+  const [editingTestimonial, setEditingTestimonial] =
+    useState<TestimonialSlide | null>(null);
+  const [testimonialForm, setTestimonialForm] = useState({
+    imageUrl: '',
+    name: '',
+    achievement: '',
+    quote: '',
+  });
+  const [testimonialUrlError, setTestimonialUrlError] = useState('');
   const [showTestimonialPreview, setShowTestimonialPreview] = useState(false);
-  const [testimonialIntervalInput, setTestimonialIntervalInput] = useState("4000");
+  const [testimonialIntervalInput, setTestimonialIntervalInput] =
+    useState('4000');
 
   // ===== 相片輪播狀態 =====
   const [gallerySlides, setGallerySlides] = useState<GallerySlide[]>([]);
-  const [galleryConfig, setGalleryConfig] = useState<GalleryConfig>({ is_published: true });
+  const [galleryConfig, setGalleryConfig] = useState<GalleryConfig>({
+    is_published: true,
+  });
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
-  const [editingGallery, setEditingGallery] = useState<GallerySlide | null>(null);
-  const [galleryForm, setGalleryForm] = useState({ imageUrl: "", caption: "" });
-  const [galleryUrlError, setGalleryUrlError] = useState("");
+  const [editingGallery, setEditingGallery] = useState<GallerySlide | null>(
+    null
+  );
+  const [galleryForm, setGalleryForm] = useState({ imageUrl: '', caption: '' });
+  const [galleryUrlError, setGalleryUrlError] = useState('');
   const [showGalleryPreview, setShowGalleryPreview] = useState(false);
 
   // ===== 載入網站文案 =====
   const fetchContent = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
+      setError('');
       const data = await contentService.getAllAdmin();
       setSections(Array.isArray(data) ? data : []);
     } catch (err) {
-      logger.error("載入網站內容失敗", err);
-      setError("載入網站內容失敗");
+      logger.error('載入網站內容失敗', err);
+      setError('載入網站內容失敗');
     } finally {
       setLoading(false);
     }
@@ -171,7 +252,7 @@ const AdminContent: React.FC = () => {
       const data = await contentService.getAllPopups();
       setPopups(Array.isArray(data) ? data : []);
     } catch (err) {
-      logger.error("載入彈窗失敗", err);
+      logger.error('載入彈窗失敗', err);
     } finally {
       setPopupLoading(false);
     }
@@ -189,7 +270,7 @@ const AdminContent: React.FC = () => {
       setTestimonialConfig(cfg);
       setTestimonialIntervalInput(String(cfg.interval_ms));
     } catch (err) {
-      logger.error("載入學員見證失敗", err);
+      logger.error('載入學員見證失敗', err);
     } finally {
       setTestimonialLoading(false);
     }
@@ -206,7 +287,7 @@ const AdminContent: React.FC = () => {
       setGallerySlides(Array.isArray(slides) ? slides : []);
       setGalleryConfig(cfg);
     } catch (err) {
-      logger.error("載入相片輪播失敗", err);
+      logger.error('載入相片輪播失敗', err);
     } finally {
       setGalleryLoading(false);
     }
@@ -223,21 +304,43 @@ const AdminContent: React.FC = () => {
   const handleEdit = (section: SiteContent) => {
     setEditingSection(section);
     setEditContent(section.content_value);
+    setEditUrlError('');
+    setError('');
   };
 
   const handleSaveContent = async () => {
     if (!editingSection) return;
+
+    // image 型：前端檔 Cloudinary
+    if (
+      editingSection.content_type === 'image' &&
+      editContent.trim() !== '' &&
+      !isValidCloudinaryUrl(editContent)
+    ) {
+      setEditUrlError(`圖片網址必須以 ${CLOUDINARY_PREFIX} 開頭`);
+      return;
+    }
+    // json 型：驗證格式
+    if (editingSection.content_type === 'json' && editContent.trim() !== '') {
+      try {
+        JSON.parse(editContent);
+      } catch {
+        setError('JSON 格式錯誤，請確認內容是合法 JSON');
+        return;
+      }
+    }
+
     try {
       setSaving(true);
       await contentService.updateContent(editingSection.content_id, {
         contentValue: editContent,
       });
-      logger.info("網站內容已更新", { key: editingSection.content_key });
+      logger.info('網站內容已更新', { key: editingSection.content_key });
       setEditingSection(null);
       fetchContent();
     } catch (err) {
-      logger.error("更新內容失敗", err);
-      setError("更新內容失敗");
+      logger.error('更新內容失敗', err);
+      setError('更新內容失敗');
     } finally {
       setSaving(false);
     }
@@ -245,8 +348,29 @@ const AdminContent: React.FC = () => {
 
   const handleCreateContent = async () => {
     if (!newContentForm.contentKey || !newContentForm.contentName) {
-      setError("Key 和名稱為必填");
+      setError('Key 和名稱為必填');
       return;
+    }
+    // image 型：Cloudinary 驗證
+    if (
+      newContentForm.contentType === 'image' &&
+      newContentForm.contentValue.trim() !== '' &&
+      !isValidCloudinaryUrl(newContentForm.contentValue)
+    ) {
+      setError(`圖片網址必須以 ${CLOUDINARY_PREFIX} 開頭`);
+      return;
+    }
+    // json 型：格式驗證
+    if (
+      newContentForm.contentType === 'json' &&
+      newContentForm.contentValue.trim() !== ''
+    ) {
+      try {
+        JSON.parse(newContentForm.contentValue);
+      } catch {
+        setError('JSON 格式錯誤');
+        return;
+      }
     }
     try {
       setSaving(true);
@@ -257,18 +381,18 @@ const AdminContent: React.FC = () => {
         contentType: newContentForm.contentType,
         sortOrder: sections.length + 1,
       });
-      logger.info("新增網站內容", { key: newContentForm.contentKey });
+      logger.info('新增網站內容', { key: newContentForm.contentKey });
       setShowCreateModal(false);
       setNewContentForm({
-        contentKey: "",
-        contentName: "",
-        contentValue: "",
-        contentType: "text",
+        contentKey: '',
+        contentName: '',
+        contentValue: '',
+        contentType: 'text',
       });
       fetchContent();
     } catch (err) {
-      logger.error("新增內容失敗", err);
-      setError("新增內容失敗（Key 可能已存在）");
+      logger.error('新增內容失敗', err);
+      setError('新增內容失敗（Key 可能已存在）');
     } finally {
       setSaving(false);
     }
@@ -276,30 +400,32 @@ const AdminContent: React.FC = () => {
 
   const handleToggleContentActive = async (section: SiteContent) => {
     try {
-      await contentService.updateContent(section.content_id, { isActive: !section.is_active });
+      await contentService.updateContent(section.content_id, {
+        isActive: !section.is_active,
+      });
       fetchContent();
     } catch (err) {
-      logger.error("切換顯示狀態失敗", err);
-      setError("切換顯示狀態失敗");
+      logger.error('切換顯示狀態失敗', err);
+      setError('切換顯示狀態失敗');
     }
   };
 
   const handleDeleteContent = async (section: SiteContent) => {
     const confirmed = await dialog.confirm({
-      title: "刪除內容",
+      title: '刪除內容',
       message: `確定要刪除「${section.content_name}」嗎？此操作無法復原。`,
-      variant: "danger",
-      confirmText: "刪除",
+      variant: 'danger',
+      confirmText: '刪除',
     });
     if (!confirmed) return;
 
     try {
       await contentService.deleteContent(section.content_id);
-      logger.info("刪除網站內容", { key: section.content_key });
+      logger.info('刪除網站內容', { key: section.content_key });
       fetchContent();
     } catch (err) {
-      logger.error("刪除內容失敗", err);
-      setError("刪除內容失敗");
+      logger.error('刪除內容失敗', err);
+      setError('刪除內容失敗');
     }
   };
 
@@ -313,19 +439,19 @@ const AdminContent: React.FC = () => {
         showOnce: popup.show_once,
         startDate: popup.start_date
           ? new Date(popup.start_date).toISOString().slice(0, 16)
-          : "",
+          : '',
         endDate: popup.end_date
           ? new Date(popup.end_date).toISOString().slice(0, 16)
-          : "",
+          : '',
       });
     } else {
       setEditingPopup(null);
       setPopupForm({
-        popupTitle: "",
-        popupContent: "",
+        popupTitle: '',
+        popupContent: '',
         showOnce: true,
-        startDate: "",
-        endDate: "",
+        startDate: '',
+        endDate: '',
       });
     }
     setShowPopupModal(true);
@@ -333,7 +459,7 @@ const AdminContent: React.FC = () => {
 
   const handleSavePopup = async () => {
     if (!popupForm.popupTitle.trim()) {
-      setError("彈窗標題為必填");
+      setError('彈窗標題為必填');
       return;
     }
     try {
@@ -348,17 +474,17 @@ const AdminContent: React.FC = () => {
 
       if (editingPopup) {
         await contentService.updatePopup(editingPopup.popup_id, payload);
-        logger.info("彈窗已更新", { id: editingPopup.popup_id });
+        logger.info('彈窗已更新', { id: editingPopup.popup_id });
       } else {
         await contentService.createPopup(payload);
-        logger.info("新增彈窗成功");
+        logger.info('新增彈窗成功');
       }
 
       setShowPopupModal(false);
       fetchPopups();
     } catch (err) {
-      logger.error("儲存彈窗失敗", err);
-      setError("儲存彈窗失敗");
+      logger.error('儲存彈窗失敗', err);
+      setError('儲存彈窗失敗');
     } finally {
       setSaving(false);
     }
@@ -370,33 +496,33 @@ const AdminContent: React.FC = () => {
       await contentService.updatePopup(popup.popup_id, {
         isActive: newActive,
       });
-      logger.info("彈窗狀態切換", {
+      logger.info('彈窗狀態切換', {
         id: popup.popup_id,
         active: newActive,
       });
       fetchPopups();
     } catch (err) {
-      logger.error("切換彈窗狀態失敗", err);
-      setError("切換彈窗狀態失敗");
+      logger.error('切換彈窗狀態失敗', err);
+      setError('切換彈窗狀態失敗');
     }
   };
 
   const handleDeletePopup = async (popup: SitePopup) => {
     const confirmed = await dialog.confirm({
-      title: "刪除彈窗",
-      message: `確定要刪除「${popup.popup_title || "未命名彈窗"}」嗎？`,
-      variant: "danger",
-      confirmText: "刪除",
+      title: '刪除彈窗',
+      message: `確定要刪除「${popup.popup_title || '未命名彈窗'}」嗎？`,
+      variant: 'danger',
+      confirmText: '刪除',
     });
     if (!confirmed) return;
 
     try {
       await contentService.deletePopup(popup.popup_id);
-      logger.info("刪除彈窗", { id: popup.popup_id });
+      logger.info('刪除彈窗', { id: popup.popup_id });
       fetchPopups();
     } catch (err) {
-      logger.error("刪除彈窗失敗", err);
-      setError("刪除彈窗失敗");
+      logger.error('刪除彈窗失敗', err);
+      setError('刪除彈窗失敗');
     }
   };
 
@@ -412,15 +538,22 @@ const AdminContent: React.FC = () => {
       });
     } else {
       setEditingTestimonial(null);
-      setTestimonialForm({ imageUrl: "", name: "", achievement: "", quote: "" });
+      setTestimonialForm({
+        imageUrl: '',
+        name: '',
+        achievement: '',
+        quote: '',
+      });
     }
-    setTestimonialUrlError("");
+    setTestimonialUrlError('');
     setShowTestimonialModal(true);
   };
 
   const handleSaveTestimonial = async () => {
     if (!isValidCloudinaryUrl(testimonialForm.imageUrl)) {
-      setTestimonialUrlError("網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭");
+      setTestimonialUrlError(
+        '網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭'
+      );
       return;
     }
     try {
@@ -444,8 +577,8 @@ const AdminContent: React.FC = () => {
       setShowTestimonialModal(false);
       fetchTestimonials();
     } catch (err) {
-      logger.error("儲存學員見證失敗", err);
-      setError("儲存學員見證失敗");
+      logger.error('儲存學員見證失敗', err);
+      setError('儲存學員見證失敗');
     } finally {
       setSaving(false);
     }
@@ -453,34 +586,36 @@ const AdminContent: React.FC = () => {
 
   const handleToggleTestimonialActive = async (slide: TestimonialSlide) => {
     try {
-      await slidesService.updateTestimonial(slide.id, { isActive: !slide.is_active });
+      await slidesService.updateTestimonial(slide.id, {
+        isActive: !slide.is_active,
+      });
       fetchTestimonials();
     } catch (err) {
-      logger.error("切換狀態失敗", err);
+      logger.error('切換狀態失敗', err);
     }
   };
 
   const handleDeleteTestimonial = async (slide: TestimonialSlide) => {
     const confirmed = await dialog.confirm({
-      title: "刪除學員見證",
-      message: `確定要刪除「${slide.name || "此見證"}」嗎？`,
-      variant: "danger",
-      confirmText: "刪除",
+      title: '刪除學員見證',
+      message: `確定要刪除「${slide.name || '此見證'}」嗎？`,
+      variant: 'danger',
+      confirmText: '刪除',
     });
     if (!confirmed) return;
     try {
       await slidesService.deleteTestimonial(slide.id);
       fetchTestimonials();
     } catch (err) {
-      logger.error("刪除學員見證失敗", err);
-      setError("刪除學員見證失敗");
+      logger.error('刪除學員見證失敗', err);
+      setError('刪除學員見證失敗');
     }
   };
 
   const handleSaveTestimonialConfig = async () => {
     const ms = Number(testimonialIntervalInput);
     if (isNaN(ms) || ms < 1000 || ms > 30000) {
-      setError("輪播間隔需在 1000～30000 毫秒之間");
+      setError('輪播間隔需在 1000～30000 毫秒之間');
       return;
     }
     try {
@@ -488,8 +623,8 @@ const AdminContent: React.FC = () => {
       await slidesService.updateTestimonialsConfig({ intervalMs: ms });
       fetchTestimonials();
     } catch (err) {
-      logger.error("更新輪播設定失敗", err);
-      setError("更新輪播設定失敗");
+      logger.error('更新輪播設定失敗', err);
+      setError('更新輪播設定失敗');
     } finally {
       setSaving(false);
     }
@@ -497,20 +632,24 @@ const AdminContent: React.FC = () => {
 
   const handleToggleTestimonialPublish = async () => {
     try {
-      await slidesService.updateTestimonialsConfig({ isPublished: !testimonialConfig.is_published });
+      await slidesService.updateTestimonialsConfig({
+        isPublished: !testimonialConfig.is_published,
+      });
       fetchTestimonials();
     } catch (err) {
-      logger.error("切換發布狀態失敗", err);
+      logger.error('切換發布狀態失敗', err);
     }
   };
 
-  const handleChangeTestimonialLayout = async (layout: 'portrait' | 'landscape') => {
+  const handleChangeTestimonialLayout = async (
+    layout: 'portrait' | 'landscape'
+  ) => {
     if (layout === testimonialConfig.card_layout) return;
     try {
       await slidesService.updateTestimonialsConfig({ cardLayout: layout });
       fetchTestimonials();
     } catch (err) {
-      logger.error("切換版型失敗", err);
+      logger.error('切換版型失敗', err);
     }
   };
 
@@ -521,15 +660,17 @@ const AdminContent: React.FC = () => {
       setGalleryForm({ imageUrl: slide.image_url, caption: slide.caption });
     } else {
       setEditingGallery(null);
-      setGalleryForm({ imageUrl: "", caption: "" });
+      setGalleryForm({ imageUrl: '', caption: '' });
     }
-    setGalleryUrlError("");
+    setGalleryUrlError('');
     setShowGalleryModal(true);
   };
 
   const handleSaveGallery = async () => {
     if (!isValidCloudinaryUrl(galleryForm.imageUrl)) {
-      setGalleryUrlError("網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭");
+      setGalleryUrlError(
+        '網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭'
+      );
       return;
     }
     try {
@@ -549,8 +690,8 @@ const AdminContent: React.FC = () => {
       setShowGalleryModal(false);
       fetchGallery();
     } catch (err) {
-      logger.error("儲存相片失敗", err);
-      setError("儲存相片失敗");
+      logger.error('儲存相片失敗', err);
+      setError('儲存相片失敗');
     } finally {
       setSaving(false);
     }
@@ -558,36 +699,40 @@ const AdminContent: React.FC = () => {
 
   const handleToggleGalleryActive = async (slide: GallerySlide) => {
     try {
-      await slidesService.updateGallery(slide.id, { isActive: !slide.is_active });
+      await slidesService.updateGallery(slide.id, {
+        isActive: !slide.is_active,
+      });
       fetchGallery();
     } catch (err) {
-      logger.error("切換狀態失敗", err);
+      logger.error('切換狀態失敗', err);
     }
   };
 
   const handleDeleteGallery = async (slide: GallerySlide) => {
     const confirmed = await dialog.confirm({
-      title: "刪除相片",
-      message: `確定要刪除「${slide.caption || "此相片"}」嗎？`,
-      variant: "danger",
-      confirmText: "刪除",
+      title: '刪除相片',
+      message: `確定要刪除「${slide.caption || '此相片'}」嗎？`,
+      variant: 'danger',
+      confirmText: '刪除',
     });
     if (!confirmed) return;
     try {
       await slidesService.deleteGallery(slide.id);
       fetchGallery();
     } catch (err) {
-      logger.error("刪除相片失敗", err);
-      setError("刪除相片失敗");
+      logger.error('刪除相片失敗', err);
+      setError('刪除相片失敗');
     }
   };
 
   const handleToggleGalleryPublish = async () => {
     try {
-      await slidesService.updateGalleryConfig({ isPublished: !galleryConfig.is_published });
+      await slidesService.updateGalleryConfig({
+        isPublished: !galleryConfig.is_published,
+      });
       fetchGallery();
     } catch (err) {
-      logger.error("切換發布狀態失敗", err);
+      logger.error('切換發布狀態失敗', err);
     }
   };
 
@@ -608,41 +753,41 @@ const AdminContent: React.FC = () => {
       {/* Tab 切換 */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
-          onClick={() => setActiveTab("content")}
+          onClick={() => setActiveTab('content')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "content"
-              ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
-              : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+            activeTab === 'content'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
           📝 網站文案
         </button>
         <button
-          onClick={() => setActiveTab("popup")}
+          onClick={() => setActiveTab('popup')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "popup"
-              ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
-              : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+            activeTab === 'popup'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
           🪟 首頁彈窗
         </button>
         <button
-          onClick={() => setActiveTab("testimonial")}
+          onClick={() => setActiveTab('testimonial')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "testimonial"
-              ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
-              : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+            activeTab === 'testimonial'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
           🏆 學員見證幻燈片
         </button>
         <button
-          onClick={() => setActiveTab("gallery")}
+          onClick={() => setActiveTab('gallery')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "gallery"
-              ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
-              : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+            activeTab === 'gallery'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
           🖼️ 相片輪播
@@ -655,7 +800,7 @@ const AdminContent: React.FC = () => {
           {error}
           <button
             className="ml-2 text-red-300 hover:text-red-100"
-            onClick={() => setError("")}
+            onClick={() => setError('')}
           >
             ✕
           </button>
@@ -663,7 +808,7 @@ const AdminContent: React.FC = () => {
       )}
 
       {/* ===== 網站文案分頁 ===== */}
-      {activeTab === "content" && (
+      {activeTab === 'content' && (
         <div>
           <div className="flex justify-end mb-4">
             <PillButton
@@ -682,64 +827,103 @@ const AdminContent: React.FC = () => {
               尚無內容，請執行資料庫 Migration 後重新載入
             </div>
           ) : (
-            <div className="space-y-4">
-              {sections.map((section) => (
-                <div
-                  key={section.content_id}
-                  className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
-                    section.is_active ? "border-luxe-gold/10" : "border-luxe-gold/5 opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-luxe-text font-medium text-sm">
-                          {section.content_name}
-                        </h3>
-                        <span className="text-xs px-1.5 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
-                          {section.content_type}
-                        </span>
-                        {!section.is_active && (
-                          <span className="text-xs px-1.5 py-0.5 bg-red-900/30 text-red-400 rounded">
-                            已停用
+            <div className="space-y-8">
+              {/* 依首頁區塊分組呈現 */}
+              {HOMEPAGE_SECTIONS.map((sectionMeta) => {
+                const sectionItems = sections.filter(
+                  (s) => KEY_TO_SECTION_ID[s.content_key] === sectionMeta.id
+                );
+                if (sectionItems.length === 0) return null;
+                return (
+                  <div key={sectionMeta.id}>
+                    {/* 區塊大標 */}
+                    <div className="flex items-start gap-3 mb-3 pb-2 border-b border-luxe-gold/15">
+                      <span className="text-2xl leading-none pt-0.5">
+                        {sectionMeta.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="text-luxe-text font-medium">
+                          {sectionMeta.title}
+                        </h2>
+                        <p className="text-luxe-muted text-xs">
+                          <span className="text-luxe-gold/70 mr-2">
+                            {sectionMeta.tagline}
                           </span>
+                          {sectionMeta.description}
+                        </p>
+                      </div>
+                    </div>
+                    {/* 區塊提示（共用資料 / 跳轉其他 tab） */}
+                    {sectionMeta.hint && (
+                      <div className="mb-3 p-2 text-xs text-luxe-gold/80 bg-luxe-gold/5 border border-luxe-gold/15 rounded flex items-center gap-2">
+                        <span>{sectionMeta.hint.text}</span>
+                        {sectionMeta.hint.targetTab && (
+                          <button
+                            onClick={() =>
+                              setActiveTab(sectionMeta.hint!.targetTab!)
+                            }
+                            className="underline hover:text-luxe-gold whitespace-nowrap"
+                          >
+                            前往 →
+                          </button>
                         )}
                       </div>
-                      <p className="text-luxe-text/70 text-xs line-clamp-2 whitespace-pre-wrap">
-                        {section.content_value || "(空白)"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Toggle
-                        theme="luxe"
-                        checked={section.is_active}
-                        onChange={() => handleToggleContentActive(section)}
-                      />
-                      <PillButton
-                        theme="luxe"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(section)}
-                      >
-                        編輯
-                      </PillButton>
-                      <button
-                        onClick={() => handleDeleteContent(section)}
-                        className="text-red-400 hover:text-red-300 text-sm px-1"
-                      >
-                        刪除
-                      </button>
+                    )}
+                    <div className="space-y-2">
+                      {sectionItems.map((item) => (
+                        <SectionItemRow
+                          key={item.content_id}
+                          item={item}
+                          onToggle={handleToggleContentActive}
+                          onEdit={handleEdit}
+                          onDelete={handleDeleteContent}
+                        />
+                      ))}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
+              {/* 其他（未分類）*/}
+              {(() => {
+                const others = sections.filter(
+                  (s) => !KEY_TO_SECTION_ID[s.content_key]
+                );
+                if (others.length === 0) return null;
+                return (
+                  <div>
+                    <div className="flex items-start gap-3 mb-3 pb-2 border-b border-luxe-gold/15">
+                      <span className="text-2xl leading-none pt-0.5">📦</span>
+                      <div>
+                        <h2 className="text-luxe-text font-medium">
+                          其他（未分類）
+                        </h2>
+                        <p className="text-luxe-muted text-xs">
+                          尚未對應到首頁區塊的自訂欄位
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {others.map((item) => (
+                        <SectionItemRow
+                          key={item.content_id}
+                          item={item}
+                          onToggle={handleToggleContentActive}
+                          onEdit={handleEdit}
+                          onDelete={handleDeleteContent}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
       )}
 
       {/* ===== 首頁彈窗分頁 ===== */}
-      {activeTab === "popup" && (
+      {activeTab === 'popup' && (
         <div>
           <div className="flex justify-end mb-4">
             <PillButton
@@ -764,15 +948,15 @@ const AdminContent: React.FC = () => {
                   key={popup.popup_id}
                   className={`bg-luxe-surface rounded-lg border p-6 transition-all ${
                     popup.is_active
-                      ? "border-luxe-gold/40 shadow-md shadow-luxe-gold/10"
-                      : "border-luxe-gold/10"
+                      ? 'border-luxe-gold/40 shadow-md shadow-luxe-gold/10'
+                      : 'border-luxe-gold/10'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-grow min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-luxe-text font-medium">
-                          {popup.popup_title || "未命名彈窗"}
+                          {popup.popup_title || '未命名彈窗'}
                         </h3>
                         {popup.is_active && (
                           <span className="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded animate-pulse">
@@ -787,21 +971,21 @@ const AdminContent: React.FC = () => {
                       </div>
                       {(popup.start_date || popup.end_date) && (
                         <p className="text-luxe-muted text-xs mb-2">
-                          ⏰{" "}
+                          ⏰{' '}
                           {popup.start_date
-                            ? new Date(popup.start_date).toLocaleString("zh-TW")
-                            : "立即"}
-                          {" → "}
+                            ? new Date(popup.start_date).toLocaleString('zh-TW')
+                            : '立即'}
+                          {' → '}
                           {popup.end_date
-                            ? new Date(popup.end_date).toLocaleString("zh-TW")
-                            : "永久"}
+                            ? new Date(popup.end_date).toLocaleString('zh-TW')
+                            : '永久'}
                         </p>
                       )}
                       <div
                         className="text-luxe-text/60 text-sm line-clamp-2 [&>*]:m-0"
                         dangerouslySetInnerHTML={{
                           __html:
-                            popup.popup_content.slice(0, 200) || "(空白內容)",
+                            popup.popup_content.slice(0, 200) || '(空白內容)',
                         }}
                       />
                     </div>
@@ -835,7 +1019,7 @@ const AdminContent: React.FC = () => {
       )}
 
       {/* ===== 學員見證幻燈片分頁 ===== */}
-      {activeTab === "testimonial" && (
+      {activeTab === 'testimonial' && (
         <div>
           {/* Config Bar */}
           <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10">
@@ -847,7 +1031,9 @@ const AdminContent: React.FC = () => {
                 onChange={handleToggleTestimonialPublish}
               />
               <span className="text-sm text-luxe-text">
-                {testimonialConfig.is_published ? "🟢 首頁顯示中" : "⚫ 已隱藏（草稿）"}
+                {testimonialConfig.is_published
+                  ? '🟢 首頁顯示中'
+                  : '⚫ 已隱藏（草稿）'}
               </span>
             </div>
 
@@ -862,8 +1048,21 @@ const AdminContent: React.FC = () => {
                     : 'border-luxe-gold/15 text-luxe-muted hover:border-luxe-gold/30 hover:text-luxe-text'
                 }`}
               >
-                <svg className="w-3.5 h-4.5" viewBox="0 0 10 14" fill="currentColor">
-                  <rect x="1" y="1" width="8" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                <svg
+                  className="w-3.5 h-4.5"
+                  viewBox="0 0 10 14"
+                  fill="currentColor"
+                >
+                  <rect
+                    x="1"
+                    y="1"
+                    width="8"
+                    height="12"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    fill="none"
+                  />
                 </svg>
                 直立式
               </button>
@@ -875,8 +1074,21 @@ const AdminContent: React.FC = () => {
                     : 'border-luxe-gold/15 text-luxe-muted hover:border-luxe-gold/30 hover:text-luxe-text'
                 }`}
               >
-                <svg className="w-4.5 h-3.5" viewBox="0 0 14 10" fill="currentColor">
-                  <rect x="1" y="1" width="12" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                <svg
+                  className="w-4.5 h-3.5"
+                  viewBox="0 0 14 10"
+                  fill="currentColor"
+                >
+                  <rect
+                    x="1"
+                    y="1"
+                    width="12"
+                    height="8"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    fill="none"
+                  />
                 </svg>
                 橫式
               </button>
@@ -894,15 +1106,30 @@ const AdminContent: React.FC = () => {
                 onChange={(e) => setTestimonialIntervalInput(e.target.value)}
                 className="w-24 bg-luxe-surface border border-luxe-gold/20 rounded-lg px-3 py-1.5 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50"
               />
-              <PillButton theme="luxe" variant="outline" size="sm" onClick={handleSaveTestimonialConfig} disabled={saving}>
+              <PillButton
+                theme="luxe"
+                variant="outline"
+                size="sm"
+                onClick={handleSaveTestimonialConfig}
+                disabled={saving}
+              >
                 套用
               </PillButton>
             </div>
 
-            <PillButton theme="luxe" variant="outline" size="sm" onClick={() => setShowTestimonialPreview(true)}>
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTestimonialPreview(true)}
+            >
               👁 預覽效果
             </PillButton>
-            <PillButton theme="luxe" variant="outline" onClick={() => openTestimonialModal()}>
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              onClick={() => openTestimonialModal()}
+            >
               + 新增幻燈片
             </PillButton>
           </div>
@@ -919,7 +1146,9 @@ const AdminContent: React.FC = () => {
                 <div
                   key={slide.id}
                   className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
-                    slide.is_active ? "border-luxe-gold/15" : "border-luxe-gold/5 opacity-50"
+                    slide.is_active
+                      ? 'border-luxe-gold/15'
+                      : 'border-luxe-gold/5 opacity-50'
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -935,18 +1164,24 @@ const AdminContent: React.FC = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="text-luxe-text font-medium text-sm">{slide.name || "(未命名)"}</span>
+                        <span className="text-luxe-text font-medium text-sm">
+                          {slide.name || '(未命名)'}
+                        </span>
                         {slide.achievement && (
                           <span className="text-xs bg-luxe-gold/10 text-luxe-gold px-2 py-0.5 rounded-full">
                             {slide.achievement}
                           </span>
                         )}
                         {!slide.is_active && (
-                          <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">停用</span>
+                          <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">
+                            停用
+                          </span>
                         )}
                       </div>
                       {slide.quote && (
-                        <p className="text-luxe-muted text-xs line-clamp-1">「{slide.quote}」</p>
+                        <p className="text-luxe-muted text-xs line-clamp-1">
+                          「{slide.quote}」
+                        </p>
                       )}
                     </div>
                     {/* Actions */}
@@ -956,7 +1191,12 @@ const AdminContent: React.FC = () => {
                         checked={slide.is_active}
                         onChange={() => handleToggleTestimonialActive(slide)}
                       />
-                      <PillButton theme="luxe" variant="outline" size="sm" onClick={() => openTestimonialModal(slide)}>
+                      <PillButton
+                        theme="luxe"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openTestimonialModal(slide)}
+                      >
                         編輯
                       </PillButton>
                       <button
@@ -975,7 +1215,7 @@ const AdminContent: React.FC = () => {
       )}
 
       {/* ===== 相片輪播分頁 ===== */}
-      {activeTab === "gallery" && (
+      {activeTab === 'gallery' && (
         <div>
           {/* Config Bar */}
           <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10">
@@ -986,14 +1226,25 @@ const AdminContent: React.FC = () => {
                 onChange={handleToggleGalleryPublish}
               />
               <span className="text-sm text-luxe-text">
-                {galleryConfig.is_published ? "🟢 首頁顯示中" : "⚫ 已隱藏（草稿）"}
+                {galleryConfig.is_published
+                  ? '🟢 首頁顯示中'
+                  : '⚫ 已隱藏（草稿）'}
               </span>
             </div>
             <div className="flex gap-2 ml-auto">
-              <PillButton theme="luxe" variant="outline" size="sm" onClick={() => setShowGalleryPreview(true)}>
+              <PillButton
+                theme="luxe"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGalleryPreview(true)}
+              >
                 👁 預覽效果
               </PillButton>
-              <PillButton theme="luxe" variant="outline" onClick={() => openGalleryModal()}>
+              <PillButton
+                theme="luxe"
+                variant="outline"
+                onClick={() => openGalleryModal()}
+              >
                 + 新增相片
               </PillButton>
             </div>
@@ -1011,7 +1262,9 @@ const AdminContent: React.FC = () => {
                 <div
                   key={slide.id}
                   className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
-                    slide.is_active ? "border-luxe-gold/15" : "border-luxe-gold/5 opacity-50"
+                    slide.is_active
+                      ? 'border-luxe-gold/15'
+                      : 'border-luxe-gold/5 opacity-50'
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -1027,7 +1280,7 @@ const AdminContent: React.FC = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-luxe-text text-sm">
-                        {slide.caption || "(無說明文字)"}
+                        {slide.caption || '(無說明文字)'}
                       </p>
                       {!slide.is_active && (
                         <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded mt-1 inline-block">
@@ -1042,7 +1295,12 @@ const AdminContent: React.FC = () => {
                         checked={slide.is_active}
                         onChange={() => handleToggleGalleryActive(slide)}
                       />
-                      <PillButton theme="luxe" variant="outline" size="sm" onClick={() => openGalleryModal(slide)}>
+                      <PillButton
+                        theme="luxe"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openGalleryModal(slide)}
+                      >
                         編輯
                       </PillButton>
                       <button
@@ -1064,14 +1322,14 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={!!editingSection}
         onClose={() => setEditingSection(null)}
-        title={`編輯 - ${editingSection?.content_name || ""}`}
+        title={`編輯 - ${editingSection?.content_name || ''}`}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4">
           <Input
             label="Key（唯讀）"
-            value={editingSection?.content_key || ""}
+            value={editingSection?.content_key || ''}
             disabled
             theme="luxe"
           />
@@ -1079,16 +1337,63 @@ const AdminContent: React.FC = () => {
           {editingSection && (
             <TemplatePicker
               contentKey={editingSection.content_key}
-              onSelect={(value) => setEditContent(value)}
+              onSelect={(value) => {
+                setEditContent(value);
+                setEditUrlError('');
+              }}
             />
           )}
-          <Textarea
-            label="內容"
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            theme="luxe"
-            rows={8}
-          />
+
+          {/* 依 content_type 切換輸入 UI */}
+          {editingSection?.content_type === 'image' ? (
+            <div className="space-y-2">
+              <Input
+                label="圖片網址（必須 Cloudinary）"
+                value={editContent}
+                onChange={(e) => {
+                  setEditContent(e.target.value);
+                  setEditUrlError('');
+                }}
+                placeholder={`${CLOUDINARY_PREFIX}image/upload/...`}
+                theme="luxe"
+              />
+              {editUrlError && (
+                <p className="text-red-400 text-xs">{editUrlError}</p>
+              )}
+              {editContent && isValidCloudinaryUrl(editContent) && (
+                <div className="mt-2 w-32 h-40 rounded-lg overflow-hidden border border-luxe-gold/20">
+                  <img
+                    src={editContent}
+                    alt="預覽"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              {editContent && !isValidCloudinaryUrl(editContent) && (
+                <div className="mt-2 p-2 bg-orange-900/20 border border-orange-500/30 rounded text-xs text-orange-300">
+                  ⚠️ 目前值不是 Cloudinary
+                  網址（可能是舊的本地檔）。儲存時必須替換成 Cloudinary URL。
+                </div>
+              )}
+            </div>
+          ) : editingSection?.content_type === 'json' ? (
+            <Textarea
+              label="內容（JSON 格式）"
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              theme="luxe"
+              rows={8}
+              placeholder='例：["體態","自信","健康","未來"]'
+            />
+          ) : (
+            <Textarea
+              label="內容"
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              theme="luxe"
+              rows={8}
+            />
+          )}
           <div className="flex justify-end gap-3">
             <PillButton
               theme="luxe"
@@ -1103,7 +1408,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSaveContent}
               disabled={saving}
             >
-              {saving ? "儲存中..." : "儲存"}
+              {saving ? '儲存中...' : '儲存'}
             </PillButton>
           </div>
         </div>
@@ -1124,7 +1429,7 @@ const AdminContent: React.FC = () => {
             onChange={(e) =>
               setNewContentForm({
                 ...newContentForm,
-                contentKey: e.target.value.replace(/\s/g, "_").toLowerCase(),
+                contentKey: e.target.value.replace(/\s/g, '_').toLowerCase(),
               })
             }
             placeholder="例如: hero_cta_text"
@@ -1151,13 +1456,19 @@ const AdminContent: React.FC = () => {
               onChange={(e) =>
                 setNewContentForm({
                   ...newContentForm,
-                  contentType: e.target.value as "text" | "html",
+                  contentType: e.target.value as
+                    | 'text'
+                    | 'html'
+                    | 'json'
+                    | 'image',
                 })
               }
               className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
             >
               <option value="text">純文字</option>
               <option value="html">HTML</option>
+              <option value="json">JSON 陣列</option>
+              <option value="image">圖片 (Cloudinary URL)</option>
             </select>
           </div>
           {/* 範本選擇器 - 根據輸入的 Key 動態顯示 */}
@@ -1195,7 +1506,7 @@ const AdminContent: React.FC = () => {
               onClick={handleCreateContent}
               disabled={saving}
             >
-              {saving ? "新增中..." : "新增"}
+              {saving ? '新增中...' : '新增'}
             </PillButton>
           </div>
         </div>
@@ -1205,7 +1516,7 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showPopupModal}
         onClose={() => setShowPopupModal(false)}
-        title={editingPopup ? "編輯彈窗" : "新增彈窗"}
+        title={editingPopup ? '編輯彈窗' : '新增彈窗'}
         theme="luxe"
         size="full"
       >
@@ -1289,7 +1600,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSavePopup}
               disabled={saving}
             >
-              {saving ? "儲存中..." : "儲存"}
+              {saving ? '儲存中...' : '儲存'}
             </PillButton>
           </div>
         </div>
@@ -1298,23 +1609,29 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showTestimonialModal}
         onClose={() => setShowTestimonialModal(false)}
-        title={editingTestimonial ? "編輯學員見證" : "新增學員見證"}
+        title={editingTestimonial ? '編輯學員見證' : '新增學員見證'}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4">
           {/* Cloudinary URL 說明 */}
           <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
-            📌 圖片網址限定使用 Cloudinary：<br />
-            <span className="text-luxe-gold/80 font-mono break-all">https://res.cloudinary.com/daejq0zo9/image/upload/...</span>
+            📌 圖片網址限定使用 Cloudinary：
+            <br />
+            <span className="text-luxe-gold/80 font-mono break-all">
+              https://res.cloudinary.com/daejq0zo9/image/upload/...
+            </span>
           </div>
           <div>
             <Input
               label="圖片網址 (Cloudinary) *"
               value={testimonialForm.imageUrl}
               onChange={(e) => {
-                setTestimonialForm({ ...testimonialForm, imageUrl: e.target.value });
-                setTestimonialUrlError("");
+                setTestimonialForm({
+                  ...testimonialForm,
+                  imageUrl: e.target.value,
+                });
+                setTestimonialUrlError('');
               }}
               placeholder="https://res.cloudinary.com/daejq0zo9/image/upload/..."
               theme="luxe"
@@ -1323,40 +1640,63 @@ const AdminContent: React.FC = () => {
               <p className="text-red-400 text-xs mt-1">{testimonialUrlError}</p>
             )}
             {/* 圖片預覽 */}
-            {testimonialForm.imageUrl && isValidCloudinaryUrl(testimonialForm.imageUrl) && (
-              <div className="mt-2 w-20 h-24 rounded-lg overflow-hidden border border-luxe-gold/20">
-                <img src={testimonialForm.imageUrl} alt="預覽" className="w-full h-full object-cover" />
-              </div>
-            )}
+            {testimonialForm.imageUrl &&
+              isValidCloudinaryUrl(testimonialForm.imageUrl) && (
+                <div className="mt-2 w-20 h-24 rounded-lg overflow-hidden border border-luxe-gold/20">
+                  <img
+                    src={testimonialForm.imageUrl}
+                    alt="預覽"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
           </div>
           <Input
             label="學員姓名 *"
             value={testimonialForm.name}
-            onChange={(e) => setTestimonialForm({ ...testimonialForm, name: e.target.value })}
+            onChange={(e) =>
+              setTestimonialForm({ ...testimonialForm, name: e.target.value })
+            }
             placeholder="例如：小美"
             theme="luxe"
           />
           <Input
             label="成就標籤（選填）"
             value={testimonialForm.achievement}
-            onChange={(e) => setTestimonialForm({ ...testimonialForm, achievement: e.target.value })}
+            onChange={(e) =>
+              setTestimonialForm({
+                ...testimonialForm,
+                achievement: e.target.value,
+              })
+            }
             placeholder="例如：3個月減脂12公斤"
             theme="luxe"
           />
           <Textarea
             label="見證內文（選填）"
             value={testimonialForm.quote}
-            onChange={(e) => setTestimonialForm({ ...testimonialForm, quote: e.target.value })}
+            onChange={(e) =>
+              setTestimonialForm({ ...testimonialForm, quote: e.target.value })
+            }
             placeholder="學員的真實感言..."
             theme="luxe"
             rows={4}
           />
           <div className="flex justify-end gap-3 pt-2">
-            <PillButton theme="luxe" variant="outline" onClick={() => setShowTestimonialModal(false)}>
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              onClick={() => setShowTestimonialModal(false)}
+            >
               取消
             </PillButton>
-            <PillButton theme="luxe" variant="filled" onClick={handleSaveTestimonial} disabled={saving}>
-              {saving ? "儲存中..." : "儲存"}
+            <PillButton
+              theme="luxe"
+              variant="filled"
+              onClick={handleSaveTestimonial}
+              disabled={saving}
+            >
+              {saving ? '儲存中...' : '儲存'}
             </PillButton>
           </div>
         </div>
@@ -1383,14 +1723,17 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showGalleryModal}
         onClose={() => setShowGalleryModal(false)}
-        title={editingGallery ? "編輯相片" : "新增相片"}
+        title={editingGallery ? '編輯相片' : '新增相片'}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4">
           <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
-            📌 圖片網址限定使用 Cloudinary：<br />
-            <span className="text-luxe-gold/80 font-mono break-all">https://res.cloudinary.com/daejq0zo9/image/upload/...</span>
+            📌 圖片網址限定使用 Cloudinary：
+            <br />
+            <span className="text-luxe-gold/80 font-mono break-all">
+              https://res.cloudinary.com/daejq0zo9/image/upload/...
+            </span>
           </div>
           <div>
             <Input
@@ -1398,7 +1741,7 @@ const AdminContent: React.FC = () => {
               value={galleryForm.imageUrl}
               onChange={(e) => {
                 setGalleryForm({ ...galleryForm, imageUrl: e.target.value });
-                setGalleryUrlError("");
+                setGalleryUrlError('');
               }}
               placeholder="https://res.cloudinary.com/daejq0zo9/image/upload/..."
               theme="luxe"
@@ -1406,25 +1749,41 @@ const AdminContent: React.FC = () => {
             {galleryUrlError && (
               <p className="text-red-400 text-xs mt-1">{galleryUrlError}</p>
             )}
-            {galleryForm.imageUrl && isValidCloudinaryUrl(galleryForm.imageUrl) && (
-              <div className="mt-2 w-32 h-20 rounded-lg overflow-hidden border border-luxe-gold/20">
-                <img src={galleryForm.imageUrl} alt="預覽" className="w-full h-full object-cover" />
-              </div>
-            )}
+            {galleryForm.imageUrl &&
+              isValidCloudinaryUrl(galleryForm.imageUrl) && (
+                <div className="mt-2 w-32 h-20 rounded-lg overflow-hidden border border-luxe-gold/20">
+                  <img
+                    src={galleryForm.imageUrl}
+                    alt="預覽"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
           </div>
           <Input
             label="圖片說明文字（選填）"
             value={galleryForm.caption}
-            onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value })}
+            onChange={(e) =>
+              setGalleryForm({ ...galleryForm, caption: e.target.value })
+            }
             placeholder="例如：培訓現場記錄"
             theme="luxe"
           />
           <div className="flex justify-end gap-3 pt-2">
-            <PillButton theme="luxe" variant="outline" onClick={() => setShowGalleryModal(false)}>
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              onClick={() => setShowGalleryModal(false)}
+            >
               取消
             </PillButton>
-            <PillButton theme="luxe" variant="filled" onClick={handleSaveGallery} disabled={saving}>
-              {saving ? "儲存中..." : "儲存"}
+            <PillButton
+              theme="luxe"
+              variant="filled"
+              onClick={handleSaveGallery}
+              disabled={saving}
+            >
+              {saving ? '儲存中...' : '儲存'}
             </PillButton>
           </div>
         </div>

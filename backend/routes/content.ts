@@ -9,6 +9,11 @@ import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 
 const router: Router = express.Router();
 
+/** 圖片型內容網址限定 Cloudinary（與 slides.ts 對齊） */
+const CLOUDINARY_PREFIX = "https://res.cloudinary.com/daejq0zo9/";
+const isValidCloudinaryUrl = (url: unknown): boolean =>
+  typeof url === "string" && url.startsWith(CLOUDINARY_PREFIX);
+
 // ===== 公開 API =====
 
 /**
@@ -107,6 +112,31 @@ router.put(
       const { id } = req.params;
       const { contentValue, contentName, contentType, isActive } = req.body;
 
+      // image 型內容：驗證必須是 Cloudinary URL
+      // 決策 content_type 後再驗 value：若本次一併改 type，以新的 type 為準
+      const effectiveType =
+        contentType !== undefined
+          ? contentType
+          : (
+              await supabaseAdmin
+                .from("site_content")
+                .select("content_type")
+                .eq("content_id", id)
+                .single()
+            ).data?.content_type;
+
+      if (
+        effectiveType === "image" &&
+        contentValue !== undefined &&
+        contentValue !== "" &&
+        !isValidCloudinaryUrl(contentValue)
+      ) {
+        res.status(400).json({
+          error: `圖片網址必須使用 Cloudinary（${CLOUDINARY_PREFIX}...）`,
+        });
+        return;
+      }
+
       const updateData: Record<string, unknown> = {};
       if (contentValue !== undefined) updateData.content_value = contentValue;
       if (contentName !== undefined) updateData.content_name = contentName;
@@ -141,6 +171,17 @@ router.post(
     try {
       const { contentKey, contentName, contentValue, contentType, sortOrder } =
         req.body;
+
+      if (
+        contentType === "image" &&
+        contentValue &&
+        !isValidCloudinaryUrl(contentValue)
+      ) {
+        res.status(400).json({
+          error: `圖片網址必須使用 Cloudinary（${CLOUDINARY_PREFIX}...）`,
+        });
+        return;
+      }
 
       const { data, error } = await supabaseAdmin
         .from("site_content")

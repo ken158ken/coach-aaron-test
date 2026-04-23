@@ -3,7 +3,7 @@
  * @module services/content.service
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from './api';
 
 /** 網站內容項目 */
 export interface SiteContent {
@@ -11,7 +11,7 @@ export interface SiteContent {
   content_key: string;
   content_name: string;
   content_value: string;
-  content_type: "text" | "html" | "json";
+  content_type: 'text' | 'html' | 'json' | 'image';
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -49,14 +49,14 @@ export const contentService = {
    * 取得所有啟用內容 (key-value map)
    */
   getPublicContent: async (): Promise<Record<string, string>> => {
-    return get<Record<string, string>>("/api/content");
+    return get<Record<string, string>>('/api/content');
   },
 
   /**
    * 取得目前啟用的彈窗
    */
   getActivePopup: async (): Promise<ActivePopup | null> => {
-    return get<ActivePopup | null>("/api/content/popup/active");
+    return get<ActivePopup | null>('/api/content/popup/active');
   },
 
   // ===== 管理員 API =====
@@ -65,7 +65,7 @@ export const contentService = {
    * 取得所有網站內容（管理員）
    */
   getAllAdmin: async (): Promise<SiteContent[]> => {
-    return get<SiteContent[]>("/api/content/admin/all");
+    return get<SiteContent[]>('/api/content/admin/all');
   },
 
   /**
@@ -78,7 +78,7 @@ export const contentService = {
       contentName: string;
       contentType: string;
       isActive: boolean;
-    }>,
+    }>
   ): Promise<SiteContent> => {
     return put<SiteContent>(`/api/content/admin/${id}`, data);
   },
@@ -93,7 +93,7 @@ export const contentService = {
     contentType?: string;
     sortOrder?: number;
   }): Promise<SiteContent> => {
-    return post<SiteContent>("/api/content/admin", data);
+    return post<SiteContent>('/api/content/admin', data);
   },
 
   /**
@@ -109,7 +109,7 @@ export const contentService = {
    * 取得所有彈窗（管理員）
    */
   getAllPopups: async (): Promise<SitePopup[]> => {
-    return get<SitePopup[]>("/api/content/admin/popups");
+    return get<SitePopup[]>('/api/content/admin/popups');
   },
 
   /**
@@ -122,7 +122,7 @@ export const contentService = {
     startDate?: string | null;
     endDate?: string | null;
   }): Promise<SitePopup> => {
-    return post<SitePopup>("/api/content/admin/popups", data);
+    return post<SitePopup>('/api/content/admin/popups', data);
   },
 
   /**
@@ -137,7 +137,7 @@ export const contentService = {
       showOnce: boolean;
       startDate: string | null;
       endDate: string | null;
-    }>,
+    }>
   ): Promise<SitePopup> => {
     return put<SitePopup>(`/api/content/admin/popups/${id}`, data);
   },

@@ -2,6 +2,15 @@
 
 > 🏋️ 專業健身教練官方網站 - 使用 React + TypeScript + Three.js + GSAP 打造的沉浸式視覺體驗
 
+## 🆕 最近更新（2026-04-23）
+
+- **後台內容管理重構**：「網站文案」tab 改為依首頁區塊分組呈現。
+- 首頁 8 大區塊（Hero、教練介紹、Podcast、學員見證、真實評價、Gallery、Moments、認證/成果 Marquee）全部從 `site_content` DB 讀取。
+- `site_content` 新增 `json` / `image` 型別；後台 Edit/Create Modal 依型別切換輸入器。
+- 圖片型文案**三層驗證**只允許 Cloudinary (`https://res.cloudinary.com/daejq0zo9/`) URL。
+- 共用 hook [`useSiteContent`](frontend/src/hooks/useSiteContent.ts) 加入模組層快取，避免重複 API 呼叫。
+- 詳細報告：[`REPORTS/CONTENT_ADMIN_REFACTOR_2026-04-23T19-15-00+08-00.md`](REPORTS/CONTENT_ADMIN_REFACTOR_2026-04-23T19-15-00+08-00.md)
+
 ## 📋 專案概述
 
 此專案是 `coach-aaron-test` 的全新前端視覺設計，採用 **Monorepo 結構** 前後端分離，融合三種精心設計的視覺主題：
@@ -200,7 +209,7 @@ GET /api/auth/google → Google 授權頁面 → /api/auth/google/callback
 function extractToken(req: Request): string | null {
   // 1. 優先讀取 Authorization: Bearer <token>
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+  if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7);
   // 2. Fallback 讀取 cookie
   return req.cookies?.token || null;
 }
@@ -700,11 +709,11 @@ COACH_EMAIL=s330221@gmail.com           # 教練收件信箱
 
 ```tsx
 // 在元件中使用日夜模式
-import { useTheme } from "@/context";
+import { useTheme } from '@/context';
 const { isDark, toggleColorMode } = useTheme();
 
 // 在元件中使用語言切換
-import { useLanguage } from "@/context";
+import { useLanguage } from '@/context';
 const { language, toggleLanguage, t } = useLanguage();
 // t.nav.home => "首頁" 或 "Home"
 ```
