@@ -20,7 +20,7 @@ const STATUS_STYLE: Record<BookingStatus, string> = {
   confirmed: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   rejected: "bg-red-500/15 text-red-300 border-red-500/30",
   cancelled: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
-  completed: "bg-luxe-gold/15 text-luxe-gold border-luxe-gold/30",
+  completed: "bg-gold/15 text-gold border-gold/30",
 };
 
 const MyBookingsPage: React.FC = () => {
@@ -72,10 +72,10 @@ const MyBookingsPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-4 py-10 sm:py-16">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light text-luxe-text">
+          <h1 className="text-2xl sm:text-3xl font-light text-inherit">
             我的預約
           </h1>
-          <p className="text-sm text-luxe-muted mt-1">
+          <p className="text-sm text-muted mt-1">
             查看所有已送出的諮詢申請
           </p>
         </div>
@@ -93,11 +93,11 @@ const MyBookingsPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-luxe-muted">載入中...</div>
+        <div className="text-center py-12 text-muted">載入中...</div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-12 text-luxe-muted">
+        <div className="text-center py-12 text-muted">
           尚無預約紀錄，
-          <Link to="/booking" className="text-luxe-gold hover:underline">
+          <Link to="/booking" className="text-gold hover:underline">
             立即預約諮詢
           </Link>
         </div>
@@ -106,17 +106,17 @@ const MyBookingsPage: React.FC = () => {
           {bookings.map((b) => (
             <div
               key={b.id}
-              className="bg-luxe-surface rounded-lg border border-luxe-gold/15 p-4"
+              className="bg-surface rounded-lg border border-gold/15 p-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="text-luxe-text font-medium">
+                    <span className="text-inherit font-medium">
                       {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
                         locale: zhTW,
                       })}
                     </span>
-                    <span className="text-luxe-muted text-sm">
+                    <span className="text-muted text-sm">
                       ~ {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
                     </span>
                     <span
@@ -128,27 +128,27 @@ const MyBookingsPage: React.FC = () => {
                     </span>
                   </div>
                   {b.course && (
-                    <p className="text-xs text-luxe-muted mb-1">
+                    <p className="text-xs text-muted mb-1">
                       📚 關聯課程：
                       <Link
                         to={`/courses/${b.course.course_slug || b.course.course_id}`}
-                        className="text-luxe-gold hover:underline ml-1"
+                        className="text-gold hover:underline ml-1"
                       >
                         {b.course.course_title}
                       </Link>
                     </p>
                   )}
                   {b.user_note && (
-                    <p className="text-sm text-luxe-text/80 mt-2">
+                    <p className="text-sm text-inherit/80 mt-2">
                       {b.user_note}
                     </p>
                   )}
                   {b.coach_note && (
-                    <p className="text-sm text-luxe-gold/80 mt-2">
+                    <p className="text-sm text-gold/80 mt-2">
                       教練備註：{b.coach_note}
                     </p>
                   )}
-                  <p className="text-xs text-luxe-muted mt-2">
+                  <p className="text-xs text-muted mt-2">
                     送出於{" "}
                     {format(new Date(b.created_at), "yyyy/MM/dd HH:mm", {
                       locale: zhTW,

@@ -45,7 +45,7 @@ const STATUS_STYLE: Record<BookingStatus, string> = {
   confirmed: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   rejected: "bg-red-500/15 text-red-300 border-red-500/30",
   cancelled: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
-  completed: "bg-luxe-gold/15 text-luxe-gold border-luxe-gold/30",
+  completed: "bg-gold/15 text-gold border-gold/30",
 };
 
 const GOOGLE_MSG: Record<string, string> = {
@@ -270,7 +270,7 @@ const CoachDashboard: React.FC = () => {
 
   if (accessLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-luxe-muted">
+      <div className="min-h-[60vh] flex items-center justify-center text-muted">
         載入中...
       </div>
     );
@@ -284,20 +284,20 @@ const CoachDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light text-luxe-text">
+          <h1 className="text-2xl sm:text-3xl font-light text-inherit">
             教練儀表板
           </h1>
-          <p className="text-sm text-luxe-muted mt-1">
+          <p className="text-sm text-muted mt-1">
             {profile?.display_name} · 管理預約、時段與 Google 日曆整合
           </p>
         </div>
       </div>
 
       {banner && (
-        <div className="mb-4 p-3 bg-luxe-gold/10 border border-luxe-gold/30 rounded-lg text-sm text-luxe-text flex items-center justify-between">
+        <div className="mb-4 p-3 bg-gold/10 border border-gold/30 rounded-lg text-sm text-inherit flex items-center justify-between">
           <span>{banner}</span>
           <button
-            className="text-luxe-muted hover:text-luxe-text"
+            className="text-muted hover:text-inherit"
             onClick={() => setBanner(null)}
           >
             ✕
@@ -318,8 +318,8 @@ const CoachDashboard: React.FC = () => {
             onClick={() => setTab(t.k as TabType)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               tab === t.k
-                ? "bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30"
-                : "text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface"
+                ? "bg-gold/20 text-gold border border-gold/30"
+                : "text-muted hover:text-inherit hover:bg-surface"
             }`}
           >
             {t.label}
@@ -331,7 +331,7 @@ const CoachDashboard: React.FC = () => {
       {tab === "pending" && (
         <div className="space-y-3">
           {pendingList.length === 0 ? (
-            <div className="text-center py-12 text-luxe-muted">
+            <div className="text-center py-12 text-muted">
               沒有待審核的預約
             </div>
           ) : (
@@ -353,19 +353,19 @@ const CoachDashboard: React.FC = () => {
       {tab === "all" && (
         <div className="space-y-3">
           {allList.length === 0 ? (
-            <div className="text-center py-12 text-luxe-muted">
+            <div className="text-center py-12 text-muted">
               尚無預約紀錄
             </div>
           ) : (
             allList.map((b) => (
               <div
                 key={b.id}
-                className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4"
+                className="bg-surface rounded-lg border border-gold/10 p-4"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-luxe-text font-medium">
+                      <span className="text-inherit font-medium">
                         {b.user?.display_name || b.user?.name || "(匿名)"}
                       </span>
                       <span
@@ -374,27 +374,27 @@ const CoachDashboard: React.FC = () => {
                         {BOOKING_STATUS_LABEL[b.status]}
                       </span>
                       {b.google_event_id && (
-                        <span className="text-xs text-luxe-muted">
+                        <span className="text-xs text-muted">
                           🔗 已同步 Google
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-luxe-muted">
+                    <p className="text-sm text-muted">
                       {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
                         locale: zhTW,
                       })}{" "}
                       - {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
                     </p>
-                    <p className="text-xs text-luxe-muted mt-1">
+                    <p className="text-xs text-muted mt-1">
                       {b.contact_email || "—"} · {b.contact_phone || "—"}
                     </p>
                     {b.user_note && (
-                      <p className="text-sm text-luxe-text/80 mt-2">
+                      <p className="text-sm text-inherit/80 mt-2">
                         {b.user_note}
                       </p>
                     )}
                     {b.coach_note && (
-                      <p className="text-xs text-luxe-gold/70 mt-1">
+                      <p className="text-xs text-gold/70 mt-1">
                         批註：{b.coach_note}
                       </p>
                     )}
@@ -419,8 +419,8 @@ const CoachDashboard: React.FC = () => {
         <div className="space-y-8">
           {/* Profile 設定 */}
           {profile && (
-            <section className="bg-luxe-surface rounded-lg border border-luxe-gold/15 p-4">
-              <h2 className="text-luxe-text font-medium mb-3">基本設定</h2>
+            <section className="bg-surface rounded-lg border border-gold/15 p-4">
+              <h2 className="text-inherit font-medium mb-3">基本設定</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="顯示名稱"
@@ -508,12 +508,12 @@ const CoachDashboard: React.FC = () => {
                       saveProfile({ is_active: v });
                     }}
                   />
-                  <span className="text-sm text-luxe-text">
+                  <span className="text-sm text-inherit">
                     {profile.is_active ? "✅ 開放預約" : "⏸ 暫停預約"}
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-luxe-muted mt-2">
+              <p className="text-xs text-muted mt-2">
                 修改後失焦（離開欄位）自動儲存
               </p>
             </section>
@@ -521,8 +521,8 @@ const CoachDashboard: React.FC = () => {
 
           {/* 每週規則 */}
           <section>
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-luxe-gold/15">
-              <h2 className="text-luxe-text font-medium">每週可預約時段</h2>
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gold/15">
+              <h2 className="text-inherit font-medium">每週可預約時段</h2>
               <PillButton
                 theme="luxe"
                 variant="outline"
@@ -540,20 +540,20 @@ const CoachDashboard: React.FC = () => {
             </div>
             <div className="space-y-2">
               {rules.length === 0 && (
-                <p className="text-sm text-luxe-muted text-center py-6">
+                <p className="text-sm text-muted text-center py-6">
                   尚無規則，點右上「新增規則」開始
                 </p>
               )}
               {rules.map((r) => (
                 <div
                   key={r.id}
-                  className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-3 flex items-center justify-between"
+                  className="bg-surface rounded-lg border border-gold/10 p-3 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="text-luxe-gold text-sm font-medium">
+                    <span className="text-gold text-sm font-medium">
                       {WEEKDAYS[r.weekday]}
                     </span>
-                    <span className="text-luxe-text text-sm">
+                    <span className="text-inherit text-sm">
                       {String(r.start_time).slice(0, 5)} —{" "}
                       {String(r.end_time).slice(0, 5)}
                     </span>
@@ -588,8 +588,8 @@ const CoachDashboard: React.FC = () => {
 
           {/* 休假 */}
           <section>
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-luxe-gold/15">
-              <h2 className="text-luxe-text font-medium">休假區間</h2>
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gold/15">
+              <h2 className="text-inherit font-medium">休假區間</h2>
               <PillButton
                 theme="luxe"
                 variant="outline"
@@ -624,17 +624,17 @@ const CoachDashboard: React.FC = () => {
             </div>
             <div className="space-y-2">
               {timeOffs.length === 0 && (
-                <p className="text-sm text-luxe-muted text-center py-6">
+                <p className="text-sm text-muted text-center py-6">
                   未來無休假安排
                 </p>
               )}
               {timeOffs.map((t) => (
                 <div
                   key={t.id}
-                  className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-3 flex items-center justify-between"
+                  className="bg-surface rounded-lg border border-gold/10 p-3 flex items-center justify-between"
                 >
                   <div>
-                    <p className="text-luxe-text text-sm">
+                    <p className="text-inherit text-sm">
                       {format(new Date(t.start_at), "yyyy/MM/dd HH:mm", {
                         locale: zhTW,
                       })}{" "}
@@ -644,7 +644,7 @@ const CoachDashboard: React.FC = () => {
                       })}
                     </p>
                     {t.reason && (
-                      <p className="text-xs text-luxe-muted mt-1">{t.reason}</p>
+                      <p className="text-xs text-muted mt-1">{t.reason}</p>
                     )}
                   </div>
                   <button
@@ -662,13 +662,13 @@ const CoachDashboard: React.FC = () => {
 
       {/* Google Tab */}
       {tab === "google" && (
-        <section className="bg-luxe-surface rounded-lg border border-luxe-gold/15 p-6 max-w-xl">
-          <h2 className="text-luxe-text font-medium mb-3">Google 日曆同步</h2>
-          <p className="text-sm text-luxe-muted mb-4">
+        <section className="bg-surface rounded-lg border border-gold/15 p-6 max-w-xl">
+          <h2 className="text-inherit font-medium mb-3">Google 日曆同步</h2>
+          <p className="text-sm text-muted mb-4">
             連結後，可預約時段會自動避開你 Google 日曆中已有的行程；批准預約時也會自動在日曆建立事件。
           </p>
-          <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg mb-4">
-            <p className="text-sm text-luxe-text">
+          <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg mb-4">
+            <p className="text-sm text-inherit">
               狀態：
               {googleStatus?.connected ? (
                 googleStatus.valid ? (
@@ -681,11 +681,11 @@ const CoachDashboard: React.FC = () => {
                   </span>
                 )
               ) : (
-                <span className="text-luxe-muted ml-1">⚪ 未連結</span>
+                <span className="text-muted ml-1">⚪ 未連結</span>
               )}
             </p>
             {googleStatus?.calendarId && (
-              <p className="text-xs text-luxe-muted mt-1">
+              <p className="text-xs text-muted mt-1">
                 Calendar ID: {googleStatus.calendarId}
               </p>
             )}
@@ -725,13 +725,13 @@ const CoachDashboard: React.FC = () => {
       >
         {reviewing && (
           <div className="space-y-4">
-            <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg">
-              <p className="text-luxe-text">
-                <span className="text-luxe-muted text-sm">用戶：</span>
+            <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg">
+              <p className="text-inherit">
+                <span className="text-muted text-sm">用戶：</span>
                 {reviewing.user?.display_name || reviewing.user?.name}
               </p>
-              <p className="text-luxe-text text-sm mt-1">
-                <span className="text-luxe-muted">時段：</span>
+              <p className="text-inherit text-sm mt-1">
+                <span className="text-muted">時段：</span>
                 {format(
                   new Date(reviewing.start_at),
                   "yyyy/MM/dd (EEE) HH:mm",
@@ -740,16 +740,16 @@ const CoachDashboard: React.FC = () => {
                 -{" "}
                 {format(new Date(reviewing.end_at), "HH:mm", { locale: zhTW })}
               </p>
-              <p className="text-luxe-muted text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 聯絡：{reviewing.contact_email || "—"} · {reviewing.contact_phone || "—"}
               </p>
               {reviewing.course && (
-                <p className="text-luxe-muted text-xs mt-1">
+                <p className="text-muted text-xs mt-1">
                   📚 {reviewing.course.course_title}
                 </p>
               )}
               {reviewing.user_note && (
-                <p className="text-luxe-text text-sm mt-2 whitespace-pre-wrap">
+                <p className="text-inherit text-sm mt-2 whitespace-pre-wrap">
                   {reviewing.user_note}
                 </p>
               )}
@@ -762,7 +762,7 @@ const CoachDashboard: React.FC = () => {
               theme="luxe"
               rows={3}
             />
-            <div className="flex justify-end gap-3 pt-2 border-t border-luxe-gold/10">
+            <div className="flex justify-end gap-3 pt-2 border-t border-gold/10">
               <PillButton
                 theme="luxe"
                 variant="outline"
@@ -800,7 +800,7 @@ const CoachDashboard: React.FC = () => {
         {ruleModal && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-luxe-muted mb-1">週幾</label>
+              <label className="block text-sm text-muted mb-1">週幾</label>
               <select
                 value={ruleModal.weekday}
                 onChange={(e) =>
@@ -809,7 +809,7 @@ const CoachDashboard: React.FC = () => {
                     weekday: Number(e.target.value),
                   })
                 }
-                className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+                className="coach-booking-select studio-input w-full rounded-lg px-4 py-3 cursor-pointer"
               >
                 {WEEKDAYS.map((w, i) => (
                   <option key={i} value={i}>
@@ -866,7 +866,7 @@ const CoachDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-luxe-muted mb-1">
+                <label className="block text-sm text-muted mb-1">
                   開始時間
                 </label>
                 <input
@@ -878,11 +878,11 @@ const CoachDashboard: React.FC = () => {
                       startAt: e.target.value,
                     })
                   }
-                  className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50"
+                  className="studio-input w-full rounded-lg px-4 py-3"
                 />
               </div>
               <div>
-                <label className="block text-sm text-luxe-muted mb-1">
+                <label className="block text-sm text-muted mb-1">
                   結束時間
                 </label>
                 <input
@@ -891,7 +891,7 @@ const CoachDashboard: React.FC = () => {
                   onChange={(e) =>
                     setTimeOffModal({ ...timeOffModal, endAt: e.target.value })
                   }
-                  className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50"
+                  className="studio-input w-full rounded-lg px-4 py-3"
                 />
               </div>
             </div>
@@ -930,19 +930,19 @@ const BookingCard: React.FC<{
 }> = ({ b, onOpen }) => (
   <div
     onClick={onOpen}
-    className="bg-luxe-surface rounded-lg border border-luxe-gold/15 p-4 cursor-pointer hover:border-luxe-gold/40 transition-colors"
+    className="bg-surface rounded-lg border border-gold/15 p-4 cursor-pointer hover:border-gold/40 transition-colors"
   >
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-luxe-text font-medium">
+          <span className="text-inherit font-medium">
             {b.user?.display_name || b.user?.name || "(匿名)"}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLE[b.status]}`}>
             {BOOKING_STATUS_LABEL[b.status]}
           </span>
         </div>
-        <p className="text-sm text-luxe-muted">
+        <p className="text-sm text-muted">
           {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
             locale: zhTW,
           })}
@@ -950,12 +950,12 @@ const BookingCard: React.FC<{
           {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
         </p>
         {b.user_note && (
-          <p className="text-sm text-luxe-text/80 mt-2 line-clamp-2">
+          <p className="text-sm text-inherit/80 mt-2 line-clamp-2">
             {b.user_note}
           </p>
         )}
       </div>
-      <span className="text-luxe-gold text-xs">點擊審核 →</span>
+      <span className="text-gold text-xs">點擊審核 →</span>
     </div>
   </div>
 );

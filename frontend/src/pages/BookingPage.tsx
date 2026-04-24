@@ -174,7 +174,7 @@ const BookingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-luxe-muted">
+      <div className="min-h-[60vh] flex items-center justify-center text-muted">
         載入中...
       </div>
     );
@@ -182,7 +182,7 @@ const BookingPage: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-luxe-muted">
+      <div className="min-h-[60vh] flex items-center justify-center text-muted">
         教練目前未開放預約
       </div>
     );
@@ -192,10 +192,10 @@ const BookingPage: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 py-10 sm:py-16">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-light text-luxe-text mb-2">
+        <h1 className="text-2xl sm:text-3xl font-light text-inherit mb-2">
           預約 {profile.display_name} 的諮詢時間
         </h1>
-        <p className="text-sm text-luxe-muted">
+        <p className="text-sm text-muted">
           每次諮詢 {profile.default_slot_minutes} 分鐘 · 時區{" "}
           {profile.timezone} · 最短 {profile.booking_notice_hours} 小時前預約
           · 最長 {profile.booking_window_days} 天內
@@ -215,7 +215,7 @@ const BookingPage: React.FC = () => {
       )}
 
       {/* 內容：左月曆 / 右時段 */}
-      <div className="grid lg:grid-cols-2 gap-6 bg-luxe-surface/40 rounded-xl border border-luxe-gold/15 p-4 sm:p-6">
+      <div className="grid lg:grid-cols-2 gap-6 bg-surface/40 rounded-xl border border-gold/15 p-4 sm:p-6">
         {/* 月曆 */}
         <div>
           <DayPicker
@@ -239,27 +239,27 @@ const BookingPage: React.FC = () => {
             fromDate={startOfToday()}
             toDate={addDays(startOfToday(), profile.booking_window_days)}
           />
-          <p className="mt-3 text-xs text-luxe-muted">
+          <p className="mt-3 text-xs text-muted">
             🟢 亮色日期有可預約時段，點擊選擇日期
           </p>
         </div>
 
         {/* 時段 */}
         <div>
-          <h3 className="text-luxe-text font-medium mb-3">
+          <h3 className="text-inherit font-medium mb-3">
             {selectedDay
               ? `${format(selectedDay, "yyyy 年 MM 月 dd 日", { locale: zhTW })} 可預約時段`
               : "請先在左側選日期"}
           </h3>
           {selectedDay && slotsOfDay.length === 0 && (
-            <p className="text-sm text-luxe-muted">該日無可預約時段</p>
+            <p className="text-sm text-muted">該日無可預約時段</p>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {slotsOfDay.map((s) => (
               <button
                 key={s.startIso}
                 onClick={() => openSubmitModal(s)}
-                className="px-3 py-2 text-sm rounded-lg border border-luxe-gold/20 text-luxe-text hover:border-luxe-gold/50 hover:bg-luxe-gold/5 transition-colors"
+                className="px-3 py-2 text-sm rounded-lg border border-gold/20 text-inherit hover:border-gold/50 hover:bg-gold/5 transition-colors"
               >
                 {s.localTime}
               </button>
@@ -268,9 +268,9 @@ const BookingPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-6 text-sm text-luxe-muted">
+      <div className="mt-6 text-sm text-muted">
         想看自己的預約紀錄？前往{" "}
-        <Link to="/my-bookings" className="text-luxe-gold hover:underline">
+        <Link to="/my-bookings" className="text-gold hover:underline">
           我的預約
         </Link>
       </div>
@@ -285,20 +285,20 @@ const BookingPage: React.FC = () => {
       >
         {pickedSlot && (
           <div className="space-y-4">
-            <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg">
-              <p className="text-luxe-text text-sm">
+            <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg">
+              <p className="text-inherit text-sm">
                 時段：
-                <span className="text-luxe-gold ml-1">
+                <span className="text-gold ml-1">
                   {pickedSlot.localDate} {pickedSlot.localTime}
                 </span>
               </p>
-              <p className="text-luxe-muted text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 時長 {profile.default_slot_minutes} 分鐘
               </p>
             </div>
 
             <div>
-              <label className="block text-sm text-luxe-muted mb-1">
+              <label className="block text-sm text-muted mb-1">
                 想諮詢的課程（選填）
               </label>
               <select
@@ -306,7 +306,7 @@ const BookingPage: React.FC = () => {
                 onChange={(e) =>
                   setForm({ ...form, courseId: e.target.value })
                 }
-                className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+                className="coach-booking-select studio-input w-full rounded-lg px-4 py-3 cursor-pointer"
               >
                 <option value="">不指定</option>
                 {courses.map((c) => (
@@ -346,11 +346,11 @@ const BookingPage: React.FC = () => {
                 theme="luxe"
               />
             </div>
-            <p className="text-xs text-luxe-muted">
+            <p className="text-xs text-muted">
               email 與電話至少需填一項。
             </p>
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-luxe-gold/10">
+            <div className="flex justify-end gap-3 pt-2 border-t border-gold/10">
               <PillButton
                 theme="luxe"
                 variant="outline"
@@ -371,26 +371,31 @@ const BookingPage: React.FC = () => {
         )}
       </Modal>
 
-      {/* react-day-picker 客製樣式（luxe 風格） */}
+      {/* react-day-picker 客製樣式（跟著 theme 切換） */}
       <style>{`
         .coach-booking-daypicker {
-          --rdp-accent-color: rgb(197, 160, 89);
-          --rdp-background-color: rgba(197, 160, 89, 0.1);
-          color: var(--luxe-text, #e8e4dc);
+          --rdp-accent-color: var(--color-gold);
+          --rdp-background-color: color-mix(in srgb, var(--color-gold) 10%, transparent);
+          color: inherit;
         }
-        .coach-booking-daypicker .rdp-day {
-          border-radius: 8px;
-        }
-        .coach-booking-daypicker .rdp-day_disabled {
-          opacity: 0.25;
-        }
+        .coach-booking-daypicker .rdp-day { border-radius: 8px; }
+        .coach-booking-daypicker .rdp-day_disabled { opacity: 0.25; }
         .coach-booking-daypicker .coach-booking-has-slots:not(.rdp-day_disabled) {
-          color: rgb(197, 160, 89);
+          color: var(--color-gold);
           font-weight: 600;
         }
         .coach-booking-daypicker .coach-booking-selected {
-          background: rgba(197, 160, 89, 0.25) !important;
-          color: rgb(197, 160, 89) !important;
+          background: color-mix(in srgb, var(--color-gold) 25%, transparent) !important;
+          color: var(--color-gold) !important;
+        }
+        /* 下拉選單的 option 在不同瀏覽器行為不一，強制用主題色 */
+        .coach-booking-select option {
+          background: var(--color-surface);
+          color: inherit;
+        }
+        [data-theme="studio-light"] .coach-booking-select option {
+          background: #ffffff;
+          color: #1a1a1a;
         }
       `}</style>
     </div>
