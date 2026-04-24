@@ -1,0 +1,177 @@
+/**
+ * MyBookingsPage — 我的預約紀錄
+ * @module pages/MyBookingsPage
+ */
+
+import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { zhTW } from "date-fns/locale";
+import {
+  bookingService,
+  BOOKING_STATUS_LABEL,
+  type MyBooking,
+  type BookingStatus,
+} from "@/services/booking.service";
+import { PillButton, useDialog } from "@/components/ui";
+
+const STATUS_STYLE: Record<BookingStatus, string> = {
+  pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  confirmed: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  rejected: "bg-red-500/15 text-red-300 border-red-500/30",
+  cancelled: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
+  completed: "bg-luxe-gold/15 text-luxe-gold border-luxe-gold/30",
+};
+
+const MyBookingsPage: React.FC = () => {
+  const dialog = useDialog();
+  const [bookings, setBookings] = useState<MyBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchBookings = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await bookingService.getMine();
+      setBookings(data);
+    } catch (err) {
+      console.error(err);
+      setError("載入預約失敗");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  const handleCancel = async (b: MyBooking) => {
+    const confirmed = await dialog.confirm({
+      title: "取消預約",
+      message: `確定要取消 ${format(new Date(b.start_at), "yyyy/MM/dd HH:mm", {
+        locale: zhTW,
+      })} 的預約嗎？`,
+      variant: "danger",
+      confirmText: "取消預約",
+    });
+    if (!confirmed) return;
+    try {
+      await bookingService.cancelMine(b.id);
+      fetchBookings();
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err instanceof Error ? err.message : "取消失敗，請聯絡教練";
+      setError(msg);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10 sm:py-16">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-light text-luxe-text">
+            我的預約
+          </h1>
+          <p className="text-sm text-luxe-muted mt-1">
+            查看所有已送出的諮詢申請
+          </p>
+        </div>
+        <Link to="/booking">
+          <PillButton theme="luxe" variant="outline">
+            + 新增預約
+          </PillButton>
+        </Link>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-12 text-luxe-muted">載入中...</div>
+      ) : bookings.length === 0 ? (
+        <div className="text-center py-12 text-luxe-muted">
+          尚無預約紀錄，
+          <Link to="/booking" className="text-luxe-gold hover:underline">
+            立即預約諮詢
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {bookings.map((b) => (
+            <div
+              key={b.id}
+              className="bg-luxe-surface rounded-lg border border-luxe-gold/15 p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="text-luxe-text font-medium">
+                      {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
+                        locale: zhTW,
+                      })}
+                    </span>
+                    <span className="text-luxe-muted text-sm">
+                      ~ {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                        STATUS_STYLE[b.status] || ""
+                      }`}
+                    >
+                      {BOOKING_STATUS_LABEL[b.status]}
+                    </span>
+                  </div>
+                  {b.course && (
+                    <p className="text-xs text-luxe-muted mb-1">
+                      📚 關聯課程：
+                      <Link
+                        to={`/courses/${b.course.course_slug || b.course.course_id}`}
+                        className="text-luxe-gold hover:underline ml-1"
+                      >
+                        {b.course.course_title}
+                      </Link>
+                    </p>
+                  )}
+                  {b.user_note && (
+                    <p className="text-sm text-luxe-text/80 mt-2">
+                      {b.user_note}
+                    </p>
+                  )}
+                  {b.coach_note && (
+                    <p className="text-sm text-luxe-gold/80 mt-2">
+                      教練備註：{b.coach_note}
+                    </p>
+                  )}
+                  <p className="text-xs text-luxe-muted mt-2">
+                    送出於{" "}
+                    {format(new Date(b.created_at), "yyyy/MM/dd HH:mm", {
+                      locale: zhTW,
+                    })}
+                  </p>
+                </div>
+                {["pending", "confirmed"].includes(b.status) && (
+                  <PillButton
+                    theme="luxe"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel(b)}
+                  >
+                    取消
+                  </PillButton>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MyBookingsPage;

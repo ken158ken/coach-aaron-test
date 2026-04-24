@@ -30,6 +30,9 @@ import Checkout from "@/pages/Checkout";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import LandingPageViewer from "@/pages/LandingPageViewer";
 import PublishedPages from "@/pages/PublishedPages";
+import BookingPage from "@/pages/BookingPage";
+import MyBookingsPage from "@/pages/MyBookingsPage";
+import CoachDashboard from "@/pages/coach/CoachDashboard";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -150,6 +153,30 @@ function App(): JSX.Element {
                   <Route path="checkout" element={<Checkout />} />
                   <Route path="checkout/success" element={<CheckoutSuccess />} />
                   <Route path="pages" element={<PublishedPages />} />
+                  <Route
+                    path="booking"
+                    element={
+                      <RequireAuth>
+                        <BookingPage />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="my-bookings"
+                    element={
+                      <RequireAuth>
+                        <MyBookingsPage />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="coach"
+                    element={
+                      <RequireAuth>
+                        <CoachDashboard />
+                      </RequireAuth>
+                    }
+                  />
                 </Route>
 
                 {/* Landing Page 公開預覽（不套 Layout，獨立全頁） */}

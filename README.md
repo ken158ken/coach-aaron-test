@@ -2,6 +2,18 @@
 
 > 🏋️ 專業健身教練官方網站 - 使用 React + TypeScript + Three.js + GSAP 打造的沉浸式視覺體驗
 
+## 🆕 最近更新（2026-04-24）
+
+- **教練諮詢預約系統**：全新上線，支援 Google Calendar 雙向同步。
+  - 登入用戶可到 `/booking` 選日期/時段送出預約；`/my-bookings` 查紀錄與取消
+  - 教練 / admin 進 `/coach` 看待審核 → 批准 → 自動在 Google 日曆建立事件
+  - 週期性可預約規則（Mon-Fri 14:00-18:00）+ 一次性休假 + buffer 緩衝 + 最短/最長前置
+  - 授權流程：教練儀表板按「連結 Google 日曆」→ 一次 consent 即可長期自動換 token
+  - 詳見：[📅 教練諮詢預約系統](#-教練諮詢預約系統-2026-04-24)
+- **內容管理第二階段（Marquee / Podcast 入表）**：認證標章、成果數字、Podcast 單集從 JSON 拆到獨立 table，客戶可完整表單化 CRUD（不再需要改 JSON）。
+- 新增 `marquee_items`、`podcast_episodes` 兩張表；admin 後台新增兩個對應 tab
+- 小型字串陣列（`hero_flip_words` / `coach_intro_bullets`）改用 chip / tag 編輯器
+
 ## 🆕 最近更新（2026-04-23）
 
 - **後台內容管理重構**：「網站文案」tab 改為依首頁區塊分組呈現。
@@ -2192,5 +2204,118 @@ npm install react-moveable moveable @scena/react-guides uuid
 #### 完整報告
 
 - 詳見 `REPORTS/RWD_TYPOGRAPHY_FIX_2026-02-07T10-00-00+08-00.md`
+
+---
+
+## 📅 教練諮詢預約系統 (2026-04-24)
+
+完整的諮詢時段預約 + Google Calendar 雙向同步系統。交付前由 admin 用自己的 Google 帳號測試；交付時把 `coach_profile.user_id` 改指向教練即可。
+
+### 資料模型（migration `016_coach_booking.sql`）
+
+| 表 | 用途 |
+|---|---|
+| `coach_profile` | 教練基本設定：時區、slot 長度、buffer、前置/取消時效、Google `refresh_token`（NULL = 未連結）|
+| `coach_availability_rules` | 每週循環可預約時段（weekday + 起訖 TIME）|
+| `coach_time_off` | 一次性休假區間（出國、連假等）|
+| `bookings` | 預約主表；含 course FK、contact snapshot、google_event_id、狀態機 |
+
+**狀態機：** `pending → confirmed | rejected`；confirmed → `cancelled`（可取消時效內）；過去的 confirmed 可手動標 `completed`。
+
+### 權限層級
+
+| Guard | 條件 | 授權範圍 |
+|---|---|---|
+| `RequireAuth`（前端） | 已登入 | `/booking`, `/my-bookings`, `/coach` |
+| `authenticateToken`（後端） | 有效 JWT | 所有預約相關 API |
+| `requireCoachOrAdmin`（後端） | coach_profile.user_id === 登入者 **OR** 登入者在 admin_whitelist | `/api/coach/*`（除 public profile）, `/api/bookings/coach/*`, approve/reject |
+
+這設計讓 **admin 可以在教練還沒加入前就先預覽儀表板**，交付後只要教練登入 + admin 移除自己的 whitelist 就完成權限切換。
+
+### 可預約時段計算（[`backend/utils/slots.ts`](backend/utils/slots.ts)）
+
+輸入：`coach_profile` 設定 + `coach_availability_rules` + 要查詢的日期範圍
+扣除：
+1. 過去時間 + `booking_notice_hours` 緩衝（最短前置）
+2. 現有 `pending` / `confirmed` 預約
+3. `coach_time_off` 區間
+4. **Google Calendar freebusy** 忙碌區間（若已連結）
+5. 與相鄰預約的 `buffer_minutes` 衝突
+
+時區全站鎖 `Asia/Taipei`，存 DB 用 UTC，前端 `date-fns-tz` 轉換。
+
+### Google OAuth 流程（[`backend/utils/googleCalendar.ts`](backend/utils/googleCalendar.ts)）
+
+1. 教練在 `/coach` 點「連結 Google 日曆」
+2. Backend `/api/coach/google/connect` 產生 state cookie + redirect 到 Google consent
+3. Google 回呼 `/api/coach/google/callback` → `access_type=offline` + `prompt=consent` → 拿 `refresh_token`
+4. `refresh_token` 存進 `coach_profile.google_refresh_token`
+5. 日後所有 API 呼叫用 refresh_token 換 access_token（googleapis SDK 自動處理）
+
+**授權範圍**：`calendar.events` + `calendar.readonly`（freebusy + 事件 CRUD）
+
+**獨立於現有登入用的 Google OAuth**（登入 scope 只有 `openid email profile`，redirect_uri 也不同），不會汙染既有流程。
+
+### 路由清單
+
+**用戶面（需登入）**
+| Method | Path | 用途 |
+|---|---|---|
+| GET | `/api/coach/profile` | 公開：教練基本資料 |
+| GET | `/api/coach/availability` | 公開：週期規則 |
+| GET | `/api/coach/time-off` | 公開：休假清單 |
+| GET | `/api/bookings/slots?from&to` | 可預約時段 |
+| POST | `/api/bookings` | 送出預約 |
+| GET | `/api/bookings/mine` | 自己的預約 |
+| POST | `/api/bookings/:id/cancel` | 用戶取消 |
+
+**教練 / admin 面**
+| Method | Path | 用途 |
+|---|---|---|
+| GET/PUT | `/api/coach/profile/full` | 完整設定 CRUD |
+| GET/POST/PUT/DELETE | `/api/coach/availability[/:id]` | 規則 CRUD |
+| GET/POST/DELETE | `/api/coach/time-off[/:id]` | 休假 CRUD |
+| GET | `/api/coach/google/status` | 連結狀態（含 token 有效性） |
+| GET | `/api/coach/google/connect` | 啟動授權 |
+| GET | `/api/coach/google/callback` | OAuth 回呼 |
+| POST | `/api/coach/google/disconnect` | 解除連結 |
+| GET | `/api/bookings/coach/pending` | 待審核 |
+| GET | `/api/bookings/coach/all` | 全部（status/date filter）|
+| POST | `/api/bookings/:id/approve` | 批准 + 建 Google event |
+| POST | `/api/bookings/:id/reject` | 拒絕 |
+| POST | `/api/bookings/:id/coach-cancel` | 教練取消 |
+
+### 前端頁面
+
+| 路徑 | 權限 | 用途 |
+|---|---|---|
+| `/booking` | 已登入 | 月曆選日 → 該日可選時段 → 送出 modal（課程選填 + 備註 + 聯絡方式）|
+| `/my-bookings` | 已登入 | 自己的預約紀錄、狀態、取消按鈕 |
+| `/coach` | coach 本人 / admin | 4 tab：待審核 / 全部 / 時段設定 / Google 日曆 |
+
+月曆元件：[`react-day-picker`](https://react-day-picker.js.org/)（輕量、headless、可套主題）。
+
+### 套件依賴
+
+**Backend 新增：** `googleapis`, `date-fns-tz`, `date-fns`
+**Frontend 新增：** `react-day-picker`, `date-fns`
+
+### 交付切換步驟（給 admin）
+
+當 `s330221@gmail.com` 準備好接手：
+
+```sql
+-- 1. 確認教練用戶存在於 users
+SELECT user_id FROM users WHERE email = 's330221@gmail.com';
+
+-- 2. 把 coach_profile 指向他，同時清掉你的 refresh_token
+UPDATE coach_profile
+SET user_id = (SELECT user_id FROM users WHERE email = 's330221@gmail.com'),
+    google_refresh_token = NULL
+WHERE id = 1;
+```
+
+3. 請教練登入、進 `/coach` → Google 日曆 tab → 按「連結 Google 日曆」完成 OAuth。
+4. （開發期結束後）若要收回你的入口，把自己從 `admin_whitelist` 移除即可。
 
 ---

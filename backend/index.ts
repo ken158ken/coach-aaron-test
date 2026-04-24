@@ -27,6 +27,8 @@ import contactRoutes from "./routes/contact.js";
 import slidesRoutes from "./routes/slides.js";
 import marqueeRoutes from "./routes/marquee.js";
 import podcastRoutes from "./routes/podcast.js";
+import coachRoutes from "./routes/coach.js";
+import bookingRoutes from "./routes/bookings.js";
 import landingRoutes from "./routes/landing.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
@@ -114,6 +116,8 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/slides", slidesRoutes);
 app.use("/api/marquee", marqueeRoutes);
 app.use("/api/podcast", podcastRoutes);
+app.use("/api/coach", coachRoutes);
+app.use("/api/bookings", bookingRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/landing", landingRoutes);
 
