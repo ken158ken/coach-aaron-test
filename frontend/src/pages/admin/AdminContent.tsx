@@ -15,7 +15,7 @@ import {
   useDialog,
   RichTextEditor,
 } from '@/components/ui';
-import { Toggle } from '@/components/ui/form';
+import { Toggle, TagInput } from '@/components/ui/form';
 import {
   contentService,
   type SiteContent,
@@ -28,10 +28,28 @@ import {
   type GallerySlide,
   type GalleryConfig,
 } from '@/services/slides.service';
+import {
+  marqueeService,
+  type MarqueeItem,
+  type MarqueeType,
+} from '@/services/marquee.service';
+import {
+  podcastService,
+  type PodcastEpisode,
+  type EpisodeCategory,
+  EPISODE_CATEGORIES,
+  EPISODE_CATEGORY_LABEL,
+} from '@/services/podcast.service';
 import { TestimonialCarousel } from '@/components/sections';
 import { GallerySlider } from '@/components/sections';
 import { getTemplates, type ContentTemplate } from '@/utils/contentTemplates';
 import { HOMEPAGE_SECTIONS, KEY_TO_SECTION_ID } from '@/utils/homepageSections';
+
+/** 用 chip / tag 編輯器呈現的 JSON 字串陣列 keys */
+const STRING_ARRAY_KEYS = new Set<string>([
+  'hero_flip_words',
+  'coach_intro_bullets',
+]);
 
 /** Cloudinary 限定前綴 */
 const CLOUDINARY_PREFIX = 'https://res.cloudinary.com/daejq0zo9/';
@@ -45,7 +63,13 @@ const logger = {
     console.error(`[AdminContent] ${msg}`, err || ''),
 };
 
-type TabType = 'content' | 'popup' | 'testimonial' | 'gallery';
+type TabType =
+  | 'content'
+  | 'popup'
+  | 'testimonial'
+  | 'gallery'
+  | 'marquee'
+  | 'podcast';
 
 /**
  * SectionItemRow - 單一網站文案欄位的可摺疊卡片列
@@ -230,6 +254,41 @@ const AdminContent: React.FC = () => {
   const [galleryUrlError, setGalleryUrlError] = useState('');
   const [showGalleryPreview, setShowGalleryPreview] = useState(false);
 
+  // ===== 認證 / 成果 Marquee 狀態 =====
+  const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
+  const [marqueeLoading, setMarqueeLoading] = useState(false);
+  const [showMarqueeModal, setShowMarqueeModal] = useState(false);
+  const [editingMarquee, setEditingMarquee] = useState<MarqueeItem | null>(null);
+  const [marqueeForm, setMarqueeForm] = useState<{
+    type: MarqueeType;
+    icon: string;
+    label: string;
+    sub: string;
+  }>({ type: 'cert', icon: '🏅', label: '', sub: '' });
+
+  // ===== Podcast 單集狀態 =====
+  const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
+  const [podcastLoading, setPodcastLoading] = useState(false);
+  const [showPodcastModal, setShowPodcastModal] = useState(false);
+  const [editingEpisode, setEditingEpisode] = useState<PodcastEpisode | null>(
+    null
+  );
+  const [podcastForm, setPodcastForm] = useState<{
+    title: string;
+    description: string;
+    fullDescription: string;
+    duration: string;
+    episodeDate: string;
+    category: EpisodeCategory;
+  }>({
+    title: '',
+    description: '',
+    fullDescription: '',
+    duration: '',
+    episodeDate: '',
+    category: 'training',
+  });
+
   // ===== 載入網站文案 =====
   const fetchContent = useCallback(async () => {
     try {
@@ -293,12 +352,47 @@ const AdminContent: React.FC = () => {
     }
   }, []);
 
+  // ===== 載入 Marquee =====
+  const fetchMarquee = useCallback(async () => {
+    try {
+      setMarqueeLoading(true);
+      const data = await marqueeService.getAdminAll();
+      setMarqueeItems(Array.isArray(data) ? data : []);
+    } catch (err) {
+      logger.error('載入 Marquee 失敗', err);
+    } finally {
+      setMarqueeLoading(false);
+    }
+  }, []);
+
+  // ===== 載入 Podcast =====
+  const fetchPodcast = useCallback(async () => {
+    try {
+      setPodcastLoading(true);
+      const data = await podcastService.getAdminAll();
+      setEpisodes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      logger.error('載入 Podcast 失敗', err);
+    } finally {
+      setPodcastLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchContent();
     fetchPopups();
     fetchTestimonials();
     fetchGallery();
-  }, [fetchContent, fetchPopups, fetchTestimonials, fetchGallery]);
+    fetchMarquee();
+    fetchPodcast();
+  }, [
+    fetchContent,
+    fetchPopups,
+    fetchTestimonials,
+    fetchGallery,
+    fetchMarquee,
+    fetchPodcast,
+  ]);
 
   // ===== 文案操作 =====
   const handleEdit = (section: SiteContent) => {
@@ -736,6 +830,181 @@ const AdminContent: React.FC = () => {
     }
   };
 
+  // ===== Marquee 操作 =====
+  const openMarqueeModal = (item?: MarqueeItem, defaultType: MarqueeType = 'cert') => {
+    if (item) {
+      setEditingMarquee(item);
+      setMarqueeForm({
+        type: item.type,
+        icon: item.icon,
+        label: item.label,
+        sub: item.sub,
+      });
+    } else {
+      setEditingMarquee(null);
+      setMarqueeForm({
+        type: defaultType,
+        icon: defaultType === 'cert' ? '🏅' : '',
+        label: '',
+        sub: '',
+      });
+    }
+    setShowMarqueeModal(true);
+  };
+
+  const handleSaveMarquee = async () => {
+    if (!marqueeForm.label.trim()) {
+      setError(
+        marqueeForm.type === 'cert' ? '認證名稱為必填' : '成果數字為必填'
+      );
+      return;
+    }
+    try {
+      setSaving(true);
+      if (editingMarquee) {
+        await marqueeService.update(editingMarquee.id, {
+          type: marqueeForm.type,
+          icon: marqueeForm.icon,
+          label: marqueeForm.label,
+          sub: marqueeForm.sub,
+        });
+      } else {
+        const sameTypeCount = marqueeItems.filter(
+          (it) => it.type === marqueeForm.type
+        ).length;
+        await marqueeService.create({
+          type: marqueeForm.type,
+          icon: marqueeForm.icon,
+          label: marqueeForm.label,
+          sub: marqueeForm.sub,
+          sortOrder: sameTypeCount + 1,
+        });
+      }
+      setShowMarqueeModal(false);
+      fetchMarquee();
+    } catch (err) {
+      logger.error('儲存 Marquee 失敗', err);
+      setError('儲存 Marquee 失敗');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleMarqueeActive = async (item: MarqueeItem) => {
+    try {
+      await marqueeService.update(item.id, { isActive: !item.is_active });
+      fetchMarquee();
+    } catch (err) {
+      logger.error('切換 Marquee 狀態失敗', err);
+    }
+  };
+
+  const handleDeleteMarquee = async (item: MarqueeItem) => {
+    const confirmed = await dialog.confirm({
+      title: '刪除項目',
+      message: `確定要刪除「${item.label}」嗎？`,
+      variant: 'danger',
+      confirmText: '刪除',
+    });
+    if (!confirmed) return;
+    try {
+      await marqueeService.remove(item.id);
+      fetchMarquee();
+    } catch (err) {
+      logger.error('刪除 Marquee 失敗', err);
+      setError('刪除失敗');
+    }
+  };
+
+  // ===== Podcast 操作 =====
+  const openPodcastModal = (ep?: PodcastEpisode) => {
+    if (ep) {
+      setEditingEpisode(ep);
+      setPodcastForm({
+        title: ep.title,
+        description: ep.description,
+        fullDescription: ep.full_description,
+        duration: ep.duration,
+        episodeDate: ep.episode_date,
+        category: ep.category,
+      });
+    } else {
+      setEditingEpisode(null);
+      setPodcastForm({
+        title: '',
+        description: '',
+        fullDescription: '',
+        duration: '',
+        episodeDate: '',
+        category: 'training',
+      });
+    }
+    setShowPodcastModal(true);
+  };
+
+  const handleSavePodcast = async () => {
+    if (!podcastForm.title.trim()) {
+      setError('單集標題為必填');
+      return;
+    }
+    try {
+      setSaving(true);
+      if (editingEpisode) {
+        await podcastService.update(editingEpisode.id, {
+          title: podcastForm.title,
+          description: podcastForm.description,
+          fullDescription: podcastForm.fullDescription,
+          duration: podcastForm.duration,
+          episodeDate: podcastForm.episodeDate,
+          category: podcastForm.category,
+        });
+      } else {
+        await podcastService.create({
+          title: podcastForm.title,
+          description: podcastForm.description,
+          fullDescription: podcastForm.fullDescription,
+          duration: podcastForm.duration,
+          episodeDate: podcastForm.episodeDate,
+          category: podcastForm.category,
+          sortOrder: episodes.length + 1,
+        });
+      }
+      setShowPodcastModal(false);
+      fetchPodcast();
+    } catch (err) {
+      logger.error('儲存單集失敗', err);
+      setError('儲存單集失敗');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTogglePodcastActive = async (ep: PodcastEpisode) => {
+    try {
+      await podcastService.update(ep.id, { isActive: !ep.is_active });
+      fetchPodcast();
+    } catch (err) {
+      logger.error('切換單集狀態失敗', err);
+    }
+  };
+
+  const handleDeletePodcast = async (ep: PodcastEpisode) => {
+    const confirmed = await dialog.confirm({
+      title: '刪除單集',
+      message: `確定要刪除「${ep.title}」嗎？`,
+      variant: 'danger',
+      confirmText: '刪除',
+    });
+    if (!confirmed) return;
+    try {
+      await podcastService.remove(ep.id);
+      fetchPodcast();
+    } catch (err) {
+      logger.error('刪除單集失敗', err);
+      setError('刪除單集失敗');
+    }
+  };
+
   return (
     <div>
       {/* Page Header */}
@@ -792,6 +1061,26 @@ const AdminContent: React.FC = () => {
         >
           🖼️ 相片輪播
         </button>
+        <button
+          onClick={() => setActiveTab('marquee')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'marquee'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
+          }`}
+        >
+          🏅 認證 / 成果 Marquee
+        </button>
+        <button
+          onClick={() => setActiveTab('podcast')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'podcast'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
+          }`}
+        >
+          🎙 Podcast 單集
+        </button>
       </div>
 
       {/* Error Message */}
@@ -833,7 +1122,8 @@ const AdminContent: React.FC = () => {
                 const sectionItems = sections.filter(
                   (s) => KEY_TO_SECTION_ID[s.content_key] === sectionMeta.id
                 );
-                if (sectionItems.length === 0) return null;
+                // 沒 item 也沒 hint → 跳過；只要有 hint 就保留一張卡片引導用戶
+                if (sectionItems.length === 0 && !sectionMeta.hint) return null;
                 return (
                   <div key={sectionMeta.id}>
                     {/* 區塊大標 */}
@@ -1318,6 +1608,262 @@ const AdminContent: React.FC = () => {
         </div>
       )}
 
+      {/* ===== 認證 / 成果 Marquee 分頁 ===== */}
+      {activeTab === 'marquee' && (
+        <div>
+          <div className="p-3 mb-4 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
+            📌 首頁兩列無限滾動的
+            <span className="text-luxe-gold mx-1">認證標章</span>與
+            <span className="text-luxe-gold mx-1">成果數字</span>
+            ，各自獨立管理、可個別停用或調整順序。
+          </div>
+
+          {/* 認證標章 */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-luxe-gold/15">
+              <div>
+                <h2 className="text-luxe-text font-medium">🏅 認證標章</h2>
+                <p className="text-luxe-muted text-xs">
+                  第一列（向左滾動）— 每筆含 Emoji + 認證名 + 副說明
+                </p>
+              </div>
+              <PillButton
+                theme="luxe"
+                variant="outline"
+                size="sm"
+                onClick={() => openMarqueeModal(undefined, 'cert')}
+              >
+                + 新增認證
+              </PillButton>
+            </div>
+            {marqueeLoading ? (
+              <div className="text-center py-8 text-luxe-muted">載入中...</div>
+            ) : (
+              <div className="space-y-2">
+                {marqueeItems
+                  .filter((it) => it.type === 'cert')
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+                        item.is_active
+                          ? 'border-luxe-gold/15'
+                          : 'border-luxe-gold/5 opacity-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl shrink-0">
+                          {item.icon || '🏅'}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-luxe-gold text-sm font-medium">
+                            {item.label}
+                          </p>
+                          <p className="text-luxe-muted text-xs">
+                            {item.sub || '(無副說明)'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Toggle
+                            theme="luxe"
+                            checked={item.is_active}
+                            onChange={() => handleToggleMarqueeActive(item)}
+                          />
+                          <PillButton
+                            theme="luxe"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openMarqueeModal(item)}
+                          >
+                            編輯
+                          </PillButton>
+                          <button
+                            onClick={() => handleDeleteMarquee(item)}
+                            className="text-red-400 hover:text-red-300 text-sm px-1"
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {marqueeItems.filter((it) => it.type === 'cert').length ===
+                  0 && (
+                  <div className="text-center py-8 text-luxe-muted">
+                    尚無認證，點擊右上「新增認證」開始
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 成果數字 */}
+          <div>
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-luxe-gold/15">
+              <div>
+                <h2 className="text-luxe-text font-medium">📊 成果數字</h2>
+                <p className="text-luxe-muted text-xs">
+                  第二列（向右滾動）— 每筆含 數值 + 說明（不需 Emoji）
+                </p>
+              </div>
+              <PillButton
+                theme="luxe"
+                variant="outline"
+                size="sm"
+                onClick={() => openMarqueeModal(undefined, 'stat')}
+              >
+                + 新增數字
+              </PillButton>
+            </div>
+            {marqueeLoading ? (
+              <div className="text-center py-8 text-luxe-muted">載入中...</div>
+            ) : (
+              <div className="space-y-2">
+                {marqueeItems
+                  .filter((it) => it.type === 'stat')
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+                        item.is_active
+                          ? 'border-luxe-gold/15'
+                          : 'border-luxe-gold/5 opacity-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl font-bold text-luxe-gold tabular-nums min-w-[80px]">
+                          {item.label}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-luxe-text text-sm">
+                            {item.sub || '(無說明)'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Toggle
+                            theme="luxe"
+                            checked={item.is_active}
+                            onChange={() => handleToggleMarqueeActive(item)}
+                          />
+                          <PillButton
+                            theme="luxe"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openMarqueeModal(item)}
+                          >
+                            編輯
+                          </PillButton>
+                          <button
+                            onClick={() => handleDeleteMarquee(item)}
+                            className="text-red-400 hover:text-red-300 text-sm px-1"
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {marqueeItems.filter((it) => it.type === 'stat').length ===
+                  0 && (
+                  <div className="text-center py-8 text-luxe-muted">
+                    尚無數字，點擊右上「新增數字」開始
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Podcast 單集分頁 ===== */}
+      {activeTab === 'podcast' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted flex-1 mr-4">
+              🎙 首頁 Podcast
+              區塊會顯示所有啟用中的單集。分類用來決定卡片的顏色標籤。
+            </div>
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              onClick={() => openPodcastModal()}
+            >
+              + 新增單集
+            </PillButton>
+          </div>
+
+          {podcastLoading ? (
+            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+          ) : episodes.length === 0 ? (
+            <div className="text-center py-12 text-luxe-muted">
+              尚無單集，點擊右上「新增單集」開始
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {episodes.map((ep) => (
+                <div
+                  key={ep.id}
+                  className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+                    ep.is_active
+                      ? 'border-luxe-gold/15'
+                      : 'border-luxe-gold/5 opacity-50'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="text-luxe-text font-medium text-sm">
+                          {ep.title || '(未命名)'}
+                        </h3>
+                        <span className="text-xs px-2 py-0.5 bg-luxe-gold/10 text-luxe-gold/70 rounded-full">
+                          {EPISODE_CATEGORY_LABEL[ep.category] || ep.category}
+                        </span>
+                        {ep.duration && (
+                          <span className="text-xs text-luxe-muted">
+                            🎧 {ep.duration}
+                          </span>
+                        )}
+                        {ep.episode_date && (
+                          <span className="text-xs text-luxe-muted">
+                            {ep.episode_date}
+                          </span>
+                        )}
+                      </div>
+                      {ep.description && (
+                        <p className="text-luxe-muted text-xs line-clamp-2">
+                          {ep.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Toggle
+                        theme="luxe"
+                        checked={ep.is_active}
+                        onChange={() => handleTogglePodcastActive(ep)}
+                      />
+                      <PillButton
+                        theme="luxe"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openPodcastModal(ep)}
+                      >
+                        編輯
+                      </PillButton>
+                      <button
+                        onClick={() => handleDeletePodcast(ep)}
+                        className="text-red-400 hover:text-red-300 text-sm px-1"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ===== 編輯文案 Modal ===== */}
       <Modal
         isOpen={!!editingSection}
@@ -1345,7 +1891,32 @@ const AdminContent: React.FC = () => {
           )}
 
           {/* 依 content_type 切換輸入 UI */}
-          {editingSection?.content_type === 'image' ? (
+          {editingSection &&
+          STRING_ARRAY_KEYS.has(editingSection.content_key) ? (
+            <div>
+              <TagInput
+                label="清單項目（按 Enter 新增、Backspace 刪除最後一筆）"
+                theme="luxe"
+                maxTags={20}
+                tags={(() => {
+                  if (!editContent.trim()) return [];
+                  try {
+                    const arr = JSON.parse(editContent);
+                    return Array.isArray(arr)
+                      ? arr.map((x) => String(x))
+                      : [];
+                  } catch {
+                    return [];
+                  }
+                })()}
+                onChange={(tags) =>
+                  setEditContent(JSON.stringify(tags))
+                }
+                placeholder="例如：體態"
+                hint="一項一句，會自動以 JSON 陣列存入 DB"
+              />
+            </div>
+          ) : editingSection?.content_type === 'image' ? (
             <div className="space-y-2">
               <Input
                 label="圖片網址（必須 Cloudinary）"
@@ -1803,6 +2374,199 @@ const AdminContent: React.FC = () => {
             initialSlides={gallerySlides.filter((s) => s.is_active)}
             initialConfig={galleryConfig}
           />
+        </div>
+      </Modal>
+
+      {/* ===== Marquee 新增 / 編輯 Modal ===== */}
+      <Modal
+        isOpen={showMarqueeModal}
+        onClose={() => setShowMarqueeModal(false)}
+        title={
+          editingMarquee
+            ? `編輯 ${marqueeForm.type === 'cert' ? '認證' : '數字'}`
+            : `新增 ${marqueeForm.type === 'cert' ? '認證' : '數字'}`
+        }
+        theme="luxe"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {marqueeForm.type === 'cert' ? (
+            <>
+              <Input
+                label="Emoji 圖示"
+                value={marqueeForm.icon}
+                onChange={(e) =>
+                  setMarqueeForm({ ...marqueeForm, icon: e.target.value })
+                }
+                placeholder="🏅"
+                theme="luxe"
+              />
+              <Input
+                label="認證名稱 *"
+                value={marqueeForm.label}
+                onChange={(e) =>
+                  setMarqueeForm({ ...marqueeForm, label: e.target.value })
+                }
+                placeholder="例如：NSCA-CPT"
+                theme="luxe"
+              />
+              <Input
+                label="副說明"
+                value={marqueeForm.sub}
+                onChange={(e) =>
+                  setMarqueeForm({ ...marqueeForm, sub: e.target.value })
+                }
+                placeholder="例如：美國體能協會認證"
+                theme="luxe"
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                label="數值 *"
+                value={marqueeForm.label}
+                onChange={(e) =>
+                  setMarqueeForm({ ...marqueeForm, label: e.target.value })
+                }
+                placeholder="例如：130+ / 95% / 8萬+"
+                theme="luxe"
+              />
+              <Input
+                label="說明"
+                value={marqueeForm.sub}
+                onChange={(e) =>
+                  setMarqueeForm({ ...marqueeForm, sub: e.target.value })
+                }
+                placeholder="例如：培訓教練人次"
+                theme="luxe"
+              />
+            </>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              onClick={() => setShowMarqueeModal(false)}
+            >
+              取消
+            </PillButton>
+            <PillButton
+              theme="luxe"
+              variant="filled"
+              onClick={handleSaveMarquee}
+              disabled={saving}
+            >
+              {saving ? '儲存中...' : '儲存'}
+            </PillButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ===== Podcast 單集 新增 / 編輯 Modal ===== */}
+      <Modal
+        isOpen={showPodcastModal}
+        onClose={() => setShowPodcastModal(false)}
+        title={editingEpisode ? '編輯 Podcast 單集' : '新增 Podcast 單集'}
+        theme="luxe"
+        size="lg"
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+          <Input
+            label="標題 *"
+            value={podcastForm.title}
+            onChange={(e) =>
+              setPodcastForm({ ...podcastForm, title: e.target.value })
+            }
+            placeholder="例如：新手必聽：健身入門的 5 大迷思"
+            theme="luxe"
+          />
+          <Textarea
+            label="卡片短描述（約 1-2 行）"
+            value={podcastForm.description}
+            onChange={(e) =>
+              setPodcastForm({
+                ...podcastForm,
+                description: e.target.value,
+              })
+            }
+            placeholder="例如：打破常見的健身迷思，建立正確的訓練觀念..."
+            theme="luxe"
+            rows={2}
+          />
+          <Textarea
+            label="展開後完整介紹"
+            value={podcastForm.fullDescription}
+            onChange={(e) =>
+              setPodcastForm({
+                ...podcastForm,
+                fullDescription: e.target.value,
+              })
+            }
+            placeholder="完整單集介紹內容..."
+            theme="luxe"
+            rows={5}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="時長"
+              value={podcastForm.duration}
+              onChange={(e) =>
+                setPodcastForm({ ...podcastForm, duration: e.target.value })
+              }
+              placeholder="例如：45:30"
+              theme="luxe"
+            />
+            <Input
+              label="發佈日期"
+              value={podcastForm.episodeDate}
+              onChange={(e) =>
+                setPodcastForm({
+                  ...podcastForm,
+                  episodeDate: e.target.value,
+                })
+              }
+              placeholder="例如：2024-01-15"
+              theme="luxe"
+            />
+            <div>
+              <label className="block text-sm text-luxe-muted mb-1">
+                分類
+              </label>
+              <select
+                value={podcastForm.category}
+                onChange={(e) =>
+                  setPodcastForm({
+                    ...podcastForm,
+                    category: e.target.value as EpisodeCategory,
+                  })
+                }
+                className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+              >
+                {EPISODE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {EPISODE_CATEGORY_LABEL[c]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-luxe-gold/10">
+            <PillButton
+              theme="luxe"
+              variant="outline"
+              onClick={() => setShowPodcastModal(false)}
+            >
+              取消
+            </PillButton>
+            <PillButton
+              theme="luxe"
+              variant="filled"
+              onClick={handleSavePodcast}
+              disabled={saving}
+            >
+              {saving ? '儲存中...' : '儲存'}
+            </PillButton>
+          </div>
         </div>
       </Modal>
     </div>

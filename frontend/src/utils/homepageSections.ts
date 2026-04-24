@@ -28,7 +28,7 @@ export interface HomepageSection {
   /** 跳轉到哪個 admin tab（若此區塊主要內容在別處管理） */
   hint?: {
     text: string;
-    targetTab?: 'testimonial' | 'gallery' | 'popup';
+    targetTab?: 'testimonial' | 'gallery' | 'popup' | 'marquee' | 'podcast';
   };
 }
 
@@ -70,14 +70,13 @@ export const HOMEPAGE_SECTIONS: HomepageSection[] = [
     id: 'podcast',
     title: 'PODCAST 深海電台',
     tagline: 'Podcast Section',
-    description: 'Podcast 區塊的標題、副標與單集清單（JSON 陣列）。',
+    description: 'Podcast 區塊的標題、副標。',
     icon: '🎙',
-    keys: [
-      'podcast_tagline',
-      'podcast_title',
-      'podcast_subtitle',
-      'podcast_episodes',
-    ],
+    keys: ['podcast_tagline', 'podcast_title', 'podcast_subtitle'],
+    hint: {
+      text: '👉 單集內容（標題、描述、時長、分類…）請到「Podcast 單集」tab 管理',
+      targetTab: 'podcast',
+    },
   },
   {
     id: 'testimonial',
@@ -132,9 +131,13 @@ export const HOMEPAGE_SECTIONS: HomepageSection[] = [
     id: 'certifications',
     title: '認證 / 成果 Marquee',
     tagline: 'Credentials Marquee',
-    description: '兩列無限滾動的認證標章與成果數字（均為 JSON 陣列）。',
+    description: '兩列無限滾動的認證標章與成果數字。',
     icon: '🏅',
-    keys: ['marquee_certs', 'marquee_stats'],
+    keys: [],
+    hint: {
+      text: '👉 認證標章與成果數字請到「認證 / 成果 Marquee」tab 管理',
+      targetTab: 'marquee',
+    },
   },
 ];
 

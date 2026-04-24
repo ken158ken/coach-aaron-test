@@ -25,6 +25,8 @@ import searchRoutes from "./routes/search.js";
 import contentRoutes from "./routes/content.js";
 import contactRoutes from "./routes/contact.js";
 import slidesRoutes from "./routes/slides.js";
+import marqueeRoutes from "./routes/marquee.js";
+import podcastRoutes from "./routes/podcast.js";
 import landingRoutes from "./routes/landing.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
@@ -110,6 +112,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/slides", slidesRoutes);
+app.use("/api/marquee", marqueeRoutes);
+app.use("/api/podcast", podcastRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/landing", landingRoutes);
 

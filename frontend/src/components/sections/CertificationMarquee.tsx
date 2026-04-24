@@ -3,53 +3,53 @@
  * @module components/sections/CertificationMarquee
  * @description Aceternity Infinite Moving Cards — 認證標章與學員成果數字無限滾動
  *              CSS animation (no JS scroll), hover 暫停，兩列反向增加層次感
- *              資料來源：site_content (`marquee_certs` / `marquee_stats`，JSON 陣列)
+ *              資料來源：DB `marquee_items` 表 — 由 admin CRUD 管理
  */
 
-import React from 'react';
-import { useSiteContent } from '@/hooks/useSiteContent';
-
-/** 認證標章資料型別 */
-interface CertItem {
-  icon: string;
-  label: string;
-  sub: string;
-}
-
-/** 成果數字資料型別 */
-interface StatItem {
-  value: string;
-  label: string;
-}
+import React, { useEffect, useState } from 'react';
+import { marqueeService, type MarqueeItem } from '@/services/marquee.service';
 
 /** 預設認證標章（DB 載入失敗時的 fallback） */
-const DEFAULT_CERTS: CertItem[] = [
-  { icon: '🏅', label: 'NSCA-CPT', sub: '美國體能協會認證' },
-  { icon: '🎓', label: 'TQUK Level 3', sub: '英國認證心理諮詢師' },
-  { icon: '🧠', label: 'NLP 執行師', sub: '神經語言程式學' },
-  { icon: '💪', label: 'ACE-CPT', sub: '美國運動委員會認證' },
-  { icon: '🏆', label: 'ISSA-CPT', sub: '國際運動科學協會' },
-  { icon: '⭐', label: '130+ 教練', sub: '已培訓執業教練' },
-  { icon: '💰', label: '月入 8 萬', sub: '學員平均業績目標' },
-  { icon: '🔥', label: '10 年經驗', sub: '健身產業深耕' },
+const DEFAULT_CERTS: MarqueeItem[] = [
+  { id: -1, type: 'cert', icon: '🏅', label: 'NSCA-CPT', sub: '美國體能協會認證', sort_order: 1, is_active: true, created_at: '' },
+  { id: -2, type: 'cert', icon: '🎓', label: 'TQUK Level 3', sub: '英國認證心理諮詢師', sort_order: 2, is_active: true, created_at: '' },
+  { id: -3, type: 'cert', icon: '🧠', label: 'NLP 執行師', sub: '神經語言程式學', sort_order: 3, is_active: true, created_at: '' },
+  { id: -4, type: 'cert', icon: '💪', label: 'ACE-CPT', sub: '美國運動委員會認證', sort_order: 4, is_active: true, created_at: '' },
+  { id: -5, type: 'cert', icon: '🏆', label: 'ISSA-CPT', sub: '國際運動科學協會', sort_order: 5, is_active: true, created_at: '' },
+  { id: -6, type: 'cert', icon: '⭐', label: '130+ 教練', sub: '已培訓執業教練', sort_order: 6, is_active: true, created_at: '' },
+  { id: -7, type: 'cert', icon: '💰', label: '月入 8 萬', sub: '學員平均業績目標', sort_order: 7, is_active: true, created_at: '' },
+  { id: -8, type: 'cert', icon: '🔥', label: '10 年經驗', sub: '健身產業深耕', sort_order: 8, is_active: true, created_at: '' },
 ];
 
 /** 預設成果數字（DB 載入失敗時的 fallback） */
-const DEFAULT_STATS: StatItem[] = [
-  { value: '130+', label: '培訓教練人次' },
-  { value: '95%', label: '學員續課率' },
-  { value: '8萬+', label: '月收入目標' },
-  { value: '3倍', label: '平均業績成長' },
-  { value: '10年', label: '產業深耕經歷' },
-  { value: '500+', label: '服務學員數' },
-  { value: '100天', label: '月入8萬計畫' },
-  { value: '4.9★', label: '學員平均評分' },
+const DEFAULT_STATS: MarqueeItem[] = [
+  { id: -11, type: 'stat', icon: '', label: '130+', sub: '培訓教練人次', sort_order: 1, is_active: true, created_at: '' },
+  { id: -12, type: 'stat', icon: '', label: '95%', sub: '學員續課率', sort_order: 2, is_active: true, created_at: '' },
+  { id: -13, type: 'stat', icon: '', label: '8萬+', sub: '月收入目標', sort_order: 3, is_active: true, created_at: '' },
+  { id: -14, type: 'stat', icon: '', label: '3倍', sub: '平均業績成長', sort_order: 4, is_active: true, created_at: '' },
+  { id: -15, type: 'stat', icon: '', label: '10年', sub: '產業深耕經歷', sort_order: 5, is_active: true, created_at: '' },
+  { id: -16, type: 'stat', icon: '', label: '500+', sub: '服務學員數', sort_order: 6, is_active: true, created_at: '' },
+  { id: -17, type: 'stat', icon: '', label: '100天', sub: '月入 8 萬計畫', sort_order: 7, is_active: true, created_at: '' },
+  { id: -18, type: 'stat', icon: '', label: '4.9★', sub: '學員平均評分', sort_order: 8, is_active: true, created_at: '' },
 ];
 
 const CertificationMarquee: React.FC = () => {
-  const { getArray } = useSiteContent();
-  const certs = getArray<CertItem>('marquee_certs', DEFAULT_CERTS);
-  const stats = getArray<StatItem>('marquee_stats', DEFAULT_STATS);
+  const [certs, setCerts] = useState<MarqueeItem[]>(DEFAULT_CERTS);
+  const [stats, setStats] = useState<MarqueeItem[]>(DEFAULT_STATS);
+
+  useEffect(() => {
+    marqueeService
+      .getAll()
+      .then((items) => {
+        const nextCerts = items.filter((i) => i.type === 'cert');
+        const nextStats = items.filter((i) => i.type === 'stat');
+        if (nextCerts.length > 0) setCerts(nextCerts);
+        if (nextStats.length > 0) setStats(nextStats);
+      })
+      .catch((err) => {
+        console.warn('[CertificationMarquee] 載入 marquee 失敗，使用預設值', err);
+      });
+  }, []);
 
   // 複製兩份讓動畫無縫循環
   const certsDuped = [...certs, ...certs];
@@ -91,7 +91,7 @@ const CertificationMarquee: React.FC = () => {
         >
           {certsDuped.map((cert, i) => (
             <div
-              key={i}
+              key={`${cert.id}-${i}`}
               className="flex items-center gap-3 px-5 py-3 rounded-full border border-luxe-gold/20 bg-luxe-surface/60 backdrop-blur-sm shrink-0 hover:border-luxe-gold/50 hover:bg-luxe-gold/5 transition-colors duration-300 cursor-default"
             >
               <span className="text-xl">{cert.icon}</span>
@@ -130,13 +130,13 @@ const CertificationMarquee: React.FC = () => {
         >
           {statsDuped.map((stat, i) => (
             <div
-              key={i}
+              key={`${stat.id}-${i}`}
               className="flex items-center gap-4 px-6 py-3 rounded-full border border-white/8 bg-white/3 backdrop-blur-sm shrink-0 hover:border-luxe-gold/30 transition-colors duration-300 cursor-default"
             >
               <span className="text-2xl font-bold text-luxe-gold tabular-nums">
-                {stat.value}
+                {stat.label}
               </span>
-              <span className="text-white/50 text-sm">{stat.label}</span>
+              <span className="text-white/50 text-sm">{stat.sub}</span>
             </div>
           ))}
         </div>

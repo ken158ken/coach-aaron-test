@@ -4,10 +4,15 @@
  * @description Aceternity Expandable Card 風格：點擊卡片展開詳細內容
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import {
+  podcastService,
+  type PodcastEpisode as DbEpisode,
+} from '@/services/podcast.service';
+
 interface PodcastEpisode {
   id: string;
   title: string;
@@ -51,6 +56,17 @@ const DEMO_EPISODES: PodcastEpisode[] = [
   },
 ];
 
+/** 把 DB 型別轉成元件本地型別 */
+const fromDb = (ep: DbEpisode): PodcastEpisode => ({
+  id: String(ep.id),
+  title: ep.title,
+  description: ep.description,
+  fullDescription: ep.full_description,
+  duration: ep.duration,
+  date: ep.episode_date,
+  category: ep.category,
+});
+
 const CATEGORY_STYLE: Record<string, string> = {
   training: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20',
   nutrition: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
@@ -65,10 +81,11 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const PodcastExpandable: React.FC = () => {
   const [active, setActive] = useState<PodcastEpisode | null>(null);
+  const [episodes, setEpisodes] = useState<PodcastEpisode[]>(DEMO_EPISODES);
 
   useScrollLock(!!active);
 
-  const { get, getArray } = useSiteContent();
+  const { get } = useSiteContent();
   const pHeader = {
     tagline: get('podcast_tagline', 'Podcast'),
     title: get('podcast_title', '深海電台'),
@@ -78,20 +95,17 @@ const PodcastExpandable: React.FC = () => {
     ),
   };
 
-  // 從 DB 讀取單集清單；缺 id 時以 index 補上以避免 React key 衝突
-  const rawEpisodes = getArray<Partial<PodcastEpisode>>(
-    'podcast_episodes',
-    DEMO_EPISODES
-  );
-  const episodes: PodcastEpisode[] = rawEpisodes.map((ep, idx) => ({
-    id: ep.id || `ep-${idx}`,
-    title: ep.title || '',
-    description: ep.description || '',
-    fullDescription: ep.fullDescription || '',
-    duration: ep.duration || '',
-    date: ep.date || '',
-    category: ep.category || 'training',
-  }));
+  // 從 DB 讀取單集清單（獨立 podcast_episodes 表）；失敗則保留 DEMO fallback
+  useEffect(() => {
+    podcastService
+      .getAll()
+      .then((rows) => {
+        if (rows.length > 0) setEpisodes(rows.map(fromDb));
+      })
+      .catch((err) => {
+        console.warn('[PodcastExpandable] 載入單集失敗，使用預設值', err);
+      });
+  }, []);
 
   return (
     <section className="py-16 sm:py-20 md:py-24 px-4 bg-transparent">
