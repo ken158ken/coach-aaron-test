@@ -926,9 +926,15 @@
 
 /* ------------------------------------------------------
    luxe-* 相容層：這些 class 散佈於 admin + 部分元件，
-   原本未在 @theme 定義因此靜默失效。這裡補齊成 alias，
-   讓 admin 一直以來的「dark + gold」呈現保持不變，
-   同時讓公共前台頁面（如果有用到）也能跟著 data-theme 切換。
+   原本未在 @theme 定義因此靜默失效。這裡補齊成 alias：
+
+   層級設計（admin 視覺層次）：
+     luxe-bg       → page base      (深色: #0a0a0a / 淺色: #f8f6f1)
+     luxe-surface  → cards on page  (深色: #141414 / 淺色: #ece9e4)
+     luxe-surface-2→ modals / deep  (深色: #1e1e1e / 淺色: #ffffff)
+
+   luxe-bg 透過下方 light-mode 區塊覆寫變淺，其他直接用 surface/surface-2
+   （這兩個在 @theme 已有 light-mode override）。
    ------------------------------------------------------ */
 .text-luxe-text     { color: inherit; }
 .text-luxe-muted    { color: var(--color-muted); }
@@ -940,6 +946,11 @@
 .bg-luxe-black      { background-color: #000; }
 .border-luxe-gold   { border-color: var(--color-gold); }
 .border-luxe-muted  { border-color: var(--color-muted); }
+
+/* Admin 淺色模式：讓 bg-luxe-bg 改用淺色底（@theme 沒幫 studio-bg 做 light override）*/
+[data-theme="studio-light"] .bg-luxe-bg { background-color: #f8f6f1; }
+/* 淺色模式下，modal/popover 顯眼一點用白底 */
+[data-theme="studio-light"] .bg-luxe-surface-2 { background-color: #ffffff; }
 /* 帶透明度的變體：讓 bg-luxe-gold/20、border-luxe-gold/30 這類寫法自動對應 */
 [class~="bg-luxe-gold/5"]    { background-color: color-mix(in srgb, var(--color-gold) 5%,  transparent); }
 [class~="bg-luxe-gold/10"]   { background-color: color-mix(in srgb, var(--color-gold) 10%, transparent); }

@@ -15,7 +15,7 @@ import {
   Textarea,
   DataTable,
 } from "@/components/ui";
-import { get, post, del } from "@/services/api";
+import { get, post, put, del } from "@/services/api";
 import type { WhitelistItem } from "@/types";
 
 /** 日誌工具 */
@@ -52,6 +52,9 @@ const AdminWhitelist: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState<WhitelistItem | null>(null);
+  const [editItem, setEditItem] = useState<WhitelistItem | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [saving, setSaving] = useState(false);
   const [newItem, setNewItem] = useState<WhitelistCreateData>({
     email: "",
     note: "",
@@ -159,6 +162,39 @@ const AdminWhitelist: React.FC = () => {
   };
 
   /**
+   * 開啟編輯備註 modal
+   */
+  const openEditModal = (item: WhitelistItem) => {
+    setEditItem(item);
+    setEditNote(item.note || "");
+    setError("");
+  };
+
+  /**
+   * 儲存備註
+   */
+  const handleSaveNote = async () => {
+    if (!editItem) return;
+    try {
+      setSaving(true);
+      await put(`/api/admin/whitelist/${editItem.id}`, { note: editNote });
+      setWhitelist((prev) =>
+        prev.map((i) =>
+          i.id === editItem.id ? { ...i, note: editNote } : i,
+        ),
+      );
+      setEditItem(null);
+      setEditNote("");
+      logger.info("Whitelist note updated", { id: editItem.id });
+    } catch (err) {
+      logger.error("Failed to update whitelist note", err);
+      setError("更新備註失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /**
    * 切換啟用狀態
    */
   const handleToggleActive = async (item: WhitelistItem) => {
@@ -185,7 +221,35 @@ const AdminWhitelist: React.FC = () => {
         <span className="text-luxe-text">{item.email || "-"}</span>
       ),
     },
-    { key: "note" as const, header: "備註", hideOnMobile: true },
+    {
+      key: "note" as const,
+      header: "備註",
+      hideOnMobile: true,
+      render: (item: WhitelistItem) => (
+        <button
+          onClick={() => openEditModal(item)}
+          className="text-left w-full min-h-6 text-luxe-text hover:text-luxe-gold transition-colors group inline-flex items-center gap-1.5"
+          title="點擊編輯備註"
+        >
+          <span className="truncate">
+            {item.note || <span className="text-luxe-muted italic">（點擊新增備註）</span>}
+          </span>
+          <svg
+            className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 shrink-0 transition-opacity"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            />
+          </svg>
+        </button>
+      ),
+    },
     {
       key: "isActive" as const,
       header: (
@@ -225,12 +289,20 @@ const AdminWhitelist: React.FC = () => {
       key: "actions" as const,
       header: "操作",
       render: (item: WhitelistItem) => (
-        <button
-          onClick={() => setDeleteItem(item)}
-          className="text-red-400 hover:text-red-300 transition-colors text-sm"
-        >
-          刪除
-        </button>
+        <div className="inline-flex items-center gap-3">
+          <button
+            onClick={() => openEditModal(item)}
+            className="text-luxe-gold hover:text-luxe-gold/80 transition-colors text-sm"
+          >
+            編輯
+          </button>
+          <button
+            onClick={() => setDeleteItem(item)}
+            className="text-red-400 hover:text-red-300 transition-colors text-sm"
+          >
+            刪除
+          </button>
+        </div>
       ),
     },
   ];
@@ -307,6 +379,45 @@ const AdminWhitelist: React.FC = () => {
                 取消
               </button>
               <PillButton onClick={handleAdd}>新增</PillButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Note Modal */}
+      {editItem && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => !saving && setEditItem(null)}
+          />
+          <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-4 sm:p-6 max-w-md w-full mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto">
+            <h3 className="text-lg font-medium text-luxe-text mb-1">
+              編輯備註
+            </h3>
+            <p className="text-xs text-luxe-muted mb-4 break-all">
+              {editItem.email}
+            </p>
+
+            <Textarea
+              label="備註"
+              value={editNote}
+              onChange={(e) => setEditNote(e.target.value)}
+              placeholder="角色說明..."
+              rows={4}
+            />
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text transition-colors disabled:opacity-50"
+                onClick={() => setEditItem(null)}
+                disabled={saving}
+              >
+                取消
+              </button>
+              <PillButton onClick={handleSaveNote} disabled={saving}>
+                {saving ? "儲存中..." : "儲存"}
+              </PillButton>
             </div>
           </div>
         </div>
