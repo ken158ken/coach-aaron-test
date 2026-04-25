@@ -144,7 +144,7 @@ router.get(
       const { data: allParts } = await supabaseAdmin
         .from("chat_participants")
         .select(
-          "conversation_id, user_id, role, user:users!inner(user_id, name, display_name, email, avatar_url)",
+          "conversation_id, user_id, role, user:users!inner(user_id, name:username, display_name, email, avatar_url)",
         )
         .in("conversation_id", convIds);
 
@@ -372,7 +372,7 @@ router.get(
       const { data: parts } = await supabaseAdmin
         .from("chat_participants")
         .select(
-          "user_id, role, joined_at, user:users!inner(user_id, name, display_name, email, avatar_url)",
+          "user_id, role, joined_at, user:users!inner(user_id, name:username, display_name, email, avatar_url)",
         )
         .eq("conversation_id", id);
 
@@ -657,13 +657,14 @@ router.get(
       const q = String(req.query.q || "").trim();
       let query = supabaseAdmin
         .from("users")
-        .select("user_id, name, display_name, email, avatar_url")
+        .select("user_id, name:username, display_name, email, avatar_url")
         .neq("user_id", me)
         .limit(20);
       if (q) {
-        // 簡單 ILIKE 三欄
+        // 三欄 ILIKE — users 表欄位是 username（不是 name）
+        const safe = q.replace(/[%_,()]/g, "");
         query = query.or(
-          `name.ilike.%${q}%,display_name.ilike.%${q}%,email.ilike.%${q}%`,
+          `username.ilike.%${safe}%,display_name.ilike.%${safe}%,email.ilike.%${safe}%`,
         );
       }
       const { data, error } = await query;
@@ -671,7 +672,13 @@ router.get(
       const enriched = await enrichUsersWithAdminName((data || []) as RawUser[]);
       res.json(enriched);
     } catch (err) {
-      logger.error("搜尋用戶失敗", err as Error);
+      const e = err as { message?: string; details?: string; hint?: string; code?: string };
+      logger.error("搜尋用戶失敗", err as Error, {
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        code: e?.code,
+      });
       res.status(500).json({ error: "搜尋用戶失敗" });
     }
   },
@@ -694,7 +701,7 @@ router.get(
       }
       const { data: users } = await supabaseAdmin
         .from("users")
-        .select("user_id, name, display_name, email, avatar_url")
+        .select("user_id, name:username, display_name, email, avatar_url")
         .in("email", emails);
 
       const wlMap = new Map<string, { display_name: string | null; note: string | null }>();
