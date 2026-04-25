@@ -163,6 +163,11 @@ const Courses: React.FC = () => {
                 <motion.div
                   key={course.course_id}
                   onMouseEnter={() => setHoveredIndex(index)}
+                  initial={{
+                    opacity: 1,
+                    filter: "blur(0px) brightness(1)",
+                    scale: 1,
+                  }}
                   animate={{
                     opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.45,
                     filter: hoveredIndex === null || hoveredIndex === index ? "blur(0px) brightness(1)" : "blur(1.5px) brightness(0.55)",
