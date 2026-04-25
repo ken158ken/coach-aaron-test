@@ -7,8 +7,10 @@ import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { ChatNotificationProvider } from "@/context/ChatNotificationContext";
 import { DialogProvider } from "@/components/ui/Dialog";
 import { RequireAuth, RequireAdmin } from "@/components/auth/RequireAuth";
+import { useHeartbeat } from "@/hooks/usePresence";
 
 // Layout
 import Layout from "@/components/layout/Layout";
@@ -33,6 +35,7 @@ import PublishedPages from "@/pages/PublishedPages";
 import BookingPage from "@/pages/BookingPage";
 import MyBookingsPage from "@/pages/MyBookingsPage";
 import CoachDashboard from "@/pages/coach/CoachDashboard";
+import ChatPage from "@/pages/Chat";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -61,6 +64,12 @@ import "aos/dist/aos.css";
  * @returns {JSX.Element} 應用程式根元件
  */
 import { useEffect } from "react";
+
+/** 觸發在線心跳（已登入才打），需在 AuthProvider 內 */
+const Heartbeat: React.FC = () => {
+  useHeartbeat();
+  return null;
+};
 
 function App(): JSX.Element {
   // 初始化 AOS
@@ -115,6 +124,8 @@ function App(): JSX.Element {
 
     return (
     <AuthProvider>
+      <ChatNotificationProvider>
+        <Heartbeat />
       <ThemeProvider>
         <LanguageProvider>
           <DialogProvider>
@@ -174,6 +185,22 @@ function App(): JSX.Element {
                     element={
                       <RequireAuth>
                         <CoachDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="chat"
+                    element={
+                      <RequireAuth>
+                        <ChatPage />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="chat/:conversationId"
+                    element={
+                      <RequireAuth>
+                        <ChatPage />
                       </RequireAuth>
                     }
                   />
@@ -257,6 +284,7 @@ function App(): JSX.Element {
           </DialogProvider>
         </LanguageProvider>
       </ThemeProvider>
+      </ChatNotificationProvider>
     </AuthProvider>
   );
 }

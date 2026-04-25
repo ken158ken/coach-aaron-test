@@ -9,7 +9,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useChatNotificationContext } from "@/context/ChatNotificationContext";
 import { GlobalSearch, SearchButton } from "@/components/ui/GlobalSearch";
+import UnreadBadge from "@/components/chat/UnreadBadge";
 
 interface NavLink {
   name: string;
@@ -75,6 +77,7 @@ const CloseIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) 
 /* ── Navbar ── */
 const Navbar: React.FC = (): JSX.Element => {
   const { user, logout, mounted, isAdmin } = useAuth();
+  const { unreadTotal } = useChatNotificationContext();
   const { isDark, toggleColorMode } = useTheme();
   const { t, language, setLanguage } = useLanguage();
   const navRef = useRef<HTMLDivElement>(null);
@@ -258,7 +261,7 @@ key={glareKey}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 transition-all duration-300"
+                className="relative flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 transition-all duration-300"
                 style={{ background: "rgba(255,255,255,0.05)" }}
                 aria-label="使用者選單"
               >
@@ -268,6 +271,11 @@ key={glareKey}
                   </span>
                 ) : (
                   <UserIcon className="w-4 h-4 text-[#888]" />
+                )}
+                {mounted && user && unreadTotal > 0 && (
+                  <span className="absolute -top-1 -right-1">
+                    <UnreadBadge count={unreadTotal} />
+                  </span>
                 )}
               </button>
 
@@ -332,6 +340,20 @@ key={glareKey}
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                         </svg>
                         <span>我的預約</span>
+                      </Link>
+
+                      <Link
+                        to="/chat"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>訊息</span>
+                        </span>
+                        <UnreadBadge count={unreadTotal} />
                       </Link>
 
                       {isAdmin && (

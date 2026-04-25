@@ -53,5 +53,6 @@ export interface UpdateWhitelistData {
   email?: string;
   phone_number?: string;
   note?: string;
+  display_name?: string;
   is_active?: boolean;
 }

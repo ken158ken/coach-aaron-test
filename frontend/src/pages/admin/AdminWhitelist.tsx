@@ -29,6 +29,7 @@ const logger = {
 interface WhitelistCreateData {
   email: string;
   note: string;
+  displayName: string;
 }
 
 /** 後端白名單資料結構 */
@@ -37,6 +38,7 @@ interface AdminWhitelistItem {
   email: string | null;
   phone_number: string | null;
   note: string | null;
+  display_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -54,10 +56,12 @@ const AdminWhitelist: React.FC = () => {
   const [deleteItem, setDeleteItem] = useState<WhitelistItem | null>(null);
   const [editItem, setEditItem] = useState<WhitelistItem | null>(null);
   const [editNote, setEditNote] = useState("");
+  const [editDisplayName, setEditDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
   const [newItem, setNewItem] = useState<WhitelistCreateData>({
     email: "",
     note: "",
+    displayName: "",
   });
   const [error, setError] = useState("");
 
@@ -80,6 +84,7 @@ const AdminWhitelist: React.FC = () => {
             email: item.email || undefined,
             phoneNumber: item.phone_number || undefined,
             note: item.note || "",
+            displayName: item.display_name || "",
             isActive: item.is_active,
             createdAt: item.created_at?.split("T")[0] || "",
           })),
@@ -121,6 +126,7 @@ const AdminWhitelist: React.FC = () => {
         email: newItem.email,
         phone_number: null,
         note: newItem.note || null,
+        displayName: newItem.displayName || null,
       });
 
       if (res && res.whitelist_id) {
@@ -129,12 +135,13 @@ const AdminWhitelist: React.FC = () => {
           email: res.email || undefined,
           phoneNumber: res.phone_number || undefined,
           note: res.note || "",
+          displayName: res.display_name || "",
           isActive: res.is_active,
           createdAt: res.created_at?.split("T")[0] || "",
         };
         setWhitelist((prev) => [...prev, newEntry]);
         setShowAddModal(false);
-        setNewItem({ email: "", note: "" });
+        setNewItem({ email: "", note: "", displayName: "" });
         logger.info("Whitelist item added successfully");
       } else {
         setError("新增失敗：回應格式錯誤");
@@ -167,28 +174,35 @@ const AdminWhitelist: React.FC = () => {
   const openEditModal = (item: WhitelistItem) => {
     setEditItem(item);
     setEditNote(item.note || "");
+    setEditDisplayName(item.displayName || "");
     setError("");
   };
 
   /**
-   * 儲存備註
+   * 儲存備註 + 顯示名稱
    */
   const handleSaveNote = async () => {
     if (!editItem) return;
     try {
       setSaving(true);
-      await put(`/api/admin/whitelist/${editItem.id}`, { note: editNote });
+      await put(`/api/admin/whitelist/${editItem.id}`, {
+        note: editNote,
+        displayName: editDisplayName,
+      });
       setWhitelist((prev) =>
         prev.map((i) =>
-          i.id === editItem.id ? { ...i, note: editNote } : i,
+          i.id === editItem.id
+            ? { ...i, note: editNote, displayName: editDisplayName }
+            : i,
         ),
       );
       setEditItem(null);
       setEditNote("");
-      logger.info("Whitelist note updated", { id: editItem.id });
+      setEditDisplayName("");
+      logger.info("Whitelist updated", { id: editItem.id });
     } catch (err) {
-      logger.error("Failed to update whitelist note", err);
-      setError("更新備註失敗");
+      logger.error("Failed to update whitelist", err);
+      setError("更新失敗");
     } finally {
       setSaving(false);
     }
@@ -219,6 +233,28 @@ const AdminWhitelist: React.FC = () => {
       isPrimary: true,
       render: (item: WhitelistItem) => (
         <span className="text-luxe-text">{item.email || "-"}</span>
+      ),
+    },
+    {
+      key: "displayName" as const,
+      header: "顯示名稱（給客戶看）",
+      hideOnMobile: true,
+      render: (item: WhitelistItem) => (
+        <button
+          onClick={() => openEditModal(item)}
+          className="text-left w-full min-h-6 text-luxe-text hover:text-luxe-gold transition-colors"
+          title="點擊編輯"
+        >
+          {item.displayName ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-luxe-gold/15 text-luxe-gold">
+                {item.displayName}
+              </span>
+            </span>
+          ) : (
+            <span className="text-luxe-muted italic text-xs">（點擊新增顯示名稱）</span>
+          )}
+        </button>
       ),
     },
     {
@@ -360,8 +396,19 @@ const AdminWhitelist: React.FC = () => {
                 }
                 placeholder="user@example.com"
               />
+              <Input
+                label="顯示名稱（給客戶在聊天看到的稱呼）"
+                value={newItem.displayName}
+                onChange={(e) =>
+                  setNewItem((prev) => ({
+                    ...prev,
+                    displayName: e.target.value,
+                  }))
+                }
+                placeholder="例：Aaron 教練 / 小恩・網站管理員"
+              />
               <Textarea
-                label="備註"
+                label="內部備註"
                 value={newItem.note}
                 onChange={(e) =>
                   setNewItem((prev) => ({ ...prev, note: e.target.value }))
@@ -393,19 +440,27 @@ const AdminWhitelist: React.FC = () => {
           />
           <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-4 sm:p-6 max-w-md w-full mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto">
             <h3 className="text-lg font-medium text-luxe-text mb-1">
-              編輯備註
+              編輯白名單
             </h3>
             <p className="text-xs text-luxe-muted mb-4 break-all">
               {editItem.email}
             </p>
 
-            <Textarea
-              label="備註"
-              value={editNote}
-              onChange={(e) => setEditNote(e.target.value)}
-              placeholder="角色說明..."
-              rows={4}
-            />
+            <div className="space-y-4">
+              <Input
+                label="顯示名稱（給客戶在聊天看到的稱呼）"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder="例：Aaron 教練 / 小恩・網站管理員"
+              />
+              <Textarea
+                label="內部備註"
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                placeholder="角色說明..."
+                rows={3}
+              />
+            </div>
 
             <div className="flex justify-end gap-3 mt-6">
               <button

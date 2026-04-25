@@ -90,6 +90,7 @@ export interface WhitelistItem {
   email?: string;
   phoneNumber?: string;
   note?: string;
+  displayName?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;

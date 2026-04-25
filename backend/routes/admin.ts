@@ -199,12 +199,13 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const { email, phoneNumber, note, isActive } = req.body;
+      const { email, phoneNumber, note, displayName, isActive } = req.body;
 
       const updateData: UpdateWhitelistData = {};
       if (email !== undefined) updateData.email = email;
       if (phoneNumber !== undefined) updateData.phone_number = phoneNumber;
       if (note !== undefined) updateData.note = note;
+      if (displayName !== undefined) updateData.display_name = displayName;
       if (isActive !== undefined) updateData.is_active = isActive;
 
       const { data, error } = await supabaseAdmin
