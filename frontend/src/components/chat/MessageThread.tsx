@@ -36,7 +36,8 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
   const me = Number(user?.user_id || 0);
-  const { messages, loading, appendLocal } = useConversationMessages(conversation.id);
+  const { messages, loading, appendLocal, replaceLocal, removeLocal } =
+    useConversationMessages(conversation.id);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 對方 ID（DM 用）
@@ -90,12 +91,31 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   }, [conversation.id]);
 
   const handleSend = async (data: { content: string; image: File | null }) => {
-    const msg = await chatService.sendMessage(conversation.id, {
+    // 樂觀更新：立刻把訊息放進去，不等 server roundtrip
+    const tempId = -Date.now();
+    const tempUrl = data.image ? URL.createObjectURL(data.image) : null;
+    const optimistic: ChatMessage = {
+      id: tempId,
+      conversation_id: conversation.id,
+      sender_id: me,
       content: data.content,
-      image: data.image,
-    });
-    appendLocal(msg);
-    onAfterSend?.();
+      image_url: tempUrl,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date().toISOString(),
+    };
+    appendLocal(optimistic);
+
+    try {
+      const real = await chatService.sendMessage(conversation.id, data);
+      replaceLocal(tempId, real);
+      // 釋放 blob URL
+      if (tempUrl) URL.revokeObjectURL(tempUrl);
+      onAfterSend?.();
+    } catch (err) {
+      removeLocal(tempId);
+      if (tempUrl) URL.revokeObjectURL(tempUrl);
+      throw err;
+    }
   };
 
   const headerName = getConversationName(conversation, me);

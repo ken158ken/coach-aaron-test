@@ -3,7 +3,7 @@
  * @module services/chat.service
  */
 
-import apiClient, { get, post, del } from "./api";
+import { get, post, del } from "./api";
 
 // =================== Types ===================
 
@@ -89,23 +89,21 @@ export const chatService = {
     );
   },
 
-  /** 送訊息（可選一張圖）— 用 axios apiClient 直接送 multipart */
-  sendMessage: async (
+  /** 送訊息（可選一張圖）— 用 multipart 表單 */
+  sendMessage: (
     convId: string,
     data: { content?: string; image?: File | null },
   ): Promise<ChatMessage> => {
     const fd = new FormData();
     if (data.content) fd.append("content", data.content);
     if (data.image) fd.append("image", data.image);
-    const res = await apiClient.post<ChatMessage>(
+    // 注意：post helper 已透過 response interceptor 自動解開 response.data
+    // 不要再 .data — 上次的 bug 來源
+    return post<ChatMessage>(
       `/api/chat/conversations/${convId}/messages`,
       fd,
-      {
-        // 讓 axios 自動帶 multipart boundary
-        headers: { "Content-Type": "multipart/form-data" },
-      },
+      { headers: { "Content-Type": "multipart/form-data" } },
     );
-    return res.data;
   },
 
   /** 標記已讀 */

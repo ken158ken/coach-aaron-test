@@ -44,18 +44,30 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
   const handleSend = async () => {
     const trimmed = content.trim();
     if (!trimmed && !image) return;
+
+    // 立刻清空輸入欄（樂觀 UX）— 失敗時再還原
+    const sentImage = image;
+    const sentPreview = preview;
+    setContent("");
+    setImage(null);
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+    setError("");
+    setSending(true);
+
     try {
-      setSending(true);
-      setError("");
-      await onSend({ content: trimmed, image });
-      setContent("");
-      setImage(null);
-      if (preview) URL.revokeObjectURL(preview);
-      setPreview(null);
-      if (fileRef.current) fileRef.current.value = "";
+      await onSend({ content: trimmed, image: sentImage });
+      // 成功 — 釋放預覽用的 blob URL（傳給 MessageThread 的 tempMsg 用了同一個）
+      if (sentPreview) URL.revokeObjectURL(sentPreview);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "送出失敗");
+      // 失敗 → 還原內容讓用戶重發
+      setContent(trimmed);
+      if (sentImage) {
+        setImage(sentImage);
+        setPreview(sentPreview);
+      }
+      setError(err instanceof Error ? err.message : "送出失敗，已還原內容");
     } finally {
       setSending(false);
     }
