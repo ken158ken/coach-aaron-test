@@ -56,27 +56,51 @@ const MessageThread: React.FC<MessageThreadProps> = ({
       .find((u) => u && (u as { user_id: number }).user_id !== me);
   }, [conversation, me]);
 
-  const partnerIds = dmPartner ? [(dmPartner as { user_id: number }).user_id] : [];
-  const presenceMap = usePresenceMany(partnerIds);
+  // 對 DM 拿對方、群組拿所有非自己成員的 presence
+  const trackedIds = useMemo(() => {
+    const parts = conversation.participants as
+      | (ChatParticipant | { user_id: number })[]
+      | undefined;
+    if (!parts) return [];
+    return parts
+      .map((p) =>
+        ("user" in p ? (p as ChatParticipant).user.user_id : (p as { user_id: number }).user_id),
+      )
+      .filter((id) => id !== me);
+  }, [conversation, me]);
+  const presenceMap = usePresenceMany(trackedIds);
+
   const partnerPresence = dmPartner
     ? presenceMap.get((dmPartner as { user_id: number }).user_id)
     : null;
 
-  // sender_id → name map（給群組顯示寄件人名）
-  const senderNameMap = useMemo(() => {
-    const m = new Map<number, string>();
+  /** 群組頭像聚合燈號 */
+  const groupStatus: "online" | "away" | "offline" = useMemo(() => {
+    if (conversation.type !== "group") return "offline";
+    let any: "online" | "away" | "offline" = "offline";
+    trackedIds.forEach((id) => {
+      const s = presenceMap.get(id)?.status;
+      if (s === "online") any = "online";
+      else if (s === "away" && any !== "online") any = "away";
+    });
+    return any;
+  }, [conversation.type, trackedIds, presenceMap]);
+
+  // sender_id → user map（給群組顯示寄件人名 + 頭像）
+  const senderMap = useMemo(() => {
+    const m = new Map<number, ChatUser>();
     const parts = conversation.participants as ChatParticipant[] | undefined;
     parts?.forEach((p) => {
-      if ("user" in p) {
-        const u = p.user;
-        m.set(
-          u.user_id,
-          u.admin_display_name || u.display_name || u.name || "用戶",
-        );
-      }
+      if ("user" in p) m.set(p.user.user_id, p.user);
     });
     return m;
   }, [conversation]);
+
+  const senderNameOf = (id: number): string => {
+    const u = senderMap.get(id);
+    if (!u) return "用戶";
+    return u.admin_display_name || u.display_name || u.name || "用戶";
+  };
 
   // 新訊息進來自動捲到底
   useEffect(() => {
@@ -153,9 +177,15 @@ const MessageThread: React.FC<MessageThreadProps> = ({
               {headerName.charAt(0).toUpperCase()}
             </div>
           )}
-          {partnerPresence && (
+          {/* DM 用對方狀態，群組用聚合狀態 */}
+          {conversation.type === "dm" && partnerPresence && (
             <span className="absolute -bottom-0.5 -right-0.5">
               <PresenceDot status={partnerPresence.status} />
+            </span>
+          )}
+          {conversation.type === "group" && (
+            <span className="absolute -bottom-0.5 -right-0.5">
+              <PresenceDot status={groupStatus} />
             </span>
           )}
         </div>
@@ -187,16 +217,28 @@ const MessageThread: React.FC<MessageThreadProps> = ({
         {messages.map((msg: ChatMessage, idx: number) => {
           const isMine = msg.sender_id === me;
           const prev = messages[idx - 1];
+          const next = messages[idx + 1];
           const samePrev = prev && prev.sender_id === msg.sender_id;
+          const sameNext = next && next.sender_id === msg.sender_id;
+          const sender = senderMap.get(msg.sender_id) || null;
+          const senderStatus =
+            sender && sender.user_id !== me
+              ? presenceMap.get(sender.user_id)?.status
+              : undefined;
           return (
             <MessageBubble
               key={msg.id}
               msg={msg}
               isMine={isMine}
-              senderName={senderNameMap.get(msg.sender_id)}
+              senderName={senderNameOf(msg.sender_id)}
               showSenderName={
                 conversation.type === "group" && !isMine && !samePrev
               }
+              showSenderAvatar={
+                conversation.type === "group" && !isMine && !sameNext
+              }
+              sender={sender}
+              senderStatus={senderStatus}
             />
           );
         })}

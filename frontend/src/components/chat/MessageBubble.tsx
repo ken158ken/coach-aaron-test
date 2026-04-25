@@ -6,7 +6,10 @@
 import React from "react";
 import { format, isToday, isYesterday } from "date-fns";
 import { zhTW } from "date-fns/locale";
-import type { ChatMessage } from "@/services/chat.service";
+import type { ChatMessage, ChatUser } from "@/services/chat.service";
+import type { PresenceStatus } from "@/services/presence.service";
+import UserAvatar from "./UserAvatar";
+import PresenceDot from "./PresenceDot";
 
 interface MessageBubbleProps {
   msg: ChatMessage;
@@ -14,6 +17,10 @@ interface MessageBubbleProps {
   /** 在群組裡顯示寄件人名（DM 不需要）*/
   senderName?: string;
   showSenderName?: boolean;
+  /** 在群組裡顯示寄件人頭像（DM 不需要）*/
+  showSenderAvatar?: boolean;
+  sender?: ChatUser | null;
+  senderStatus?: PresenceStatus;
 }
 
 function formatTime(iso: string): string {
@@ -28,9 +35,30 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   isMine,
   senderName,
   showSenderName,
+  showSenderAvatar,
+  sender,
+  senderStatus,
 }) => {
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"} mb-2`}>
+    <div
+      className={`flex ${isMine ? "justify-end" : "justify-start"} mb-2 gap-2`}
+    >
+      {/* 群組左側：寄件人頭像（同一人連發只在第一則顯示）*/}
+      {!isMine && (
+        <div className="w-8 shrink-0">
+          {showSenderAvatar && sender && (
+            <div className="relative">
+              <UserAvatar user={sender} size="sm" />
+              {senderStatus && (
+                <span className="absolute -bottom-0.5 -right-0.5">
+                  <PresenceDot status={senderStatus} />
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div
         className={`max-w-[75%] sm:max-w-[60%] ${
           isMine ? "items-end" : "items-start"

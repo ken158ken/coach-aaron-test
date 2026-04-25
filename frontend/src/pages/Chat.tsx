@@ -47,7 +47,8 @@ const ChatPage: React.FC = () => {
   }, [conversationId, navigate]);
 
   return (
-    <div className="fixed inset-0 top-[64px] flex bg-surface z-10">
+    <div className="fixed inset-0 top-[64px] z-10 bg-surface flex justify-center">
+    <div className="flex w-full max-w-[1440px] border-x border-gold/10">
       {/* 左欄 — 對話清單 */}
       <div
         className={`${
@@ -101,6 +102,7 @@ const ChatPage: React.FC = () => {
         isOpen={showNewChat}
         onClose={() => setShowNewChat(false)}
       />
+    </div>
     </div>
   );
 };

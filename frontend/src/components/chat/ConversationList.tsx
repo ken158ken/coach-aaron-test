@@ -41,18 +41,31 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const { conversationId } = useParams();
   const me = Number(user?.user_id || 0);
 
-  // 收集所有 DM 對方的 user_id 來查 presence
-  const dmPartnerIds = useMemo(() => {
+  // 收集所有對話中其他成員的 user_id 來查 presence（含群組成員，用於聚合燈號）
+  const allPartnerIds = useMemo(() => {
     const ids = new Set<number>();
     conversations.forEach((c) => {
-      if (c.type !== "dm") return;
       (c.participants as { user_id: number }[] | undefined)?.forEach((u) => {
         if (u.user_id !== me) ids.add(u.user_id);
       });
     });
     return Array.from(ids);
   }, [conversations, me]);
-  const presence = usePresenceMany(dmPartnerIds);
+  const presence = usePresenceMany(allPartnerIds);
+
+  /** 群組「聚合在線」：任一成員 online → online；任一 away → away；否則 offline */
+  const groupAggregateStatus = (
+    participants: { user_id: number }[] | undefined,
+  ): "online" | "away" | "offline" => {
+    let any: "online" | "away" | "offline" = "offline";
+    (participants || []).forEach((u) => {
+      if (u.user_id === me) return;
+      const s = presence.get(u.user_id)?.status;
+      if (s === "online") any = "online";
+      else if (s === "away" && any !== "online") any = "away";
+    });
+    return any;
+  };
 
   return (
     <div className="flex flex-col h-full bg-surface border-r border-gold/15">
@@ -98,9 +111,14 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   (u) => u.user_id !== me,
                 )
               : null;
-          const presenceStatus = partner
-            ? presence.get(partner.user_id)?.status || "offline"
-            : null;
+          const presenceStatus =
+            c.type === "dm"
+              ? partner
+                ? presence.get(partner.user_id)?.status || "offline"
+                : null
+              : groupAggregateStatus(
+                  c.participants as { user_id: number }[] | undefined,
+                );
 
           return (
             <Link
