@@ -47,7 +47,7 @@ const ChatPage: React.FC = () => {
   }, [conversationId, navigate]);
 
   return (
-    <div className="fixed inset-0 top-[64px] flex bg-surface">
+    <div className="fixed inset-0 top-[64px] flex bg-surface z-10">
       {/* 左欄 — 對話清單 */}
       <div
         className={`${

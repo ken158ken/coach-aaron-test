@@ -21,11 +21,14 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const overlayClasses =
   "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm";
+/** 用 surface-2（modal/popover 層）讓 modal 跟頁面 bg-surface 在淺色與深色都有對比 */
 const modalClasses =
-  "bg-surface border border-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden my-auto text-inherit";
+  "bg-surface-2 border border-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-visible my-auto text-inherit relative";
 const headerClasses =
-  "px-4 sm:px-6 py-3 sm:py-4 border-b border-gold/20 bg-surface-2";
-const contentClasses = "px-4 sm:px-6 py-3 sm:py-4 max-h-[70vh] overflow-y-auto";
+  "px-4 sm:px-6 py-3 sm:py-4 border-b border-gold/20 rounded-t-xl";
+/** 內容不再 overflow-clip — 讓 popover/dropdown 可以溢出顯示。
+ *  超長時靠 viewport 自身的 overlay scroll 處理。*/
+const contentClasses = "px-4 sm:px-6 py-3 sm:py-4";
 const footerClasses =
   "px-4 sm:px-6 py-3 sm:py-4 border-t border-gold/20 flex flex-wrap justify-end gap-2 sm:gap-3";
 
