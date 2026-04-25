@@ -9,6 +9,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import {
   type ChatConversation,
+  type ChatUser,
   getConversationName,
   previewText,
 } from "@/services/chat.service";
@@ -16,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePresenceMany } from "@/hooks/usePresence";
 import PresenceDot from "./PresenceDot";
 import UnreadBadge from "./UnreadBadge";
+import UserAvatar from "./UserAvatar";
 
 interface ConversationListProps {
   conversations: ChatConversation[];
@@ -92,7 +94,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
           const isActive = c.id === conversationId;
           const partner =
             c.type === "dm"
-              ? (c.participants as { user_id: number }[] | undefined)?.find(
+              ? (c.participants as ChatUser[] | undefined)?.find(
                   (u) => u.user_id !== me,
                 )
               : null;
@@ -110,9 +112,17 @@ const ConversationList: React.FC<ConversationListProps> = ({
             >
               {/* Avatar */}
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center text-gold font-medium">
-                  {c.type === "group" ? "👥" : name.charAt(0).toUpperCase()}
-                </div>
+                {c.type === "group" ? (
+                  <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center text-gold font-medium">
+                    👥
+                  </div>
+                ) : partner ? (
+                  <UserAvatar user={partner} size="md" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center text-gold font-medium">
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 {presenceStatus && (
                   <span className="absolute -bottom-0.5 -right-0.5">
                     <PresenceDot status={presenceStatus} />

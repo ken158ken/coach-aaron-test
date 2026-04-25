@@ -10,6 +10,7 @@ import {
   type ChatConversation,
   type ChatMessage,
   type ChatParticipant,
+  type ChatUser,
   getConversationName,
 } from "@/services/chat.service";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +20,7 @@ import { formatLastSeen } from "@/services/presence.service";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import PresenceDot from "./PresenceDot";
+import UserAvatar from "./UserAvatar";
 
 interface MessageThreadProps {
   conversation: ChatConversation;
@@ -120,9 +122,17 @@ const MessageThread: React.FC<MessageThreadProps> = ({
           </button>
         )}
         <div className="relative shrink-0">
-          <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center text-gold font-medium">
-            {conversation.type === "group" ? "👥" : headerName.charAt(0).toUpperCase()}
-          </div>
+          {conversation.type === "group" ? (
+            <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center text-gold font-medium">
+              👥
+            </div>
+          ) : dmPartner ? (
+            <UserAvatar user={dmPartner as ChatUser} size="md" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center text-gold font-medium">
+              {headerName.charAt(0).toUpperCase()}
+            </div>
+          )}
           {partnerPresence && (
             <span className="absolute -bottom-0.5 -right-0.5">
               <PresenceDot status={partnerPresence.status} />
