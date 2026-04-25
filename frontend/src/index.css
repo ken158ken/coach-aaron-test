@@ -887,3 +887,77 @@
   );
   animation: routeBladeSweep 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* ══════════════════════════════════════════════════════
+   Light-mode safety net (added 2026-04-24)
+   Many pages and components use hardcoded text-white / text-white/X
+   and text-gray-300/400 that become invisible on light backgrounds.
+   These overrides force those utilities to auto-switch in light mode.
+
+   Opt-out: add `force-white` class to keep white in light mode
+   (e.g. text on bg-gold buttons / dark image overlays).
+   ══════════════════════════════════════════════════════ */
+
+[data-theme="studio-light"] .text-white          { color: rgba(20,16,12,0.88); }
+[data-theme="studio-light"] .text-white\/95      { color: rgba(20,16,12,0.86); }
+[data-theme="studio-light"] .text-white\/90      { color: rgba(20,16,12,0.82); }
+[data-theme="studio-light"] .text-white\/85      { color: rgba(20,16,12,0.78); }
+[data-theme="studio-light"] .text-white\/80      { color: rgba(20,16,12,0.72); }
+[data-theme="studio-light"] .text-white\/75      { color: rgba(20,16,12,0.68); }
+[data-theme="studio-light"] .text-white\/70      { color: rgba(20,16,12,0.64); }
+[data-theme="studio-light"] .text-white\/65      { color: rgba(20,16,12,0.60); }
+[data-theme="studio-light"] .text-white\/60      { color: rgba(20,16,12,0.56); }
+[data-theme="studio-light"] .text-white\/55      { color: rgba(20,16,12,0.52); }
+[data-theme="studio-light"] .text-white\/50      { color: rgba(20,16,12,0.48); }
+[data-theme="studio-light"] .text-white\/45      { color: rgba(20,16,12,0.44); }
+[data-theme="studio-light"] .text-white\/40      { color: rgba(20,16,12,0.40); }
+[data-theme="studio-light"] .text-white\/35      { color: rgba(20,16,12,0.36); }
+[data-theme="studio-light"] .text-white\/30      { color: rgba(20,16,12,0.32); }
+[data-theme="studio-light"] .text-white\/25      { color: rgba(20,16,12,0.28); }
+[data-theme="studio-light"] .text-white\/20      { color: rgba(20,16,12,0.24); }
+
+/* 灰階文字系列同樣在淺色底會對比不足 */
+[data-theme="studio-light"] .text-gray-300      { color: rgba(28,24,20,0.72); }
+[data-theme="studio-light"] .text-gray-400      { color: rgba(28,24,20,0.58); }
+[data-theme="studio-light"] .text-gray-500      { color: rgba(28,24,20,0.50); }
+
+/* 強制保留白色（放在 bg-gold 按鈕 / 深色圖片遮罩等場景） */
+[data-theme="studio-light"] .force-white        { color: #ffffff !important; }
+
+/* ------------------------------------------------------
+   luxe-* 相容層：這些 class 散佈於 admin + 部分元件，
+   原本未在 @theme 定義因此靜默失效。這裡補齊成 alias，
+   讓 admin 一直以來的「dark + gold」呈現保持不變，
+   同時讓公共前台頁面（如果有用到）也能跟著 data-theme 切換。
+   ------------------------------------------------------ */
+.text-luxe-text     { color: inherit; }
+.text-luxe-muted    { color: var(--color-muted); }
+.text-luxe-gold     { color: var(--color-gold); }
+.bg-luxe-bg         { background-color: var(--color-studio-bg); }
+.bg-luxe-surface    { background-color: var(--color-surface); }
+.bg-luxe-surface-2  { background-color: var(--color-surface-2); }
+.bg-luxe-gold       { background-color: var(--color-gold); }
+.bg-luxe-black      { background-color: #000; }
+.border-luxe-gold   { border-color: var(--color-gold); }
+.border-luxe-muted  { border-color: var(--color-muted); }
+/* 帶透明度的變體：讓 bg-luxe-gold/20、border-luxe-gold/30 這類寫法自動對應 */
+[class~="bg-luxe-gold/5"]    { background-color: color-mix(in srgb, var(--color-gold) 5%,  transparent); }
+[class~="bg-luxe-gold/10"]   { background-color: color-mix(in srgb, var(--color-gold) 10%, transparent); }
+[class~="bg-luxe-gold/15"]   { background-color: color-mix(in srgb, var(--color-gold) 15%, transparent); }
+[class~="bg-luxe-gold/20"]   { background-color: color-mix(in srgb, var(--color-gold) 20%, transparent); }
+[class~="bg-luxe-gold/25"]   { background-color: color-mix(in srgb, var(--color-gold) 25%, transparent); }
+[class~="bg-luxe-gold/30"]   { background-color: color-mix(in srgb, var(--color-gold) 30%, transparent); }
+[class~="border-luxe-gold/5"]  { border-color: color-mix(in srgb, var(--color-gold) 5%,  transparent); }
+[class~="border-luxe-gold/10"] { border-color: color-mix(in srgb, var(--color-gold) 10%, transparent); }
+[class~="border-luxe-gold/15"] { border-color: color-mix(in srgb, var(--color-gold) 15%, transparent); }
+[class~="border-luxe-gold/20"] { border-color: color-mix(in srgb, var(--color-gold) 20%, transparent); }
+[class~="border-luxe-gold/30"] { border-color: color-mix(in srgb, var(--color-gold) 30%, transparent); }
+[class~="border-luxe-gold/40"] { border-color: color-mix(in srgb, var(--color-gold) 40%, transparent); }
+[class~="border-luxe-gold/50"] { border-color: color-mix(in srgb, var(--color-gold) 50%, transparent); }
+[class~="hover:bg-luxe-gold/5"]:hover  { background-color: color-mix(in srgb, var(--color-gold) 5%,  transparent); }
+[class~="hover:bg-luxe-gold/10"]:hover { background-color: color-mix(in srgb, var(--color-gold) 10%, transparent); }
+[class~="hover:bg-luxe-gold/20"]:hover { background-color: color-mix(in srgb, var(--color-gold) 20%, transparent); }
+[class~="hover:border-luxe-gold/50"]:hover { border-color: color-mix(in srgb, var(--color-gold) 50%, transparent); }
+[class~="hover:text-luxe-gold"]:hover  { color: var(--color-gold); }
+/* admin 專用的 bg-luxe-bg 刻意鎖死為 dark（不跟著淺色切換）— admin 永遠視覺一致 */
+

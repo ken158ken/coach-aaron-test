@@ -77,19 +77,19 @@ const Modal: React.FC<ModalProps> = ({
           rounded-xl
           overflow-hidden
           animate-fade-in
-          bg-[#0f0f0f] border-white/15
+          bg-surface border-gold/20 text-inherit
           ${className}
         `}
       >
         {/* Header */}
         {title && (
           <div
-            className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b text-white/90 border-white/10"
+            className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gold/15"
           >
             <h2 className="text-base sm:text-lg font-medium">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 transition-colors text-white/40 hover:text-white"
+              className="p-1 transition-colors text-muted hover:text-inherit"
             >
               <svg
                 className="w-5 h-5"

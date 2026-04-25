@@ -22,12 +22,12 @@ import { motion, AnimatePresence } from "framer-motion";
 const overlayClasses =
   "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm";
 const modalClasses =
-  "bg-luxe-surface border border-luxe-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden my-auto";
+  "bg-surface border border-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-hidden my-auto text-inherit";
 const headerClasses =
-  "px-4 sm:px-6 py-3 sm:py-4 border-b border-luxe-gold/20 bg-luxe-black/50";
+  "px-4 sm:px-6 py-3 sm:py-4 border-b border-gold/20 bg-surface-2";
 const contentClasses = "px-4 sm:px-6 py-3 sm:py-4 max-h-[70vh] overflow-y-auto";
 const footerClasses =
-  "px-4 sm:px-6 py-3 sm:py-4 border-t border-luxe-gold/20 flex flex-wrap justify-end gap-2 sm:gap-3";
+  "px-4 sm:px-6 py-3 sm:py-4 border-t border-gold/20 flex flex-wrap justify-end gap-2 sm:gap-3";
 
 // ============ 基礎 Modal ============
 
@@ -113,7 +113,7 @@ export const Modal: React.FC<ModalProps> = ({
           >
             {title && (
               <div className={headerClasses}>
-                <h3 className="text-lg font-medium text-luxe-gold">{title}</h3>
+                <h3 className="text-lg font-medium text-gold">{title}</h3>
               </div>
             )}
             <div className={contentClasses}>{children}</div>
@@ -229,7 +229,7 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm text-muted hover:text-inherit transition-colors"
           >
             {cancelText}
           </button>
@@ -237,14 +237,14 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
             type="button"
             onClick={handleConfirm}
             disabled={!value.trim() || !isValid}
-            className="px-4 py-2 text-sm bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="px-4 py-2 text-sm bg-gold text-black rounded-lg hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {confirmText}
           </button>
         </>
       }
     >
-      {message && <p className="text-gray-300 text-sm mb-4">{message}</p>}
+      {message && <p className="text-inherit opacity-85 text-sm mb-4">{message}</p>}
 
       <input
         ref={inputRef}
@@ -256,10 +256,10 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={`w-full px-4 py-3 bg-luxe-bg border rounded-lg outline-none text-sm transition-colors ${
+        className={`studio-input w-full px-4 py-3 border rounded-lg outline-none text-sm transition-colors ${
           error
             ? "border-red-500 focus:border-red-500"
-            : "border-luxe-gold/30 focus:border-luxe-gold"
+            : "border-gold/30 focus:border-gold"
         }`}
       />
 
@@ -326,7 +326,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm text-muted hover:text-inherit transition-colors"
           >
             {cancelText}
           </button>
@@ -336,7 +336,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             className={`px-4 py-2 text-sm rounded-lg font-medium ${
               resolvedVariant === "danger"
                 ? "bg-red-500 hover:bg-red-600 text-white"
-                : "bg-luxe-gold hover:bg-luxe-gold/90 text-black"
+                : "bg-gold hover:bg-gold/90 text-black"
             }`}
           >
             {confirmText}
@@ -344,7 +344,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </>
       }
     >
-      <p className="text-gray-300">{message}</p>
+      <p className="text-inherit opacity-85">{message}</p>
     </Modal>
   );
 };
@@ -382,13 +382,13 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90 font-medium"
+          className="px-4 py-2 text-sm bg-gold text-black rounded-lg hover:bg-gold/90 font-medium"
         >
           確定
         </button>
       }
     >
-      <p className="text-gray-300">{message}</p>
+      <p className="text-inherit opacity-85">{message}</p>
     </Modal>
   );
 };
