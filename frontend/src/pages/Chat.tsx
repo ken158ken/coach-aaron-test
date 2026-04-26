@@ -7,7 +7,7 @@
  *   /chat/:id          — 顯示單一對話內容
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { chatService, type ChatConversation } from "@/services/chat.service";
 import { useChatNotificationContext } from "@/context/ChatNotificationContext";
@@ -24,27 +24,31 @@ const ChatPage: React.FC = () => {
   const [showNewChat, setShowNewChat] = useState(false);
 
   // 拉某個對話的詳情（含 participants）
-  useEffect(() => {
+  const loadActive = useCallback(() => {
     if (!conversationId) {
       setActiveConv(null);
-      return;
+      return Promise.resolve();
     }
-    let cancelled = false;
     setActiveLoading(true);
-    chatService
+    return chatService
       .getConversation(conversationId)
-      .then((c) => !cancelled && setActiveConv(c))
+      .then((c) => setActiveConv(c))
       .catch(() => {
-        if (!cancelled) {
-          setActiveConv(null);
-          navigate("/chat", { replace: true });
-        }
+        setActiveConv(null);
+        navigate("/chat", { replace: true });
       })
-      .finally(() => !cancelled && setActiveLoading(false));
+      .finally(() => setActiveLoading(false));
+  }, [conversationId, navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadActive().then(() => {
+      if (cancelled) return;
+    });
     return () => {
       cancelled = true;
     };
-  }, [conversationId, navigate]);
+  }, [loadActive]);
 
   return (
     <div className="fixed inset-0 top-[64px] z-10 bg-surface flex justify-center">
@@ -90,6 +94,10 @@ const ChatPage: React.FC = () => {
             conversation={activeConv}
             onBack={() => navigate("/chat")}
             onAfterSend={refreshConversations}
+            onConversationChanged={() => {
+              loadActive();
+              refreshConversations();
+            }}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted text-sm">

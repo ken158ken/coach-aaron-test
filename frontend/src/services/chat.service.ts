@@ -39,8 +39,11 @@ export interface ChatConversation {
     has_image: boolean;
     sender_id: number;
     created_at: string;
+    message_type?: "user" | "system";
   } | null;
   unread_count?: number;
+  /** 自己的 left_at；非 null 代表已被移出/離開此群組 */
+  my_left_at?: string | null;
 }
 
 export interface ChatMessage {
@@ -49,6 +52,7 @@ export interface ChatMessage {
   sender_id: number;
   content: string;
   image_url: string | null;
+  message_type?: "user" | "system";
   expires_at: string;
   created_at: string;
 }

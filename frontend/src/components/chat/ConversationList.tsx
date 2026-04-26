@@ -149,9 +149,16 @@ const ConversationList: React.FC<ConversationListProps> = ({
               </div>
 
               {/* Body */}
-              <div className="flex-1 min-w-0">
+              <div className={`flex-1 min-w-0 ${c.my_left_at ? "opacity-60" : ""}`}>
                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <h3 className="font-medium text-sm truncate">{name}</h3>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h3 className="font-medium text-sm truncate">{name}</h3>
+                    {c.my_left_at && (
+                      <span className="text-[10px] text-muted bg-zinc-500/15 border border-zinc-500/30 rounded-full px-1.5 py-0.5 shrink-0">
+                        已離開
+                      </span>
+                    )}
+                  </div>
                   {c.last_message && (
                     <span className="text-[10px] text-muted shrink-0">
                       {formatTime(c.last_message.created_at)}

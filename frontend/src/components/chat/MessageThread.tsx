@@ -3,7 +3,7 @@
  * @module components/chat/MessageThread
  */
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   chatService,
@@ -17,22 +17,29 @@ import { useAuth } from "@/context/AuthContext";
 import { useConversationMessages } from "@/hooks/useChat";
 import { usePresenceMany } from "@/hooks/usePresence";
 import { formatLastSeen } from "@/services/presence.service";
+import { subscribeConversation } from "@/services/realtime.service";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import PresenceDot from "./PresenceDot";
 import UserAvatar from "./UserAvatar";
+import GroupMembersModal from "./GroupMembersModal";
 
 interface MessageThreadProps {
   conversation: ChatConversation;
   onBack?: () => void;
   onAfterSend?: () => void;
+  /** 對話內成員變動（加 / 踢 / 自己離開）後通知父頁面 */
+  onConversationChanged?: () => void;
 }
 
 const MessageThread: React.FC<MessageThreadProps> = ({
   conversation,
   onBack,
   onAfterSend,
+  onConversationChanged,
 }) => {
+  const [showMembers, setShowMembers] = useState(false);
+  const hasLeft = !!conversation.my_left_at;
   const { user } = useAuth();
   const navigate = useNavigate();
   const me = Number(user?.user_id || 0);
@@ -114,6 +121,15 @@ const MessageThread: React.FC<MessageThreadProps> = ({
     chatService.markRead(conversation.id).catch(() => {});
   }, [conversation.id]);
 
+  // 訂閱群組成員變動 → 通知父頁面 reload conversation（拉新的 participants）
+  useEffect(() => {
+    if (conversation.type !== "group") return;
+    const unsub = subscribeConversation(conversation.id, {
+      onMembersChanged: () => onConversationChanged?.(),
+    });
+    return unsub;
+  }, [conversation.id, conversation.type, onConversationChanged]);
+
   const handleSend = async (data: { content: string; image: File | null }) => {
     // 樂觀更新：立刻把訊息放進去，不等 server roundtrip
     const tempId = -Date.now();
@@ -193,6 +209,18 @@ const MessageThread: React.FC<MessageThreadProps> = ({
           <h3 className="font-medium truncate">{headerName}</h3>
           {headerSub && <p className="text-xs text-muted">{headerSub}</p>}
         </div>
+        {/* 群組才顯示「查看成員」 */}
+        {conversation.type === "group" && (
+          <button
+            onClick={() => setShowMembers(true)}
+            className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            title="查看成員"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={() => navigate("/chat")}
           className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors hidden lg:block"
@@ -244,8 +272,25 @@ const MessageThread: React.FC<MessageThreadProps> = ({
         })}
       </div>
 
-      {/* Input */}
-      <MessageInput onSend={handleSend} />
+      {/* Input — 已離開群組則顯示說明而非輸入框 */}
+      {hasLeft ? (
+        <div className="border-t border-gold/15 bg-surface-2/40 px-4 py-3 text-center text-sm text-muted">
+          🚪 你已離開此群組，無法發送新訊息（仍可瀏覽舊訊息）
+        </div>
+      ) : (
+        <MessageInput onSend={handleSend} />
+      )}
+
+      {/* 群組成員管理 modal */}
+      {conversation.type === "group" && (
+        <GroupMembersModal
+          isOpen={showMembers}
+          onClose={() => setShowMembers(false)}
+          conversation={conversation}
+          onChanged={onConversationChanged}
+          onSelfLeft={() => navigate("/chat")}
+        />
+      )}
     </div>
   );
 };

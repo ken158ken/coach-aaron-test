@@ -34,19 +34,74 @@ const upload = multer({
 
 // ===== Helpers =====
 
-/** 確認 user 是該對話的 participant */
+/** 確認 user 是該對話的 participant；leftAt 不為 null 代表已軟離開 */
 async function ensureParticipant(
   conversationId: string,
   userId: number,
-): Promise<{ ok: boolean; role?: "member" | "admin" }> {
+): Promise<{ ok: boolean; role?: "member" | "admin"; leftAt?: string | null }> {
   const { data } = await supabaseAdmin
     .from("chat_participants")
-    .select("role")
+    .select("role, left_at")
     .eq("conversation_id", conversationId)
     .eq("user_id", userId)
     .maybeSingle();
   if (!data) return { ok: false };
-  return { ok: true, role: data.role as "member" | "admin" };
+  return {
+    ok: true,
+    role: data.role as "member" | "admin",
+    leftAt: data.left_at,
+  };
+}
+
+/** 插入系統訊息（XXX 加入 / 離開 / 被移除）*/
+async function insertSystemMessage(
+  conversationId: string,
+  actorUserId: number,
+  content: string,
+): Promise<void> {
+  try {
+    const { data: msg } = await supabaseAdmin
+      .from("chat_messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_id: actorUserId,
+        content,
+        message_type: "system",
+      })
+      .select(
+        "id, conversation_id, sender_id, content, image_url, message_type, expires_at, created_at",
+      )
+      .single();
+    if (msg) void broadcast(conversationId, "new_message", msg);
+  } catch (err) {
+    logger.warn("插入系統訊息失敗（不阻擋主流程）", {
+      error: (err as Error)?.message,
+      conversationId,
+    });
+  }
+}
+
+/** 取一個 user 的顯示名稱（給系統訊息用） */
+async function getUserDisplayName(userId: number): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from("users")
+    .select("user_id, username, display_name, email")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data) return `用戶#${userId}`;
+  // 若是 admin，優先用 admin_whitelist.display_name
+  if (data.email) {
+    const { data: wl } = await supabaseAdmin
+      .from("admin_whitelist")
+      .select("display_name")
+      .eq("email", data.email)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (wl?.display_name) return wl.display_name;
+  }
+  return (
+    data.display_name || data.username || data.email || `用戶#${userId}`
+  );
 }
 
 /** 取目前 user 是否為 admin（會員 vs 白名單） */
@@ -119,10 +174,10 @@ router.get(
     try {
       const userId = Number(req.user?.userId);
 
-      // 找出我有參與的對話 IDs
+      // 找出我有參與的對話 IDs（包含已 left_at 的，讓前端能看舊訊息 + 顯示「已離開」標籤）
       const { data: parts, error: pErr } = await supabaseAdmin
         .from("chat_participants")
-        .select("conversation_id, last_read_at")
+        .select("conversation_id, last_read_at, left_at")
         .eq("user_id", userId);
       if (pErr) throw pErr;
 
@@ -131,6 +186,10 @@ router.get(
         res.json([]);
         return;
       }
+      const myLeftAtByConv = new Map<string, string | null>();
+      (parts || []).forEach((p) =>
+        myLeftAtByConv.set(p.conversation_id, p.left_at),
+      );
 
       // 對話 metadata
       const { data: convs, error: cErr } = await supabaseAdmin
@@ -140,18 +199,21 @@ router.get(
         .order("last_message_at", { ascending: false });
       if (cErr) throw cErr;
 
-      // 所有相關 participant + user info
+      // 所有相關 participant + user info（只列「目前還在群組」的成員作為主清單）
       const { data: allParts } = await supabaseAdmin
         .from("chat_participants")
         .select(
-          "conversation_id, user_id, role, user:users!inner(user_id, name:username, display_name, email, avatar_url)",
+          "conversation_id, user_id, role, left_at, user:users!inner(user_id, name:username, display_name, email, avatar_url)",
         )
-        .in("conversation_id", convIds);
+        .in("conversation_id", convIds)
+        .is("left_at", null);
 
-      // 各對話最後一則訊息（preview）
+      // 各對話最後一則訊息（preview）— 已離開的人只看 left_at 之前的
       const { data: lastMsgs } = await supabaseAdmin
         .from("chat_messages")
-        .select("id, conversation_id, sender_id, content, image_url, created_at")
+        .select(
+          "id, conversation_id, sender_id, content, image_url, message_type, created_at",
+        )
         .in("conversation_id", convIds)
         .order("created_at", { ascending: false });
 
@@ -169,6 +231,8 @@ router.get(
 
       const unreadResults = await Promise.all(
         convIds.map(async (cid) => {
+          // 已離開的人未讀永遠是 0
+          if (myLeftAtByConv.get(cid)) return [cid, 0] as const;
           const lastRead = lastReadByConv.get(cid);
           if (!lastRead) return [cid, 0] as const;
           const { count } = await supabaseAdmin
@@ -215,9 +279,12 @@ router.get(
                 has_image: !!last.image_url,
                 sender_id: last.sender_id,
                 created_at: last.created_at,
+                message_type: last.message_type || "user",
               }
             : null,
           unread_count: unreadByConv.get(c.id) || 0,
+          /** 我自己在此對話的 left_at；非 null 代表已離開 */
+          my_left_at: myLeftAtByConv.get(c.id) || null,
         };
       });
 
@@ -369,12 +436,22 @@ router.get(
         return;
       }
 
+      // 我自己的 left_at（用於前端顯示「已離開」橫幅 + 鎖輸入框）
+      const { data: meRow } = await supabaseAdmin
+        .from("chat_participants")
+        .select("left_at")
+        .eq("conversation_id", id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      // 只列目前還在群組的成員（left_at IS NULL）
       const { data: parts } = await supabaseAdmin
         .from("chat_participants")
         .select(
-          "user_id, role, joined_at, user:users!inner(user_id, name:username, display_name, email, avatar_url)",
+          "user_id, role, joined_at, left_at, user:users!inner(user_id, name:username, display_name, email, avatar_url)",
         )
-        .eq("conversation_id", id);
+        .eq("conversation_id", id)
+        .is("left_at", null);
 
       const users: RawUser[] = (parts || [])
         .map((p: unknown) => {
@@ -387,6 +464,7 @@ router.get(
 
       res.json({
         ...conv,
+        my_left_at: meRow?.left_at || null,
         participants: (parts || []).map((p: unknown) => {
           const row = p as {
             user_id: number;
@@ -422,7 +500,7 @@ router.get(
     try {
       const userId = Number(req.user?.userId);
       const id = String(req.params.id || "");
-      const { ok } = await ensureParticipant(id, userId);
+      const { ok, leftAt } = await ensureParticipant(id, userId);
       if (!ok) {
         res.status(403).json({ error: "未參與此對話" });
         return;
@@ -434,12 +512,14 @@ router.get(
       let q = supabaseAdmin
         .from("chat_messages")
         .select(
-          "id, conversation_id, sender_id, content, image_url, expires_at, created_at",
+          "id, conversation_id, sender_id, content, image_url, message_type, expires_at, created_at",
         )
         .eq("conversation_id", id)
         .order("created_at", { ascending: false })
         .limit(limit);
       if (before) q = q.lt("created_at", before);
+      // 已離開的成員只能看離開前的訊息
+      if (leftAt) q = q.lte("created_at", leftAt);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -461,9 +541,13 @@ router.post(
     try {
       const userId = Number(req.user?.userId);
       const id = String(req.params.id || "");
-      const { ok } = await ensureParticipant(id, userId);
+      const { ok, leftAt } = await ensureParticipant(id, userId);
       if (!ok) {
         res.status(403).json({ error: "未參與此對話" });
+        return;
+      }
+      if (leftAt) {
+        res.status(403).json({ error: "你已離開此群組，無法發送訊息" });
         return;
       }
 
@@ -510,7 +594,7 @@ router.post(
           image_path: imagePath,
         })
         .select(
-          "id, conversation_id, sender_id, content, image_url, expires_at, created_at",
+          "id, conversation_id, sender_id, content, image_url, message_type, expires_at, created_at",
         )
         .single();
       if (insErr) throw insErr;
@@ -589,15 +673,24 @@ router.post(
         return;
       }
 
+      // upsert：新成員會新增；之前被踢的人重新加入會把 left_at 設回 null
       const rows = userIds.map((uid: number) => ({
         conversation_id: id,
         user_id: Number(uid),
         role: "member",
+        left_at: null,
+        last_read_at: new Date().toISOString(),
       }));
       const { error } = await supabaseAdmin
         .from("chat_participants")
-        .upsert(rows, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
+        .upsert(rows, { onConflict: "conversation_id,user_id" });
       if (error) throw error;
+
+      // 系統訊息（每個被加的人各一則）
+      for (const uid of userIds) {
+        const name = await getUserDisplayName(Number(uid));
+        await insertSystemMessage(id, userId, `${name} 加入了群組`);
+      }
 
       void broadcast(id, "members_changed", { type: "added", userIds });
       res.json({ success: true });
@@ -622,19 +715,34 @@ router.delete(
 
       // 自己離開 OR admin 踢人
       const isAdmin = await isAdminEmail(requesterEmail);
-      if (targetId !== requesterId && !isAdmin) {
+      const isSelf = targetId === requesterId;
+      if (!isSelf && !isAdmin) {
         res.status(403).json({ error: "僅 admin 可移除其他成員" });
         return;
       }
 
+      // 軟刪除：set left_at = NOW() 而非真的 DELETE，讓被踢的人仍能讀
+      // 離開前的訊息（前端 + GET /messages 會用 left_at 過濾）
+      const now = new Date().toISOString();
       const { error } = await supabaseAdmin
         .from("chat_participants")
-        .delete()
+        .update({ left_at: now })
         .eq("conversation_id", id)
-        .eq("user_id", targetId);
+        .eq("user_id", targetId)
+        .is("left_at", null); // 已離開的不重複處理
       if (error) throw error;
 
-      void broadcast(id, "members_changed", { type: "removed", userIds: [targetId] });
+      // 系統訊息
+      const targetName = await getUserDisplayName(targetId);
+      const sysContent = isSelf
+        ? `${targetName} 離開了群組`
+        : `${targetName} 已被移出群組`;
+      await insertSystemMessage(id, requesterId, sysContent);
+
+      void broadcast(id, "members_changed", {
+        type: "removed",
+        userIds: [targetId],
+      });
       res.json({ success: true });
     } catch (err) {
       logger.error("移除成員失敗", err as Error);

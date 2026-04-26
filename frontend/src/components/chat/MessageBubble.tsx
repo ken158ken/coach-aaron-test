@@ -39,6 +39,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   sender,
   senderStatus,
 }) => {
+  // 系統訊息（XXX 加入群組 / 被移除 / 離開）— 中央灰字小提示，不分左右
+  if (msg.message_type === "system") {
+    return (
+      <div className="flex justify-center my-3">
+        <span className="text-[11px] text-muted bg-surface-2/60 border border-gold/10 rounded-full px-3 py-1">
+          {msg.content}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex ${isMine ? "justify-end" : "justify-start"} mb-2 gap-2`}
