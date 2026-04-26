@@ -12,6 +12,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useChatNotificationContext } from "@/context/ChatNotificationContext";
 import { GlobalSearch, SearchButton } from "@/components/ui/GlobalSearch";
 import UnreadBadge from "@/components/chat/UnreadBadge";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 interface NavLink {
   name: string;
@@ -256,6 +257,9 @@ key={glareKey}
           <div className="flex items-center gap-1.5 sm:gap-3">
             {/* 搜尋按鈕 */}
             <SearchButton onClick={() => setSearchOpen(true)} />
+
+            {/* 通知鈴鐺（登入才顯示） */}
+            {mounted && user && <NotificationBell />}
 
             {/* User 區塊 */}
             <div className="relative" ref={dropdownRef}>

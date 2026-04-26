@@ -33,6 +33,24 @@ import {
   type CoachGoogleContext,
 } from "../utils/googleCalendar.js";
 import { logger } from "../utils/logger.js";
+import { createNotification } from "../utils/notifications.js";
+
+/** 取教練 user_id（給通知教練用） */
+async function getCoachUserId(coachId: number): Promise<number | null> {
+  const { data } = await supabaseAdmin
+    .from("coach_profile")
+    .select("user_id")
+    .eq("id", coachId)
+    .maybeSingle();
+  return data?.user_id || null;
+}
+
+/** 把 ISO 時間格成 YYYY/MM/DD HH:mm（給通知 body 用） */
+function fmtBookingTime(iso: string): string {
+  const d = new Date(iso);
+  const z = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}/${z(d.getMonth() + 1)}/${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+}
 
 const router: Router = express.Router();
 
@@ -235,6 +253,20 @@ router.post(
         .select()
         .single();
       if (error) throw error;
+
+      // 通知教練：有新預約待審核
+      const coachUserId = await getCoachUserId(ctx.coachId);
+      if (coachUserId) {
+        void createNotification({
+          userId: coachUserId,
+          type: "booking_pending",
+          title: "🔔 有新預約待審核",
+          body: `預約時間：${fmtBookingTime(start.toISOString())}`,
+          link: "/coach",
+          metadata: { booking_id: data.id, user_id: Number(userId) },
+        }).catch(() => {});
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Create booking error:", err);
@@ -349,6 +381,22 @@ router.post(
         .select()
         .single();
       if (error) throw error;
+
+      // 用戶取消 confirmed 預約 → 通知教練（你之前的需求）
+      if (booking.status === "confirmed") {
+        const coachUserId = await getCoachUserId(booking.coach_id);
+        if (coachUserId) {
+          void createNotification({
+            userId: coachUserId,
+            type: "booking_cancelled",
+            title: "⚠️ 用戶取消已確認的預約",
+            body: `原本時間：${fmtBookingTime(booking.start_at)}`,
+            link: "/coach",
+            metadata: { booking_id: booking.id, cancelled_by: "user" },
+          }).catch(() => {});
+        }
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Cancel booking error:", err);
@@ -502,6 +550,16 @@ router.post(
         .single();
       if (error) throw error;
 
+      // 通知用戶：預約已批准
+      void createNotification({
+        userId: booking.user_id,
+        type: "booking_approved",
+        title: "✅ 預約已確認",
+        body: `${fmtBookingTime(booking.start_at)} 的諮詢已被教練批准`,
+        link: "/my-bookings",
+        metadata: { booking_id: booking.id },
+      }).catch(() => {});
+
       res.json(data);
     } catch (err) {
       logger.error("Approve booking failed", err as Error);
@@ -523,7 +581,7 @@ router.post(
 
       const { data: booking } = await supabaseAdmin
         .from("bookings")
-        .select("status, coach_id")
+        .select("status, coach_id, user_id, start_at")
         .eq("id", id)
         .single();
       if (!booking || Number(booking.coach_id) !== Number(coachId)) {
@@ -546,6 +604,19 @@ router.post(
         .select()
         .single();
       if (error) throw error;
+
+      // 通知用戶：被拒絕
+      void createNotification({
+        userId: booking.user_id,
+        type: "booking_rejected",
+        title: "❌ 預約被婉拒",
+        body: coachNote
+          ? `教練回覆：${coachNote}`
+          : `${fmtBookingTime(booking.start_at)} 的諮詢未被批准`,
+        link: "/my-bookings",
+        metadata: { booking_id: Number(id) },
+      }).catch(() => {});
+
       res.json(data);
     } catch (err) {
       console.error("Reject booking error:", err);
@@ -567,7 +638,7 @@ router.post(
 
       const { data: booking } = await supabaseAdmin
         .from("bookings")
-        .select("status, coach_id, google_event_id")
+        .select("status, coach_id, user_id, start_at, google_event_id")
         .eq("id", id)
         .single();
       if (!booking || Number(booking.coach_id) !== Number(coachId)) {
@@ -610,6 +681,19 @@ router.post(
         .select()
         .single();
       if (error) throw error;
+
+      // 通知用戶：教練取消
+      void createNotification({
+        userId: booking.user_id,
+        type: "booking_cancelled",
+        title: "⚠️ 預約被教練取消",
+        body: coachNote
+          ? `教練說明：${coachNote}`
+          : `原本時間：${fmtBookingTime(booking.start_at)}`,
+        link: "/my-bookings",
+        metadata: { booking_id: Number(id), cancelled_by: "coach" },
+      }).catch(() => {});
+
       res.json(data);
     } catch (err) {
       console.error("Coach cancel error:", err);

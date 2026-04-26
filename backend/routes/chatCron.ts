@@ -68,15 +68,31 @@ router.get(
         .lt("expires_at", now);
       if (delErr) throw delErr;
 
+      // 4. 清過期通知（順便處理，省一條 cron 名額）
+      let deletedNotifs = 0;
+      try {
+        const { count } = await supabaseAdmin
+          .from("notifications")
+          .delete({ count: "exact" })
+          .lt("expires_at", now);
+        deletedNotifs = count || 0;
+      } catch (err) {
+        logger.warn("notifications 清理失敗", {
+          error: (err as Error)?.message,
+        });
+      }
+
       logger.info("chat cleanup 完成", {
         messagesDeleted: total,
         filesDeleted: deletedFiles,
+        notificationsDeleted: deletedNotifs,
       });
 
       res.json({
         ok: true,
         messagesDeleted: total,
         filesDeleted: deletedFiles,
+        notificationsDeleted: deletedNotifs,
         timestamp: now,
       });
     } catch (err) {

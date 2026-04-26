@@ -10,6 +10,7 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initAuth } from "./lib/auth-init";
+import { registerServiceWorker } from "./lib/registerSW";
 import "./index.css";
 
 // React Router v7 future flags 消除警告
@@ -74,3 +75,6 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+// PWA service worker — 註冊在 React 渲染後（不擋首次渲染）
+registerServiceWorker();

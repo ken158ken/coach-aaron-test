@@ -8,6 +8,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ChatNotificationProvider } from "@/context/ChatNotificationContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import { DialogProvider } from "@/components/ui/Dialog";
 import { RequireAuth, RequireAdmin } from "@/components/auth/RequireAuth";
 import { useHeartbeat } from "@/hooks/usePresence";
@@ -36,6 +37,7 @@ import BookingPage from "@/pages/BookingPage";
 import MyBookingsPage from "@/pages/MyBookingsPage";
 import CoachDashboard from "@/pages/coach/CoachDashboard";
 import ChatPage from "@/pages/Chat";
+import NotificationsPage from "@/pages/NotificationsPage";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -124,6 +126,7 @@ function App(): JSX.Element {
 
     return (
     <AuthProvider>
+      <NotificationProvider>
       <ChatNotificationProvider>
         <Heartbeat />
       <ThemeProvider>
@@ -201,6 +204,14 @@ function App(): JSX.Element {
                     element={
                       <RequireAuth>
                         <ChatPage />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="notifications"
+                    element={
+                      <RequireAuth>
+                        <NotificationsPage />
                       </RequireAuth>
                     }
                   />
@@ -285,6 +296,7 @@ function App(): JSX.Element {
         </LanguageProvider>
       </ThemeProvider>
       </ChatNotificationProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

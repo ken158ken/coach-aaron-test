@@ -17,6 +17,7 @@ import multer from "multer";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
+import { createNotification } from "../utils/notifications.js";
 
 const router: Router = express.Router();
 
@@ -290,7 +291,13 @@ router.get(
 
       res.json(result);
     } catch (err) {
-      logger.error("取得對話清單失敗", err as Error);
+      const e = err as { message?: string; details?: string; hint?: string; code?: string };
+      logger.error("取得對話清單失敗", err as Error, {
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        code: e?.code,
+      });
       res.status(500).json({ error: "取得對話清單失敗" });
     }
   },
@@ -482,7 +489,13 @@ router.get(
         }),
       });
     } catch (err) {
-      logger.error("取得對話失敗", err as Error);
+      const e = err as { message?: string; details?: string; hint?: string; code?: string };
+      logger.error("取得對話失敗", err as Error, {
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        code: e?.code,
+      });
       res.status(500).json({ error: "取得對話失敗" });
     }
   },
@@ -602,6 +615,13 @@ router.post(
       // 廣播
       void broadcast(id, "new_message", msg);
 
+      // 通知所有其他「目前還在群組」的參與者（async 不擋回應）
+      void notifyConversationRecipients(id, userId, msg).catch((e) =>
+        logger.warn("通知 recipients 失敗", {
+          error: (e as Error)?.message,
+        }),
+      );
+
       res.json(msg);
     } catch (err) {
       logger.error("送訊息失敗", err as Error);
@@ -609,6 +629,66 @@ router.post(
     }
   },
 );
+
+/** 推通知給該對話除寄件人外的所有 active 成員 */
+async function notifyConversationRecipients(
+  conversationId: string,
+  senderId: number,
+  msg: {
+    id: number;
+    content: string;
+    image_url: string | null;
+    message_type?: string;
+  },
+): Promise<void> {
+  // 系統訊息不通知
+  if (msg.message_type === "system") return;
+
+  // 取對話資料
+  const { data: conv } = await supabaseAdmin
+    .from("chat_conversations")
+    .select("id, type, title")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (!conv) return;
+
+  // 寄件人顯示名稱
+  const senderName = await getUserDisplayName(senderId);
+
+  // active recipients（排除寄件人）
+  const { data: recipients } = await supabaseAdmin
+    .from("chat_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .is("left_at", null)
+    .neq("user_id", senderId);
+
+  const preview =
+    msg.content?.trim() ||
+    (msg.image_url ? "📷 圖片" : "");
+  const title =
+    conv.type === "group" ? `${senderName}（${conv.title}）` : senderName;
+  const body =
+    preview.length > 80 ? preview.slice(0, 80) + "..." : preview;
+
+  // 並行發
+  await Promise.all(
+    (recipients || []).map((r) =>
+      createNotification({
+        userId: r.user_id,
+        type: "chat_message",
+        title,
+        body,
+        link: `/chat/${conversationId}`,
+        metadata: {
+          conversation_id: conversationId,
+          message_id: msg.id,
+          sender_id: senderId,
+        },
+      }),
+    ),
+  );
+}
 
 /** POST /api/chat/conversations/:id/read — 標記已讀 */
 router.post(
@@ -686,10 +766,28 @@ router.post(
         .upsert(rows, { onConflict: "conversation_id,user_id" });
       if (error) throw error;
 
-      // 系統訊息（每個被加的人各一則）
+      // 系統訊息（每個被加的人各一則）+ 通知被加進群組的人
+      const { data: convForNotif } = await supabaseAdmin
+        .from("chat_conversations")
+        .select("title")
+        .eq("id", id)
+        .maybeSingle();
+      const groupTitle = convForNotif?.title || "群組";
+      const inviterName = await getUserDisplayName(userId);
+
       for (const uid of userIds) {
-        const name = await getUserDisplayName(Number(uid));
+        const targetId = Number(uid);
+        const name = await getUserDisplayName(targetId);
         await insertSystemMessage(id, userId, `${name} 加入了群組`);
+        // 推通知給被加的人
+        void createNotification({
+          userId: targetId,
+          type: "chat_added_to_group",
+          title: `你被加入群組「${groupTitle}」`,
+          body: `${inviterName} 邀請你加入了群組對話`,
+          link: `/chat/${id}`,
+          metadata: { conversation_id: id, inviter_id: userId },
+        }).catch(() => {});
       }
 
       void broadcast(id, "members_changed", { type: "added", userIds });
@@ -738,6 +836,24 @@ router.delete(
         ? `${targetName} 離開了群組`
         : `${targetName} 已被移出群組`;
       await insertSystemMessage(id, requesterId, sysContent);
+
+      // 通知被移除的人（自己離開不通知）
+      if (!isSelf) {
+        const { data: convForNotif } = await supabaseAdmin
+          .from("chat_conversations")
+          .select("title")
+          .eq("id", id)
+          .maybeSingle();
+        const groupTitle = convForNotif?.title || "群組";
+        void createNotification({
+          userId: targetId,
+          type: "chat_removed_from_group",
+          title: `你被移出群組「${groupTitle}」`,
+          body: "管理員已將你從此群組中移除",
+          link: `/chat/${id}`,
+          metadata: { conversation_id: id, removed_by: requesterId },
+        }).catch(() => {});
+      }
 
       void broadcast(id, "members_changed", {
         type: "removed",
