@@ -21,6 +21,7 @@ export interface Translations {
     home: string;
     courses: string;
     videos: string;
+    lessons: string;
     articles: string;
     contact: string;
     photos: string;
@@ -281,6 +282,7 @@ export interface Translations {
     courses: string;
     articles: string;
     videos: string;
+    lessons: string;
     whitelist: string;
     landingPages: string;
     newArticle: string;
@@ -296,7 +298,8 @@ const zhTW: Translations = {
   nav: {
     home: "教練介紹",
     courses: "線上課程",
-    videos: "短影音",
+    videos: "Reels 牆",
+    lessons: "教學影片",
     articles: "專業知識",
     contact: "聯絡我",
     photos: "阿倫私密淫照",
@@ -421,9 +424,9 @@ const zhTW: Translations = {
     learnItem6: "避免常見訓練錯誤",
   },
   videos: {
-    pageLabel: "短影音",
-    heading: "教學影片",
-    subheading: "免費的健身知識分享，隨時隨地學習",
+    pageLabel: "Reels 牆",
+    heading: "Reels 牆",
+    subheading: "短影音精選 — 隨手翻、隨時看",
     noVideos: "目前沒有影片",
     searchPlaceholder: "搜尋影片...",
     noSearchResults: "找不到符合的影片",
@@ -545,7 +548,8 @@ const zhTW: Translations = {
     users: "用戶管理",
     courses: "課程管理",
     articles: "文章管理",
-    videos: "影片管理",
+    videos: "Reels 牆",
+    lessons: "教學影片",
     whitelist: "白名單管理",
     landingPages: "自訂頁面",
     newArticle: "新增文章",
@@ -561,7 +565,8 @@ const en: Translations = {
   nav: {
     home: "About Coach",
     courses: "Courses",
-    videos: "Videos",
+    videos: "Reels Wall",
+    lessons: "Lessons",
     articles: "Articles",
     contact: "Contact",
     photos: "Private Photos",
@@ -686,9 +691,9 @@ const en: Translations = {
     learnItem6: "Avoid common training mistakes",
   },
   videos: {
-    pageLabel: "Short Videos",
-    heading: "Tutorial Videos",
-    subheading: "Free fitness knowledge, learn anytime anywhere",
+    pageLabel: "Reels Wall",
+    heading: "Reels Wall",
+    subheading: "A scroll of bite-sized fitness clips",
     noVideos: "No videos available",
     searchPlaceholder: "Search videos...",
     noSearchResults: "No matching videos found",
@@ -810,7 +815,8 @@ const en: Translations = {
     users: "Users",
     courses: "Courses",
     articles: "Articles",
-    videos: "Videos",
+    videos: "Reels Wall",
+    lessons: "Lessons",
     whitelist: "Whitelist",
     landingPages: "Landing Pages",
     newArticle: "New Article",

@@ -150,6 +150,7 @@ const Navbar: React.FC = (): JSX.Element => {
     { name: t.nav.home, path: "/" },
     { name: t.nav.courses, path: "/courses" },
     { name: t.nav.videos, path: "/videos" },
+    { name: t.nav.lessons, path: "/lessons" },
     { name: t.nav.articles, path: "/articles" },
     { name: t.nav.contact, path: "/contact" },
   ];

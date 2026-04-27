@@ -18,6 +18,7 @@ import authLineRoutes from "./routes/authLine.js";
 
 import coursesRoutes from "./routes/courses.js";
 import videosRoutes from "./routes/videos.js";
+import lessonsRoutes from "./routes/lessons.js";
 import adminRoutes from "./routes/admin.js";
 import articlesRoutes from "./routes/articles.js";
 import userRoutes from "./routes/user.js";
@@ -112,6 +113,7 @@ app.use("/api/auth/line", authLineRoutes);
 
 app.use("/api/courses", coursesRoutes);
 app.use("/api/videos", videosRoutes);
+app.use("/api/lessons", lessonsRoutes);
 app.use("/api/articles", articlesRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);

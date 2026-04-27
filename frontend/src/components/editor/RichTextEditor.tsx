@@ -14,6 +14,7 @@ interface RichTextEditorProps {
   editor: Editor | null;
   onInsertImage?: () => void;
   onInsertYoutube?: () => void;
+  onInsertLoom?: () => void;
   onInsertLink?: () => void;
   onInsertImageGallery?: () => void;
 }
@@ -26,6 +27,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   editor,
   onInsertImage,
   onInsertYoutube,
+  onInsertLoom,
   onInsertLink,
   onInsertImageGallery,
 }) => {
@@ -462,6 +464,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
             >
               🎬
+            </button>
+          </Tooltip>
+        )}
+        {onInsertLoom && (
+          <Tooltip label="插入 Loom">
+            <button
+              type="button"
+              onClick={onInsertLoom}
+              className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
+            >
+              🎙️
             </button>
           </Tooltip>
         )}

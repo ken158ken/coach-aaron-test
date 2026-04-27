@@ -35,6 +35,7 @@ import { FloatingMenu } from "@tiptap/extension-floating-menu";
 import {
   ResizableImage,
   ResizableYoutube,
+  ResizableLoom,
   ImageGallery,
 } from "@/components/editor";
 
@@ -183,6 +184,7 @@ export const useRichTextEditor = ({
         openOnClick: false,
       }),
       ResizableYoutube,
+      ResizableLoom,
       // 功能性
       Placeholder.configure({
         placeholder,

@@ -42,6 +42,27 @@ const extractYouTubeId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
+/**
+ * 驗證 Loom 網址
+ */
+const isValidLoomUrl = (url: string): boolean => {
+  return /^https?:\/\/(www\.)?loom\.com\/(share|embed)\/[a-f0-9]{32}/i.test(
+    url.trim(),
+  );
+};
+
+/**
+ * 提取 Loom 影片 ID
+ */
+const extractLoomId = (url: string): string | null => {
+  const cleaned = url.trim();
+  if (/^[a-f0-9]{32}$/i.test(cleaned)) return cleaned.toLowerCase();
+  const match = cleaned.match(
+    /loom\.com\/(?:share|embed)\/([a-f0-9]{32})(?:[/?#]|$)/i,
+  );
+  return match ? match[1].toLowerCase() : null;
+};
+
 /** 文章資料結構 */
 interface ArticleData {
   id?: string;
@@ -476,6 +497,55 @@ const ArticleEditor: React.FC = () => {
     }
   }, [editor, dialog]);
 
+  /** 插入 Loom（驗證 + 即時預覽） */
+  const handleInsertLoom = useCallback(async () => {
+    const url = await dialog.prompt({
+      title: "插入 Loom 影片",
+      message: "請輸入 Loom 影片連結：",
+      placeholder: "https://www.loom.com/share/...",
+      validation: (value) => {
+        if (!isValidLoomUrl(value)) {
+          return "❌ 只能使用 Loom 影片連結！\n格式：https://www.loom.com/share/<32 字元 id>";
+        }
+        return null;
+      },
+      renderPreview: (value) => {
+        const loomId = extractLoomId(value);
+        return loomId ? (
+          <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
+            <iframe
+              src={`https://www.loom.com/embed/${loomId}`}
+              title="Loom 預覽"
+              className="w-full aspect-video"
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+              allowFullScreen
+            />
+          </div>
+        ) : null;
+      },
+    });
+
+    if (url && editor) {
+      if (!isValidLoomUrl(url)) {
+        await dialog.alert({
+          type: "error",
+          title: "無效的 Loom 連結",
+          message: "請貼 Loom 分享連結（loom.com/share/<id>）",
+        });
+        return;
+      }
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "resizableLoom",
+          attrs: { src: url, width: 640, height: 360 },
+        })
+        .run();
+    }
+  }, [editor, dialog]);
+
   /** 插入連結 */
   const handleInsertLink = useCallback(async () => {
     const url = await dialog.prompt({
@@ -807,6 +877,7 @@ const ArticleEditor: React.FC = () => {
               onInsertImage={handleInsertImage}
               onInsertImageGallery={handleInsertImageGallery}
               onInsertYoutube={handleInsertYoutube}
+              onInsertLoom={handleInsertLoom}
               onInsertLink={handleInsertLink}
             />
           </div>

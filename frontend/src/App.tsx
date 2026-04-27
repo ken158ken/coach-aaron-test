@@ -22,6 +22,8 @@ import Home from "@/pages/Home";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import Videos from "@/pages/Videos";
+import Lessons from "@/pages/Lessons";
+import LessonDetail from "@/pages/LessonDetail";
 import Contact from "@/pages/Contact";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -44,6 +46,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminVideos from "@/pages/admin/AdminVideos";
+import AdminLessons from "@/pages/admin/AdminLessons";
 import AdminContent from "@/pages/admin/AdminContent";
 import AdminWhitelist from "@/pages/admin/AdminWhitelist";
 import AdminArticles from "@/pages/admin/AdminArticles";
@@ -143,6 +146,8 @@ function App(): JSX.Element {
                   <Route path="courses" element={<Courses />} />
                   <Route path="courses/:id" element={<CourseDetail />} />
                   <Route path="videos" element={<Videos />} />
+                  <Route path="lessons" element={<Lessons />} />
+                  <Route path="lessons/:id" element={<LessonDetail />} />
                   <Route path="articles" element={<Articles />} />
                   <Route path="articles/:slug" element={<ArticleDetail />} />
                   <Route path="contact" element={<Contact />} />
@@ -233,6 +238,7 @@ function App(): JSX.Element {
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="courses" element={<AdminCourses />} />
                   <Route path="videos" element={<AdminVideos />} />
+                  <Route path="lessons" element={<AdminLessons />} />
                   <Route path="content" element={<AdminContent />} />
                   <Route path="articles" element={<AdminArticles />} />
                   <Route path="landing-pages" element={<LandingPageManager />} />
