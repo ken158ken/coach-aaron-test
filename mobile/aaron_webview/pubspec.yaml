@@ -1,0 +1,38 @@
+name: aaron_webview
+description: "Aaron coach WebView shell"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # WebView
+  webview_flutter: ^4.10.0
+  webview_flutter_android: ^4.1.0
+
+  # File picker bridge for <input type=file> inside WebView
+  image_picker: ^1.1.2
+  file_picker: ^8.1.4
+
+  # Open external URLs (mailto:, tel:, 第三方網域) in browser instead of WebView
+  url_launcher: ^6.3.1
+
+  # Pull-to-refresh
+  pull_to_refresh_flutter3: ^2.0.2
+
+  # FCM 推播（後端 Phase 0 完成後啟用 token 註冊）
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
