@@ -158,31 +158,69 @@ router.get(
   },
 );
 
-/** POST /api/notifications/push/subscribe */
+/**
+ * POST /api/notifications/push/subscribe
+ *
+ * 兩種 body 變體：
+ *
+ *   Web Push（瀏覽器）：
+ *     { endpoint: string, keys: { p256dh, auth }, userAgent? }
+ *
+ *   FCM（Android app）：
+ *     { provider: 'fcm', token: string, userAgent? }
+ *     → token 會塞到 endpoint 欄位（保持 unique 約束），p256dh / auth 留空
+ */
 router.post(
   "/push/subscribe",
   authenticateToken,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = Number(req.user?.userId);
-      const { endpoint, keys, userAgent } = req.body;
-      if (!endpoint || !keys?.p256dh || !keys?.auth) {
-        res.status(400).json({ error: "缺少訂閱資料" });
-        return;
+      const { provider, token, endpoint, keys, userAgent } = req.body;
+
+      let row: {
+        user_id: number;
+        endpoint: string;
+        provider: "web" | "fcm";
+        p256dh: string | null;
+        auth: string | null;
+        user_agent: string | null;
+        last_used_at: string;
+      };
+
+      if (provider === "fcm") {
+        if (!token || typeof token !== "string") {
+          res.status(400).json({ error: "缺少 FCM token" });
+          return;
+        }
+        row = {
+          user_id: userId,
+          endpoint: token,
+          provider: "fcm",
+          p256dh: null,
+          auth: null,
+          user_agent: userAgent || null,
+          last_used_at: new Date().toISOString(),
+        };
+      } else {
+        if (!endpoint || !keys?.p256dh || !keys?.auth) {
+          res.status(400).json({ error: "缺少訂閱資料" });
+          return;
+        }
+        row = {
+          user_id: userId,
+          endpoint,
+          provider: "web",
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          user_agent: userAgent || null,
+          last_used_at: new Date().toISOString(),
+        };
       }
+
       const { error } = await supabaseAdmin
         .from("push_subscriptions")
-        .upsert(
-          {
-            user_id: userId,
-            endpoint,
-            p256dh: keys.p256dh,
-            auth: keys.auth,
-            user_agent: userAgent || null,
-            last_used_at: new Date().toISOString(),
-          },
-          { onConflict: "endpoint" },
-        );
+        .upsert(row, { onConflict: "endpoint" });
       if (error) throw error;
       res.json({ success: true });
     } catch (err) {
