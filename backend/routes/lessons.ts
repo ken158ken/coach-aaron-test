@@ -20,6 +20,7 @@ import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
 import {
   extractLoomId,
+  fetchLoomMetadata,
   fetchLoomTranscript,
   parseTranscript,
   type TranscriptEntry,
@@ -184,6 +185,19 @@ router.post(
       // 處理 transcript
       let transcript = await resolveTranscript(loomId, body);
 
+      // admin 沒給 thumbnail / duration，用 oEmbed 抓
+      let thumbnailUrl = body.thumbnail_url?.trim() || null;
+      let durationSeconds = body.duration_seconds ?? null;
+      if (!thumbnailUrl || durationSeconds == null) {
+        const meta = await fetchLoomMetadata(body.loom_url);
+        if (meta) {
+          if (!thumbnailUrl && meta.thumbnailUrl) thumbnailUrl = meta.thumbnailUrl;
+          if (durationSeconds == null && meta.durationSeconds != null) {
+            durationSeconds = meta.durationSeconds;
+          }
+        }
+      }
+
       const row: InsertRow = {
         title: body.title.trim(),
         title_en: body.title_en?.trim() || null,
@@ -192,11 +206,11 @@ router.post(
         provider: "loom",
         loom_id: loomId,
         loom_url: body.loom_url.trim(),
-        thumbnail_url: body.thumbnail_url?.trim() || null,
+        thumbnail_url: thumbnailUrl,
         category: body.category?.trim() || null,
         category_en: body.category_en?.trim() || null,
         keywords: body.keywords?.trim() || null,
-        duration_seconds: body.duration_seconds ?? null,
+        duration_seconds: durationSeconds,
         sort_order: body.sort_order ?? 0,
         is_published: body.is_published ?? true,
         transcript,
@@ -255,8 +269,9 @@ router.put(
       if (body.transcript_lang !== undefined && body.transcript_lang)
         update.transcript_lang = body.transcript_lang;
 
-      // 換 Loom URL → 重新解析
+      // 換 Loom URL → 重新解析 + 重抓 metadata
       let loomIdForFetch: string | null = null;
+      let loomUrlForMeta: string | null = null;
       if (body.loom_url !== undefined && body.loom_url) {
         const newId = extractLoomId(body.loom_url);
         if (!newId) {
@@ -266,6 +281,41 @@ router.put(
         update.loom_id = newId;
         update.loom_url = body.loom_url.trim();
         loomIdForFetch = newId;
+        loomUrlForMeta = body.loom_url.trim();
+        // 改 URL 同時重抓縮圖（除非 admin 自己貼）
+        if (body.thumbnail_url === undefined) {
+          update.thumbnail_url = null; // 先清，下面再補
+        }
+      }
+      if (body.thumbnail_url !== undefined) {
+        update.thumbnail_url = body.thumbnail_url?.trim() || null;
+      }
+
+      // 自動補縮圖：thumbnail_url 還是空就用 oEmbed 抓
+      const needsThumbnail =
+        update.thumbnail_url === null ||
+        (body.thumbnail_url !== undefined && !body.thumbnail_url?.trim());
+      if (needsThumbnail) {
+        let urlToUse = loomUrlForMeta;
+        if (!urlToUse) {
+          const { data: cur } = await supabaseAdmin
+            .from("lesson_videos")
+            .select("loom_url")
+            .eq("id", id)
+            .single();
+          urlToUse = cur?.loom_url || null;
+        }
+        if (urlToUse) {
+          const meta = await fetchLoomMetadata(urlToUse);
+          if (meta?.thumbnailUrl) update.thumbnail_url = meta.thumbnailUrl;
+          if (
+            meta?.durationSeconds != null &&
+            update.duration_seconds == null &&
+            body.duration_seconds === undefined
+          ) {
+            update.duration_seconds = meta.durationSeconds;
+          }
+        }
       }
 
       // Transcript：只有當有提供 transcript_raw / transcript / fetch_transcript 才動

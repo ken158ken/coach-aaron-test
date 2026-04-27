@@ -170,10 +170,6 @@ interface LessonCardProps {
 }
 
 const LessonCard: React.FC<LessonCardProps> = ({ lesson, loc }) => {
-  // Loom 自動 thumbnail：https://cdn.loom.com/sessions/thumbnails/{id}-with-play.gif
-  const thumbnail =
-    lesson.thumbnail_url ||
-    `https://cdn.loom.com/sessions/thumbnails/${lesson.loom_id}-with-play.gif`;
   const duration = lesson.duration_seconds
     ? formatDuration(lesson.duration_seconds)
     : null;
@@ -186,20 +182,13 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, loc }) => {
     <Link to={`/lessons/${lesson.id}`} className="group block h-full">
       <article className="lesson-card h-full flex flex-col rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 hover:shadow-xl hover:shadow-white/5 transition-all duration-300 bg-white/[0.02] backdrop-blur-sm">
         {/* Thumbnail：16:9 */}
-        <div className="aspect-video relative overflow-hidden bg-white/5">
-          <img
-            src={thumbnail}
-            alt={lesson.title}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => {
-              // GIF 失敗就 fallback 靜態 jpg
-              const img = e.currentTarget;
-              if (!img.src.endsWith(".jpg")) {
-                img.src = `https://cdn.loom.com/sessions/thumbnails/${lesson.loom_id}-with-play.jpg`;
-              }
-            }}
+        <div className="aspect-video relative overflow-hidden bg-linear-to-br from-white/4 to-white/1">
+          <LoomThumb
+            thumbnailUrl={lesson.thumbnail_url}
+            loomId={lesson.loom_id}
           />
+          {/* 漸層遮罩讓底部 play 鈕更明顯 */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
           {/* Play 圖示 overlay */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-14 h-14 rounded-full bg-black/55 flex items-center justify-center group-hover:bg-black/70 transition">
@@ -272,5 +261,50 @@ function formatDuration(seconds: number): string {
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
+
+/**
+ * Loom thumbnail with cascading fallback：
+ *   1. DB 存的 thumbnail_url（後端從 oEmbed 抓的）
+ *   2. cdn.loom.com 的 -with-play.gif
+ *   3. cdn.loom.com 的 -with-play.jpg
+ *   4. 全部失敗就隱藏，露出 container 的漸層底色（不會出現破圖 alt 文字）
+ */
+const LoomThumb: React.FC<{
+  thumbnailUrl?: string | null;
+  loomId: string;
+}> = ({ thumbnailUrl, loomId }) => {
+  const sources = React.useMemo(
+    () =>
+      [
+        thumbnailUrl,
+        `https://cdn.loom.com/sessions/thumbnails/${loomId}-with-play.gif`,
+        `https://cdn.loom.com/sessions/thumbnails/${loomId}-with-play.jpg`,
+      ].filter((s): s is string => !!s),
+    [thumbnailUrl, loomId],
+  );
+  const [idx, setIdx] = React.useState(0);
+  const [hidden, setHidden] = React.useState(false);
+
+  // thumbnailUrl 換了重置
+  React.useEffect(() => {
+    setIdx(0);
+    setHidden(false);
+  }, [sources.length, sources[0]]);
+
+  if (hidden || sources.length === 0) return null;
+
+  return (
+    <img
+      src={sources[idx]}
+      alt=""
+      loading="lazy"
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      onError={() => {
+        if (idx + 1 < sources.length) setIdx(idx + 1);
+        else setHidden(true);
+      }}
+    />
+  );
+};
 
 export default Lessons;

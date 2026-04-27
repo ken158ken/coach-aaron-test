@@ -120,6 +120,52 @@ export function parseTranscript(raw: string): TranscriptEntry[] {
 }
 
 /**
+ * Loom oEmbed metadata（透過官方 oEmbed API 抓 thumbnail / 標題等）
+ *
+ * 文件：https://dev.loom.com/docs/oembed
+ *
+ * 比硬猜 CDN 路徑可靠多了：
+ * - cdn.loom.com/sessions/thumbnails/{id}-with-play.gif 對某些影片會 404
+ * - oEmbed 會回真正可用的 thumbnail_url（含 timestamp 部分）
+ */
+export interface LoomMetadata {
+  title?: string;
+  thumbnailUrl?: string;
+  authorName?: string;
+  width?: number;
+  height?: number;
+  durationSeconds?: number; // oEmbed 不一定會回，但保留接口給未來擴充
+}
+
+export async function fetchLoomMetadata(
+  loomUrl: string,
+): Promise<LoomMetadata | null> {
+  if (!loomUrl) return null;
+  try {
+    const apiUrl = `https://www.loom.com/v1/oembed?format=json&url=${encodeURIComponent(loomUrl)}`;
+    const res = await fetch(apiUrl, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as Record<string, unknown>;
+    return {
+      title: typeof data.title === "string" ? data.title : undefined,
+      thumbnailUrl:
+        typeof data.thumbnail_url === "string" ? data.thumbnail_url : undefined,
+      authorName:
+        typeof data.author_name === "string" ? data.author_name : undefined,
+      width: typeof data.width === "number" ? data.width : undefined,
+      height: typeof data.height === "number" ? data.height : undefined,
+      durationSeconds:
+        typeof data.duration === "number" ? data.duration : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 嘗試從 Loom 抓 transcript
  *
  * Loom 有好幾個未公開的 transcript endpoint，會隨時間變動，

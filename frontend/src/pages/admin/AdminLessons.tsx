@@ -122,15 +122,10 @@ const AdminLessons: React.FC = () => {
               className="flex gap-4 p-3 sm:p-4 bg-surface rounded-xl border border-gold/15 hover:border-gold/30 transition-colors"
             >
               {/* Thumbnail */}
-              <div className="shrink-0 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden bg-surface-2">
-                <img
-                  src={
-                    l.thumbnail_url ||
-                    `https://cdn.loom.com/sessions/thumbnails/${l.loom_id}-with-play.jpg`
-                  }
-                  alt={l.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
+              <div className="shrink-0 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden bg-surface-2 relative">
+                <AdminLoomThumb
+                  thumbnailUrl={l.thumbnail_url}
+                  loomId={l.loom_id}
                 />
               </div>
 
@@ -460,5 +455,47 @@ const Field: React.FC<{
     {hint && <p className="text-[11px] text-muted mt-1">{hint}</p>}
   </div>
 );
+
+/** Cascading thumbnail fallback：DB url → Loom CDN gif → jpg → 隱藏 */
+const AdminLoomThumb: React.FC<{
+  thumbnailUrl?: string | null;
+  loomId: string;
+}> = ({ thumbnailUrl, loomId }) => {
+  const sources = React.useMemo(
+    () =>
+      [
+        thumbnailUrl,
+        `https://cdn.loom.com/sessions/thumbnails/${loomId}-with-play.gif`,
+        `https://cdn.loom.com/sessions/thumbnails/${loomId}-with-play.jpg`,
+      ].filter((s): s is string => !!s),
+    [thumbnailUrl, loomId],
+  );
+  const [idx, setIdx] = React.useState(0);
+  const [hidden, setHidden] = React.useState(false);
+  React.useEffect(() => {
+    setIdx(0);
+    setHidden(false);
+  }, [sources.length, sources[0]]);
+
+  if (hidden || sources.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted text-xs">
+        🎬
+      </div>
+    );
+  }
+  return (
+    <img
+      src={sources[idx]}
+      alt=""
+      loading="lazy"
+      className="w-full h-full object-cover"
+      onError={() => {
+        if (idx + 1 < sources.length) setIdx(idx + 1);
+        else setHidden(true);
+      }}
+    />
+  );
+};
 
 export default AdminLessons;
