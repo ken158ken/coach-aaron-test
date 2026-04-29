@@ -290,6 +290,30 @@ export interface Translations {
     saveDraft: string;
     publish: string;
     manageCategories: string;
+    export: string;
+  };
+  // 匯出
+  exportFeature: {
+    exportData: string;
+    exportMyChats: string;
+    exportFormat: string;
+    exporting: string;
+    exportSuccess: string;
+    exportFailed: string;
+    exportConversation: string;
+    noConversations: string;
+    messageCount: string;
+    exportCenter: string;
+    moduleExport: string;
+    fullExport: string;
+    fullExportDesc: string;
+    fullExportBtn: string;
+    selectFormat: string;
+    formatMd: string;
+    formatTxt: string;
+    formatHtml: string;
+    formatXlsx: string;
+    formatDocx: string;
   };
 }
 
@@ -557,6 +581,29 @@ const zhTW: Translations = {
     saveDraft: "儲存草稿",
     publish: "發布",
     manageCategories: "管理分類",
+    export: "匯出中心",
+  },
+  exportFeature: {
+    exportData: "匯出資料",
+    exportMyChats: "匯出我的對話",
+    exportFormat: "匯出格式",
+    exporting: "匯出中...",
+    exportSuccess: "匯出成功",
+    exportFailed: "匯出失敗，請稍後再試",
+    exportConversation: "匯出此對話",
+    noConversations: "目前沒有任何對話記錄",
+    messageCount: "則訊息",
+    exportCenter: "匯出中心",
+    moduleExport: "分模組匯出",
+    fullExport: "全站資料匯出",
+    fullExportDesc: "將所有模組資料匯出為一份 Excel 檔案（各模組各一個工作表），不含使用者密碼。",
+    fullExportBtn: "下載全站 Excel",
+    selectFormat: "選擇格式",
+    formatMd: "Markdown (.md)",
+    formatTxt: "純文字 (.txt)",
+    formatHtml: "網頁 (.html)",
+    formatXlsx: "Excel (.xlsx)",
+    formatDocx: "Word (.docx)",
   },
 };
 
@@ -824,6 +871,29 @@ const en: Translations = {
     saveDraft: "Save Draft",
     publish: "Publish",
     manageCategories: "Manage Categories",
+    export: "Export Center",
+  },
+  exportFeature: {
+    exportData: "Export Data",
+    exportMyChats: "Export My Chats",
+    exportFormat: "Export Format",
+    exporting: "Exporting...",
+    exportSuccess: "Export Successful",
+    exportFailed: "Export failed, please try again",
+    exportConversation: "Export This Conversation",
+    noConversations: "No conversations found",
+    messageCount: "messages",
+    exportCenter: "Export Center",
+    moduleExport: "Export by Module",
+    fullExport: "Full Site Export",
+    fullExportDesc: "Export all modules into a single Excel file (one sheet per module). User passwords are excluded.",
+    fullExportBtn: "Download Full Site Excel",
+    selectFormat: "Select Format",
+    formatMd: "Markdown (.md)",
+    formatTxt: "Plain Text (.txt)",
+    formatHtml: "Webpage (.html)",
+    formatXlsx: "Excel (.xlsx)",
+    formatDocx: "Word (.docx)",
   },
 };
 

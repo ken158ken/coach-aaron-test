@@ -11,7 +11,7 @@ import { StatCard, PillButton, Input, Toast, Modal } from "@/components/ui";
 import { AvatarPicker } from "@/components/ui/avatar";
 import SEOHead from "@/components/seo/SEOHead";
 import { userService } from "@/services";
-import { put } from "@/services/api";
+import { put, getAuthToken } from "@/services/api";
 import { useLanguage } from "@/context/LanguageContext";
 
 /** 日誌工具 */
@@ -30,7 +30,7 @@ const MemberCenter: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<
-    "profile" | "courses" | "settings"
+    "profile" | "courses" | "settings" | "export"
   >("profile");
   const [toast, setToast] = useState<{
     message: string;
@@ -40,6 +40,14 @@ const MemberCenter: React.FC = () => {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+
+  // 匯出 state
+  const [exportConvs, setExportConvs] = useState<
+    { id: string; name: string; type: string; message_count: number }[]
+  >([]);
+  const [exportConvsLoading, setExportConvsLoading] = useState(false);
+  const [exportLoadingId, setExportLoadingId] = useState<string | null>(null);
+  const [exportFormat, setExportFormat] = useState<"md" | "txt" | "xlsx" | "docx">("txt");
 
   // 初始化表單值
   useEffect(() => {
@@ -196,12 +204,55 @@ const MemberCenter: React.FC = () => {
     }
   }, [updateUser, t]);
 
+  // 載入對話列表（切到匯出 tab 時）
+  useEffect(() => {
+    if (activeTab !== "export") return;
+    setExportConvsLoading(true);
+    const token = getAuthToken();
+    fetch("/api/export/my-chats", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => r.json())
+      .then((data) => setExportConvs(data.conversations || []))
+      .catch(() => setExportConvs([]))
+      .finally(() => setExportConvsLoading(false));
+  }, [activeTab]);
+
+  // 下載對話匯出
+  const handleExportChat = useCallback(async (convId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+    setExportLoadingId(convId);
+    try {
+      const res = await fetch(`/api/export/chat/${convId}?format=${exportFormat}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("下載失敗");
+      const disposition = res.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename\*=UTF-8''(.+)/i);
+      const filename = match ? decodeURIComponent(match[1]) : `對話_${convId}.${exportFormat}`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setToast({ message: t.exportFeature.exportSuccess, type: "success" });
+    } catch {
+      setToast({ message: t.exportFeature.exportFailed, type: "error" });
+    } finally {
+      setExportLoadingId(null);
+    }
+  }, [exportFormat, t]);
+
   // Auth guard 已由 App.tsx RequireAuth 統一處理
 
   const tabs = [
     { key: "profile" as const, label: t.member.personalInfo },
     { key: "courses" as const, label: t.member.myCourses },
     { key: "settings" as const, label: t.member.accountSettings },
+    { key: "export" as const, label: t.exportFeature.exportData },
   ];
 
   const stats = [
@@ -448,6 +499,93 @@ const MemberCenter: React.FC = () => {
                     {t.member.changePassword}
                   </PillButton>
                 </form>
+              </div>
+            )}
+
+            {activeTab === "export" && (
+              <div className="space-y-5">
+                <h2 className="text-lg sm:text-xl text-white/90 font-light">
+                  {t.exportFeature.exportMyChats}
+                </h2>
+
+                {/* 格式選擇 */}
+                <div>
+                  <p className="text-xs text-[#888] mb-2">{t.exportFeature.exportFormat}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(["txt", "md", "xlsx", "docx"] as const).map((fmt) => (
+                      <button
+                        key={fmt}
+                        onClick={() => setExportFormat(fmt)}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                          exportFormat === fmt
+                            ? "bg-[#c5a059]/20 border-[#c5a059] text-[#c5a059]"
+                            : "border-[#c5a059]/20 text-[#888] hover:border-[#c5a059]/40 hover:text-white/80"
+                        }`}
+                      >
+                        {fmt === "txt" && "純文字 (.txt)"}
+                        {fmt === "md" && "Markdown (.md)"}
+                        {fmt === "xlsx" && "Excel (.xlsx)"}
+                        {fmt === "docx" && "Word (.docx)"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 對話清單 */}
+                {exportConvsLoading ? (
+                  <div className="text-center py-8 text-[#888] text-sm">載入中...</div>
+                ) : exportConvs.length === 0 ? (
+                  <div className="text-center py-8 text-[#888] text-sm">
+                    {t.exportFeature.noConversations}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {exportConvs.map((conv) => {
+                      const isLoading = exportLoadingId === conv.id;
+                      return (
+                        <div
+                          key={conv.id}
+                          className="flex items-center justify-between gap-3 px-4 py-3 bg-[#1a1a1a] border border-[#c5a059]/10 rounded-lg hover:border-[#c5a059]/20 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-base shrink-0">
+                              {conv.type === "group" ? "👥" : "💬"}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm text-white/80 truncate">{conv.name}</p>
+                              <p className="text-xs text-[#888]">
+                                {conv.message_count} {t.exportFeature.messageCount}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleExportChat(conv.id)}
+                            disabled={exportLoadingId !== null}
+                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                              isLoading
+                                ? "border-[#c5a059]/30 text-[#c5a059]"
+                                : "border-[#c5a059]/20 text-[#888] hover:border-[#c5a059] hover:text-[#c5a059] disabled:opacity-40 disabled:cursor-not-allowed"
+                            }`}
+                          >
+                            {isLoading ? (
+                              <>
+                                <span className="w-3 h-3 border border-t-transparent border-[#c5a059] rounded-full animate-spin" />
+                                匯出中
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                匯出
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

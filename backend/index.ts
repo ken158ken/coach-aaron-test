@@ -35,6 +35,8 @@ import presenceRoutes from "./routes/presence.js";
 import chatCronRoutes from "./routes/chatCron.js";
 import notificationsRoutes from "./routes/notifications.js";
 import landingRoutes from "./routes/landing.js";
+import exportRoutes from "./routes/export.js";
+import adminExportRoutes from "./routes/adminExport.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
 import {
@@ -130,6 +132,8 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/cron", chatCronRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/landing", landingRoutes);
+app.use("/api/export", exportRoutes);
+app.use("/api/admin/export", adminExportRoutes);
 
 /**
  * 健康檢查端點

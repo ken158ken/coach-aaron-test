@@ -55,6 +55,7 @@ import CourseEditor from "@/pages/admin/CourseEditor";
 import LandingPageManager from "@/pages/admin/LandingPageManager";
 import LandingPageNew from "@/pages/admin/LandingPageNew";
 import LandingPageEditor from "@/pages/admin/LandingPageEditor";
+import AdminExport from "@/pages/admin/AdminExport";
 
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import PageBlade from "@/components/layout/PageBlade";
@@ -243,6 +244,7 @@ function App(): JSX.Element {
                   <Route path="articles" element={<AdminArticles />} />
                   <Route path="landing-pages" element={<LandingPageManager />} />
                   <Route path="whitelist" element={<AdminWhitelist />} />
+                  <Route path="export" element={<AdminExport />} />
                 </Route>
 
                 {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}

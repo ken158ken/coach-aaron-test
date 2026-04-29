@@ -3,8 +3,9 @@
  * @module components/chat/MessageThread
  */
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAuthToken } from "@/services/api";
 import {
   chatService,
   type ChatConversation,
@@ -39,6 +40,8 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   onConversationChanged,
 }) => {
   const [showMembers, setShowMembers] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportingFmt, setExportingFmt] = useState<string | null>(null);
   const hasLeft = !!conversation.my_left_at;
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -129,6 +132,35 @@ const MessageThread: React.FC<MessageThreadProps> = ({
     });
     return unsub;
   }, [conversation.id, conversation.type, onConversationChanged]);
+
+  const handleExport = useCallback(async (format: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+    setExportingFmt(format);
+    setShowExportMenu(false);
+    try {
+      const res = await fetch(`/api/export/chat/${conversation.id}?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("下載失敗");
+      const disposition = res.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename\*=UTF-8''(.+)/i);
+      const filename = match
+        ? decodeURIComponent(match[1])
+        : `對話_${conversation.id.slice(0, 8)}.${format}`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // 靜默失敗
+    } finally {
+      setExportingFmt(null);
+    }
+  }, [conversation.id]);
 
   const handleSend = async (data: { content: string; image: File | null }) => {
     // 樂觀更新：立刻把訊息放進去，不等 server roundtrip
@@ -221,6 +253,48 @@ const MessageThread: React.FC<MessageThreadProps> = ({
             </svg>
           </button>
         )}
+        {/* 匯出下拉 */}
+        <div className="relative">
+          <button
+            onClick={() => setShowExportMenu((v) => !v)}
+            disabled={exportingFmt !== null}
+            className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            title="匯出對話"
+          >
+            {exportingFmt ? (
+              <span className="w-5 h-5 flex items-center justify-center">
+                <span className="w-3.5 h-3.5 border border-t-transparent border-gold rounded-full animate-spin" />
+              </span>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+          </button>
+          {showExportMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+              <div className="absolute right-0 top-9 z-20 w-44 bg-surface border border-gold/20 rounded-xl shadow-xl overflow-hidden">
+                <p className="px-3 py-2 text-[10px] text-muted uppercase tracking-widest border-b border-gold/10">匯出格式</p>
+                {[
+                  { fmt: "txt",  label: "純文字 (.txt)" },
+                  { fmt: "md",   label: "Markdown (.md)" },
+                  { fmt: "xlsx", label: "Excel (.xlsx)" },
+                  { fmt: "docx", label: "Word (.docx)" },
+                ].map(({ fmt, label }) => (
+                  <button
+                    key={fmt}
+                    onClick={() => handleExport(fmt)}
+                    className="w-full text-left px-3 py-2.5 text-sm text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         <button
           onClick={() => navigate("/chat")}
           className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors hidden lg:block"
