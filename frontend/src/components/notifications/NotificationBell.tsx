@@ -8,7 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { format, isToday, isYesterday } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import { useNotificationContext } from "@/context/NotificationContext";
-import type { Notification } from "@/services/notification.service";
+import type { Notification } from "@/services/notifications/notification.service";
 
 interface NotificationBellProps {
   className?: string;

@@ -3,7 +3,7 @@
  * @module services/lesson.service
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 import type { Lesson, LessonSummary, LessonInput } from "@/types";
 
 export const lessonService = {

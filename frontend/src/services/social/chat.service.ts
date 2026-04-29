@@ -3,7 +3,7 @@
  * @module services/chat.service
  */
 
-import { get, post, del } from "./api";
+import { get, post, del } from "../api";
 
 // =================== Types ===================
 

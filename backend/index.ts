@@ -12,31 +12,7 @@ dotenv.config();
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import authRoutes from "./routes/auth.js";
-import authGoogleRoutes from "./routes/authGoogle.js";
-import authLineRoutes from "./routes/authLine.js";
-
-import coursesRoutes from "./routes/courses.js";
-import videosRoutes from "./routes/videos.js";
-import lessonsRoutes from "./routes/lessons.js";
-import adminRoutes from "./routes/admin.js";
-import articlesRoutes from "./routes/articles.js";
-import userRoutes from "./routes/user.js";
-import searchRoutes from "./routes/search.js";
-import contentRoutes from "./routes/content.js";
-import contactRoutes from "./routes/contact.js";
-import slidesRoutes from "./routes/slides.js";
-import marqueeRoutes from "./routes/marquee.js";
-import podcastRoutes from "./routes/podcast.js";
-import coachRoutes from "./routes/coach.js";
-import bookingRoutes from "./routes/bookings.js";
-import chatRoutes from "./routes/chat.js";
-import presenceRoutes from "./routes/presence.js";
-import chatCronRoutes from "./routes/chatCron.js";
-import notificationsRoutes from "./routes/notifications.js";
-import landingRoutes from "./routes/landing.js";
-import exportRoutes from "./routes/export.js";
-import adminExportRoutes from "./routes/adminExport.js";
+import { registerRoutes } from "./routes/index.js";
 import { validateEnv } from "./utils/env.js";
 import { logger } from "./utils/logger.js";
 import {
@@ -106,34 +82,8 @@ app.use(detectSuspiciousRequest);
 // 全域 Rate Limiting（較寬鬆）
 app.use("/api", apiLimiter);
 
-/**
- * API 路由註冊
- */
-app.use("/api/auth", authRoutes);
-app.use("/api/auth/google", authGoogleRoutes);
-app.use("/api/auth/line", authLineRoutes);
-
-app.use("/api/courses", coursesRoutes);
-app.use("/api/videos", videosRoutes);
-app.use("/api/lessons", lessonsRoutes);
-app.use("/api/articles", articlesRoutes);
-app.use("/api/user", userRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/content", contentRoutes);
-app.use("/api/contact", contactRoutes);
-app.use("/api/slides", slidesRoutes);
-app.use("/api/marquee", marqueeRoutes);
-app.use("/api/podcast", podcastRoutes);
-app.use("/api/coach", coachRoutes);
-app.use("/api/bookings", bookingRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/presence", presenceRoutes);
-app.use("/api/notifications", notificationsRoutes);
-app.use("/api/cron", chatCronRoutes);
-app.use("/api/search", searchRoutes);
-app.use("/api/landing", landingRoutes);
-app.use("/api/export", exportRoutes);
-app.use("/api/admin/export", adminExportRoutes);
+// 所有 /api/* 路由集中掛載（見 routes/index.ts）
+registerRoutes(app);
 
 /**
  * 健康檢查端點

@@ -18,7 +18,7 @@ import {
   slidesService,
   type GallerySlide,
   type GalleryConfig,
-} from '@/services/slides.service';
+} from '@/services/site/slides.service';
 import Sparkles from '@/components/ui/Sparkles';
 import { useSiteContent } from '@/hooks/useSiteContent';
 

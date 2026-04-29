@@ -19,8 +19,8 @@ import { PillButton, Input, useDialog } from "@/components/ui";
 import {
   landingService,
   PAGE_KIND_LABELS,
-} from "@/services/landing.service";
-import type { LpTemplate, PageKind } from "@/services/landing.service";
+} from "@/services/site/landing.service";
+import type { LpTemplate, PageKind } from "@/services/site/landing.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 // ─────────────────────────────────────────────────────────

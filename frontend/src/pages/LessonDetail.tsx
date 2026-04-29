@@ -14,7 +14,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { lessonService } from "@/services/lesson.service";
+import { lessonService } from "@/services/content/lesson.service";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { useLanguage } from "@/context/LanguageContext";

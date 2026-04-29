@@ -15,7 +15,7 @@ import React, {
 } from "react";
 import { PillButton, Input, useDialog } from "@/components/ui";
 import { get, post, put } from "@/services/api";
-import { videoService } from "@/services/video.service";
+import { videoService } from "@/services/content/video.service";
 import type { AdminVideo } from "@/types";
 import { useScrollLock } from "@/hooks/useScrollLock";
 

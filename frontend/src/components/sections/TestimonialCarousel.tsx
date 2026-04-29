@@ -12,7 +12,7 @@ import {
   slidesService,
   type TestimonialSlide,
   type TestimonialConfig,
-} from '@/services/slides.service';
+} from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
 
 // ─── Aceternity AnimatedTestimonials 風格：逐字淡入 ───────────────────────

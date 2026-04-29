@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import type { PresenceStatus } from "@/services/presence.service";
+import type { PresenceStatus } from "@/services/social/presence.service";
 
 interface PresenceDotProps {
   status: PresenceStatus;

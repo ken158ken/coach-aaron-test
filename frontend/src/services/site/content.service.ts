@@ -3,7 +3,7 @@
  * @module services/content.service
  */
 
-import { get, post, put, del } from './api';
+import { get, post, put, del } from '../api';
 
 /** 網站內容項目 */
 export interface SiteContent {

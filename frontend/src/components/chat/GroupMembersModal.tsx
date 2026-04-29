@@ -15,10 +15,10 @@ import {
   type ChatConversation,
   type ChatParticipant,
   type ChatUser,
-} from "@/services/chat.service";
+} from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
 import { usePresenceMany } from "@/hooks/usePresence";
-import { formatLastSeen } from "@/services/presence.service";
+import { formatLastSeen } from "@/services/social/presence.service";
 import UserAvatar from "./UserAvatar";
 import PresenceDot from "./PresenceDot";
 

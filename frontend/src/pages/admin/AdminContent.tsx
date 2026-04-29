@@ -20,26 +20,26 @@ import {
   contentService,
   type SiteContent,
   type SitePopup,
-} from '@/services/content.service';
+} from '@/services/site/content.service';
 import {
   slidesService,
   type TestimonialSlide,
   type TestimonialConfig,
   type GallerySlide,
   type GalleryConfig,
-} from '@/services/slides.service';
+} from '@/services/site/slides.service';
 import {
   marqueeService,
   type MarqueeItem,
   type MarqueeType,
-} from '@/services/marquee.service';
+} from '@/services/site/marquee.service';
 import {
   podcastService,
   type PodcastEpisode,
   type EpisodeCategory,
   EPISODE_CATEGORIES,
   EPISODE_CATEGORY_LABEL,
-} from '@/services/podcast.service';
+} from '@/services/site/podcast.service';
 import { TestimonialCarousel } from '@/components/sections';
 import { GallerySlider } from '@/components/sections';
 import { getTemplates, type ContentTemplate } from '@/utils/contentTemplates';

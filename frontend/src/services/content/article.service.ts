@@ -3,7 +3,7 @@
  * @module services/article.service
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 import type {
   Article,
   ArticlesResponse,

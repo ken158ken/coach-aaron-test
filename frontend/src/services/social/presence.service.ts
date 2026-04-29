@@ -3,7 +3,7 @@
  * @module services/presence.service
  */
 
-import { get, post } from "./api";
+import { get, post } from "../api";
 
 export type PresenceStatus = "online" | "away" | "offline";
 

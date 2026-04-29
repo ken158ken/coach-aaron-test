@@ -18,7 +18,7 @@ import {
   RichTextEditor,
   useDialog,
 } from "@/components/ui";
-import { articleService } from "@/services/article.service";
+import { articleService } from "@/services/content/article.service";
 import type { Article, ArticleStatus } from "@/types";
 
 /** 日誌工具 */

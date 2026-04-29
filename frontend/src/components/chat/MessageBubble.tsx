@@ -6,8 +6,8 @@
 import React from "react";
 import { format, isToday, isYesterday } from "date-fns";
 import { zhTW } from "date-fns/locale";
-import type { ChatMessage, ChatUser } from "@/services/chat.service";
-import type { PresenceStatus } from "@/services/presence.service";
+import type { ChatMessage, ChatUser } from "@/services/social/chat.service";
+import type { PresenceStatus } from "@/services/social/presence.service";
 import UserAvatar from "./UserAvatar";
 import PresenceDot from "./PresenceDot";
 

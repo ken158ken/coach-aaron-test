@@ -12,7 +12,7 @@ import {
   BOOKING_STATUS_LABEL,
   type MyBooking,
   type BookingStatus,
-} from "@/services/booking.service";
+} from "@/services/booking/booking.service";
 import { PillButton, useDialog } from "@/components/ui";
 
 const STATUS_STYLE: Record<BookingStatus, string> = {

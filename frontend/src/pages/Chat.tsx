@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { chatService, type ChatConversation } from "@/services/chat.service";
+import { chatService, type ChatConversation } from "@/services/social/chat.service";
 import { useChatNotificationContext } from "@/context/ChatNotificationContext";
 import ConversationList from "@/components/chat/ConversationList";
 import MessageThread from "@/components/chat/MessageThread";

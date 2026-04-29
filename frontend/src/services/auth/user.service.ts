@@ -3,7 +3,7 @@
  * @module services/user.service
  */
 
-import { post, del } from "./api";
+import { post, del } from "../api";
 
 /** 頭像上傳回應 */
 interface AvatarUploadResponse {

@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { coachService, type CoachFullProfile } from "@/services/coach.service";
+import { coachService, type CoachFullProfile } from "@/services/booking/coach.service";
 
 export interface UseCoachAccessResult {
   canAccess: boolean;

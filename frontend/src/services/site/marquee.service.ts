@@ -7,7 +7,7 @@
  *   - 'stat' : {label=value, sub=說明} — 成果數字（無 icon）
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 
 // ============================================================
 // Types

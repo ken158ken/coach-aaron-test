@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState } from "react";
 import { PillButton, Modal, useDialog } from "@/components/ui";
-import { lessonService } from "@/services/lesson.service";
+import { lessonService } from "@/services/content/lesson.service";
 import type { Lesson, LessonInput } from "@/types";
 
 const AdminLessons: React.FC = () => {

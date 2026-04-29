@@ -3,7 +3,7 @@
  * @module services/notification.service
  */
 
-import { get, post, del } from "./api";
+import { get, post, del } from "../api";
 
 export type NotificationType =
   | "chat_message"

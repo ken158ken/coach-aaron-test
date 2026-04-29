@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TextButton } from '@/components/ui';
-import { contentService } from '@/services/content.service';
+import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
 
 interface CoachIntroSectionProps {

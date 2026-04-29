@@ -13,7 +13,7 @@ import { Loading, Tooltip } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks";
-import { courseService } from "@/services/course.service";
+import { courseService } from "@/services/content/course.service";
 
 /**
  * 驗證 Cloudinary 圖片網址

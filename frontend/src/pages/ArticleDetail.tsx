@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
-import { articleService } from "@/services/article.service";
+import { articleService } from "@/services/content/article.service";
 import { useAuth } from "@/context";
 import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
 import { useLocalize } from "@/hooks/useLocalize";

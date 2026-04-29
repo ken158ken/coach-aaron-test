@@ -9,7 +9,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { lessonService } from "@/services/lesson.service";
+import { lessonService } from "@/services/content/lesson.service";
 import { PageHeader, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";

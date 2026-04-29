@@ -13,7 +13,7 @@ import {
   useTransform,
 } from 'framer-motion';
 import { GlowButton, TextButton } from '@/components/ui';
-import { contentService } from '@/services/content.service';
+import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
 
 interface HeroSectionProps {

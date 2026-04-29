@@ -18,11 +18,11 @@ import { PillButton, Input, useDialog } from "@/components/ui";
 import {
   landingService,
   STATUS_LABELS,
-} from "@/services/landing.service";
+} from "@/services/site/landing.service";
 import type {
   LpProject,
   ProjectStatus,
-} from "@/services/landing.service";
+} from "@/services/site/landing.service";
 
 // ─────────────────────────────────────────────────────────
 // Constants

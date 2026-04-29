@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { presenceService, type PresenceRow } from "@/services/presence.service";
+import { presenceService, type PresenceRow } from "@/services/social/presence.service";
 
 const HEARTBEAT_MS = 30_000;
 const POLL_MS = 30_000;

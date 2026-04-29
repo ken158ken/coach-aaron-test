@@ -7,7 +7,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { slidesService, type GallerySlide } from '@/services/slides.service';
+import { slidesService, type GallerySlide } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
 
 type Dir = 'top' | 'bottom' | 'left' | 'right';

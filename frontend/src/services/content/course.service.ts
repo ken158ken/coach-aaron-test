@@ -3,7 +3,7 @@
  * @module services/course.service
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 import type { Course, AdminCourse, CourseReview } from "@/types";
 
 /**

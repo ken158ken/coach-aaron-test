@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { landingService } from "../services/landing.service";
+import { landingService } from "../services/site/landing.service";
 
 interface PublishedPage {
   id: number;

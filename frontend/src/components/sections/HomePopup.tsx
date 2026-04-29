@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { contentService, type ActivePopup } from "@/services/content.service";
+import { contentService, type ActivePopup } from "@/services/site/content.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 /** 日誌工具 */

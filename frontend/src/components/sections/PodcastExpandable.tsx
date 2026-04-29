@@ -11,7 +11,7 @@ import { useSiteContent } from '@/hooks/useSiteContent';
 import {
   podcastService,
   type PodcastEpisode as DbEpisode,
-} from '@/services/podcast.service';
+} from '@/services/site/podcast.service';
 
 interface PodcastEpisode {
   id: string;

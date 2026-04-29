@@ -3,7 +3,7 @@
  * @module services/auth.service
  */
 
-import { post, get, setAuthToken } from "./api";
+import { post, get, setAuthToken } from "../api";
 import type { LoginFormData, RegisterFormData, AuthResponse } from "@/types";
 
 /**

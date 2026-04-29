@@ -18,11 +18,11 @@ import { zhTW } from "date-fns/locale";
 import {
   bookingService,
   type AvailableSlot,
-} from "@/services/booking.service";
+} from "@/services/booking/booking.service";
 import {
   coachService,
   type CoachPublicProfile,
-} from "@/services/coach.service";
+} from "@/services/booking/coach.service";
 import { courseService } from "@/services";
 import { useAuth } from "@/context/AuthContext";
 import {

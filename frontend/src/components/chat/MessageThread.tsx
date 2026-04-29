@@ -13,12 +13,12 @@ import {
   type ChatParticipant,
   type ChatUser,
   getConversationName,
-} from "@/services/chat.service";
+} from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
 import { useConversationMessages } from "@/hooks/useChat";
 import { usePresenceMany } from "@/hooks/usePresence";
-import { formatLastSeen } from "@/services/presence.service";
-import { subscribeConversation } from "@/services/realtime.service";
+import { formatLastSeen } from "@/services/social/presence.service";
+import { subscribeConversation } from "@/services/social/realtime.service";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import PresenceDot from "./PresenceDot";

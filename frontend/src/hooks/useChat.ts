@@ -8,8 +8,8 @@ import {
   chatService,
   type ChatConversation,
   type ChatMessage,
-} from "@/services/chat.service";
-import { subscribeConversation } from "@/services/realtime.service";
+} from "@/services/social/chat.service";
+import { subscribeConversation } from "@/services/social/realtime.service";
 
 /** 載自己的對話清單 + 提供 refresh */
 export function useConversations(): {

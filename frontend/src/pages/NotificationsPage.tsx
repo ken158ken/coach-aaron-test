@@ -9,8 +9,8 @@ import { format, isToday, isYesterday } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import { PillButton } from "@/components/ui";
 import { useNotificationContext } from "@/context/NotificationContext";
-import { pushSubscriptionService } from "@/services/pushSubscription.service";
-import type { Notification } from "@/services/notification.service";
+import { pushSubscriptionService } from "@/services/notifications/pushSubscription.service";
+import type { Notification } from "@/services/notifications/notification.service";
 
 const TYPE_ICON: Record<string, string> = {
   chat_message: "💬",

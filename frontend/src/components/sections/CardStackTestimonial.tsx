@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   slidesService,
   type TestimonialSlide,
-} from '@/services/slides.service';
+} from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
 
 /** Demo 資料（API 無資料時使用） */

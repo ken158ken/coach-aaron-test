@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { articleService } from "@/services/article.service";
+import { articleService } from "@/services/content/article.service";
 import { PageHeader, Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";

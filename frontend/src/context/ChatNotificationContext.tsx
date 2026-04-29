@@ -8,7 +8,7 @@ import {
   useChatNotifications,
   type ChatNotification,
 } from "@/hooks/useChatNotifications";
-import type { ChatConversation } from "@/services/chat.service";
+import type { ChatConversation } from "@/services/social/chat.service";
 
 interface ChatNotificationContextValue {
   unreadTotal: number;

@@ -12,15 +12,14 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { landingService } from "../../services/landing.service";
+import { landingService } from "../../services/site/landing.service";
 import type {
   LpProjectDetail,
   LpResolvedField,
-} from "../../services/landing.service";
+} from "../../services/site/landing.service";
 
 // ─────────────────────────────────────────────────────────
 // Types

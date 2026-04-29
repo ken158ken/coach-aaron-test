@@ -18,14 +18,14 @@ import {
   BOOKING_STATUS_LABEL,
   type CoachBookingRow,
   type BookingStatus,
-} from "@/services/booking.service";
+} from "@/services/booking/booking.service";
 import {
   coachService,
   type AvailabilityRule,
   type TimeOff,
   type CoachFullProfile,
   type GoogleStatus,
-} from "@/services/coach.service";
+} from "@/services/booking/coach.service";
 import { useCoachAccess } from "@/hooks/useCoachAccess";
 import {
   PillButton,

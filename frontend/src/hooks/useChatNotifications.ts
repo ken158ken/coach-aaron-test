@@ -13,9 +13,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { chatService } from "@/services/chat.service";
-import type { ChatMessage, ChatConversation } from "@/services/chat.service";
-import { subscribeMany } from "@/services/realtime.service";
+import { chatService } from "@/services/social/chat.service";
+import type { ChatMessage, ChatConversation } from "@/services/social/chat.service";
+import { subscribeMany } from "@/services/social/realtime.service";
 
 export interface ChatNotification {
   message: ChatMessage;

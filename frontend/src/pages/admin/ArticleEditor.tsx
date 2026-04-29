@@ -13,7 +13,7 @@ import { Loading, Tooltip } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks";
-import { articleService } from "@/services/article.service";
+import { articleService } from "@/services/content/article.service";
 import ArticlePreviewModal from "@/components/admin/ArticlePreviewModal";
 
 /**

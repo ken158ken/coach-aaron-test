@@ -4,7 +4,7 @@
  * 涵蓋：學員見證幻燈片（自動輪播）+ 相片輪播（手動翻頁）
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 
 // ============================================================
 // Types

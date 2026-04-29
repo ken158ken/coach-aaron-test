@@ -12,7 +12,7 @@
  *   2. POST 後端刪 DB row
  */
 
-import { get, post } from "./api";
+import { get, post } from "../api";
 
 interface PushKey {
   publicKey: string;

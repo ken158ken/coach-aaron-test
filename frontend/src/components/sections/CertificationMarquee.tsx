@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { marqueeService, type MarqueeItem } from '@/services/marquee.service';
+import { marqueeService, type MarqueeItem } from '@/services/site/marquee.service';
 
 /** 預設認證標章（DB 載入失敗時的 fallback） */
 const DEFAULT_CERTS: MarqueeItem[] = [

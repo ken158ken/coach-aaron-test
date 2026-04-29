@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext } from "react";
 import { useNotificationsHook } from "@/hooks/useNotifications";
-import type { Notification } from "@/services/notification.service";
+import type { Notification } from "@/services/notifications/notification.service";
 
 interface NotificationContextValue {
   notifications: Notification[];

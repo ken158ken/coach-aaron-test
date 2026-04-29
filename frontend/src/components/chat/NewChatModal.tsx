@@ -14,7 +14,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Input, PillButton } from "@/components/ui";
-import { chatService, type ChatUser } from "@/services/chat.service";
+import { chatService, type ChatUser } from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
 import UserAvatar from "./UserAvatar";
 

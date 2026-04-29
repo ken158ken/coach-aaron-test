@@ -3,7 +3,7 @@
  * @module services/video.service
  */
 
-import { get, post, put, del } from './api';
+import { get, post, put, del } from '../api';
 import type { Video, AdminVideo } from '@/types';
 
 /**

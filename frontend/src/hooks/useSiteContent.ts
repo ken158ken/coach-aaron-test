@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { contentService } from '@/services/content.service';
+import { contentService } from '@/services/site/content.service';
 
 /** 模組層級快取：避免每個 section 元件各自打一次 API */
 let cache: Record<string, string> | null = null;

@@ -10,7 +10,7 @@
 
 import React, { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import type { LpPublicProject, LpResolvedField } from "../../services/landing.service";
+import type { LpPublicProject, LpResolvedField } from "../../services/site/landing.service";
 
 // ─────────────────────────────────────────────────────────
 // Types & helpers

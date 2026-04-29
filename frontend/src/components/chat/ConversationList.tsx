@@ -12,7 +12,7 @@ import {
   type ChatUser,
   getConversationName,
   previewText,
-} from "@/services/chat.service";
+} from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
 import { usePresenceMany } from "@/hooks/usePresence";
 import PresenceDot from "./PresenceDot";

@@ -5,7 +5,7 @@
  * 對應後端 `routes/podcast.ts` 與首頁元件 `PodcastExpandable.tsx`。
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 
 // ============================================================
 // Types

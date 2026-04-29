@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import type { ChatUser } from "@/services/chat.service";
+import type { ChatUser } from "@/services/social/chat.service";
 
 interface UserAvatarProps {
   user: Pick<ChatUser, "name" | "display_name" | "email" | "avatar_url" | "admin_display_name">;

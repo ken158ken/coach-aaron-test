@@ -9,8 +9,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { landingService } from "../services/landing.service";
-import type { LpPublicProject, LpResolvedField } from "../services/landing.service";
+import { landingService } from "../services/site/landing.service";
+import type { LpPublicProject, LpResolvedField } from "../services/site/landing.service";
 import GenericLP from "../components/landing-templates/GenericLP";
 
 // ─────────────────────────────────────────────────────────
@@ -33,19 +33,6 @@ const NotFoundPage: React.FC<{ slug: string }> = ({ slug }) => (
   </div>
 );
 
-const UnpublishedPage: React.FC = () => (
-  <div className="min-h-screen bg-studio-bg flex flex-col items-center justify-center text-white px-4">
-    <p className="text-5xl mb-6 opacity-30">🚧</p>
-    <h1 className="text-2xl font-light mb-2">頁面尚未發布</h1>
-    <p className="text-white/40 text-sm mb-10">此頁面目前為草稿狀態，尚未對外開放。</p>
-    <Link
-      to="/"
-      className="px-6 py-2.5 bg-[#C9A96E] text-black rounded-lg text-sm font-semibold hover:bg-[#C9A96E]/90 transition-colors"
-    >
-      返回首頁
-    </Link>
-  </div>
-);
 
 const LoadingPage: React.FC = () => (
   <div className="min-h-screen bg-studio-bg flex items-center justify-center">

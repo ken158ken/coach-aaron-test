@@ -3,7 +3,7 @@
  * @module services/booking.service
  */
 
-import { get, post } from "./api";
+import { get, post } from "../api";
 
 export type BookingStatus =
   | "pending"

@@ -14,8 +14,8 @@ import { useAuth } from "@/context/AuthContext";
 import {
   notificationService,
   type Notification,
-} from "@/services/notification.service";
-import { getSupabaseClient } from "@/services/supabase.client";
+} from "@/services/notifications/notification.service";
+import { getSupabaseClient } from "@/services/social/supabase.client";
 
 const REFRESH_INTERVAL = 60_000;
 

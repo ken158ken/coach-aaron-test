@@ -3,7 +3,7 @@
  * @module services/coach.service
  */
 
-import { get, post, put, del } from "./api";
+import { get, post, put, del } from "../api";
 
 export interface CoachPublicProfile {
   id: number;
