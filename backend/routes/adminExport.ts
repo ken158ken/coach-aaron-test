@@ -121,16 +121,17 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
     case "videos": {
       const { data } = await supabaseAdmin
         .from("videos")
-        .select("id, title, platform, category, url, is_active, created_at")
-        .order("created_at", { ascending: false });
+        .select("video_id, title, url, type, description, is_visible, sort_order, thumbnail_url")
+        .order("sort_order", { ascending: true });
       return (data || []).map((r) => ({
-        ID: r.id,
+        影片ID: r.video_id,
         標題: r.title || "",
-        平台: r.platform || "",
-        分類: r.category || "",
-        網址: r.url || "",
-        顯示狀態: r.is_active ? "顯示" : "隱藏",
-        建立時間: fmtTime(r.created_at),
+        類型: r.type || "",
+        連結: r.url || "",
+        描述: r.description || "",
+        顯示狀態: r.is_visible ? "顯示" : "隱藏",
+        排序: r.sort_order ?? "",
+        縮圖連結: r.thumbnail_url || "",
       }));
     }
 
@@ -156,20 +157,20 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
       const { data } = await supabaseAdmin
         .from("bookings")
         .select(
-          `id, status, starts_at, ends_at, notes, created_at,
-           users:user_id(display_name, email)`,
+          `id, status, start_at, end_at, user_note, contact_email, created_at,
+           user:users(display_name, email)`,
         )
-        .order("starts_at", { ascending: false });
+        .order("start_at", { ascending: false });
       return (data || []).map((r) => {
-        const u = r.users as { display_name?: string; email?: string } | null;
+        const u = r.user as { display_name?: string; email?: string } | null;
         return {
           預約ID: r.id,
           預約者: u?.display_name || u?.email || "",
-          Email: u?.email || "",
-          開始時間: fmtTime(r.starts_at),
-          結束時間: fmtTime(r.ends_at),
+          Email: u?.email || r.contact_email || "",
+          開始時間: fmtTime(r.start_at),
+          結束時間: fmtTime(r.end_at),
           狀態: translateBookingStatus(r.status),
-          備註: r.notes || "",
+          備註: r.user_note || "",
           建立時間: fmtTime(r.created_at),
         };
       });
@@ -179,39 +180,33 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
     case "chat_all": {
       const { data } = await supabaseAdmin
         .from("chat_messages")
-        .select(
-          `id, conversation_id, content, message_type, created_at,
-           users:sender_id(display_name, email)`,
-        )
+        .select("id, conversation_id, sender_id, content, message_type, created_at")
         .order("created_at", { ascending: false })
-        .limit(5000); // 避免太大
-      return (data || []).map((r) => {
-        const u = r.users as { display_name?: string; email?: string } | null;
-        return {
-          訊息ID: r.id,
-          對話ID: r.conversation_id,
-          發送者: u?.display_name || u?.email || "",
-          Email: u?.email || "",
-          內容: r.content || "",
-          訊息類型: r.message_type === "system" ? "系統訊息" : "一般訊息",
-          發送時間: fmtTime(r.created_at),
-        };
-      });
+        .limit(5000);
+      return (data || []).map((r) => ({
+        訊息ID: r.id,
+        對話ID: r.conversation_id,
+        發送者ID: r.sender_id,
+        內容: r.content || "",
+        訊息類型: r.message_type === "system" ? "系統訊息" : "一般訊息",
+        發送時間: fmtTime(r.created_at),
+      }));
     }
 
     // ---------- 跑馬燈 ----------
     case "marquee": {
       const { data } = await supabaseAdmin
         .from("marquee_items")
-        .select("id, text, type, sort_order, is_active, created_at")
+        .select("id, type, icon, label, sub, sort_order, is_active")
         .order("sort_order", { ascending: true });
       return (data || []).map((r) => ({
         ID: r.id,
-        文字內容: r.text,
         類型: r.type || "",
+        圖示: r.icon || "",
+        標題文字: r.label || "",
+        副文字: r.sub || "",
         排序: r.sort_order ?? "",
         顯示狀態: r.is_active ? "顯示" : "隱藏",
-        建立時間: fmtTime(r.created_at),
       }));
     }
 
@@ -219,17 +214,17 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
     case "podcast": {
       const { data } = await supabaseAdmin
         .from("podcast_episodes")
-        .select("id, title, description, url, platform, published_at, is_active, created_at")
-        .order("published_at", { ascending: false });
+        .select("id, title, description, duration, episode_date, category, sort_order, is_active")
+        .order("sort_order", { ascending: true });
       return (data || []).map((r) => ({
         ID: r.id,
         標題: r.title,
         描述: r.description || "",
-        連結: r.url || "",
-        平台: r.platform || "",
-        發布日期: r.published_at ? fmtTime(r.published_at) : "",
+        時長: r.duration || "",
+        發布日期: r.episode_date || "",
+        分類: r.category || "",
+        排序: r.sort_order ?? "",
         顯示狀態: r.is_active ? "顯示" : "隱藏",
-        建立時間: fmtTime(r.created_at),
       }));
     }
 
@@ -237,25 +232,18 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
     case "notifications": {
       const { data } = await supabaseAdmin
         .from("notifications")
-        .select(
-          `id, type, title, body, is_read, created_at,
-           users:user_id(display_name, email)`,
-        )
+        .select("id, user_id, type, title, body, is_read, created_at")
         .order("created_at", { ascending: false })
         .limit(3000);
-      return (data || []).map((r) => {
-        const u = r.users as { display_name?: string; email?: string } | null;
-        return {
-          通知ID: r.id,
-          接收者: u?.display_name || u?.email || "",
-          Email: u?.email || "",
-          類型: r.type || "",
-          標題: r.title || "",
-          內容: r.body || "",
-          已讀: r.is_read ? "已讀" : "未讀",
-          發送時間: fmtTime(r.created_at),
-        };
-      });
+      return (data || []).map((r) => ({
+        通知ID: r.id,
+        接收者ID: r.user_id,
+        類型: r.type || "",
+        標題: r.title || "",
+        內容: r.body || "",
+        已讀: r.is_read ? "已讀" : "未讀",
+        發送時間: fmtTime(r.created_at),
+      }));
     }
 
     // ---------- 站內文案 ----------
@@ -292,14 +280,15 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
     case "landing_pages": {
       const { data } = await supabaseAdmin
         .from("lp_projects")
-        .select("id, name, slug, template_id, is_published, created_at")
+        .select("id, project_code, project_name, customer_name, status, custom_slug, created_at")
         .order("created_at", { ascending: false });
       return (data || []).map((r) => ({
         專案ID: r.id,
-        專案名稱: r.name || "",
-        Slug: r.slug || "",
-        模板ID: r.template_id ?? "",
-        發布狀態: r.is_published ? "已發布" : "草稿",
+        專案代碼: r.project_code || "",
+        專案名稱: r.project_name || "",
+        客戶名稱: r.customer_name || "",
+        狀態: r.status === "published" ? "已發布" : r.status || "草稿",
+        Slug: r.custom_slug || "",
         建立時間: fmtTime(r.created_at),
       }));
     }

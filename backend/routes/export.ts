@@ -65,7 +65,7 @@ router.get("/my-chats", authenticateToken, async (req: Request, res: Response) =
           .eq("conversation_id", conv.id)
           .neq("user_id", userId)
           .limit(1)
-          .single();
+          .maybeSingle();
         if (parts) {
           const u = parts.users as { display_name?: string; username?: string; email?: string } | null;
           displayName = u?.display_name || u?.username || u?.email || displayName;
@@ -119,13 +119,23 @@ router.get("/chat/:id", authenticateToken, async (req: Request, res: Response) =
     return res.status(404).json({ error: "找不到此對話" });
   }
 
-  // 取所有訊息（含寄件人名稱）
+  // 取所有對話成員的顯示名稱（建 senderMap）
+  const { data: participants } = await supabaseAdmin
+    .from("chat_participants")
+    .select("user_id, users(display_name, username, email)")
+    .eq("conversation_id", id);
+
+  const senderMap = new Map<number, string>();
+  for (const p of participants || []) {
+    const u = p.users as { display_name?: string; username?: string; email?: string } | null;
+    const name = u?.display_name || u?.username || u?.email || `用戶${p.user_id}`;
+    senderMap.set(p.user_id, name);
+  }
+
+  // 取所有訊息（不做 FK join）
   const { data: rawMsgs, error: msgsErr } = await supabaseAdmin
     .from("chat_messages")
-    .select(
-      `id, sender_id, content, image_url, message_type, created_at,
-       users:sender_id(display_name, username, email)`,
-    )
+    .select("id, sender_id, content, image_url, message_type, created_at")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
 
@@ -134,35 +144,31 @@ router.get("/chat/:id", authenticateToken, async (req: Request, res: Response) =
     return res.status(500).json({ error: "取得訊息失敗" });
   }
 
-  // 組名稱
+  // 組對話名稱
   let convName = conv.name || "";
   if (conv.type === "dm") {
-    const { data: parts } = await supabaseAdmin
+    const { data: partner } = await supabaseAdmin
       .from("chat_participants")
       .select("user_id, users(display_name, username, email)")
       .eq("conversation_id", id)
       .neq("user_id", userId)
       .limit(1)
-      .single();
-    if (parts) {
-      const u = parts.users as { display_name?: string; username?: string; email?: string } | null;
+      .maybeSingle();
+    if (partner) {
+      const u = partner.users as { display_name?: string; username?: string; email?: string } | null;
       convName = u?.display_name || u?.username || u?.email || convName;
     }
   }
   if (!convName) convName = `對話 ${id.slice(0, 8)}`;
 
   // 整理訊息
-  const msgs: ChatExportMessage[] = (rawMsgs || []).map((m) => {
-    const u = m.users as { display_name?: string; username?: string; email?: string } | null;
-    const senderName = u?.display_name || u?.username || u?.email || `用戶${m.sender_id}`;
-    return {
-      time: fmtTime(m.created_at),
-      sender: senderName,
-      content: m.content || "",
-      imageUrl: m.image_url,
-      isSystem: m.message_type === "system",
-    };
-  });
+  const msgs: ChatExportMessage[] = (rawMsgs || []).map((m) => ({
+    time: fmtTime(m.created_at),
+    sender: senderMap.get(m.sender_id) || `用戶${m.sender_id}`,
+    content: m.content || "",
+    imageUrl: m.image_url,
+    isSystem: m.message_type === "system",
+  }));
 
   const safeTitle = convName.replace(/[\\/:*?"<>|]/g, "_");
   const dateStr = dateFmt(new Date(), "yyyyMMdd");
