@@ -40,8 +40,9 @@ api/_ssr_template.html
 .env*.local
 
 # One-time local migration / import scripts (may contain hardcoded keys)
-backend/import_*.mjs
-backend/migrate_*.mjs
+# 腳本已移至 database/scripts/
+database/scripts/import_*.mjs
+database/scripts/migrate_*.mjs
 
 # Supabase DB snapshot（含真實資料，僅供本機 review，不上 git）
 database/snapshot/

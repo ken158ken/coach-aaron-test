@@ -8,7 +8,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
-import { ImagesBadge, type BadgeItem } from "@/components/ui/images-badge";
+import { ImagesBadge, type BadgeItem } from "@/components/ui/ImagesBadge";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
 import { useLanguage } from "@/context/LanguageContext";
