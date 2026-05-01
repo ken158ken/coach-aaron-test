@@ -180,6 +180,18 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+/** Landing Page 樣式方案 */
+export interface LpVariant {
+  id: number;
+  variant_key: string;
+  label: string;
+  label_en: string | null;
+  color_vars: Record<string, string>;
+  preview_thumbnail: string | null;
+  is_default: boolean;
+  sort_order: number;
+}
+
 // ─────────────────────────────────────────────────────────
 // Service
 // ─────────────────────────────────────────────────────────
@@ -285,6 +297,36 @@ export const landingService = {
   /** 下架專案 */
   unpublishProject: (id: number) =>
     put<LpProjectDetail>(`/api/landing/projects/${id}`, { status: "draft" }),
+
+  /** 取得模板的所有樣式方案 */
+  getVariants: (templateId: number) =>
+    get<{ variants: LpVariant[] }>(`/api/landing/templates/${templateId}/variants`),
+
+  /** 套用樣式方案 */
+  setVariant: (projectId: number, variantId: number | null) =>
+    put<LpProjectDetail>(`/api/landing/projects/${projectId}`, { variant_id: variantId }),
+
+  /** 上傳圖片（multipart/form-data，field: image） */
+  uploadImage: async (projectId: number, file: File): Promise<{ url: string; path: string }> => {
+    const { getAuthToken } = await import("../api");
+    const token = getAuthToken();
+    const form = new FormData();
+    form.append("image", file);
+    const res = await fetch(`/api/landing/projects/${projectId}/images`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error || "上傳失敗");
+    }
+    return res.json();
+  },
+
+  /** 刪除已上傳的圖片 */
+  deleteImage: (projectId: number, path: string) =>
+    del<{ success: boolean }>(`/api/landing/projects/${projectId}/images`, { data: { path } }),
 };
 
 // ─────────────────────────────────────────────────────────

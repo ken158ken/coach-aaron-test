@@ -16,10 +16,21 @@
  */
 
 import express, { Request, Response, Router } from "express";
+import multer from "multer";
+import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin, optionalAuth } from "../middleware/auth.js";
 import { sanitizeId } from "../utils/sanitizer.js";
 import { logger } from "../utils/logger.js";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const ok = ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.mimetype);
+    cb(null, ok);
+  },
+});
 
 const router: Router = express.Router();
 
@@ -162,12 +173,23 @@ router.get("/projects/slug/:slug", async (req: Request, res: Response): Promise<
   try {
     const { data: project, error: pErr } = await supabaseAdmin
       .from("lp_projects")
-      .select("*, lp_templates(template_code, jsx_component_key, color_vars, animation_type)")
+      .select("*, lp_templates(template_code, jsx_component_key, color_vars, animation_type), lp_template_variants(color_vars)")
       .eq("custom_slug", slug)
       .eq("status", "published")
       .single();
 
     if (pErr || !project) { sendError(res, 404, "找不到此頁面"); return; }
+
+    // 若有 variant，將 variant.color_vars 合併覆蓋 template.color_vars
+    const variantVars = (project.lp_template_variants as { color_vars?: Record<string, string> } | null)?.color_vars;
+    if (variantVars && project.lp_templates) {
+      (project.lp_templates as { color_vars: Record<string, string> }).color_vars = {
+        ...(project.lp_templates as { color_vars: Record<string, string> }).color_vars,
+        ...variantVars,
+      };
+    }
+    // 不把 variant 物件暴露給前端
+    delete (project as Record<string, unknown>).lp_template_variants;
 
     // 解析後的欄位值（用 view）
     const { data: resolvedFields, error: rfErr } = await supabaseAdmin
@@ -395,6 +417,7 @@ router.put("/projects/:id", authenticateToken, requireAdmin, async (req: Request
     "og_title", "og_description",
     "hero_image_url", "logo_url", "og_image_url", "favicon_url",
     "settings_json",
+    "variant_id",
   ] as const;
 
   const VALID_STATUSES = ["draft", "review", "published", "archived"];
@@ -529,5 +552,109 @@ router.delete("/projects/:id", authenticateToken, requireAdmin, async (req: Requ
     sendError(res, 500, "刪除專案失敗");
   }
 });
+
+// ─────────────────────────────────────────────────────────────
+// 樣式 Variant
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/landing/templates/:id/variants
+ * 取得某模板的所有樣式方案（公開）
+ */
+router.get("/templates/:id/variants", async (req: Request, res: Response): Promise<void> => {
+  const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
+  if (!isValid) { sendError(res, 400, errorMessage!); return; }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("lp_template_variants")
+      .select("id, variant_key, label, label_en, color_vars, preview_thumbnail, is_default, sort_order")
+      .eq("template_id", numericValue)
+      .order("sort_order", { ascending: true });
+
+    if (error) throw error;
+    res.json({ variants: data ?? [] });
+  } catch (err) {
+    logger.error("取得 variant 失敗", err);
+    sendError(res, 500, "取得樣式方案失敗");
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 圖片上傳（Landing Page 用）
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/landing/projects/:id/images
+ * 上傳圖片至 Supabase Storage lp-images bucket
+ * Body: multipart/form-data, field name: "image"
+ * Returns: { url, path }
+ */
+router.post(
+  "/projects/:id/images",
+  authenticateToken,
+  requireAdmin,
+  upload.single("image"),
+  async (req: Request, res: Response): Promise<void> => {
+    const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
+    if (!isValid) { sendError(res, 400, errorMessage!); return; }
+
+    if (!req.file) { sendError(res, 400, "請附上圖片檔案（field: image）"); return; }
+
+    try {
+      // 壓縮 → webp，max 1920px
+      const webpBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+
+      const filename = `${numericValue}/${Date.now()}.webp`;
+
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from("lp-images")
+        .upload(filename, webpBuffer, { contentType: "image/webp", upsert: false });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: publicData } = supabaseAdmin.storage
+        .from("lp-images")
+        .getPublicUrl(filename);
+
+      logger.info("LP 圖片上傳成功", { projectId: numericValue, path: filename });
+      res.json({ url: publicData.publicUrl, path: filename });
+    } catch (err) {
+      logger.error("LP 圖片上傳失敗", { error: (err as Error).message });
+      sendError(res, 500, "圖片上傳失敗，請稍後再試");
+    }
+  },
+);
+
+/**
+ * DELETE /api/landing/projects/:id/images
+ * 刪除已上傳的圖片
+ * Body: { path }
+ */
+router.delete(
+  "/projects/:id/images",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const path = String(req.body.path || "").trim();
+    if (!path) { sendError(res, 400, "path 不可為空"); return; }
+    // 基本安全：path 只允許 projectId/timestamp.webp 格式
+    if (!/^\d+\/\d+\.webp$/.test(path)) {
+      sendError(res, 400, "path 格式無效");
+      return;
+    }
+    try {
+      const { error } = await supabaseAdmin.storage.from("lp-images").remove([path]);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err) {
+      logger.error("LP 圖片刪除失敗", err);
+      sendError(res, 500, "圖片刪除失敗");
+    }
+  },
+);
 
 export default router;

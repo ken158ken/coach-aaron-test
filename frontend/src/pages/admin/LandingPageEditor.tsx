@@ -19,6 +19,7 @@ import { landingService } from "../../services/site/landing.service";
 import type {
   LpProjectDetail,
   LpResolvedField,
+  LpVariant,
 } from "../../services/site/landing.service";
 
 // ─────────────────────────────────────────────────────────
@@ -122,41 +123,99 @@ function isChanged(fe: FieldEdit): boolean {
 const FieldInput: React.FC<{
   field: FieldEdit;
   onChange: (fe: FieldEdit) => void;
-}> = ({ field, onChange }) => {
+  onUploadImage?: (file: File) => Promise<string>;
+}> = ({ field, onChange, onUploadImage }) => {
   const changed = isChanged(field);
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const set = (patch: Partial<FieldEdit>) =>
     onChange({ ...field, ...patch });
 
+  const handleFileSelect = async (file: File) => {
+    if (!onUploadImage) return;
+    setUploading(true);
+    try {
+      const url = await onUploadImage(file);
+      set({ cloudinaryUrl: url });
+    } catch (err) {
+      alert(`上傳失敗：${(err as Error).message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (isImageField(field)) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {/* Current image preview */}
         {field.cloudinaryUrl && (
-          <div className="relative aspect-video w-full max-w-xs rounded-lg overflow-hidden border border-luxe-gold/10">
+          <div className="relative aspect-video w-full max-w-xs rounded-lg overflow-hidden border border-luxe-gold/10 group">
             <img
               src={field.cloudinaryUrl}
               alt={field.field_label}
               className="w-full h-full object-cover"
             />
+            <button
+              onClick={() => set({ cloudinaryUrl: "", cloudinaryPublicId: "" })}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white/70 hover:text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              ✕
+            </button>
           </div>
         )}
-        <input
-          type="url"
-          value={field.cloudinaryUrl}
-          onChange={(e) => set({ cloudinaryUrl: e.target.value })}
-          placeholder="https://res.cloudinary.com/..."
-          className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
-            changed
-              ? "border-luxe-gold/50"
-              : "border-luxe-gold/10 focus:border-luxe-gold/30"
-          }`}
-        />
-        {field.cloudinaryUrl && (
-          <p className="text-[10px] text-luxe-muted/50">
-            圖片必須使用 Cloudinary URL
-          </p>
+
+        {/* Upload zone */}
+        {onUploadImage && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileSelect(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-full max-w-xs flex flex-col items-center gap-2 py-4 border-2 border-dashed rounded-lg text-xs text-luxe-muted hover:text-luxe-text hover:border-luxe-gold/40 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+              style={{ borderColor: "rgba(197,160,89,0.2)" }}
+            >
+              {uploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
+                  上傳中…
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  點擊上傳圖片
+                  <span className="text-[10px] text-luxe-muted/50">JPG / PNG / WebP，最大 5MB</span>
+                </>
+              )}
+            </button>
+          </>
         )}
+
+        {/* Manual URL input */}
+        <div className="space-y-1">
+          <p className="text-[10px] text-luxe-muted/40">或直接貼上圖片 URL</p>
+          <input
+            type="url"
+            value={field.cloudinaryUrl}
+            onChange={(e) => set({ cloudinaryUrl: e.target.value })}
+            placeholder="https://..."
+            className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
+              changed ? "border-luxe-gold/50" : "border-luxe-gold/10 focus:border-luxe-gold/30"
+            }`}
+          />
+        </div>
       </div>
     );
   }
@@ -248,6 +307,11 @@ const LandingPageEditor: React.FC = () => {
   const [projectName, setProjectName] = useState("");
   const [customSlug, setCustomSlug] = useState("");
 
+  // Variant (樣式切換)
+  const [variants, setVariants] = useState<LpVariant[]>([]);
+  const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
+  const [savingVariant, setSavingVariant] = useState(false);
+
   // ── Load project ──
   useEffect(() => {
     if (isNaN(projectId)) {
@@ -274,6 +338,19 @@ const LandingPageEditor: React.FC = () => {
         if (edits.length > 0) {
           setActiveGroup(edits[0].content_group);
         }
+
+        // 載入該模板的樣式方案
+        if (proj.template_id) {
+          try {
+            const { variants: vs } = await landingService.getVariants(proj.template_id);
+            setVariants(vs);
+            // 設定目前 project 套用的 variant（需 lp_projects 包含 variant_id）
+            const pWithVariant = proj as LpProjectDetail & { variant_id?: number | null };
+            setActiveVariantId(pWithVariant.variant_id ?? null);
+          } catch {
+            // variant 載入失敗不阻擋主流程
+          }
+        }
       } catch (err) {
         logger.error("載入專案失敗", err);
         setError("無法載入專案資料，請重新整理");
@@ -283,6 +360,26 @@ const LandingPageEditor: React.FC = () => {
     };
 
     load();
+  }, [projectId]);
+
+  // ── Variant handler ──
+  const handleVariantChange = useCallback(async (variantId: number | null) => {
+    setActiveVariantId(variantId);
+    setSavingVariant(true);
+    try {
+      await landingService.setVariant(projectId, variantId);
+    } catch (err) {
+      logger.error("樣式切換失敗", err);
+      alert("樣式切換失敗");
+    } finally {
+      setSavingVariant(false);
+    }
+  }, [projectId]);
+
+  // ── Image upload handler ──
+  const handleImageUpload = useCallback(async (file: File): Promise<string> => {
+    const { url } = await landingService.uploadImage(projectId, file);
+    return url;
   }, [projectId]);
 
   // ── Derived ──
@@ -520,6 +617,36 @@ const LandingPageEditor: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left sidebar: Group nav ── */}
         <aside className="w-48 shrink-0 border-r border-luxe-gold/10 bg-luxe-surface overflow-y-auto py-3">
+          {/* Variant picker */}
+          {variants.length > 0 && (
+            <div className="px-3 mb-4">
+              <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-2 px-2">
+                樣式 {savingVariant && <span className="text-luxe-gold animate-pulse">•</span>}
+              </p>
+              <div className="flex flex-wrap gap-1.5 px-2">
+                {variants.map((v) => {
+                  const isActive = activeVariantId === v.id || (!activeVariantId && v.is_default);
+                  const primary = (v.color_vars as Record<string, string>).primary ?? "#c5a059";
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => handleVariantChange(v.id)}
+                      title={v.label}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] transition-all ${
+                        isActive
+                          ? "bg-luxe-gold/15 text-luxe-gold border border-luxe-gold/40"
+                          : "text-luxe-muted hover:text-luxe-text border border-transparent hover:border-luxe-gold/20"
+                      }`}
+                    >
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: primary }} />
+                      {v.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Project info section */}
           <div className="px-3 mb-4">
             <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-2 px-2">
@@ -677,7 +804,11 @@ const LandingPageEditor: React.FC = () => {
                           {fe.field_kind}
                         </span>
                       </div>
-                      <FieldInput field={fe} onChange={updateField} />
+                      <FieldInput
+                          field={fe}
+                          onChange={updateField}
+                          onUploadImage={isImageField(fe) ? handleImageUpload : undefined}
+                        />
                     </div>
                   ))}
                 </div>
