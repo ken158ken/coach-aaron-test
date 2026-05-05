@@ -77,25 +77,30 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Storage policy: 公開讀取
-INSERT INTO storage.policies (name, bucket_id, operation, definition)
-VALUES (
-  'lp-images-public-read',
-  'lp-images',
-  'SELECT',
-  'true'
-)
-ON CONFLICT DO NOTHING;
+-- Storage policy 掛在 storage.objects（Supabase 正確寫法，不是 storage.policies）
+DO $$
+BEGIN
+  -- 公開讀取
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND policyname='lp-images-public-read'
+  ) THEN
+    EXECUTE 'CREATE POLICY "lp-images-public-read" ON storage.objects FOR SELECT USING (bucket_id = ''lp-images'')';
+  END IF;
 
--- Storage policy: admin 寫入
-INSERT INTO storage.policies (name, bucket_id, operation, definition)
-VALUES (
-  'lp-images-admin-write',
-  'lp-images',
-  'INSERT',
-  'public.is_admin()'
-)
-ON CONFLICT DO NOTHING;
+  -- Admin 上傳
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND policyname='lp-images-admin-insert'
+  ) THEN
+    EXECUTE 'CREATE POLICY "lp-images-admin-insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = ''lp-images'' AND public.is_admin())';
+  END IF;
+
+  -- Admin 刪除
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND policyname='lp-images-admin-delete'
+  ) THEN
+    EXECUTE 'CREATE POLICY "lp-images-admin-delete" ON storage.objects FOR DELETE USING (bucket_id = ''lp-images'' AND public.is_admin())';
+  END IF;
+END $$;
 
 -- ============================================================
 -- 五、為現有模板 AARON_GENERIC_001 補齊 3 個 variant
