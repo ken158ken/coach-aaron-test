@@ -171,25 +171,36 @@ router.get("/projects/slug/:slug", async (req: Request, res: Response): Promise<
   if (!slug) { sendError(res, 400, "slug 不可為空"); return; }
 
   try {
+    // 主查詢：不 join lp_template_variants（避免 migration 023 未跑時整個 query 壞掉）
     const { data: project, error: pErr } = await supabaseAdmin
       .from("lp_projects")
-      .select("*, lp_templates(template_code, jsx_component_key, color_vars, animation_type), lp_template_variants(color_vars)")
+      .select("*, lp_templates(template_code, jsx_component_key, color_vars, animation_type)")
       .eq("custom_slug", slug)
       .eq("status", "published")
       .single();
 
     if (pErr || !project) { sendError(res, 404, "找不到此頁面"); return; }
 
-    // 若有 variant，將 variant.color_vars 合併覆蓋 template.color_vars
-    const variantVars = (project.lp_template_variants as { color_vars?: Record<string, string> } | null)?.color_vars;
-    if (variantVars && project.lp_templates) {
-      (project.lp_templates as { color_vars: Record<string, string> }).color_vars = {
-        ...(project.lp_templates as { color_vars: Record<string, string> }).color_vars,
-        ...variantVars,
-      };
+    // 若 project 有 variant_id，另外查 variant color_vars 並合併
+    // 用 try-catch 包住，確保 migration 023 未跑時不影響主流程
+    const variantId = (project as Record<string, unknown>).variant_id as number | null;
+    if (variantId && project.lp_templates) {
+      try {
+        const { data: variant } = await supabaseAdmin
+          .from("lp_template_variants")
+          .select("color_vars")
+          .eq("id", variantId)
+          .maybeSingle();
+        if (variant?.color_vars) {
+          (project.lp_templates as { color_vars: Record<string, string> }).color_vars = {
+            ...(project.lp_templates as { color_vars: Record<string, string> }).color_vars,
+            ...(variant.color_vars as Record<string, string>),
+          };
+        }
+      } catch {
+        // variant 表未建立或查詢失敗，略過，不影響頁面顯示
+      }
     }
-    // 不把 variant 物件暴露給前端
-    delete (project as Record<string, unknown>).lp_template_variants;
 
     // 解析後的欄位值（用 view）
     const { data: resolvedFields, error: rfErr } = await supabaseAdmin
