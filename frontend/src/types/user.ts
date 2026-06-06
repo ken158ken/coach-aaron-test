@@ -25,7 +25,6 @@ export interface User {
   // 前端別名 (方便使用)
   id?: number;
   role?: UserRole;
-  sex?: boolean;
   isAdmin?: boolean;
   createdAt?: string;
 }

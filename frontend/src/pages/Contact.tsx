@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
 import { ImagesBadge, type BadgeItem } from "@/components/ui/ImagesBadge";
+import WhisperForm from "@/components/ui/WhisperForm";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
 import SEOHead from "@/components/seo/SEOHead";
 import { useLanguage } from "@/context/LanguageContext";
@@ -188,6 +189,13 @@ const Contact: React.FC = () => {
       icon: "🎙️",
       desc: "陪你健身",
       bg: "#9b59b6",
+    },
+    {
+      name: "Notion",
+      href: SOCIAL_LINKS.NOTION,
+      icon: "📝",
+      desc: "教練筆記",
+      bg: "#191919",
     },
   ];
 
@@ -397,6 +405,11 @@ const Contact: React.FC = () => {
                 hoverSpread={20}
                 overlap={-14}
               />
+
+              {/* 悄悄話區塊 */}
+              <div className="mt-8" data-aos="fade-left" data-aos-delay="250">
+                <WhisperForm />
+              </div>
             </div>
           </div>
         </div>

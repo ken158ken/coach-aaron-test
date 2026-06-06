@@ -11,9 +11,10 @@
  *   - Transcript：admin 可貼 VTT/SRT，後端 parse 成 JSON 存
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { PillButton, Modal, useDialog } from "@/components/ui";
 import { lessonService } from "@/services/content/lesson.service";
+import { post } from "@/services/api";
 import type { Lesson, LessonInput } from "@/types";
 
 const AdminLessons: React.FC = () => {
@@ -242,6 +243,10 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
     lesson?.transcript_lang || "zh-TW",
   );
   const [fetchTranscript, setFetchTranscript] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState(lesson?.thumbnail_url || "");
+  const [thumbUploading, setThumbUploading] = useState(false);
+  const [thumbUploadError, setThumbUploadError] = useState("");
+  const thumbFileRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const isEdit = !!lesson;
@@ -262,6 +267,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
       description: description.trim() || undefined,
       description_en: descriptionEn.trim() || undefined,
       loom_url: loomUrl.trim(),
+      thumbnail_url: thumbnailUrl.trim() || undefined,
       category: category.trim() || undefined,
       keywords: keywords.trim() || undefined,
       sort_order: sortOrder,
@@ -292,6 +298,35 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
 
   return (
     <Modal isOpen onClose={onClose} title={isEdit ? "編輯教學影片" : "新增教學影片"} size="lg">
+      <input
+        ref={thumbFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          e.target.value = "";
+          setThumbUploading(true);
+          setThumbUploadError("");
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const dataUrl = (ev.target?.result as string) ?? "";
+            try {
+              const { url } = await post<{ url: string }>(
+                "/api/lessons/upload-thumbnail",
+                { image: dataUrl },
+              );
+              setThumbnailUrl(url);
+            } catch {
+              setThumbUploadError("上傳失敗，請重試");
+            } finally {
+              setThumbUploading(false);
+            }
+          };
+          reader.readAsDataURL(file);
+        }}
+      />
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
         <Field label="Loom 分享連結 *" hint="例：https://www.loom.com/share/d3479f55…">
           <input
@@ -301,6 +336,37 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
             value={loomUrl}
             onChange={(e) => setLoomUrl(e.target.value)}
           />
+        </Field>
+
+        <Field label="封面截圖" hint="上傳截圖或貼網址；不填則自動抓 Loom 縮圖">
+          <div className="flex gap-2">
+            <input
+              type="url"
+              className="studio-input flex-1"
+              placeholder="https://..."
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => thumbFileRef.current?.click()}
+              disabled={thumbUploading}
+              className="px-3 py-2 bg-gold/15 hover:bg-gold/25 text-gold text-xs rounded-lg border border-gold/30 transition-colors whitespace-nowrap disabled:opacity-50"
+            >
+              {thumbUploading ? "上傳中..." : "上傳截圖"}
+            </button>
+          </div>
+          {thumbUploadError && (
+            <p className="text-xs text-red-400 mt-1">{thumbUploadError}</p>
+          )}
+          {thumbnailUrl && (
+            <img
+              src={thumbnailUrl}
+              alt="縮圖預覽"
+              className="mt-2 w-full h-24 object-cover rounded-lg"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
         </Field>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

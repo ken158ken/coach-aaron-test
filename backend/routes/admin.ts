@@ -539,33 +539,39 @@ router.put(
  */
 router.get("/stats", async (req: Request, res: Response): Promise<void> => {
   try {
-    // 使用者總數
-    const { count: userCount } = await supabaseAdmin
-      .from("users")
-      .select("*", { count: "exact", head: true })
-      .is("deleted_at", null);
-
-    // 課程總數
-    const { count: courseCount } = await supabaseAdmin
-      .from("courses")
-      .select("*", { count: "exact", head: true })
-      .is("deleted_at", null);
-
-    // 訂單總數
-    const { count: orderCount } = await supabaseAdmin
-      .from("orders")
-      .select("*", { count: "exact", head: true });
-
-    // 本月營收
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
+    const startOfMonthISO = startOfMonth.toISOString();
 
-    const { data: monthlyOrders } = await supabaseAdmin
-      .from("orders")
-      .select("total_amount")
-      .eq("status", "paid")
-      .gte("paid_at", startOfMonth.toISOString());
+    // 並行查詢所有統計
+    const [
+      { count: userCount },
+      { count: courseCount },
+      { count: orderCount },
+      { count: videoCount },
+      { count: articleCount },
+      { count: lessonCount },
+      { count: newUsersThisMonth },
+      { data: monthlyOrders },
+      { data: topArticles },
+      { data: topLessons },
+      { data: courseEnrollments },
+      { count: bookingCount },
+    ] = await Promise.all([
+      supabaseAdmin.from("users").select("*", { count: "exact", head: true }).is("deleted_at", null),
+      supabaseAdmin.from("courses").select("*", { count: "exact", head: true }).is("deleted_at", null),
+      supabaseAdmin.from("orders").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("is_visible", true),
+      supabaseAdmin.from("articles").select("*", { count: "exact", head: true }).eq("status", "published"),
+      supabaseAdmin.from("lesson_videos").select("*", { count: "exact", head: true }).eq("is_published", true).is("deleted_at", null),
+      supabaseAdmin.from("users").select("*", { count: "exact", head: true }).is("deleted_at", null).gte("created_at", startOfMonthISO),
+      supabaseAdmin.from("orders").select("total_amount").eq("status", "paid").gte("paid_at", startOfMonthISO),
+      supabaseAdmin.from("articles").select("article_id, article_title, view_count").eq("status", "published").order("view_count", { ascending: false }).limit(5),
+      supabaseAdmin.from("lesson_videos").select("id, title, view_count").eq("is_published", true).is("deleted_at", null).order("view_count", { ascending: false }).limit(5),
+      supabaseAdmin.from("courses").select("course_id, course_title, total_enrolled").is("deleted_at", null).order("total_enrolled", { ascending: false }).limit(5),
+      supabaseAdmin.from("bookings").select("*", { count: "exact", head: true }),
+    ]);
 
     const monthlyRevenue =
       monthlyOrders?.reduce(
@@ -574,11 +580,43 @@ router.get("/stats", async (req: Request, res: Response): Promise<void> => {
         0,
       ) || 0;
 
+    const totalArticleViews = (topArticles || []).reduce(
+      (sum: number, a: { view_count?: number | null }) => sum + (a.view_count || 0), 0
+    );
+    const totalLessonViews = (topLessons || []).reduce(
+      (sum: number, l: { view_count?: number }) => sum + (l.view_count || 0), 0
+    );
+
     res.json({
+      // 核心數據（舊欄位保持相容）
       userCount,
       courseCount,
       orderCount,
       monthlyRevenue,
+      // 擴充數據
+      videoCount,
+      articleCount,
+      lessonCount,
+      newUsersThisMonth,
+      bookingCount,
+      totalArticleViews,
+      totalLessonViews,
+      // 排行榜
+      topArticles: (topArticles || []).map((a: { article_id: number; article_title: string; view_count?: number | null }) => ({
+        id: a.article_id,
+        title: a.article_title,
+        views: a.view_count || 0,
+      })),
+      topLessons: (topLessons || []).map((l: { id: number; title: string; view_count?: number }) => ({
+        id: l.id,
+        title: l.title,
+        views: l.view_count || 0,
+      })),
+      topCourses: (courseEnrollments || []).map((c: { course_id: number; course_title: string; total_enrolled?: number | null }) => ({
+        id: c.course_id,
+        title: c.course_title,
+        enrolled: c.total_enrolled || 0,
+      })),
     });
   } catch (err) {
     console.error("Get stats error:", err);

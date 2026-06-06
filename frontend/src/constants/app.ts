@@ -47,6 +47,7 @@ export const SOCIAL_LINKS = {
   TIKTOK: "https://www.tiktok.com/@coachluen",
   PODCAST:
     "https://podcasts.apple.com/tw/podcast/%E9%99%AA%E4%BD%A0%E5%81%A5%E8%BA%AB/id1551996280",
+  NOTION: "https://www.notion.so/22a21087610880a3a028ddd3a1622c41",
 } as const;
 
 // Coach Contact Info

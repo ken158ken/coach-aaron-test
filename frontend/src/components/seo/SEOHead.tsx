@@ -49,6 +49,8 @@ interface SEOHeadProps {
   category?: string;
   /** 不要被搜尋引擎索引 */
   noIndex?: boolean;
+  /** 商品價格（用於 product schema） */
+  price?: number;
 }
 
 /** 預設網站資訊 */
@@ -90,11 +92,58 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   isArticle = false,
   category,
   noIndex = false,
+  price,
 }) => {
   // 組合完整標題
   const fullTitle = title
     ? `${title} | ${DEFAULT_SITE_NAME}`
     : DEFAULT_SITE_NAME;
+
+  // JSON-LD 結構化資料
+  const jsonLd = (() => {
+    if (isArticle) {
+      return JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: title || DEFAULT_SITE_NAME,
+        description,
+        image: fullImage,
+        datePublished: publishedTime,
+        dateModified: modifiedTime || publishedTime,
+        author: { "@type": "Person", name: author || "阿倫教官" },
+        publisher: {
+          "@type": "Organization",
+          name: DEFAULT_SITE_NAME,
+          logo: { "@type": "ImageObject", url: `${DEFAULT_URL}/icons/icon-192.png` },
+        },
+        url: fullUrl,
+        articleSection: category,
+        keywords: keywords.join(", "),
+      });
+    }
+    if (type === "product" && price !== undefined) {
+      return JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Course",
+        name: title,
+        description,
+        image: fullImage,
+        url: fullUrl,
+        provider: {
+          "@type": "Person",
+          name: "阿倫教官",
+          sameAs: "https://www.instagram.com/coach.luen/",
+        },
+        offers: {
+          "@type": "Offer",
+          price,
+          priceCurrency: "TWD",
+          availability: "https://schema.org/InStock",
+        },
+      });
+    }
+    return null;
+  })();
 
   // 確保圖片是完整 URL（處理 null/undefined）
   const imageUrl = image || DEFAULT_IMAGE;
@@ -157,6 +206,11 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
       {/* Canonical URL */}
       <link rel="canonical" href={fullUrl} />
+
+      {/* JSON-LD 結構化資料 */}
+      {jsonLd && (
+        <script type="application/ld+json">{jsonLd}</script>
+      )}
     </Helmet>
   );
 };

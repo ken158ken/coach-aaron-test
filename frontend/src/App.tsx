@@ -49,6 +49,7 @@ import AdminVideos from "@/pages/admin/AdminVideos";
 import AdminLessons from "@/pages/admin/AdminLessons";
 import AdminContent from "@/pages/admin/AdminContent";
 import AdminWhitelist from "@/pages/admin/AdminWhitelist";
+import AdminWhispers from "@/pages/admin/AdminWhispers";
 import AdminArticles from "@/pages/admin/AdminArticles";
 import ArticleEditor from "@/pages/admin/ArticleEditor";
 import CourseEditor from "@/pages/admin/CourseEditor";
@@ -244,6 +245,7 @@ function App(): JSX.Element {
                   <Route path="articles" element={<AdminArticles />} />
                   <Route path="landing-pages" element={<LandingPageManager />} />
                   <Route path="whitelist" element={<AdminWhitelist />} />
+                  <Route path="whispers" element={<AdminWhispers />} />
                   <Route path="export" element={<AdminExport />} />
                 </Route>
 

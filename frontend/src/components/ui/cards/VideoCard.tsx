@@ -89,9 +89,9 @@ const VideoCard: React.FC<VideoCardProps> = ({
       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
       {/* Hover 遮罩 — 從底部浮上 */}
-      <div className="absolute inset-0 flex flex-col justify-end translate-y-[calc(100%-2.5rem)] group-hover:translate-y-0 transition-transform duration-400 ease-out">
+      <div className="absolute inset-0 flex flex-col justify-end translate-y-[calc(100%-2.5rem)] group-hover:translate-y-0 transition-transform duration-300 ease-out">
         {/* 漸層背景 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* 文字內容 */}
         <div className="relative z-10 p-3 sm:p-4">

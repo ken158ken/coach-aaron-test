@@ -66,17 +66,17 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
   switch (key) {
     // ---------- 使用者（排除密碼）----------
     case "users": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("users")
-        .select("user_id, username, display_name, email, phone, sex, is_active, email_verified, created_at")
+        .select("user_id, username, display_name, email, phone_number, is_active, email_verified, created_at")
         .order("created_at", { ascending: false });
+      if (error) throw error;
       return (data || []).map((r) => ({
         用戶ID: r.user_id,
         帳號: r.username || "",
         顯示名稱: r.display_name || "",
         Email: r.email,
-        電話: r.phone || "",
-        性別: r.sex === "male" ? "男" : r.sex === "female" ? "女" : r.sex || "",
+        電話: r.phone_number || "",
         帳號狀態: r.is_active ? "啟用" : "停用",
         Email驗證: r.email_verified ? "已驗證" : "未驗證",
         加入時間: fmtTime(r.created_at),
@@ -85,15 +85,16 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 課程 ----------
     case "courses": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("courses")
-        .select("course_id, title, category, level, price, status, created_at")
+        .select("course_id, course_title, course_category, course_level, price, status, created_at")
         .order("created_at", { ascending: false });
+      if (error) throw error;
       return (data || []).map((r) => ({
         課程ID: r.course_id,
-        課程名稱: r.title,
-        分類: r.category || "",
-        難度: r.level || "",
+        課程名稱: r.course_title,
+        分類: r.course_category || "",
+        難度: r.course_level || "",
         價格: r.price ?? "",
         狀態: r.status === "published" ? "已發布" : "草稿",
         建立時間: fmtTime(r.created_at),
@@ -102,15 +103,16 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 文章 ----------
     case "articles": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("articles")
-        .select("article_id, title, slug, category, status, view_count, created_at")
+        .select("article_id, article_title, article_slug, article_category, status, view_count, created_at")
         .order("created_at", { ascending: false });
+      if (error) throw error;
       return (data || []).map((r) => ({
         文章ID: r.article_id,
-        標題: r.title,
-        Slug: r.slug || "",
-        分類: r.category || "",
+        標題: r.article_title,
+        Slug: r.article_slug || "",
+        分類: r.article_category || "",
         狀態: r.status === "published" ? "已發布" : "草稿",
         瀏覽數: r.view_count ?? 0,
         建立時間: fmtTime(r.created_at),
@@ -119,10 +121,11 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- Reels 影片 ----------
     case "videos": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("videos")
         .select("video_id, title, url, type, description, is_visible, sort_order, thumbnail_url")
         .order("sort_order", { ascending: true });
+      if (error) throw error;
       return (data || []).map((r) => ({
         影片ID: r.video_id,
         標題: r.title || "",
@@ -137,10 +140,11 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 教學影片 ----------
     case "lessons": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("lesson_videos")
         .select("id, title, loom_id, duration_seconds, keywords, is_published, created_at")
         .order("created_at", { ascending: false });
+      if (error) throw error;
       return (data || []).map((r) => ({
         ID: r.id,
         標題: r.title,
@@ -154,13 +158,14 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 預約記錄 ----------
     case "bookings": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("bookings")
         .select(
           `id, status, start_at, end_at, user_note, contact_email, created_at,
            user:users(display_name, email)`,
         )
         .order("start_at", { ascending: false });
+      if (error) throw error;
       return (data || []).map((r) => {
         const u = r.user as { display_name?: string; email?: string } | null;
         return {
@@ -178,11 +183,12 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 所有聊天記錄 ----------
     case "chat_all": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("chat_messages")
         .select("id, conversation_id, sender_id, content, message_type, created_at")
         .order("created_at", { ascending: false })
         .limit(5000);
+      if (error) throw error;
       return (data || []).map((r) => ({
         訊息ID: r.id,
         對話ID: r.conversation_id,
@@ -195,10 +201,11 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 跑馬燈 ----------
     case "marquee": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("marquee_items")
         .select("id, type, icon, label, sub, sort_order, is_active")
         .order("sort_order", { ascending: true });
+      if (error) throw error;
       return (data || []).map((r) => ({
         ID: r.id,
         類型: r.type || "",
@@ -212,10 +219,11 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- Podcast ----------
     case "podcast": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("podcast_episodes")
         .select("id, title, description, duration, episode_date, category, sort_order, is_active")
         .order("sort_order", { ascending: true });
+      if (error) throw error;
       return (data || []).map((r) => ({
         ID: r.id,
         標題: r.title,
@@ -230,11 +238,12 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 通知記錄 ----------
     case "notifications": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("notifications")
         .select("id, user_id, type, title, body, is_read, created_at")
         .order("created_at", { ascending: false })
         .limit(3000);
+      if (error) throw error;
       return (data || []).map((r) => ({
         通知ID: r.id,
         接收者ID: r.user_id,
@@ -248,27 +257,29 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- 站內文案 ----------
     case "site_content": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("site_content")
-        .select("id, key, value, type, updated_at")
-        .order("key", { ascending: true });
+        .select("content_id, content_key, content_value, content_type, updated_at")
+        .order("content_key", { ascending: true });
+      if (error) throw error;
       return (data || []).map((r) => ({
-        ID: r.id,
-        鍵名: r.key,
-        內容值: typeof r.value === "object" ? JSON.stringify(r.value) : String(r.value ?? ""),
-        類型: r.type || "",
+        ID: r.content_id,
+        鍵名: r.content_key,
+        內容值: typeof r.content_value === "object" ? JSON.stringify(r.content_value) : String(r.content_value ?? ""),
+        類型: r.content_type || "",
         最後更新: fmtTime(r.updated_at),
       }));
     }
 
     // ---------- 管理員白名單 ----------
     case "whitelist": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("admin_whitelist")
-        .select("id, email, display_name, is_active, created_at")
+        .select("whitelist_id, email, display_name, is_active, created_at")
         .order("created_at", { ascending: true });
+      if (error) throw error;
       return (data || []).map((r) => ({
-        ID: r.id,
+        ID: r.whitelist_id,
         Email: r.email,
         顯示名稱: r.display_name || "",
         狀態: r.is_active ? "啟用" : "停用",
@@ -278,10 +289,11 @@ async function fetchModule(key: string): Promise<ExportRow[]> {
 
     // ---------- Landing Pages ----------
     case "landing_pages": {
-      const { data } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("lp_projects")
         .select("id, project_code, project_name, customer_name, status, custom_slug, created_at")
         .order("created_at", { ascending: false });
+      if (error) throw error;
       return (data || []).map((r) => ({
         專案ID: r.id,
         專案代碼: r.project_code || "",

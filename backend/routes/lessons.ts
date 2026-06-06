@@ -15,6 +15,7 @@
  */
 
 import express, { Request, Response, Router } from "express";
+import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
@@ -25,6 +26,8 @@ import {
   parseTranscript,
   type TranscriptEntry,
 } from "../utils/loom.js";
+
+const LESSON_THUMB_BUCKET = "lesson-thumbnails";
 
 const router: Router = express.Router();
 
@@ -399,5 +402,53 @@ async function resolveTranscript(
   }
   return null;
 }
+
+/**
+ * 上傳教學影片截圖 — base64 → WebP → Supabase Storage
+ * @route POST /api/lessons/upload-thumbnail
+ * body: { image: string }  // "data:image/...;base64,..."
+ * Bucket: lesson-thumbnails（需在 Supabase 後台建立，設為 public）
+ */
+router.post(
+  "/upload-thumbnail",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { image } = req.body as { image?: string };
+      if (!image || !image.startsWith("data:image/")) {
+        res.status(400).json({ error: "請提供有效的圖片 (base64 data URL)" });
+        return;
+      }
+
+      const base64 = image.replace(/^data:image\/\w+;base64,/, "");
+      const inputBuffer = Buffer.from(base64, "base64");
+
+      const webpBuffer = await sharp(inputBuffer)
+        .resize({ width: 800, withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+
+      const filename = `lesson_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from(LESSON_THUMB_BUCKET)
+        .upload(filename, webpBuffer, {
+          contentType: "image/webp",
+          upsert: false,
+        });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data } = supabaseAdmin.storage
+        .from(LESSON_THUMB_BUCKET)
+        .getPublicUrl(filename);
+
+      res.json({ url: data.publicUrl });
+    } catch (err) {
+      logger.error("上傳教學影片截圖失敗", err as Error);
+      res.status(500).json({ error: "上傳截圖失敗" });
+    }
+  },
+);
 
 export default router;

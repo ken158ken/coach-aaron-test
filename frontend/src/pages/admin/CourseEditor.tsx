@@ -14,6 +14,7 @@ import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks";
 import { courseService } from "@/services/content/course.service";
+import { post } from "@/services/api";
 
 /**
  * 驗證 Cloudinary 圖片網址
@@ -130,6 +131,16 @@ const CourseEditor: React.FC = () => {
 
   // 使用說明 Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // 圖片上傳狀態
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [coverUploadError, setCoverUploadError] = useState("");
+  const [bannerUploadError, setBannerUploadError] = useState("");
+  const [coverUrlError, setCoverUrlError] = useState("");
+  const [bannerUrlError, setBannerUrlError] = useState("");
+  const coverFileRef = useRef<HTMLInputElement>(null);
+  const bannerFileRef = useRef<HTMLInputElement>(null);
 
   useScrollLock(showCategoryModal || showHelpModal);
 
@@ -377,6 +388,59 @@ const CourseEditor: React.FC = () => {
       tags: prev.tags.filter((t) => t !== tag),
     }));
     setHasChanges(true);
+  }, []);
+
+  /** 上傳圖片檔案到後端 Storage（base64 → WebP） */
+  const handleImageFileUpload = useCallback(
+    async (
+      file: File,
+      field: "coverImage" | "bannerImage",
+    ) => {
+      const setUploading = field === "coverImage" ? setCoverUploading : setBannerUploading;
+      const setUploadError = field === "coverImage" ? setCoverUploadError : setBannerUploadError;
+      setUploading(true);
+      setUploadError("");
+
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataUrl = (ev.target?.result as string) ?? "";
+        try {
+          const { url } = await post<{ url: string }>(
+            "/api/courses/upload-image",
+            { image: dataUrl },
+          );
+          setCourse((prev) => ({ ...prev, [field]: url }));
+          setHasChanges(true);
+        } catch {
+          setUploadError("上傳失敗，請重試");
+        } finally {
+          setUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    [],
+  );
+
+  /** 驗證 Cloudinary URL 是否可存取（後端 HEAD 檢查） */
+  const checkImageUrl = useCallback(async (url: string, field: "coverImage" | "bannerImage") => {
+    const setUrlError = field === "coverImage" ? setCoverUrlError : setBannerUrlError;
+    if (!url || !isValidCloudinaryUrl(url)) {
+      setUrlError("");
+      return;
+    }
+    setUrlError("");
+    try {
+      const result = await post<{ ok: boolean; error?: string }>(
+        "/api/courses/check-image-url",
+        { url },
+      );
+      if (!result.ok) {
+        setUrlError(result.error || "圖片網址無法存取");
+      }
+    } catch {
+      setUrlError("無法驗證圖片網址");
+    }
   }, []);
 
   /** 插入圖片（強制 Cloudinary 驗證） */
@@ -956,40 +1020,77 @@ const CourseEditor: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 隱藏 file inputs */}
+                <input
+                  ref={coverFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImageFileUpload(f, "coverImage");
+                    e.target.value = "";
+                  }}
+                />
+                <input
+                  ref={bannerFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImageFileUpload(f, "bannerImage");
+                    e.target.value = "";
+                  }}
+                />
+
                 {/* 封面圖片 (縮圖) */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
                     封面縮圖
                     <span className="ml-1 text-gray-600">（列表卡片用）</span>
                   </label>
-                  <input
-                    type="url"
-                    value={course.coverImage}
-                    onChange={(e) => {
-                      setCourse((prev) => ({
-                        ...prev,
-                        coverImage: e.target.value,
-                      }));
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://res.cloudinary.com/..."
-                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
-                      course.coverImage && !isValidCloudinaryUrl(course.coverImage)
-                        ? "border-red-500 focus:border-red-400"
-                        : "border-luxe-gold/30 focus:border-luxe-gold"
-                    }`}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={course.coverImage}
+                      onChange={(e) => {
+                        setCourse((prev) => ({ ...prev, coverImage: e.target.value }));
+                        setHasChanges(true);
+                        setCoverUrlError("");
+                      }}
+                      onBlur={() => checkImageUrl(course.coverImage, "coverImage")}
+                      placeholder="https://res.cloudinary.com/..."
+                      className={`flex-1 px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
+                        (course.coverImage && !isValidCloudinaryUrl(course.coverImage)) || coverUrlError
+                          ? "border-red-500 focus:border-red-400"
+                          : "border-luxe-gold/30 focus:border-luxe-gold"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => coverFileRef.current?.click()}
+                      disabled={coverUploading}
+                      className="px-3 py-2 bg-luxe-gold/15 hover:bg-luxe-gold/25 text-luxe-gold text-xs rounded-lg border border-luxe-gold/30 transition-colors whitespace-nowrap disabled:opacity-50"
+                    >
+                      {coverUploading ? "上傳中..." : "上傳截圖"}
+                    </button>
+                  </div>
                   {course.coverImage && !isValidCloudinaryUrl(course.coverImage) && (
                     <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
+                  )}
+                  {coverUrlError && (
+                    <p className="text-xs text-red-400 mt-1">⚠️ {coverUrlError}</p>
+                  )}
+                  {coverUploadError && (
+                    <p className="text-xs text-red-400 mt-1">{coverUploadError}</p>
                   )}
                   {course.coverImage && isValidCloudinaryUrl(course.coverImage) && (
                     <img
                       src={course.coverImage}
                       alt="封面預覽"
                       className="mt-2 w-full h-24 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   )}
                 </div>
@@ -1000,34 +1101,47 @@ const CourseEditor: React.FC = () => {
                     Banner 大圖
                     <span className="ml-1 text-gray-600">（內頁頂部橫幅用）</span>
                   </label>
-                  <input
-                    type="url"
-                    value={course.bannerImage}
-                    onChange={(e) => {
-                      setCourse((prev) => ({
-                        ...prev,
-                        bannerImage: e.target.value,
-                      }));
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://res.cloudinary.com/..."
-                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
-                      course.bannerImage && !isValidCloudinaryUrl(course.bannerImage)
-                        ? "border-red-500 focus:border-red-400"
-                        : "border-luxe-gold/30 focus:border-luxe-gold"
-                    }`}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={course.bannerImage}
+                      onChange={(e) => {
+                        setCourse((prev) => ({ ...prev, bannerImage: e.target.value }));
+                        setHasChanges(true);
+                        setBannerUrlError("");
+                      }}
+                      onBlur={() => checkImageUrl(course.bannerImage, "bannerImage")}
+                      placeholder="https://res.cloudinary.com/..."
+                      className={`flex-1 px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
+                        (course.bannerImage && !isValidCloudinaryUrl(course.bannerImage)) || bannerUrlError
+                          ? "border-red-500 focus:border-red-400"
+                          : "border-luxe-gold/30 focus:border-luxe-gold"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => bannerFileRef.current?.click()}
+                      disabled={bannerUploading}
+                      className="px-3 py-2 bg-luxe-gold/15 hover:bg-luxe-gold/25 text-luxe-gold text-xs rounded-lg border border-luxe-gold/30 transition-colors whitespace-nowrap disabled:opacity-50"
+                    >
+                      {bannerUploading ? "上傳中..." : "上傳截圖"}
+                    </button>
+                  </div>
                   {course.bannerImage && !isValidCloudinaryUrl(course.bannerImage) && (
                     <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
+                  )}
+                  {bannerUrlError && (
+                    <p className="text-xs text-red-400 mt-1">⚠️ {bannerUrlError}</p>
+                  )}
+                  {bannerUploadError && (
+                    <p className="text-xs text-red-400 mt-1">{bannerUploadError}</p>
                   )}
                   {course.bannerImage && isValidCloudinaryUrl(course.bannerImage) && (
                     <img
                       src={course.bannerImage}
                       alt="Banner 預覽"
                       className="mt-2 w-full h-24 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   )}
                 </div>

@@ -147,11 +147,15 @@ const LessonDetail: React.FC = () => {
     <div className="relative min-h-screen bg-transparent">
       <SEOHead
         title={loc(lesson as unknown as Record<string, unknown>, "title")}
-        description={
-          loc(lesson as unknown as Record<string, unknown>, "description") ||
-          undefined
-        }
+        description={loc(lesson as unknown as Record<string, unknown>, "description") || undefined}
+        keywords={lesson.keywords ? lesson.keywords.split(",").map((k) => k.trim()) : ["教學影片", "健身教學", "阿倫教官"]}
+        image={lesson.thumbnail_url || undefined}
         url={`/lessons/${lesson.id}`}
+        type="article"
+        isArticle={true}
+        publishedTime={lesson.created_at}
+        modifiedTime={lesson.updated_at}
+        author="阿倫教官"
       />
 
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-20 px-4">

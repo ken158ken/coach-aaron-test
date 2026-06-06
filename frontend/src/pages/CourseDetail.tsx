@@ -143,8 +143,12 @@ const CourseDetail: React.FC = () => {
       <SEOHead
         title={loc(course as unknown as Record<string, unknown>, "course_title")}
         description={loc(course as unknown as Record<string, unknown>, "course_description") || loc(course as unknown as Record<string, unknown>, "course_title")}
-        keywords={course.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])}
-        image={course.thumbnail}
+        keywords={
+          course.course_keywords
+            ? course.course_keywords.split(",").map((k) => k.trim())
+            : course.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])
+        }
+        image={course.course_thumbnail_url || course.thumbnail}
         url={`/courses/${course.id}`}
         type="product"
       />

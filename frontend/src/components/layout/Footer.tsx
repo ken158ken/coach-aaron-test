@@ -6,6 +6,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FaInstagram, FaFacebook, FaTiktok, FaPodcast } from "react-icons/fa";
+import { SiNotion } from "react-icons/si";
+import { SOCIAL_LINKS } from "@/constants";
 import type { IconType } from "react-icons";
 
 interface SocialLink {
@@ -16,10 +18,11 @@ interface SocialLink {
 
 const Footer: React.FC = (): JSX.Element => {
   const socialLinks: SocialLink[] = [
-    { icon: FaInstagram, url: "https://www.instagram.com/coach.luen/", label: "Instagram" },
-    { icon: FaFacebook, url: "https://www.facebook.com/populuen/", label: "Facebook" },
-    { icon: FaTiktok, url: "https://www.tiktok.com/@coachluen", label: "TikTok" },
-    { icon: FaPodcast, url: "https://podcasts.apple.com/tw/podcast/%E9%99%AA%E4%BD%A0%E5%81%A5%E8%BA%AB/id1551996280", label: "Podcast" },
+    { icon: FaInstagram, url: SOCIAL_LINKS.INSTAGRAM, label: "Instagram" },
+    { icon: FaFacebook, url: SOCIAL_LINKS.FACEBOOK, label: "Facebook" },
+    { icon: FaTiktok, url: SOCIAL_LINKS.TIKTOK, label: "TikTok" },
+    { icon: FaPodcast, url: SOCIAL_LINKS.PODCAST, label: "Podcast" },
+    { icon: SiNotion, url: SOCIAL_LINKS.NOTION, label: "Notion" },
   ];
 
   return (
@@ -42,7 +45,7 @@ const Footer: React.FC = (): JSX.Element => {
             {[
               { to: "/", label: "教練介紹" },
               { to: "/courses", label: "線上課程" },
-              { to: "/videos", label: "短影音" },
+              { to: "/videos", label: "Reels" },
               { to: "/contact", label: "聯絡我" },
             ].map((l) => (
               <Link

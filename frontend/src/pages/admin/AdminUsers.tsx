@@ -68,7 +68,6 @@ const AdminUsers: React.FC = () => {
   // 篩選狀態
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [albumFilter, setAlbumFilter] = useState<string>("all");
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -91,7 +90,6 @@ const AdminUsers: React.FC = () => {
                   email: u.email,
                   avatar_url: u.avatar_base64 || u.avatar_url || undefined,
                   phone_number: u.phone_number,
-                  sex: u.sex ?? false,
                   is_active: u.is_active ?? true,
                   created_at: u.created_at || new Date().toISOString(),
                   updated_at: u.updated_at || new Date().toISOString(),
@@ -120,24 +118,6 @@ const AdminUsers: React.FC = () => {
 
     fetchUsers();
   }, [currentPage]);
-
-  /**
-   * 切換私密相簿權限
-   */
-  const handleToggleSex = async (user: User) => {
-    try {
-      await put(`/api/admin/users/${user.user_id}`, { sex: !user.sex });
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.user_id === user.user_id ? { ...u, sex: !u.sex } : u,
-        ),
-      );
-      logger.info("Toggled album permission", { userId: user.user_id });
-    } catch (err) {
-      logger.error("Failed to toggle sex permission", err);
-      setError("切換權限失敗");
-    }
-  };
 
   /**
    * 取得指定使用者的課程售價可見性
@@ -286,15 +266,9 @@ const AdminUsers: React.FC = () => {
         (activeFilter === "active" && user.is_active) ||
         (activeFilter === "inactive" && !user.is_active);
 
-      // 私密相簿篩選
-      const matchAlbum =
-        albumFilter === "all" ||
-        (albumFilter === "enabled" && user.sex) ||
-        (albumFilter === "disabled" && !user.sex);
-
-      return matchSearch && matchRole && matchActive && matchAlbum;
+      return matchSearch && matchRole && matchActive;
     });
-  }, [users, searchTerm, roleFilter, activeFilter, albumFilter]);
+  }, [users, searchTerm, roleFilter, activeFilter]);
 
   const columns = [
     {
@@ -325,41 +299,6 @@ const AdminUsers: React.FC = () => {
       header: "狀態",
       sortValue: (user: User) => (user.is_active ? 1 : 0),
       render: (user: User) => getStatusBadge(user),
-    },
-    {
-      key: "sex" as const,
-      header: (
-        <span className="inline-flex items-center gap-1.5">
-          私密相簿
-          <span className="relative group/tip">
-            <svg
-              className="w-3.5 h-3.5 text-luxe-gold/60 cursor-help"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8.228 9c.549-1.065 2.01-1.37 3.272-1.37 1.635 0 2.5.882 2.5 1.87 0 1.128-1.443 1.614-2.5 2.164V13m0 3h.01"
-              />
-              <circle cx="12" cy="12" r="10" strokeWidth={2} />
-            </svg>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-luxe-surface border border-luxe-gold/30 rounded-lg text-[11px] text-amber-300 whitespace-nowrap opacity-0 pointer-events-none group-hover/tip:opacity-100 transition-opacity duration-200 shadow-lg z-50">
-              ⚠️ 開啟權限會讓會員看到私密相簿要注意喔
-            </span>
-          </span>
-        </span>
-      ),
-      headerText: "私密相簿",
-      sortValue: (user: User) => (user.sex ? 1 : 0),
-      render: (user: User) => (
-        <Toggle
-          checked={user.sex ?? false}
-          onChange={() => handleToggleSex(user)}
-        />
-      ),
     },
     {
       key: "createdAt" as const,
@@ -464,22 +403,6 @@ const AdminUsers: React.FC = () => {
           <option value="active">活躍</option>
           <option value="inactive">停用</option>
         </select>
-        <select
-          value={albumFilter}
-          onChange={(e) => setAlbumFilter(e.target.value)}
-          className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C9A96E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 0.5rem center",
-            backgroundSize: "1.25em 1.25em",
-          }}
-        >
-          <option value="all">私密相簿</option>
-          <option value="enabled">已啟用</option>
-          <option value="disabled">未啟用</option>
-        </select>
-
         {/* 檢視模式切換 */}
         <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
           {viewOptions.map((opt) => (
@@ -606,15 +529,6 @@ const AdminUsers: React.FC = () => {
                         >
                           編輯
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleSex(user);
-                          }}
-                          className="text-amber-400 hover:underline text-xs"
-                        >
-                          {user.sex ? "關閉相簿" : "開啟相簿"}
-                        </button>
                       </div>
                     </div>
                   )}
@@ -640,16 +554,6 @@ const AdminUsers: React.FC = () => {
                           <span className="text-luxe-muted/60">建立日期</span>
                           <p className="text-luxe-text">{user.createdAt}</p>
                         </div>
-                        <div>
-                          <span className="text-luxe-muted/60">私密相簿</span>
-                          <p
-                            className={
-                              user.sex ? "text-emerald-400" : "text-luxe-muted"
-                            }
-                          >
-                            {user.sex ? "已開啟" : "未開啟"}
-                          </p>
-                        </div>
                         {user.phone_number && (
                           <div className="col-span-2">
                             <span className="text-luxe-muted/60">電話</span>
@@ -669,15 +573,6 @@ const AdminUsers: React.FC = () => {
                           className="text-luxe-gold hover:underline text-xs flex-1"
                         >
                           編輯
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleSex(user);
-                          }}
-                          className="text-amber-400 hover:underline text-xs"
-                        >
-                          {user.sex ? "關閉相簿" : "開啟相簿"}
                         </button>
                       </div>
                     </div>
@@ -753,27 +648,6 @@ const AdminUsers: React.FC = () => {
                 <span className="text-luxe-text">
                   {detailUser.created_at?.split("T")[0] || "—"}
                 </span>
-              </div>
-              <div>
-                <span className="text-luxe-muted text-xs block mb-0.5">
-                  私密相簿
-                </span>
-                <div className="flex items-center gap-2">
-                  <Toggle
-                    checked={detailUser.sex ?? false}
-                    onChange={() => {
-                      handleToggleSex(detailUser);
-                      setDetailUser((prev) =>
-                        prev ? { ...prev, sex: !prev.sex } : null,
-                      );
-                    }}
-                  />
-                  <span
-                    className={`text-xs ${detailUser.sex ? "text-emerald-400" : "text-luxe-muted"}`}
-                  >
-                    {detailUser.sex ? "已開啟" : "未開啟"}
-                  </span>
-                </div>
               </div>
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">

@@ -6,6 +6,7 @@
  */
 
 import express, { Request, Response, Router } from "express";
+import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import {
   authenticateToken,
@@ -21,6 +22,9 @@ import {
   logSecurityEvent,
 } from "../utils/sanitizer.js";
 import { logger } from "../utils/logger.js";
+
+const COURSE_IMAGE_BUCKET = "course-images";
+const CLOUDINARY_PREFIX = "https://res.cloudinary.com/";
 
 const router: Router = express.Router();
 
@@ -593,6 +597,106 @@ router.delete(
     } catch (err) {
       console.error("Delete course error:", err);
       res.status(500).json({ error: "刪除課程失敗" });
+    }
+  },
+);
+
+/**
+ * 上傳課程圖片（封面/Banner）— base64 → WebP → Supabase Storage
+ * @route POST /api/courses/upload-image
+ * body: { image: string }  // "data:image/...;base64,..."
+ * Bucket: course-images（需在 Supabase 後台建立，設為 public）
+ */
+router.post(
+  "/upload-image",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { image } = req.body as { image?: string };
+      if (!image || !image.startsWith("data:image/")) {
+        res.status(400).json({ error: "請提供有效的圖片 (base64 data URL)" });
+        return;
+      }
+
+      const base64 = image.replace(/^data:image\/\w+;base64,/, "");
+      const inputBuffer = Buffer.from(base64, "base64");
+
+      const webpBuffer = await sharp(inputBuffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+
+      const filename = `course_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from(COURSE_IMAGE_BUCKET)
+        .upload(filename, webpBuffer, {
+          contentType: "image/webp",
+          upsert: false,
+        });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data } = supabaseAdmin.storage
+        .from(COURSE_IMAGE_BUCKET)
+        .getPublicUrl(filename);
+
+      res.json({ url: data.publicUrl });
+    } catch (err) {
+      logger.error("上傳課程圖片失敗", err as Error);
+      res.status(500).json({ error: "上傳圖片失敗" });
+    }
+  },
+);
+
+/**
+ * 檢查圖片 URL 是否可存取（僅允許 Cloudinary）
+ * @route POST /api/courses/check-image-url
+ * body: { url: string }
+ * response: { ok: boolean, error?: string }
+ */
+router.post(
+  "/check-image-url",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { url } = req.body as { url?: string };
+      if (!url) {
+        res.status(400).json({ ok: false, error: "請提供圖片網址" });
+        return;
+      }
+      if (!url.startsWith(CLOUDINARY_PREFIX)) {
+        res.status(400).json({
+          ok: false,
+          error: `圖片網址必須以 ${CLOUDINARY_PREFIX} 開頭`,
+        });
+        return;
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      try {
+        const resp = await fetch(url, {
+          method: "HEAD",
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (resp.ok) {
+          res.json({ ok: true });
+        } else {
+          res.json({
+            ok: false,
+            error: `圖片無法存取（HTTP ${resp.status}）`,
+          });
+        }
+      } catch {
+        clearTimeout(timeout);
+        res.json({ ok: false, error: "圖片網址無法連線，請確認連結是否正確" });
+      }
+    } catch (err) {
+      logger.error("檢查圖片 URL 失敗", err as Error);
+      res.status(500).json({ ok: false, error: "伺服器錯誤" });
     }
   },
 );

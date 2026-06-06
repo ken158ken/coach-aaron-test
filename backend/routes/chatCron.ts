@@ -82,10 +82,72 @@ router.get(
         });
       }
 
+      // 5. 清除無訊息且建立超過 7 天的對話
+      let deletedEmptyConvs = 0;
+      try {
+        const sevenDaysAgo = new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).toISOString();
+
+        // 取得超過 7 天的對話 ID
+        const { data: oldConvs, error: oldConvErr } = await supabaseAdmin
+          .from("chat_conversations")
+          .select("id")
+          .lt("created_at", sevenDaysAgo);
+        if (oldConvErr) throw oldConvErr;
+
+        if (oldConvs && oldConvs.length > 0) {
+          const oldIds = oldConvs.map((c) => c.id);
+
+          // 找出其中有訊息的對話（僅選 distinct conversation_id）
+          const { data: convWithMsgs, error: msgErr } = await supabaseAdmin
+            .from("chat_messages")
+            .select("conversation_id")
+            .in("conversation_id", oldIds);
+          if (msgErr) throw msgErr;
+
+          const hasMessages = new Set(
+            (convWithMsgs || []).map((m) => m.conversation_id)
+          );
+          const emptyIds = oldIds.filter((id) => !hasMessages.has(id));
+
+          if (emptyIds.length > 0) {
+            // 先刪 participants（FK 約束）
+            await supabaseAdmin
+              .from("chat_participants")
+              .delete()
+              .in("conversation_id", emptyIds);
+
+            // 再刪對話
+            const { count: convCount } = await supabaseAdmin
+              .from("chat_conversations")
+              .delete({ count: "exact" })
+              .in("id", emptyIds);
+            deletedEmptyConvs = convCount || emptyIds.length;
+          }
+        }
+      } catch (err) {
+        logger.warn("空對話清理失敗", { error: (err as Error)?.message });
+      }
+
+      // 6. 清除過期悄悄話（30天）
+      let deletedWhispers = 0;
+      try {
+        const { count: wCount } = await supabaseAdmin
+          .from("whispers")
+          .delete({ count: "exact" })
+          .lt("expires_at", now);
+        deletedWhispers = wCount || 0;
+      } catch (err) {
+        logger.warn("悄悄話清理失敗", { error: (err as Error)?.message });
+      }
+
       logger.info("chat cleanup 完成", {
         messagesDeleted: total,
         filesDeleted: deletedFiles,
         notificationsDeleted: deletedNotifs,
+        emptyConvsDeleted: deletedEmptyConvs,
+        whispersDeleted: deletedWhispers,
       });
 
       res.json({
@@ -93,6 +155,8 @@ router.get(
         messagesDeleted: total,
         filesDeleted: deletedFiles,
         notificationsDeleted: deletedNotifs,
+        emptyConvsDeleted: deletedEmptyConvs,
+        whispersDeleted: deletedWhispers,
         timestamp: now,
       });
     } catch (err) {
