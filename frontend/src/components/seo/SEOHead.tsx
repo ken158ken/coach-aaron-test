@@ -99,6 +99,15 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     ? `${title} | ${DEFAULT_SITE_NAME}`
     : DEFAULT_SITE_NAME;
 
+  // 確保圖片是完整 URL（處理 null/undefined）
+  const imageUrl = image || DEFAULT_IMAGE;
+  const fullImage = imageUrl.startsWith("http")
+    ? imageUrl
+    : `${DEFAULT_URL}${imageUrl}`;
+
+  // 確保 URL 是完整的
+  const fullUrl = url?.startsWith("http") ? url : `${DEFAULT_URL}${url || ""}`;
+
   // JSON-LD 結構化資料
   const jsonLd = (() => {
     if (isArticle) {
@@ -144,15 +153,6 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     }
     return null;
   })();
-
-  // 確保圖片是完整 URL（處理 null/undefined）
-  const imageUrl = image || DEFAULT_IMAGE;
-  const fullImage = imageUrl.startsWith("http")
-    ? imageUrl
-    : `${DEFAULT_URL}${imageUrl}`;
-
-  // 確保 URL 是完整的
-  const fullUrl = url?.startsWith("http") ? url : `${DEFAULT_URL}${url || ""}`;
 
   return (
     <Helmet>
