@@ -17,6 +17,7 @@ import {
   WidthType,
   ShadingType,
   AlignmentType,
+  PageBreak,
 } from "docx";
 import { Response } from "express";
 
@@ -290,6 +291,244 @@ export async function toFullXlsx(modules: ModuleExport[]): Promise<Buffer> {
   }
 
   return Buffer.from(await wb.xlsx.writeBuffer());
+}
+
+// ===== 全站匯出：MD（單檔多區塊，每個模組一個 H1 + 表格） =====
+
+export function toFullMd(modules: ModuleExport[]): Buffer {
+  const ts = new Date().toLocaleString("zh-TW");
+  const sections: string[] = [
+    `# Aaron 教練系統 — 全站資料匯出`,
+    "",
+    `匯出時間：${ts}`,
+    `共 ${modules.length} 個模組`,
+    "",
+    "---",
+    "",
+  ];
+
+  for (const mod of modules) {
+    sections.push(`## ${mod.name}`);
+    sections.push("");
+    sections.push(`共 ${mod.rows.length} 筆`);
+    sections.push("");
+
+    if (mod.rows.length === 0) {
+      sections.push("（無資料）");
+    } else {
+      const keys = Object.keys(mod.rows[0]);
+      sections.push(`| ${keys.join(" | ")} |`);
+      sections.push(`| ${keys.map(() => "---").join(" | ")} |`);
+      for (const r of mod.rows) {
+        sections.push(
+          `| ${keys.map((k) => String(r[k] ?? "").replace(/\|/g, "｜").replace(/\n/g, " ")).join(" | ")} |`,
+        );
+      }
+    }
+    sections.push("");
+    sections.push("---");
+    sections.push("");
+  }
+
+  return Buffer.from(sections.join("\n"), "utf-8");
+}
+
+// ===== 全站匯出：TXT（單檔多區塊） =====
+
+export function toFullTxt(modules: ModuleExport[]): Buffer {
+  const ts = new Date().toLocaleString("zh-TW");
+  const lines: string[] = [
+    `Aaron 教練系統 — 全站資料匯出`,
+    `匯出時間：${ts}`,
+    `共 ${modules.length} 個模組`,
+    "=".repeat(60),
+    "",
+  ];
+
+  for (const mod of modules) {
+    lines.push(`【${mod.name}】 共 ${mod.rows.length} 筆`);
+    lines.push("-".repeat(60));
+
+    if (mod.rows.length === 0) {
+      lines.push("（無資料）");
+    } else {
+      const keys = Object.keys(mod.rows[0]);
+      lines.push(keys.join("\t"));
+      for (const r of mod.rows) {
+        lines.push(
+          keys.map((k) => String(r[k] ?? "").replace(/\n/g, " ")).join("\t"),
+        );
+      }
+    }
+    lines.push("");
+    lines.push("");
+  }
+
+  return Buffer.from(lines.join("\n"), "utf-8");
+}
+
+// ===== 全站匯出：HTML（單檔多區塊） =====
+
+export function toFullHtml(modules: ModuleExport[]): Buffer {
+  const ts = new Date().toLocaleString("zh-TW");
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const sections = modules
+    .map((mod) => {
+      let table = "";
+      if (mod.rows.length === 0) {
+        table = "<p class='empty'>（無資料）</p>";
+      } else {
+        const keys = Object.keys(mod.rows[0]);
+        const thead = `<tr>${keys.map((k) => `<th>${esc(k)}</th>`).join("")}</tr>`;
+        const tbody = mod.rows
+          .map(
+            (r) =>
+              `<tr>${keys.map((k) => `<td>${esc(String(r[k] ?? ""))}</td>`).join("")}</tr>`,
+          )
+          .join("\n");
+        table = `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+      }
+      return `
+<section>
+  <h2>${esc(mod.name)}</h2>
+  <p class="count">共 ${mod.rows.length} 筆</p>
+  ${table}
+</section>`;
+    })
+    .join("\n");
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<title>Aaron 教練系統 — 全站資料匯出</title>
+<style>
+  body{font-family:-apple-system,"Noto Sans TC",sans-serif;padding:32px;color:#222;max-width:1200px;margin:0 auto}
+  h1{font-size:1.6em;border-bottom:2px solid #2d6a4f;padding-bottom:8px}
+  h2{font-size:1.2em;color:#2d6a4f;margin-top:32px}
+  .meta{color:#888;font-size:.9em;margin-bottom:24px}
+  .count{color:#666;font-size:.85em;margin:4px 0 12px}
+  .empty{color:#aaa;font-style:italic}
+  table{border-collapse:collapse;width:100%;margin-top:8px}
+  th{background:#2d6a4f;color:#fff;padding:8px 10px;text-align:left;font-weight:600}
+  td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}
+  tr:nth-child(even) td{background:#f9f9f9}
+  section{margin-bottom:24px;page-break-inside:avoid}
+</style>
+</head>
+<body>
+<h1>Aaron 教練系統 — 全站資料匯出</h1>
+<p class="meta">匯出時間：${ts}　共 ${modules.length} 個模組</p>
+${sections}
+</body>
+</html>`;
+  return Buffer.from(html, "utf-8");
+}
+
+// ===== 全站匯出：DOCX（單檔多區塊，每個模組之間分頁） =====
+
+export async function toFullDocx(modules: ModuleExport[]): Promise<Buffer> {
+  const ts = new Date().toLocaleString("zh-TW");
+  const children: (Paragraph | Table)[] = [];
+
+  children.push(
+    new Paragraph({
+      text: "Aaron 教練系統 — 全站資料匯出",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `匯出時間：${ts}　共 ${modules.length} 個模組`,
+          color: "888888",
+          size: 20,
+        }),
+      ],
+    }),
+    new Paragraph({ text: "" }),
+  );
+
+  modules.forEach((mod, modIdx) => {
+    // 模組之間分頁（第一個模組除外）
+    if (modIdx > 0) {
+      children.push(
+        new Paragraph({ children: [new PageBreak()] }),
+      );
+    }
+
+    children.push(
+      new Paragraph({ text: mod.name, heading: HeadingLevel.HEADING_2 }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `共 ${mod.rows.length} 筆`,
+            color: "888888",
+            size: 18,
+          }),
+        ],
+      }),
+      new Paragraph({ text: "" }),
+    );
+
+    if (mod.rows.length === 0) {
+      children.push(new Paragraph({ text: "（無資料）" }));
+      return;
+    }
+
+    const keys = Object.keys(mod.rows[0]);
+    const tableRows: TableRow[] = [
+      new TableRow({
+        tableHeader: true,
+        children: keys.map(
+          (k) =>
+            new TableCell({
+              shading: { type: ShadingType.SOLID, fill: "2D6A4F", color: "auto" },
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.LEFT,
+                  children: [
+                    new TextRun({ text: k, bold: true, color: "FFFFFF", size: 20 }),
+                  ],
+                }),
+              ],
+            }),
+        ),
+      }),
+      ...mod.rows.map(
+        (r, idx) =>
+          new TableRow({
+            children: keys.map(
+              (k) =>
+                new TableCell({
+                  shading:
+                    idx % 2 === 1
+                      ? { type: ShadingType.SOLID, fill: "F5F5F5", color: "auto" }
+                      : undefined,
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({ text: String(r[k] ?? ""), size: 20 }),
+                      ],
+                    }),
+                  ],
+                }),
+            ),
+          }),
+      ),
+    ];
+
+    children.push(
+      new Table({
+        width: { size: 9000, type: WidthType.DXA },
+        rows: tableRows,
+      }),
+    );
+  });
+
+  const doc = new Document({ sections: [{ children }] });
+  return Buffer.from(await Packer.toBuffer(doc));
 }
 
 // ===== 聊天記錄：MD =====

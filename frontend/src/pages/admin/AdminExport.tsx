@@ -96,7 +96,7 @@ const AdminExport: React.FC = () => {
     if (!token) return;
     setLoadingKey("__full__");
     try {
-      await triggerDownload("/api/admin/export/full", token);
+      await triggerDownload(`/api/admin/export/full?format=${format}`, token);
       showToast(t.exportFeature.exportSuccess, true);
     } catch (err) {
       showToast((err as Error).message || t.exportFeature.exportFailed, false);
@@ -104,6 +104,10 @@ const AdminExport: React.FC = () => {
       setLoadingKey(null);
     }
   };
+
+  /** 目前選中格式的顯示文字（給按鈕標籤用） */
+  const formatLabel =
+    FORMAT_OPTIONS.find((o) => o.value === format)?.label ?? format.toUpperCase();
 
   return (
     <div className="space-y-8">
@@ -233,7 +237,7 @@ const AdminExport: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                {t.exportFeature.fullExportBtn}
+                {t.exportFeature.fullExportBtn}（{formatLabel}）
               </>
             )}
           </button>

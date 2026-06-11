@@ -20,6 +20,10 @@ import {
   toXlsx,
   toDocx,
   toFullXlsx,
+  toFullMd,
+  toFullTxt,
+  toFullHtml,
+  toFullDocx,
   type ExportRow,
   type ModuleExport,
 } from "../utils/exportHelpers.js";
@@ -327,11 +331,18 @@ router.get("/modules", ...guard, (_req: Request, res: Response) => {
   res.json({ modules: MODULE_LIST });
 });
 
-// ===== GET /api/admin/export/full =====
+// ===== GET /api/admin/export/full?format= =====
 
-router.get("/full", ...guard, async (_req: Request, res: Response) => {
+router.get("/full", ...guard, async (req: Request, res: Response) => {
+  const format = ((req.query.format as string) || "xlsx").toLowerCase();
+  if (!["md", "txt", "html", "xlsx", "docx"].includes(format)) {
+    return res
+      .status(400)
+      .json({ error: "format 必須是 md / txt / html / xlsx / docx" });
+  }
+
   const dateStr = dateFmt(new Date(), "yyyyMMdd");
-  const filename = `Aaron教練系統_全站資料_${dateStr}.xlsx`;
+  const filename = `Aaron教練系統_全站資料_${dateStr}.${format}`;
 
   try {
     const modules: ModuleExport[] = [];
@@ -340,8 +351,16 @@ router.get("/full", ...guard, async (_req: Request, res: Response) => {
       modules.push({ name, rows });
     }
 
-    const buf = await toFullXlsx(modules);
-    setDownloadHeaders(res, filename, "xlsx");
+    setDownloadHeaders(res, filename, format);
+    let buf: Buffer;
+    switch (format) {
+      case "md":   buf = toFullMd(modules);          break;
+      case "txt":  buf = toFullTxt(modules);         break;
+      case "html": buf = toFullHtml(modules);        break;
+      case "xlsx": buf = await toFullXlsx(modules);  break;
+      case "docx": buf = await toFullDocx(modules);  break;
+      default:     buf = toFullTxt(modules);
+    }
     res.send(buf);
   } catch (err) {
     logger.error("全站匯出失敗", { error: (err as Error).message });
