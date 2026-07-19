@@ -1,5 +1,5 @@
 /**
- * PodcastExpandable - 深海電台 Expandable Card 版本
+ * PodcastExpandable - Podcast《陪你健身》Expandable Card 版本
  * @module components/sections/PodcastExpandable
  * @description Aceternity Expandable Card 風格：點擊卡片展開詳細內容
  */
@@ -23,35 +23,42 @@ interface PodcastEpisode {
   category: string;
 }
 
+/**
+ * DB（podcast_episodes 表）讀不到時的 fallback 單集。
+ *
+ * 原本的三筆是 B2C 模板假資料（健身入門迷思／飲食控制／訓練動力），
+ * 與純 B2B 定位衝突，已改為節目中的 B2B 向集數。
+ * ⚠️ 時長為概值、日期為節目實際年份區間；正式資料請由後台維護。
+ */
 const DEMO_EPISODES: PodcastEpisode[] = [
   {
     id: '1',
-    title: '新手必聽：健身入門的 5 大迷思',
-    description: '打破常見的健身迷思，建立正確的訓練觀念...',
+    title: 'EP20 續課八法',
+    description: '把續約從「開口很尷尬」變成一套可執行的流程...',
     fullDescription:
-      '很多初學者在進入健身房前就已經被坊間的錯誤資訊影響。這集將逐一破解最常見的 5 個迷思，包括「重量訓練會讓女生變壯」、「空腹運動燃脂更快」等。讓你從一開始就走對路，避免浪費時間與精力在錯誤的方向上。',
-    duration: '45:30',
-    date: '2024-01-15',
+      '開發一個新會員的成本，是維護一個舊會員的好幾倍。這集拆解續課的八個切入點：從課程中的成效回顧、時機判讀，到怎麼把續約談成「下一階段的規劃」而不是推銷。教練最該先補的一塊，通常就在這裡。',
+    duration: '32:10',
+    date: '2021',
     category: 'training',
   },
   {
     id: '2',
-    title: '飲食控制不等於節食',
-    description: '學會聰明吃，讓增肌減脂事半功倍...',
+    title: 'EP22 SMARTER 目標設定',
+    description: '會員做不到的目標，多半是一開始就設錯了...',
     fullDescription:
-      '飲食是健身成效的關鍵，但很多人把「控制飲食」誤解為「不能吃」。這集深入探討熱量赤字、蛋白質攝取與碳水循環的概念，告訴你如何在享受美食的同時，依然達成增肌減脂的目標。',
-    duration: '38:15',
-    date: '2024-01-08',
-    category: 'nutrition',
+      '目標設定不是喊口號。這集用 SMARTER 架構逐項拆解：具體、可衡量、可達成、相關性、時限，再加上評估與調整兩步。學會之後，你不只能幫會員設目標，也能把自己的業績目標拆成每週做得完的動作。',
+    duration: '28:45',
+    date: '2021',
+    category: 'mindset',
   },
   {
     id: '3',
-    title: '如何保持訓練動力',
-    description: '分享維持長期運動習慣的心法與技巧...',
+    title: 'EP2 人類三大本能',
+    description: '讀懂本能，才讀得懂會員為什麼說「我再想想」...',
     fullDescription:
-      '開始健身容易，但如何讓運動成為生活中不可缺少的一部分？這集深度分析動力的本質，以及如何在低潮期持續前進。阿倫教官分享了他親身實踐的 3 個心法，幫助你建立自驅力，不再依賴外在刺激。',
-    duration: '42:00',
-    date: '2024-01-01',
+      '所有溝通與成交的底層，都是人的本能反應。這集談趨吉避凶、追求認同與歸屬感三大本能如何影響決策，以及教練該怎麼在對話裡對準這些動機——這是我後來整套銷售心理學的起點。',
+    duration: '25:30',
+    date: '2021',
     category: 'mindset',
   },
 ];
@@ -86,12 +93,17 @@ const PodcastExpandable: React.FC = () => {
   useScrollLock(!!active);
 
   const { get } = useSiteContent();
+  // ⚠️ 節目 2022 年已停更，文案不得出現「每週更新」「持續更新」等時效性字眼。
+  // 主標備選：'我的方法論，從這裡開始' ／ '58 集，一套方法的原點'
+  // 說明備選：
+  //   B 案：'58 集《陪你健身》，完整記錄了我方法論成形的過程。有空可以聽聽，它們現在還是有效的。'
+  //   C 案：'在很多人還沒開始做 Podcast 的時候，我已經一集一集講完了 58 集。內容沒有過期——講的是原理，不是趨勢。'
   const pHeader = {
     tagline: get('podcast_tagline', 'Podcast'),
-    title: get('podcast_title', '深海電台'),
+    title: get('podcast_title', 'Podcast《陪你健身》'),
     subtitle: get(
       'podcast_subtitle',
-      '每週更新健身知識、訓練技巧與生活態度分享'
+      '58 集完整節目，我方法論成形的過程'
     ),
   };
 

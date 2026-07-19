@@ -215,8 +215,10 @@ router.put(
       }
       if (isPublished !== undefined) updateData.is_published = isPublished;
       if (cardLayout !== undefined) {
-        if (!["portrait", "landscape"].includes(cardLayout)) {
-          res.status(400).json({ error: "card_layout 只允許 portrait 或 landscape" });
+        if (!["portrait", "landscape", "quote-grid"].includes(cardLayout)) {
+          res
+            .status(400)
+            .json({ error: "card_layout 只允許 portrait、landscape 或 quote-grid" });
           return;
         }
         updateData.card_layout = cardLayout;

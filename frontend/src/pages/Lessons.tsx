@@ -15,13 +15,19 @@ import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";
 import { useLanguage } from "@/context/LanguageContext";
 import { useLocalize } from "@/hooks/useLocalize";
+import { getInitialData } from "@/ssr/initialData";
+import { dataKeys } from "@/ssr/routeData";
 import type { LessonSummary } from "@/types";
 
 const Lessons: React.FC = () => {
   const { t, language } = useLanguage();
   const { loc } = useLocalize();
-  const [lessons, setLessons] = useState<LessonSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── SSR 預抓資料 ──
+  const ssrLessons = getInitialData<LessonSummary[]>(dataKeys.lessonsList());
+  const initialLessons = Array.isArray(ssrLessons) ? ssrLessons : [];
+
+  const [lessons, setLessons] = useState<LessonSummary[]>(initialLessons);
+  const [loading, setLoading] = useState(initialLessons.length === 0);
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -56,9 +62,26 @@ const Lessons: React.FC = () => {
     ? lessons.filter((l) => l.category === selectedCategory)
     : lessons;
 
-  if (loading) {
+  // SEO — 必須在 early return 之前建立
+  const seoHead = (
+    <SEOHead
+      title={language === "en" ? "Lessons" : "教學影片"}
+      description={
+        language === "en"
+          ? "In-depth coaching lessons with full transcripts"
+          : "完整的教練教學影片，含逐字稿，深入學習各種主題"
+      }
+      url="/lessons"
+      breadcrumbs={[
+        { name: language === "en" ? "Lessons" : "教學影片", url: "/lessons" },
+      ]}
+    />
+  );
+
+  if (loading && lessons.length === 0) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
+        {seoHead}
         <Loading theme="luxe" text={t.common.loading} />
       </div>
     );
@@ -66,15 +89,7 @@ const Lessons: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-transparent">
-      <SEOHead
-        title={language === "en" ? "Lessons" : "教學影片"}
-        description={
-          language === "en"
-            ? "In-depth coaching lessons with full transcripts"
-            : "完整的教練教學影片，含逐字稿，深入學習各種主題"
-        }
-        url="/lessons"
-      />
+      {seoHead}
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="luxe-container max-w-7xl mx-auto">
           <PageHeader

@@ -3,7 +3,7 @@
  * @module pages/CourseDetail
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context";
 import {
@@ -17,6 +17,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { courseService } from "@/services";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { getInitialData } from "@/ssr/initialData";
+import { dataKeys } from "@/ssr/routeData";
 import type { Course, CourseReview } from "@/types";
 
 const CourseDetail: React.FC = () => {
@@ -26,9 +28,14 @@ const CourseDetail: React.FC = () => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { loc } = useLocalize();
-  const [course, setCourse] = useState<Course | null>(null);
+  // ── SSR 預抓資料（key 帶 :id，client-side 換課程時不會誤用） ──
+  const ssrCourse = id ? getInitialData<Course>(dataKeys.course(id)) : undefined;
+
+  const [course, setCourse] = useState<Course | null>(ssrCourse ?? null);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!ssrCourse);
+  /** 首次 fetch 已有 SSR 資料 → 不切回 loading，避免水合後閃骨架 */
+  const skipFirstLoadingRef = useRef(Boolean(ssrCourse));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,7 +60,7 @@ const CourseDetail: React.FC = () => {
   const fetchCourse = useCallback(async () => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (!skipFirstLoadingRef.current) setLoading(true);
       setError("");
       const data = await courseService.getById(Number(id));
       if (data) {
@@ -84,6 +91,7 @@ const CourseDetail: React.FC = () => {
       setError(t.common.error);
     } finally {
       setLoading(false);
+      skipFirstLoadingRef.current = false;
     }
   }, [id, user, language, t]);
 
@@ -123,16 +131,57 @@ const CourseDetail: React.FC = () => {
     });
   };
 
-  if (loading) return <Loading text={t.common.loading} />;
+  // ── SEO ──
+  // 必須在 early return 之前建立，否則 loading / error 狀態下伺服器端輸出空 title。
+  const courseObj = (course ?? {}) as unknown as Record<string, unknown>;
+  const seoTitle =
+    loc(courseObj, "course_title") ||
+    (id ? `${t.course.pageLabel} #${id}` : t.course.pageLabel);
+  const courseUrl = `/courses/${course?.id ?? course?.course_id ?? id ?? ""}`;
+  const seoHead = (
+    <SEOHead
+      title={seoTitle}
+      description={loc(courseObj, "course_description") || seoTitle}
+      keywords={
+        course?.course_keywords
+          ? course.course_keywords.split(",").map((k) => k.trim())
+          : course?.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])
+      }
+      image={course?.course_thumbnail_url || course?.thumbnail}
+      url={courseUrl}
+      // 只有真的拿到課程才用 product 型別（才會輸出 Course JSON-LD），
+      // 避免 fallback 狀態下產生 name 是「線上課程 #1」的假結構化資料
+      type={course ? "product" : "website"}
+      noIndex={Boolean(error) || (!loading && !course)}
+      price={typeof course?.price === "number" ? course.price : undefined}
+      showPrice={Boolean(course?.show_price)}
+      breadcrumbs={[
+        { name: t.course.pageLabel, url: "/courses" },
+        { name: seoTitle, url: courseUrl },
+      ]}
+    />
+  );
+
+  if (loading) {
+    return (
+      <>
+        {seoHead}
+        <Loading text={t.common.loading} />
+      </>
+    );
+  }
 
   if (error || !course) {
     return (
-      <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white/60 mb-4">{error || (language === "en" ? "Course not found" : "找不到課程")}</p>
-          <Link to="/courses" className="text-[#d4d4d4] hover:underline">{t.course.backToList}</Link>
+      <>
+        {seoHead}
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-white/60 mb-4">{error || (language === "en" ? "Course not found" : "找不到課程")}</p>
+            <Link to="/courses" className="text-[#d4d4d4] hover:underline">{t.course.backToList}</Link>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -140,18 +189,7 @@ const CourseDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent relative">
-      <SEOHead
-        title={loc(course as unknown as Record<string, unknown>, "course_title")}
-        description={loc(course as unknown as Record<string, unknown>, "course_description") || loc(course as unknown as Record<string, unknown>, "course_title")}
-        keywords={
-          course.course_keywords
-            ? course.course_keywords.split(",").map((k) => k.trim())
-            : course.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])
-        }
-        image={course.course_thumbnail_url || course.thumbnail}
-        url={`/courses/${course.id}`}
-        type="product"
-      />
+      {seoHead}
 
       {/* ── Full-width Banner ── */}
       <div

@@ -1,5 +1,28 @@
 # https://www.robotstxt.org/robotstxt.html
+#
+# 注意：下方 Sitemap 行的網域會在部署時由 scripts/vercel-build.sh 自動改寫為
+# 實際網域（依 VITE_SITE_URL / VERCEL_PROJECT_PRODUCTION_URL 推導）。
+# 這裡保留 localhost 僅供本機開發，請勿在此寫死正式或測試網域。
+
 User-agent: *
 Allow: /
 
-Sitemap: https://coach-aaron-test.vercel.app/sitemap.xml
+# 後台：僅管理員可用，被爬取只會產生大量空殼薄頁面，浪費抓取預算
+Disallow: /admin
+Disallow: /admin/
+
+# 登入 / 註冊與登入後的個人化頁面：無索引價值
+Disallow: /login
+Disallow: /register
+Disallow: /member
+Disallow: /dashboard
+Disallow: /checkout
+Disallow: /booking
+Disallow: /my-bookings
+Disallow: /notifications
+Disallow: /chat
+
+# API 端點
+Disallow: /api/
+
+Sitemap: http://localhost:5173/sitemap.xml

@@ -35,11 +35,16 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   const lineRef = useRef<HTMLDivElement>(null);
 
   // Flip Words — 標題循環換字（可由 DB 覆寫）
+  // 定稿文案「甲組」，搭配主標 A 案「私教變現 系統」。
+  // 客戶日後如要換主標，備選輪播詞組（見 REPORTS/INDEX_B2B文案_定稿草案.md 1-2）：
+  //   乙組（搭主標 B 案）：['業績', '成交', '續約', '收入']
+  //   丙組（搭主標 C 案）：['教練', '軍師', '後盾', '陪跑員']
+  // ⚠️ 字數請維持 2–3 字，避免翻字時版面跳動。
   const [flipWords, setFlipWords] = useState<string[]>([
-    '體態',
-    '自信',
-    '健康',
-    '未來',
+    '系統',
+    '軍師',
+    '陪跑',
+    '實戰',
   ]);
   const [wordIndex, setWordIndex] = useState(0);
 
@@ -69,17 +74,29 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   };
 
   // ✅ SSR-safe：使用確定性範本
+  //
+  // 主標採定稿 A 案（直球定位）。第一行「私教變現 系統」的最後一詞「系統」
+  // 會被 flipWords 替換，關鍵字「私教變現」固定保留在 <h1> 內。
+  // 備選主標（客戶日後可直接替換，記得同步換上面的 flipWords 組別）：
+  //   B 案（痛點對話，搭乙組）：'你很會教 但業績呢\n私教變現，是一門可以學的技術'
+  //   C 案（同行對同行，搭丙組）：'教練的 教練\n私教變現 × 銷售心理學，帶你走過我走過的路'
   const [heroTitle, setHeroTitle] = useState(() =>
-    getDefaultTemplate('hero_title', '打造 理想體態\n遇見更好的自己')
+    getDefaultTemplate('hero_title', '私教變現 系統\n把你的專業，變成穩定的收入')
   );
+  // 副標採定稿新 A 案。備選：
+  //   B 案：'十年健身產業、50 人教練團隊、130+ 位教練的實戰驗證\n專業不會自己變成收入，但它可以被設計成收入'
+  //         ⚠️「130+ 位教練」屬待佐證數字，客戶確認後才可啟用
+  //   C 案：'專業夠了，卡住的通常是系統\n銷售心理學 × 陪跑輔導，帶教練把技術換成穩定業績'
   const [heroSubtitle, setHeroSubtitle] = useState(() =>
     getDefaultTemplate(
       'hero_subtitle',
-      '專業一對一健身指導，量身打造訓練計畫\n科學化訓練 × 飲食規劃 × 心理建設'
+      '給私人教練的商業實戰培訓\n從體驗課成交、續約經營到個人品牌，一套可複製的變現系統'
     )
   );
-  const [ctaPrimary, setCtaPrimary] = useState('探索課程');
-  const [ctaSecondary, setCtaSecondary] = useState('預約諢詢');
+  // CTA 備選：主按鈕 '查看課程與方案' ／ '我要提升業績'
+  //           次按鈕 '先聊聊你的狀況' ／ '免費諮詢'
+  const [ctaPrimary, setCtaPrimary] = useState('看變現方案');
+  const [ctaSecondary, setCtaSecondary] = useState('預約 1 對 1 諮詢');
 
   // 從 DB 載入文案（空值或錯誤時保留 fallback）
   useEffect(() => {
@@ -225,9 +242,24 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
         >
           {heroTitle.split('\n').map((line, i) => {
             if (i === 0) {
-              // Flip Words: 最後一個詞動畫切換
-              const parts = line.trim().split(/\s+/);
-              const staticPart = parts.slice(0, -1).join(' ');
+              // Flip Words: 靜態前綴 + 動畫輪播詞
+              //
+              // 中文沒有詞間空白，舊寫法 split(/\s+/) + slice(0, -1) 會把
+              // 「私教變現」這種整行單詞的主關鍵字整個丟掉、被輪播詞取代，
+              // 導致 SSR 出來的 <h1> 讀不到關鍵字。
+              // 規則：
+              //   1. 含「|」→ 分隔符前為靜態前綴（可明確指定）
+              //   2. 含空白 → 維持原行為，最後一個詞交給輪播動畫替換
+              //   3. 皆無（純中文）→ 整行皆為靜態前綴，輪播詞附加於後
+              const raw = line.trim();
+              let staticPart: string;
+              if (raw.includes('|')) {
+                staticPart = raw.slice(0, raw.indexOf('|')).trim();
+              } else if (/\s/.test(raw)) {
+                staticPart = raw.split(/\s+/).slice(0, -1).join(' ');
+              } else {
+                staticPart = raw;
+              }
               return (
                 <React.Fragment key={i}>
                   {staticPart}{' '}
@@ -241,7 +273,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
                         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         className="inline-block text-luxe-gold"
                       >
-                        {flipWords[wordIndex]}
+                        {/* 後台改短 flipWords 時 wordIndex 可能越界，回退首詞避免 H1 出現空字 */}
+                        {flipWords[wordIndex] ?? flipWords[0]}
                       </motion.span>
                     </AnimatePresence>
                   </span>

@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>阿倫教官 | Coach Aaron</title>
+    <!--
+      注意：此處刻意不放靜態 title 標籤。
+      頁面標題一律由 SEOHead (react-helmet) 在下方 ssr-head 佔位處注入。
+      若在此處放靜態標題，因它在文件順序上較前，依 HTML 規範會勝過 Helmet 注入的那個，
+      導致所有內頁標題都被通用站名蓋掉（SEO 傷害）。請勿加回。
+    -->
 
     <!-- PWA manifest + theme -->
     <link rel="manifest" href="/manifest.json" />
@@ -22,27 +27,8 @@
       href="https://fonts.googleapis.com/css2?family=Aboreto&family=Cinzel:wght@400;700&family=Lato:wght@300;400&family=Montserrat:wght@300;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Raleway:wght@300;500&display=swap"
       rel="stylesheet"
     />
-    <!-- 載入遮罩：JS 掛載前遮住畫面，防止 HTML 未套用樣式就顯示 -->
-    <style>
-      #app-loader {
-        position: fixed; inset: 0; z-index: 99999;
-        background: #0d0d0f;
-        display: flex; align-items: center; justify-content: center;
-        transition: opacity 0.35s ease;
-        pointer-events: none;
-      }
-      #app-loader.fade-out { opacity: 0; }
-      #app-loader-text {
-        color: #3a3a3a;
-        font-family: sans-serif;
-        font-size: 12px;
-        letter-spacing: 6px;
-        text-transform: uppercase;
-      }
-    </style>
   </head>
   <body>
-    <div id="app-loader"><span id="app-loader-text">AARON COACH</span></div>
     <div id="root"><!--ssr-outlet--></div>
     <script type="module" src="/src/entry-client.tsx"></script>
   </body>

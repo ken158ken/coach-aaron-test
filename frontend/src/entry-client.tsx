@@ -37,10 +37,9 @@ const appElement = (
  * bootstrap — 渲染前先完成 auth 預載，再交給 React
  *
  * 流程：
- *   1. #app-loader 遮罩蓋住畫面（HTML 內置）
+ *   1. SSR 內容已直接可見（無載入遮罩，不阻擋首屏繪製）
  *   2. await initAuth() → 呼叫 /api/auth/me，結果存入 auth-init 模組變數
  *   3. hydrateRoot / createRoot — React 用已知 auth 狀態直接渲染正確畫面
- *   4. App 掛載後 useEffect 移除 #app-loader（淡出 0.35s）
  */
 async function bootstrap() {
   // 渲染前先跑完 auth 預載（OAuth 回呼頁面也會快速完成）

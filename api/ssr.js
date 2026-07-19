@@ -42,6 +42,26 @@ function loadTemplate() {
   return _cachedTemplate;
 }
 
+/**
+ * 推導 API 根位址（供 SSR 資料預抓使用）
+ *
+ * 預設同源（Vercel rewrites 會把 /api/* 導到 api/server），
+ * 可用 SSR_API_BASE 覆寫（例如 API 部署在其他網域時）。
+ *
+ * @param {import('http').IncomingMessage} req
+ * @returns {string} 例如 https://coach-aaron-test.vercel.app
+ */
+function resolveApiBase(req) {
+  if (process.env.SSR_API_BASE) return process.env.SSR_API_BASE;
+  const host =
+    req.headers["x-forwarded-host"] ||
+    req.headers.host ||
+    process.env.VERCEL_URL;
+  if (!host) return "";
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  return `${proto}://${host}`;
+}
+
 module.exports = async function handler(req, res) {
   const url = req.url;
 
@@ -61,20 +81,44 @@ module.exports = async function handler(req, res) {
       );
     }
 
-    // ===== 3. 渲染 HTML =====
+    // ===== 3. 路由層資料預抓 =====
+    // 失敗只會讓 initialData 為 {}，SSR 仍照常進行（優雅降級）
+    let initialData = {};
+    const prefetch = serverModule.prefetch || serverModule.default?.prefetch;
+    if (typeof prefetch === "function") {
+      try {
+        initialData = await prefetch(url, { apiBase: resolveApiBase(req) });
+        const keys = Object.keys(initialData);
+        if (keys.length > 0) {
+          console.log(`📦 Prefetched for ${url}: ${keys.join(", ")}`);
+        }
+      } catch (prefetchError) {
+        console.error("⚠️ Prefetch failed (continuing):", prefetchError.message);
+        initialData = {};
+      }
+    }
+
+    // ===== 4. 渲染 HTML =====
     let appHtml = "";
     let headTags = "";
+    let initialDataScript = "";
 
     try {
-      const renderResult = render(url);
+      const renderResult = render(url, initialData);
       appHtml = renderResult.html || "";
       headTags = renderResult.head || "";
+      initialDataScript = renderResult.initialDataScript || "";
     } catch (renderError) {
       console.error("❌ React render error:", renderError.message);
       console.error("Falling back to CSR...");
     }
 
-    // ===== 4. 注入 head 標籤和 body 內容 =====
+    // 初始資料 script 必須在 client bundle 執行前出現 → 併入 head 注入點
+    if (initialDataScript) {
+      headTags = `${headTags}\n${initialDataScript}`;
+    }
+
+    // ===== 5. 注入 head 標籤和 body 內容 =====
     let html = template;
 
     if (html.includes("<!--ssr-outlet-->")) {

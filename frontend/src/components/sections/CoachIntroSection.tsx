@@ -13,12 +13,24 @@ interface CoachIntroSectionProps {
   className?: string;
 }
 
-/** 預設 bullets（DB 無值時 fallback） */
+/**
+ * 預設 bullets（DB 無值時 fallback）
+ *
+ * 只放已佐證的資歷；ACE／ISSA 兩張證照履歷查無，依定稿文案僅在頁尾
+ * Credentials 區塊（CertificationMarquee）列出，此處不放。
+ *
+ * 備選（更偏商業成果，5 項，客戶如要換可直接替換整個陣列）：
+ *   '教練職涯培訓講師｜私教變現顧問',
+ *   '威豪健身總教官｜約 50 人教練團隊管理',
+ *   '房仲業務轉職，帶著銷售實戰進健身房',
+ *   'NSCA-CPT｜TQUK 心理諮詢｜NLP 執行師',
+ *   '《陪你健身》Podcast 主持人｜58 集',
+ */
 const DEFAULT_BULLETS: string[] = [
-  'ACE 美國運動委員會認證教練',
-  'ISSA 國際運動科學協會認證',
-  '運動營養專家認證',
-  '1000+ 學員成功案例',
+  '威豪健身 Pro Fitness 總教官｜統籌約 50 人教練團隊',
+  'NSCA-CPT 美國肌力與體能協會私人教練認證',
+  'TQUK 英國心理諮詢認證｜NLP 執行師',
+  '逾 1000 小時教學與授課時數',
 ];
 
 /** 預設教練照（DB 無 Cloudinary URL 時 fallback） */
@@ -28,18 +40,27 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   className = '',
 }) => {
   // ✅ SSR-safe：使用確定性範本，避免 Math.random() hydration mismatch
+  // 本文採定稿新 A 案（資歷＋定位並重）。備選：
+  //   B 案（對話感優先）：'你的專業應該值更多錢，這是我做這件事的全部理由。我從房仲業務轉行當私人教練，
+  //     在第一線一堂課一堂課賣起，被拒絕過無數次；後來帶起 50 人的教練團隊，才真正看懂業績不是逼出來的，
+  //     是設計出來的。現在我做的事很單純：把這套設計交給還在硬撐的教練。'
+  //   C 案（精簡，版面吃緊時用）：'私教變現顧問、教練職涯培訓講師。台東威豪健身總教官，帶約 50 人教練團隊。
+  //     第一線私教出身，專攻銷售心理學與教練經營，只服務一種人——想把專業變成收入的私人教練。'
   const [aboutCoach, setAboutCoach] = useState(() =>
     getDefaultTemplate(
       'about_coach',
-      '擁有超過 10 年健身教學經驗，專注於體態雕塑、增肌減脂與運動表現提升。結合科學化訓練方法與個人化指導，幫助學員突破極限，達成目標。'
+      '教練職涯培訓講師、私教變現顧問。第一線私教出身，現任台東威豪健身總教官，統籌約 50 人的教練團隊，負責業績與續約 KPI、教練育成與教學品質管理。十年產業經驗讓我很確定一件事：多數教練卡住的不是專業，是沒有一套把專業換成收入的系統。所以近年我把私教與管理的實戰方法整理成課程與陪跑，只教一件事——教練怎麼把技術變成穩定業績。'
     )
   );
-  const [tagline, setTagline] = useState('關於教練');
-  const [coachName, setCoachName] = useState('Aaron 教練');
-  const [coachTitle, setCoachTitle] = useState('專業健身指導');
+  // tagline 備選：'關於教練'（保守）／'我是誰，憑什麼教你'（強對話感）
+  const [tagline, setTagline] = useState('關於阿倫教官');
+  const [coachName, setCoachName] = useState('阿倫教官');
+  // 頭銜備選：'教練職涯培訓講師' ／ '教練的教練'
+  const [coachTitle, setCoachTitle] = useState('私教變現顧問');
   const [imageUrl, setImageUrl] = useState(DEFAULT_IMAGE);
   const [bullets, setBullets] = useState<string[]>(DEFAULT_BULLETS);
-  const [cta, setCta] = useState('了解更多');
+  // CTA 備選：'我的職涯故事' ／ '為什麼是我'
+  const [cta, setCta] = useState('完整經歷');
 
   // 從後台載入內容，若 DB 回傳空值則保留範本
   useEffect(() => {

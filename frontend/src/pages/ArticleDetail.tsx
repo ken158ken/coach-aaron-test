@@ -14,6 +14,8 @@ import { useLocalize } from "@/hooks/useLocalize";
 import { useLanguage } from "@/context/LanguageContext";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { getInitialData } from "@/ssr/initialData";
+import { dataKeys } from "@/ssr/routeData";
 import type { Article, ArticleComment, ArticleRating } from "@/types";
 
 const ArticleDetail: React.FC = () => {
@@ -21,11 +23,30 @@ const ArticleDetail: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
   const { loc } = useLocalize();
-  const [article, setArticle] = useState<Article | null>(null);
+
+  // ── SSR 預抓資料 ──
+  // 伺服器端與 hydrate 時讀到同一份資料 → 初始 render 樹一致，不會 mismatch。
+  // key 帶 slug，client-side 換到別篇文章時不會誤用。
+  const ssrArticle = slug
+    ? getInitialData<Article>(dataKeys.article(slug))
+    : undefined;
+  const ssrPopular = getInitialData<{ articles?: Article[] }>(
+    dataKeys.articlesPopular(),
+  );
+
+  const [article, setArticle] = useState<Article | null>(ssrArticle ?? null);
   const [comments, setComments] = useState<ArticleComment[]>([]);
   const [, setRatings] = useState<ArticleRating[]>([]);
-  const [popularArticles, setPopularArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [popularArticles, setPopularArticles] = useState<Article[]>(() => {
+    if (!ssrArticle || !ssrPopular?.articles) return [];
+    return ssrPopular.articles
+      .filter((a) => a.article_id !== ssrArticle.article_id)
+      .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+      .slice(0, 5);
+  });
+  const [loading, setLoading] = useState(!ssrArticle);
+  /** 首次 fetch 時已有 SSR 資料 → 不要切回 loading，避免水合後閃一下骨架 */
+  const skipFirstLoadingRef = useRef(Boolean(ssrArticle));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
@@ -61,7 +82,7 @@ const ArticleDetail: React.FC = () => {
   const fetchArticle = useCallback(async () => {
     if (!slug) return;
     try {
-      setLoading(true);
+      if (!skipFirstLoadingRef.current) setLoading(true);
       setError("");
       const data = await articleService.getByIdentifier(slug);
       if (data) {
@@ -93,6 +114,7 @@ const ArticleDetail: React.FC = () => {
       setError("載入文章失敗");
     } finally {
       setLoading(false);
+      skipFirstLoadingRef.current = false;
     }
   }, [slug, user]);
 
@@ -224,38 +246,72 @@ const ArticleDetail: React.FC = () => {
     );
   };
 
-  if (loading) return <Loading text={t.common.loading} />;
+  const articleObj = (article ?? {}) as unknown as Record<string, unknown>;
+  const authorName =
+    article?.author?.display_name || article?.users?.display_name || "Coach Aaron";
+
+  // ── SEO ──
+  // 必須在任何 early return 之前建立，否則 loading / error 狀態下
+  // Helmet 收不到任何標籤，伺服器端就會輸出空 title（原本的 bug）。
+  const seoTitle =
+    loc(articleObj, "article_title") ||
+    (slug ? slug.replace(/[-_]+/g, " ").trim() : t.article.pageLabel);
+  const seoHead = (
+    <SEOHead
+      title={seoTitle}
+      description={
+        loc(articleObj, "article_description") || seoTitle
+      }
+      keywords={article?.article_keywords ? article.article_keywords.split(",").map((k) => k.trim()) : []}
+      image={article?.article_thumbnail_url}
+      url={`/articles/${article?.article_slug || article?.article_id || slug || ""}`}
+      type="article"
+      // 只有真的拿到文章才輸出 Article JSON-LD，
+      // 避免在 fallback 狀態下產生 headline 是 slug 的假結構化資料
+      isArticle={Boolean(article)}
+      noIndex={Boolean(error) || (!loading && !article)}
+      publishedTime={article?.published_at || article?.created_at}
+      modifiedTime={article?.updated_at}
+      author={authorName}
+      category={loc(articleObj, "article_category")}
+      breadcrumbs={[
+        { name: t.article.pageLabel, url: "/articles" },
+        {
+          name: seoTitle,
+          url: `/articles/${article?.article_slug || article?.article_id || slug || ""}`,
+        },
+      ]}
+    />
+  );
+
+  if (loading) {
+    return (
+      <>
+        {seoHead}
+        <Loading text={t.common.loading} />
+      </>
+    );
+  }
 
   if (error || !article) {
     return (
-      <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white/50 mb-4">{error || t.article.noContent}</p>
-          <Link to="/articles" className="text-[#d4d4d4] hover:underline">{t.article.backToList}</Link>
+      <>
+        {seoHead}
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-white/50 mb-4">{error || t.article.noContent}</p>
+            <Link to="/articles" className="text-[#d4d4d4] hover:underline">{t.article.backToList}</Link>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   const organizedComments = organizeComments(comments);
-  const authorName = article.author?.display_name || article.users?.display_name || "Coach Aaron";
-  const articleObj = article as unknown as Record<string, unknown>;
 
   return (
     <div className="min-h-screen bg-transparent relative">
-      <SEOHead
-        title={loc(articleObj, "article_title")}
-        description={loc(articleObj, "article_description") || loc(articleObj, "article_title")}
-        keywords={article.article_keywords ? article.article_keywords.split(",").map((k) => k.trim()) : []}
-        image={article.article_thumbnail_url}
-        url={`/articles/${article.article_slug || article.article_id}`}
-        type="article"
-        isArticle={true}
-        publishedTime={article.published_at || article.created_at}
-        modifiedTime={article.updated_at}
-        author={authorName}
-        category={loc(articleObj, "article_category")}
-      />
+      {seoHead}
 
       {/* ── Full-width Banner ── */}
       <div

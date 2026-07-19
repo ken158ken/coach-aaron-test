@@ -13,7 +13,9 @@ import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";
 import { useLanguage } from "@/context/LanguageContext";
 import { useLocalize } from "@/hooks/useLocalize";
-import type { Article } from "@/types";
+import { getInitialData } from "@/ssr/initialData";
+import { dataKeys } from "@/ssr/routeData";
+import type { Article, ArticlesResponse } from "@/types";
 
 /**
  * Articles - 公開文章列表頁面
@@ -23,13 +25,23 @@ import type { Article } from "@/types";
 const Articles: React.FC = () => {
   const { t, language } = useLanguage();
   const { loc } = useLocalize();
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── SSR 預抓資料（僅第一頁、未篩選分類） ──
+  const ssrList = getInitialData<ArticlesResponse>(dataKeys.articlesList());
+  const ssrArticles = Array.isArray(ssrList?.articles) ? ssrList.articles : [];
+
+  const [articles, setArticles] = useState<Article[]>(ssrArticles);
+  const [loading, setLoading] = useState(ssrArticles.length === 0);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(ssrList?.totalPages || 1);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>(() => [
+    ...new Set(
+      ssrArticles
+        .map((a) => a.article_category)
+        .filter((c): c is string => !!c),
+    ),
+  ]);
   const articlesRef = useScrollReveal();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -83,9 +95,22 @@ const Articles: React.FC = () => {
     );
   };
 
+  // SEO Meta 標籤 — 必須在 early return 之前建立，
+  // 否則 loading 狀態下伺服器端輸出的 title 會是空的
+  const seoHead = (
+    <SEOHead
+      title={t.article.pageLabel}
+      description="健身教練的專業分享與訓練心得，提供健身新手入門指南、訓練技巧、營養建議等實用內容"
+      keywords={["健身", "訓練", "教練", "健身知識", "運動"]}
+      url="/articles"
+      breadcrumbs={[{ name: t.article.pageLabel, url: "/articles" }]}
+    />
+  );
+
   if (loading && articles.length === 0) {
     return (
       <div className="min-h-screen bg-transparent relative">
+        {seoHead}
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <Loading text={t.common.loading} />
         </div>
@@ -95,13 +120,7 @@ const Articles: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent relative">
-      {/* SEO Meta 標籤 */}
-      <SEOHead
-        title={t.article.pageLabel}
-        description="健身教練的專業分享與訓練心得，提供健身新手入門指南、訓練技巧、營養建議等實用內容"
-        keywords={["健身", "訓練", "教練", "健身知識", "運動"]}
-        url="/articles"
-      />
+      {seoHead}
 
       {/* 主要內容 */}
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">

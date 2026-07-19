@@ -13,9 +13,10 @@ import {
   Textarea,
   Modal,
   useDialog,
-  RichTextEditor,
 } from '@/components/ui';
 import { Toggle, TagInput } from '@/components/ui/form';
+// 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
+import { RichTextEditor } from '@/components/ui/editor';
 import {
   contentService,
   type SiteContent,
@@ -25,6 +26,7 @@ import {
   slidesService,
   type TestimonialSlide,
   type TestimonialConfig,
+  type TestimonialCardLayout,
   type GallerySlide,
   type GalleryConfig,
 } from '@/services/site/slides.service';
@@ -736,7 +738,7 @@ const AdminContent: React.FC = () => {
   };
 
   const handleChangeTestimonialLayout = async (
-    layout: 'portrait' | 'landscape'
+    layout: TestimonialCardLayout
   ) => {
     if (layout === testimonialConfig.card_layout) return;
     try {
@@ -1381,6 +1383,53 @@ const AdminContent: React.FC = () => {
                   />
                 </svg>
                 橫式
+              </button>
+              <button
+                onClick={() => handleChangeTestimonialLayout('quote-grid')}
+                title="三欄引言牆：以文字評價為主，一次顯示 3 則、整組換場"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                  testimonialConfig.card_layout === 'quote-grid'
+                    ? 'bg-luxe-gold/20 border-luxe-gold/50 text-luxe-gold'
+                    : 'border-luxe-gold/15 text-luxe-muted hover:border-luxe-gold/30 hover:text-luxe-text'
+                }`}
+              >
+                <svg
+                  className="w-4.5 h-3.5"
+                  viewBox="0 0 14 10"
+                  fill="currentColor"
+                >
+                  <rect
+                    x="1"
+                    y="1"
+                    width="3.3"
+                    height="8"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    fill="none"
+                  />
+                  <rect
+                    x="5.35"
+                    y="1"
+                    width="3.3"
+                    height="8"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    fill="none"
+                  />
+                  <rect
+                    x="9.7"
+                    y="1"
+                    width="3.3"
+                    height="8"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    fill="none"
+                  />
+                </svg>
+                引言牆
               </button>
             </div>
 

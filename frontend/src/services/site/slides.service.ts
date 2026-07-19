@@ -21,10 +21,18 @@ export interface TestimonialSlide {
   created_at: string;
 }
 
+/**
+ * 學員見證卡片版型
+ * - portrait   直立式 coverflow（圖為主）
+ * - landscape  橫式 coverflow（圖為主）
+ * - quote-grid 三欄引言牆（文字為主，原 CardStackTestimonial 版型）
+ */
+export type TestimonialCardLayout = 'portrait' | 'landscape' | 'quote-grid';
+
 export interface TestimonialConfig {
   interval_ms: number;
   is_published: boolean;
-  card_layout: 'portrait' | 'landscape';
+  card_layout: TestimonialCardLayout;
 }
 
 export interface GallerySlide {
@@ -105,7 +113,7 @@ export const slidesService = {
   updateTestimonialsConfig: (data: {
     intervalMs?: number;
     isPublished?: boolean;
-    cardLayout?: 'portrait' | 'landscape';
+    cardLayout?: TestimonialCardLayout;
   }): Promise<TestimonialConfig> =>
     put<TestimonialConfig>("/api/slides/admin/testimonials/config", data),
 

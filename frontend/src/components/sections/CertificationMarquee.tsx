@@ -9,28 +9,35 @@
 import React, { useEffect, useState } from 'react';
 import { marqueeService, type MarqueeItem } from '@/services/site/marquee.service';
 
-/** 預設認證標章（DB 載入失敗時的 fallback） */
+/**
+ * 預設認證標章（DB 載入失敗時的 fallback）— cert 軌只放證照，不混業績數字。
+ *
+ * 「130+ 教練」「月入 8 萬」「10 年經驗」等成果數字改列到下方 stat 軌，
+ * 避免混淆「認證」與「成果」兩種不同性質的資訊。
+ */
 const DEFAULT_CERTS: MarqueeItem[] = [
-  { id: -1, type: 'cert', icon: '🏅', label: 'NSCA-CPT', sub: '美國體能協會認證', sort_order: 1, is_active: true, created_at: '' },
-  { id: -2, type: 'cert', icon: '🎓', label: 'TQUK Level 3', sub: '英國認證心理諮詢師', sort_order: 2, is_active: true, created_at: '' },
+  { id: -1, type: 'cert', icon: '🏅', label: 'NSCA-CPT', sub: '美國肌力與體能協會 私人教練認證', sort_order: 1, is_active: true, created_at: '' },
+  { id: -2, type: 'cert', icon: '🎓', label: 'TQUK Level 3', sub: '英國認證心理諮詢', sort_order: 2, is_active: true, created_at: '' },
   { id: -3, type: 'cert', icon: '🧠', label: 'NLP 執行師', sub: '神經語言程式學', sort_order: 3, is_active: true, created_at: '' },
-  { id: -4, type: 'cert', icon: '💪', label: 'ACE-CPT', sub: '美國運動委員會認證', sort_order: 4, is_active: true, created_at: '' },
-  { id: -5, type: 'cert', icon: '🏆', label: 'ISSA-CPT', sub: '國際運動科學協會', sort_order: 5, is_active: true, created_at: '' },
-  { id: -6, type: 'cert', icon: '⭐', label: '130+ 教練', sub: '已培訓執業教練', sort_order: 6, is_active: true, created_at: '' },
-  { id: -7, type: 'cert', icon: '💰', label: '月入 8 萬', sub: '學員平均業績目標', sort_order: 7, is_active: true, created_at: '' },
-  { id: -8, type: 'cert', icon: '🔥', label: '10 年經驗', sub: '健身產業深耕', sort_order: 8, is_active: true, created_at: '' },
+  { id: -4, type: 'cert', icon: '🧭', label: 'Andaction 生活教練', sub: '目標設定與行動陪伴', sort_order: 4, is_active: true, created_at: '' },
+  { id: -5, type: 'cert', icon: '📜', label: '健身教練 C 級', sub: '健身指導員培訓認證', sort_order: 5, is_active: true, created_at: '' },
+  { id: -6, type: 'cert', icon: '💪', label: 'ACE-CPT', sub: '美國運動委員會認證', sort_order: 6, is_active: true, created_at: '' },
+  { id: -7, type: 'cert', icon: '🏆', label: 'ISSA-CPT', sub: '國際運動科學協會', sort_order: 7, is_active: true, created_at: '' },
 ];
 
-/** 預設成果數字（DB 載入失敗時的 fallback） */
+/**
+ * 預設成果數字（DB 載入失敗時的 fallback）。
+ *
+ * 已移除模板帶來的假數據：95% 學員續課率、3 倍平均業績成長、500+ 服務學員數、
+ * 4.9★ 學員平均評分（且「學員」一詞在 B2B 語境下語意錯誤）。
+ */
 const DEFAULT_STATS: MarqueeItem[] = [
-  { id: -11, type: 'stat', icon: '', label: '130+', sub: '培訓教練人次', sort_order: 1, is_active: true, created_at: '' },
-  { id: -12, type: 'stat', icon: '', label: '95%', sub: '學員續課率', sort_order: 2, is_active: true, created_at: '' },
-  { id: -13, type: 'stat', icon: '', label: '8萬+', sub: '月收入目標', sort_order: 3, is_active: true, created_at: '' },
-  { id: -14, type: 'stat', icon: '', label: '3倍', sub: '平均業績成長', sort_order: 4, is_active: true, created_at: '' },
-  { id: -15, type: 'stat', icon: '', label: '10年', sub: '產業深耕經歷', sort_order: 5, is_active: true, created_at: '' },
-  { id: -16, type: 'stat', icon: '', label: '500+', sub: '服務學員數', sort_order: 6, is_active: true, created_at: '' },
-  { id: -17, type: 'stat', icon: '', label: '100天', sub: '月入 8 萬計畫', sort_order: 7, is_active: true, created_at: '' },
-  { id: -18, type: 'stat', icon: '', label: '4.9★', sub: '學員平均評分', sort_order: 8, is_active: true, created_at: '' },
+  { id: -11, type: 'stat', icon: '', label: '50 人', sub: '教練團隊管理規模', sort_order: 1, is_active: true, created_at: '' },
+  { id: -12, type: 'stat', icon: '', label: '1000+ 小時', sub: '教學與授課時數', sort_order: 2, is_active: true, created_at: '' },
+  { id: -13, type: 'stat', icon: '', label: '10 年', sub: '健身產業經歷', sort_order: 3, is_active: true, created_at: '' },
+  { id: -14, type: 'stat', icon: '', label: '58 集', sub: '《陪你健身》Podcast', sort_order: 4, is_active: true, created_at: '' },
+  { id: -15, type: 'stat', icon: '', label: '130+', sub: '協助提升收入的教練', sort_order: 5, is_active: true, created_at: '' },
+  { id: -16, type: 'stat', icon: '', label: '8 萬', sub: '個人私教月收入', sort_order: 6, is_active: true, created_at: '' },
 ];
 
 const CertificationMarquee: React.FC = () => {
@@ -62,8 +69,10 @@ const CertificationMarquee: React.FC = () => {
         <span className="text-gold text-xs uppercase tracking-widest">
           Credentials
         </span>
+        {/* 定稿標題為「Credentials 專業認證」；上方 tagline 已顯示 Credentials，
+            此處只放中文以免重複。備選：'專業背書' ／ '證照與資歷' */}
         <h2 className="mt-2 text-xl sm:text-2xl font-light text-white/80">
-          專業認證 ‧ 實力說話
+          專業認證
         </h2>
       </div>
 

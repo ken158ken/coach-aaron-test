@@ -16,6 +16,7 @@ import React, {
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { landingService } from "../../services/site/landing.service";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import type {
   LpProjectDetail,
   LpResolvedField,
@@ -61,6 +62,10 @@ const GROUP_LABELS: Record<string, string> = {
   benefits: "方案優勢",
   services: "服務項目",
   process: "服務流程",
+  blocks: "圖文交錯區塊",
+  scenes: "大圖段落",
+  cards: "圖文卡片",
+  stats: "數字統計",
   testimonials: "學員見證",
   reviews: "好評回饋",
   pricing: "費用方案",
@@ -196,7 +201,7 @@ const FieldInput: React.FC<{
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
                   點擊上傳圖片
-                  <span className="text-[10px] text-luxe-muted/50">JPG / PNG / WebP，最大 5MB</span>
+                  <span className="text-xs text-luxe-muted/50">JPG / PNG / WebP，最大 5MB</span>
                 </>
               )}
             </button>
@@ -205,13 +210,13 @@ const FieldInput: React.FC<{
 
         {/* Manual URL input */}
         <div className="space-y-1">
-          <p className="text-[10px] text-luxe-muted/40">或直接貼上圖片 URL</p>
+          <p className="text-xs text-luxe-muted/40">或直接貼上圖片 URL</p>
           <input
             type="url"
             value={field.cloudinaryUrl}
             onChange={(e) => set({ cloudinaryUrl: e.target.value })}
             placeholder="https://..."
-            className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
+            className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
               changed ? "border-luxe-gold/50" : "border-luxe-gold/10 focus:border-luxe-gold/30"
             }`}
           />
@@ -227,7 +232,7 @@ const FieldInput: React.FC<{
         onChange={(e) => set({ text: e.target.value })}
         placeholder={`請輸入 ${field.field_label}…`}
         rows={4}
-        className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 resize-y min-h-20 transition-colors ${
+        className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 resize-y min-h-20 transition-colors ${
           changed
             ? "border-luxe-gold/50"
             : "border-luxe-gold/10 focus:border-luxe-gold/30"
@@ -243,7 +248,7 @@ const FieldInput: React.FC<{
         value={field.text}
         onChange={(e) => set({ text: e.target.value })}
         placeholder="https://..."
-        className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
+        className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
           changed
             ? "border-luxe-gold/50"
             : "border-luxe-gold/10 focus:border-luxe-gold/30"
@@ -259,7 +264,7 @@ const FieldInput: React.FC<{
         value={field.text}
         onChange={(e) => set({ text: e.target.value })}
         placeholder="0"
-        className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
+        className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
           changed
             ? "border-luxe-gold/50"
             : "border-luxe-gold/10 focus:border-luxe-gold/30"
@@ -275,7 +280,7 @@ const FieldInput: React.FC<{
       value={field.text}
       onChange={(e) => set({ text: e.target.value })}
       placeholder={`請輸入 ${field.field_label}…`}
-      className={`w-full bg-luxe-bg border rounded-lg px-3 py-2 text-sm text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
+      className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
         changed
           ? "border-luxe-gold/50"
           : "border-luxe-gold/10 focus:border-luxe-gold/30"
@@ -293,6 +298,9 @@ const LandingPageEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const projectId = id ? parseInt(id, 10) : NaN;
 
+  // 全螢幕編輯器：鎖住背景 Lenis 頁面捲動，改由內部各 pane 原生捲動
+  useScrollLock(true);
+
   // ── State ──
   const [project, setProject] = useState<LpProjectDetail | null>(null);
   const [fieldEdits, setFieldEdits] = useState<FieldEdit[]>([]);
@@ -302,6 +310,10 @@ const LandingPageEditor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+
+  // 區塊顯示/隱藏（存於 settings_json.hidden_sections）
+  const [hiddenSections, setHiddenSections] = useState<string[]>([]);
+  const [savingSection, setSavingSection] = useState<string | null>(null);
 
   // Project info editing
   const [projectName, setProjectName] = useState("");
@@ -327,6 +339,10 @@ const LandingPageEditor: React.FC = () => {
         setProject(proj);
         setProjectName(proj.project_name);
         setCustomSlug(proj.custom_slug ?? "");
+
+        // 載入區塊隱藏設定
+        const hs = (proj.settings_json as Record<string, unknown> | undefined)?.hidden_sections;
+        setHiddenSections(Array.isArray(hs) ? hs.map(String) : []);
 
         const edits = resolvedFields
           .slice()
@@ -375,6 +391,34 @@ const LandingPageEditor: React.FC = () => {
       setSavingVariant(false);
     }
   }, [projectId]);
+
+  // ── Section visibility handler ──
+  const handleToggleSection = useCallback(async (group: string) => {
+    const next = hiddenSections.includes(group)
+      ? hiddenSections.filter((g) => g !== group)
+      : [...hiddenSections, group];
+    const prevHidden = hiddenSections;
+    setHiddenSections(next);
+    setSavingSection(group);
+    try {
+      const nextSettings = {
+        ...(project?.settings_json ?? {}),
+        hidden_sections: next,
+      };
+      const updated = await landingService.updateProject(projectId, {
+        settings_json: nextSettings,
+      });
+      setProject((prev) =>
+        prev ? { ...prev, settings_json: updated.settings_json ?? nextSettings } : prev,
+      );
+    } catch (err) {
+      logger.error("區塊顯示切換失敗", err);
+      alert("區塊顯示切換失敗，請稍後再試");
+      setHiddenSections(prevHidden); // rollback
+    } finally {
+      setSavingSection(null);
+    }
+  }, [hiddenSections, project, projectId]);
 
   // ── Image upload handler ──
   const handleImageUpload = useCallback(async (file: File): Promise<string> => {
@@ -541,7 +585,7 @@ const LandingPageEditor: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-luxe-bg overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col bg-luxe-bg overflow-hidden">
       {/* ── Top Bar ── */}
       <header className="flex items-center justify-between px-5 py-3 bg-luxe-surface border-b border-luxe-gold/10 shrink-0 z-30">
         {/* Left */}
@@ -654,7 +698,7 @@ const LandingPageEditor: React.FC = () => {
             </p>
             <button
               onClick={() => setActiveGroup("__info__")}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 activeGroup === "__info__"
                   ? "bg-luxe-gold/10 text-luxe-gold"
                   : "text-luxe-muted hover:text-luxe-text hover:bg-white/3"
@@ -666,28 +710,65 @@ const LandingPageEditor: React.FC = () => {
 
           {/* Field groups */}
           <div className="px-3">
-            <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-2 px-2">
+            <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-1 px-2">
               頁面內容
+            </p>
+            <p className="text-[9px] text-luxe-muted/30 mb-2 px-2 leading-snug">
+              點眼睛圖示可隱藏該區塊（不會在公開頁顯示）
             </p>
             {groups.map((g) => {
               const hasChanges = fieldEdits
                 .filter((f) => f.content_group === g)
                 .some(isChanged);
+              const isHidden = hiddenSections.includes(g);
+              const isToggling = savingSection === g;
               return (
-                <button
+                <div
                   key={g}
-                  onClick={() => setActiveGroup(g)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between gap-1 ${
-                    activeGroup === g
-                      ? "bg-luxe-gold/10 text-luxe-gold"
-                      : "text-luxe-muted hover:text-luxe-text hover:bg-white/3"
+                  className={`group/nav flex items-center rounded-lg transition-colors ${
+                    activeGroup === g ? "bg-luxe-gold/10" : "hover:bg-white/3"
                   }`}
                 >
-                  <span className="truncate">{getGroupLabel(g)}</span>
-                  {hasChanges && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-luxe-gold shrink-0" />
-                  )}
-                </button>
+                  <button
+                    onClick={() => setActiveGroup(g)}
+                    className={`flex-1 min-w-0 text-left pl-3 pr-1 py-2.5 rounded-l-lg text-sm flex items-center gap-1.5 transition-colors ${
+                      activeGroup === g
+                        ? "text-luxe-gold"
+                        : "text-luxe-muted group-hover/nav:text-luxe-text"
+                    }`}
+                  >
+                    <span className={`truncate ${isHidden ? "line-through opacity-40" : ""}`}>
+                      {getGroupLabel(g)}
+                    </span>
+                    {hasChanges && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-luxe-gold shrink-0" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleToggleSection(g)}
+                    disabled={isToggling}
+                    title={isHidden ? "目前隱藏，點擊顯示此區塊" : "目前顯示，點擊隱藏此區塊"}
+                    aria-label={isHidden ? "顯示此區塊" : "隱藏此區塊"}
+                    className={`shrink-0 px-2 py-2 rounded-r-lg transition-colors ${
+                      isToggling ? "animate-pulse" : ""
+                    } ${
+                      isHidden
+                        ? "text-luxe-muted/30 hover:text-luxe-text"
+                        : "text-luxe-gold/60 hover:text-luxe-gold"
+                    }`}
+                  >
+                    {isHidden ? (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.52 10.52 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l11.544 11.544M21 21l-2.228-2.228" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -711,7 +792,7 @@ const LandingPageEditor: React.FC = () => {
                     type="text"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
-                    className="w-full bg-luxe-bg border border-luxe-gold/10 rounded-lg px-3 py-2 text-sm text-luxe-text focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 focus:border-luxe-gold/30 transition-colors"
+                    className="w-full bg-luxe-bg border border-luxe-gold/10 rounded-lg px-3 py-2.5 text-base text-luxe-text focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 focus:border-luxe-gold/30 transition-colors"
                   />
                 </div>
 
@@ -730,7 +811,7 @@ const LandingPageEditor: React.FC = () => {
                         )
                       }
                       placeholder="my-page-slug"
-                      className="flex-1 bg-luxe-bg border border-luxe-gold/10 rounded-lg px-3 py-2 text-sm text-luxe-text focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 focus:border-luxe-gold/30 transition-colors"
+                      className="flex-1 bg-luxe-bg border border-luxe-gold/10 rounded-lg px-3 py-2.5 text-base text-luxe-text focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 focus:border-luxe-gold/30 transition-colors"
                     />
                   </div>
                 </div>
@@ -790,17 +871,17 @@ const LandingPageEditor: React.FC = () => {
                     >
                       <div className="flex items-start justify-between mb-2 gap-2">
                         <div>
-                          <label className="text-xs font-medium text-luxe-text">
+                          <label className="text-sm font-medium text-luxe-text">
                             {fe.field_label}
                             {fe.is_required && (
                               <span className="text-red-400 ml-1">*</span>
                             )}
                           </label>
-                          <p className="text-[10px] text-luxe-muted/40 mt-0.5 font-mono">
+                          <p className="text-[11px] text-luxe-muted/40 mt-0.5 font-mono">
                             {fe.field_key}
                           </p>
                         </div>
-                        <span className="text-[9px] text-luxe-muted/30 bg-white/3 border border-white/5 px-1.5 py-0.5 rounded shrink-0">
+                        <span className="text-[10px] text-luxe-muted/30 bg-white/3 border border-white/5 px-1.5 py-0.5 rounded shrink-0">
                           {fe.field_kind}
                         </span>
                       </div>

@@ -111,8 +111,9 @@ const DirectionAwareGallery: React.FC = () => {
   const { get } = useSiteContent();
   const mHeader = {
     tagline: get('moments_tagline', 'Moments'),
-    title: get('moments_title', '精彩回顧'),
-    subtitle: get('moments_subtitle', 'Hover 探索每張照片背後的故事'),
+    // 標題備選：'現場紀錄' ／ '培訓現場'（後者已用於 GallerySlider，勿重複）
+    title: get('moments_title', 'Moments'),
+    subtitle: get('moments_subtitle', '滑過每張照片，看看數字之外的東西'),
   };
 
   useEffect(() => {

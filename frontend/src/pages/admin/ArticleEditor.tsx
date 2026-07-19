@@ -12,7 +12,7 @@ import { useAuth } from "@/context";
 import { Loading, Tooltip } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
-import { useRichTextEditor } from "@/hooks";
+import { useRichTextEditor } from "@/hooks/useRichTextEditor";
 import { articleService } from "@/services/content/article.service";
 import ArticlePreviewModal from "@/components/admin/ArticlePreviewModal";
 

@@ -39,6 +39,72 @@ export const isImage = (f: LpResolvedField) =>
 export const isUrl = (f: LpResolvedField) =>
   f.field_kind === "url" || f.data_type === "url";
 
+// ── 圖片佔位（admin 尚未上傳時顯示，自帶 SVG，不依賴外部服務）──
+
+/** 內建灰底圖示佔位圖（data-URI SVG），任何主題下都顯示為「待上傳圖片」 */
+export const PLACEHOLDER_IMG: string = `data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 600'>" +
+    "<rect width='800' height='600' fill='#e5e7eb'/>" +
+    "<g fill='none' stroke='#9ca3af' stroke-width='12' stroke-linecap='round' stroke-linejoin='round'>" +
+    "<rect x='250' y='190' width='300' height='220' rx='16'/>" +
+    "<circle cx='332' cy='262' r='26'/>" +
+    "<path d='M268 400 L362 312 L418 372 L498 300 L532 400 Z'/>" +
+    "</g></svg>",
+)}`;
+
+/** 圖片來源：有值用原圖，否則回佔位圖。讓未上傳的圖片仍維持版面完整 */
+export function imgSrc(url: string | null | undefined): string {
+  return url && url.trim() ? url : PLACEHOLDER_IMG;
+}
+
+/** 是否為「尚未上傳、目前顯示佔位圖」 */
+export function isPlaceholder(url: string | null | undefined): boolean {
+  return !(url && url.trim());
+}
+
+// ── 區塊顯示/隱藏（admin 在 settings_json.hidden_sections 控制）──
+
+/** 取得被 admin 隱藏的 content_group 清單 */
+export function getHiddenSections(project: LpPublicProject): string[] {
+  const raw = (project.settings_json as Record<string, unknown> | undefined)
+    ?.hidden_sections;
+  return Array.isArray(raw) ? raw.map(String) : [];
+}
+
+/** 此 content_group 是否應渲染（未被 admin 隱藏） */
+export function sectionVisible(project: LpPublicProject, group: string): boolean {
+  return !getHiddenSections(project).includes(group);
+}
+
+// ── 索引型重複項目收集（block_1_*, card_2_*, gallery_3_* …）──
+
+/**
+ * 把 `${prefix}_${i}_${suffix}` 形式的欄位收集成物件陣列。
+ * 例：collectIndexed(fields, "block", 8, ["image","title","desc"])
+ *   → [{ image, title, desc }, ...]（自動跳過全空的項目）
+ *
+ * keys 的值優先取 cloudinary_url（圖片），否則 resolved_text。
+ */
+export function collectIndexed<K extends string>(
+  fields: LpResolvedField[],
+  prefix: string,
+  count: number,
+  keys: readonly K[],
+): Record<K, string>[] {
+  const out: Record<K, string>[] = [];
+  for (let i = 1; i <= count; i++) {
+    const item = {} as Record<K, string>;
+    let hasAny = false;
+    for (const k of keys) {
+      const val = pick(fields, `${prefix}_${i}_${k}`);
+      item[k] = val;
+      if (val) hasAny = true;
+    }
+    if (hasAny) out.push(item);
+  }
+  return out;
+}
+
 // ── CSS vars 注入 ───────────────────────────────────────────
 
 /**

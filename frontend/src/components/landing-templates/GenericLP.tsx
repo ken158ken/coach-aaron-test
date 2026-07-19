@@ -11,6 +11,7 @@
 import React, { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { LpPublicProject, LpResolvedField } from "../../services/site/landing.service";
+import { getHiddenSections } from "./lpUtils";
 
 // ─────────────────────────────────────────────────────────
 // Types & helpers
@@ -472,7 +473,10 @@ const GenericLP: React.FC<Props> = ({ project, fields }) => {
     return () => { document.title = prev; };
   }, [seoTitle]);
 
-  // Group fields by content_group (skip empty values + meta groups)
+  // admin 隱藏的區塊（settings_json.hidden_sections）
+  const hidden = useMemo(() => new Set(getHiddenSections(project)), [project]);
+
+  // Group fields by content_group (skip empty values + meta groups + hidden groups)
   const { heroFields, contentGroups } = useMemo(() => {
     const grouped: Record<string, LpResolvedField[]> = {};
     fields.forEach((f) => {
@@ -485,13 +489,13 @@ const GenericLP: React.FC<Props> = ({ project, fields }) => {
       g.sort((a, b) => a.field_sort_order - b.field_sort_order),
     );
 
-    const hero = grouped["hero"] || [];
+    const hero = hidden.has("hero") ? [] : grouped["hero"] || [];
     const rest = Object.entries(grouped)
-      .filter(([key]) => key !== "hero" && !META_GROUPS.has(key))
+      .filter(([key]) => key !== "hero" && !META_GROUPS.has(key) && !hidden.has(key))
       .sort(([a], [b]) => groupOrder(a) - groupOrder(b));
 
     return { heroFields: hero, contentGroups: rest };
-  }, [fields]);
+  }, [fields, hidden]);
 
   // Section label display names
   const sectionLabel = (key: string): string => {

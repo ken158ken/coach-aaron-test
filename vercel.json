@@ -3,7 +3,24 @@
   "outputDirectory": "frontend/dist/client",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/server" },
-    { "source": "/(.*)", "destination": "/api/ssr" }
+
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+
+    { "source": "/", "destination": "/api/ssr" },
+    {
+      "source": "/(courses|videos|lessons|articles|contact|login|register|member|dashboard|checkout|pages|booking|my-bookings|coach|chat|notifications)",
+      "destination": "/api/ssr"
+    },
+    { "source": "/courses/:id", "destination": "/api/ssr" },
+    { "source": "/lessons/:id", "destination": "/api/ssr" },
+    { "source": "/articles/:slug", "destination": "/api/ssr" },
+    { "source": "/page/:slug", "destination": "/api/ssr" },
+    { "source": "/chat/:conversationId", "destination": "/api/ssr" },
+    { "source": "/checkout/success", "destination": "/api/ssr" },
+    { "source": "/admin", "destination": "/api/ssr" },
+    { "source": "/admin/:path*", "destination": "/api/ssr" },
+
+    { "source": "/(.*)", "destination": "/api/not-found" }
   ],
   "functions": {
     "api/server.js": {
@@ -13,6 +30,13 @@
     "api/ssr.js": {
       "maxDuration": 10,
       "includeFiles": "api/_ssr_template.html"
+    },
+    "api/not-found.js": {
+      "maxDuration": 10,
+      "includeFiles": "api/_ssr_template.html"
+    },
+    "api/sitemap.js": {
+      "maxDuration": 10
     }
   },
   "crons": [

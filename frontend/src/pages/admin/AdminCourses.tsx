@@ -14,9 +14,10 @@ import {
   Modal,
   Textarea,
   TagInput,
-  RichTextEditor,
   useDialog,
 } from "@/components/ui";
+// 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
+import { RichTextEditor } from "@/components/ui/editor";
 import { get, post, put, del } from "@/services/api";
 import type { Course } from "@/types";
 

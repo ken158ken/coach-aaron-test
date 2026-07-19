@@ -49,14 +49,20 @@ interface SEOHeadProps {
   category?: string;
   /** 不要被搜尋引擎索引 */
   noIndex?: boolean;
-  /** 商品價格（用於 product schema） */
+  /** 商品價格（用於 Course schema 的 offers；未提供則不輸出 offers） */
   price?: number;
+  /** 是否公開顯示價格（false 時不輸出 offers，避免與頁面「請洽詢」不一致） */
+  showPrice?: boolean;
+  /** 麵包屑（依序由淺到深，不含站台首頁；首頁會自動加在最前） */
+  breadcrumbs?: Array<{ name: string; url: string }>;
 }
 
 /** 預設網站資訊 */
 const DEFAULT_SITE_NAME = "阿倫教官 | Coach Aaron";
+// ⚠️ 本站為純 B2B（服務對象是健身教練同業，非一般健身會員），
+//    預設描述不得再出現「一對一訓練」等 B2C 服務字眼。
 const DEFAULT_DESCRIPTION =
-  "專業健身教練，提供線上課程、一對一訓練與健身知識分享";
+  "阿倫教官｜私教變現顧問、教練職涯培訓講師。給私人教練的商業實戰培訓：銷售心理學、體驗課成交、續約經營與個人品牌，把專業變成穩定收入。";
 const DEFAULT_IMAGE = "/images/og-default.jpg";
 
 /**
@@ -93,6 +99,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   category,
   noIndex = false,
   price,
+  showPrice = true,
+  breadcrumbs,
 }) => {
   // 組合完整標題
   const fullTitle = title
@@ -109,10 +117,14 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   const fullUrl = url?.startsWith("http") ? url : `${DEFAULT_URL}${url || ""}`;
 
   // JSON-LD 結構化資料
+  // 以 @graph 收納多個實體（Article / Course / BreadcrumbList），
+  // 只輸出單一 <script>，避免 Helmet 對多個同型別 script 的處理歧異
   const jsonLd = (() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const graph: Record<string, any>[] = [];
+
     if (isArticle) {
-      return JSON.stringify({
-        "@context": "https://schema.org",
+      graph.push({
         "@type": "Article",
         headline: title || DEFAULT_SITE_NAME,
         description,
@@ -130,9 +142,10 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         keywords: keywords.join(", "),
       });
     }
-    if (type === "product" && price !== undefined) {
-      return JSON.stringify({
-        "@context": "https://schema.org",
+    // Course：只要是 product 型別就輸出（過去因額外要求 price 而永遠不成立）
+    if (type === "product" && title) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const course: Record<string, any> = {
         "@type": "Course",
         name: title,
         description,
@@ -143,15 +156,41 @@ const SEOHead: React.FC<SEOHeadProps> = ({
           name: "阿倫教官",
           sameAs: "https://www.instagram.com/coach.luen/",
         },
-        offers: {
+      };
+      // 價格公開且為有效數值時才輸出 offers，與頁面顯示保持一致
+      if (showPrice && typeof price === "number" && Number.isFinite(price)) {
+        course.offers = {
           "@type": "Offer",
           price,
           priceCurrency: "TWD",
           availability: "https://schema.org/InStock",
-        },
+          url: fullUrl,
+        };
+      }
+      graph.push(course);
+    }
+
+    // BreadcrumbList
+    if (breadcrumbs && breadcrumbs.length > 0) {
+      const items = [{ name: "首頁", url: "/" }, ...breadcrumbs];
+      graph.push({
+        "@type": "BreadcrumbList",
+        itemListElement: items.map((item, idx) => ({
+          "@type": "ListItem",
+          position: idx + 1,
+          name: item.name,
+          item: item.url.startsWith("http")
+            ? item.url
+            : `${DEFAULT_URL}${item.url}`,
+        })),
       });
     }
-    return null;
+
+    if (graph.length === 0) return null;
+    return JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": graph,
+    });
   })();
 
   return (

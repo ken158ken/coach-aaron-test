@@ -8,11 +8,11 @@ import React from "react";
 import {
   HeroSection,
   CoachIntroSection,
+  ServicesSection,
   CertificationMarquee,
   PodcastExpandable,
   TestimonialCarousel,
-  CardStackTestimonial,
-  GallerySlider,
+  CareerCarousel,
   DirectionAwareGallery,
 } from "@/components/sections";
 import HomePopup from "@/components/sections/HomePopup";
@@ -59,6 +59,12 @@ const Home: React.FC = () => {
           "私人教練銷售",
           "健身教練銷售",
           "皮拉提斯銷售",
+          // 2026-07 改版新增：對應新的服務項目與經歷區塊
+          "私教變現陪跑",
+          "教練變現線上課程",
+          "教練一對一顧問",
+          "教練經理",
+          "健身總教官",
         ]}
         image="/images/og-default.jpg"
         url="/"
@@ -71,38 +77,47 @@ const Home: React.FC = () => {
       {/* Hero Section — 自帶 GSAP 進場 */}
       <HeroSection />
 
-      {/* Coach Introduction — 自帶 data-aos（framer-motion motion.div） */}
+      {/* 2. 關於教練 — 自帶 data-aos（framer-motion motion.div） */}
       <div className="relative z-10 bg-transparent">
         <CoachIntroSection />
       </div>
 
-      {/* Certification Marquee — CSS @keyframes marquee，無需外層動畫 */}
+      {/* 3. 主要服務項目與專長 — 接既有 courses 資料
+          離首屏近，刻意不包 LazySection（比照 CoachIntro / Marquee），
+          元件自帶骨架佔位避免 CLS */}
       <div className="relative z-10 bg-transparent">
-        <CertificationMarquee />
+        <ServicesSection />
       </div>
 
       {/* 以下各 section 延遲渲染（距視窗 600px 前才掛載 DOM） */}
       {/* 各 section 內部自帶 data-aos 或 framer-motion 進場 */}
 
-      <LazySection minHeight="500px">
-        <PodcastExpandable />
-      </LazySection>
-
+      {/* 4. 真實學員留言（原 Student Reviews + Real Reviews 合併，
+             版型由後台 testimonial_config.card_layout 切換） */}
       <LazySection minHeight="500px">
         <TestimonialCarousel />
       </LazySection>
 
-      <LazySection minHeight="400px">
-        <CardStackTestimonial />
-      </LazySection>
-
-      <LazySection minHeight="400px">
-        <GallerySlider />
-      </LazySection>
-
+      {/* 5. Moments — 精彩瞬間相片牆 */}
       <LazySection minHeight="400px">
         <DirectionAwareGallery />
       </LazySection>
+
+      {/* 6. 其他人設經歷 — 輪播 */}
+      <LazySection minHeight="500px">
+        <CareerCarousel />
+      </LazySection>
+
+      {/* 7. Podcast — 下移至頁面底部 */}
+      <LazySection minHeight="500px">
+        <PodcastExpandable />
+      </LazySection>
+
+      {/* 8. Credentials 專業認證 — 下移至最末作為背書收尾
+             CSS @keyframes marquee，無需外層動畫 */}
+      <div className="relative z-10 bg-transparent">
+        <CertificationMarquee />
+      </div>
     </div>
   );
 };

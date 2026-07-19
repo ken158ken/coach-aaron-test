@@ -1,9 +1,17 @@
 /**
- * TestimonialCarousel - 學員見證 3D Coverflow 自動輪播
+ * TestimonialCarousel - 真實學員留言（唯一的學員見證區塊）
  * @module components/sections/TestimonialCarousel
- * @description 支援兩種版型：直立式 (portrait) 和橫式 (landscape)
+ * @description 支援三種版型（由後台 testimonial_config.card_layout 切換）：
+ *              - portrait   直立式 coverflow（圖為主）
+ *              - landscape  橫式 coverflow（圖為主）
+ *              - quote-grid 三欄引言牆（文字為主，原 CardStackTestimonial 版型）
  *              左右各露出前後一張卡，透視旋轉進退 (coverflow)
  *              is_published=false 時首頁隱藏；preview=true 強制顯示
+ *
+ * 2026-07 改版：原本首頁有兩個讀同一份 getTestimonials() 資料的區塊
+ *              （Student Reviews / Real Reviews），已合併為本元件。
+ *              CardStackTestimonial 的三欄引言版型移入此處成為 quote-grid，
+ *              並修掉舊版「不檢查 is_published + 內建 pravatar 假資料」的 bug。
  */
 
 import React, { useState, useEffect, useCallback, CSSProperties } from 'react';
@@ -12,8 +20,10 @@ import {
   slidesService,
   type TestimonialSlide,
   type TestimonialConfig,
+  type TestimonialCardLayout,
 } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 // ─── Aceternity AnimatedTestimonials 風格：逐字淡入 ───────────────────────
 const AnimatedQuote: React.FC<{ text: string; slideId: number }> = ({
@@ -140,12 +150,166 @@ const TestimonialHeader: React.FC = () => {
       <span className="text-gold text-xs uppercase tracking-widest">
         {get('testimonial_tagline', 'Student Reviews')}
       </span>
+      {/* 標題備選：'教練同業的實戰回饋' ／ '合作教練怎麼說'
+          導言備選：'我的學生，都是教練。所以這些回饋談的不是體重掉了幾公斤，
+                    而是續課率、成交數，跟月底那張數字。' ／
+                   '來自現役教練同業的真實回饋——關於業績、續約，
+                    以及重新相信自己專業值多少錢這件事。' */}
       <h2 className="mt-2 text-2xl sm:text-3xl font-light text-white/90">
-        {get('testimonial_title', '學員見證')}
+        {get('testimonial_title', '真實學員留言')}
       </h2>
       <p className="mt-2 text-sm text-white/40">
-        {get('testimonial_subtitle', '真實的學員回饋，見證業績蛻變的歷程')}
+        {get(
+          'testimonial_subtitle',
+          '這裡的每一則留言，都來自現役私人教練'
+        )}
       </p>
+    </div>
+  );
+};
+
+// ─── quote-grid 版型：三欄引言牆 ──────────────────────────────
+// 移植自舊 CardStackTestimonial.tsx（一次顯示 3 筆、整組換場）
+// 與舊版差異：
+//   1. 不再有 DEMO_CARDS 假資料 —— 無資料時由外層直接不渲染
+//   2. is_published 由外層統一把關
+//   3. 補上 hover 暫停與 prefers-reduced-motion
+const QUOTE_GRID_PER_PAGE = 3;
+
+const QuoteGridView: React.FC<{
+  slides: TestimonialSlide[];
+  intervalMs: number;
+}> = ({ slides, intervalMs }) => {
+  const [groupIdx, setGroupIdx] = useState(0);
+  const [direction, setDirection] = useState(1); // 1=forward, -1=backward
+  const [paused, setPaused] = useState(false);
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+
+  const totalGroups = Math.ceil(slides.length / QUOTE_GRID_PER_PAGE);
+
+  // 自動輪播（整組切換）；只有一組、hover 中或使用者要求減少動態時不啟動
+  useEffect(() => {
+    if (totalGroups <= 1 || paused || reduceMotion) return;
+    const t = setInterval(() => {
+      setDirection(1);
+      setGroupIdx((i) => (i + 1) % totalGroups);
+    }, intervalMs);
+    return () => clearInterval(t);
+  }, [totalGroups, paused, reduceMotion, intervalMs]);
+
+  // 資料變少時避免 groupIdx 越界
+  useEffect(() => {
+    setGroupIdx((i) => (i >= totalGroups ? 0 : i));
+  }, [totalGroups]);
+
+  // 當前組的卡片（不循環補滿，最後一組可能少於 3 張，避免重複 key）
+  const groupCards = slides.slice(
+    groupIdx * QUOTE_GRID_PER_PAGE,
+    groupIdx * QUOTE_GRID_PER_PAGE + QUOTE_GRID_PER_PAGE
+  );
+
+  const goTo = (idx: number) => {
+    setDirection(idx > groupIdx ? 1 : -1);
+    setGroupIdx(idx);
+  };
+
+  return (
+    <div
+      className="max-w-5xl mx-auto px-4"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={groupIdx}
+          custom={direction}
+          variants={{
+            enter: (d: number) => ({ opacity: 0, x: d * 40 }),
+            center: { opacity: 1, x: 0 },
+            exit: (d: number) => ({ opacity: 0, x: d * -40 }),
+          }}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+        >
+          {groupCards.map((card, i) => {
+            const hasAvatar = !!card.image_url?.startsWith('http');
+            return (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: i * 0.07,
+                  duration: 0.35,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="bg-surface border border-white/10 rounded-2xl p-5 sm:p-6 flex flex-col gap-4 hover:border-gold/25 transition-colors duration-300"
+              >
+                {/* Quote */}
+                {card.quote && (
+                  <p className="text-white/70 text-sm leading-relaxed flex-1">
+                    「{card.quote}」
+                  </p>
+                )}
+
+                {/* Divider */}
+                <div className="w-8 h-px bg-gold/30" />
+
+                {/* Author */}
+                <div className="flex items-center gap-3">
+                  {hasAvatar ? (
+                    <img
+                      src={card.image_url}
+                      alt={card.name || '學員'}
+                      loading="lazy"
+                      className="w-9 h-9 rounded-full object-cover border border-white/15 shrink-0"
+                    />
+                  ) : (
+                    /* 無頭像時用姓名首字，不再回退到 pravatar 假圖 */
+                    <span
+                      aria-hidden="true"
+                      className="w-9 h-9 rounded-full border border-white/15 bg-white/5 shrink-0 flex items-center justify-center text-gold text-xs"
+                    >
+                      {card.name?.trim().charAt(0) || '·'}
+                    </span>
+                  )}
+                  <div>
+                    <p className="text-white/90 text-sm font-medium leading-tight">
+                      {card.name}
+                    </p>
+                    {card.achievement && (
+                      <p className="text-gold text-xs mt-0.5">
+                        {card.achievement}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Dot indicators（一組一個圓點） */}
+      {totalGroups > 1 && (
+        <div className="flex justify-center gap-2 mt-8">
+          {Array.from({ length: totalGroups }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              aria-label={`第 ${i + 1} 組`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === groupIdx
+                  ? 'w-6 bg-gold'
+                  : 'w-1.5 bg-white/20 hover:bg-white/40'
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -213,7 +377,18 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
     );
   if (!slides.length) return null;
 
-  const layout = config.card_layout ?? 'portrait';
+  const layout: TestimonialCardLayout = config.card_layout ?? 'portrait';
+
+  // ── quote-grid：文字引言牆版型（非 coverflow，走獨立分支）──
+  if (layout === 'quote-grid') {
+    return (
+      <section className="py-16 sm:py-20 bg-transparent">
+        <TestimonialHeader />
+        <QuoteGridView slides={slides} intervalMs={config.interval_ms} />
+      </section>
+    );
+  }
+
   const { STAGE_H } = LAYOUTS[layout];
   const isLandscape = layout === 'landscape';
 

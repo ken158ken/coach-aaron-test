@@ -14,6 +14,8 @@ import { SEOHead } from "@/components/seo";
 import { useScrollReveal, getStaggerClass } from "@/hooks/useScrollReveal";
 import { useLanguage } from "@/context/LanguageContext";
 import { useLocalize } from "@/hooks";
+import { getInitialData } from "@/ssr/initialData";
+import { dataKeys } from "@/ssr/routeData";
 import type { Course } from "@/types";
 
 /**
@@ -25,8 +27,12 @@ const Courses: React.FC = () => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { loc } = useLocalize();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── SSR 預抓資料 ──
+  const ssrCourses = getInitialData<Course[]>(dataKeys.coursesList());
+  const initialCourses = Array.isArray(ssrCourses) ? ssrCourses : [];
+
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [loading, setLoading] = useState(initialCourses.length === 0);
   const [error, setError] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -82,9 +88,23 @@ const Courses: React.FC = () => {
     return true;
   });
 
-  if (loading) {
+  // SEO Meta 標籤 — 必須在 early return 之前建立，
+  // 否則 loading 狀態下伺服器端輸出的 title 會是空的
+  const seoHead = (
+    <SEOHead
+      title={t.course.pageLabel}
+      description={language === "en" ? "Explore professional fitness courses, from beginner to advanced training" : "探索專業健身課程，從初學者到進階訓練，找到適合你的課程"}
+      keywords={language === "en" ? ["fitness courses", "training courses", "coaching", "online learning"] : ["健身課程", "訓練課程", "教練課程", "線上學習"]}
+      url="/courses"
+      breadcrumbs={[{ name: t.course.pageLabel, url: "/courses" }]}
+    />
+  );
+
+  // 已有 SSR 資料時不再顯示骨架（避免水合後閃一下）
+  if (loading && courses.length === 0) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
+        {seoHead}
         <Loading theme="studio" text={t.common.loading} />
       </div>
     );
@@ -92,13 +112,7 @@ const Courses: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-transparent">
-      {/* SEO Meta 標籤 */}
-      <SEOHead
-        title={t.course.pageLabel}
-        description={language === "en" ? "Explore professional fitness courses, from beginner to advanced training" : "探索專業健身課程，從初學者到進階訓練，找到適合你的課程"}
-        keywords={language === "en" ? ["fitness courses", "training courses", "coaching", "online learning"] : ["健身課程", "訓練課程", "教練課程", "線上學習"]}
-        url="/courses"
-      />
+      {seoHead}
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="studio-container">
         <PageHeader

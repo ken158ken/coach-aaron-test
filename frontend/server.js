@@ -11,6 +11,9 @@ import express from "express";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === "production";
 
+/** SSR 資料預抓的 API 根位址（本機開發預設指向 Express 後端） */
+const API_BASE = process.env.SSR_API_BASE || "http://localhost:5000";
+
 async function createServer() {
   const app = express();
 
@@ -34,7 +37,7 @@ async function createServer() {
     const url = req.originalUrl;
 
     try {
-      let template, render;
+      let template, render, prefetch;
 
       if (!isProduction) {
         // Dev: read template and transform with Vite
@@ -43,7 +46,9 @@ async function createServer() {
           "utf-8",
         );
         template = await vite.transformIndexHtml(url, template);
-        render = (await vite.ssrLoadModule("/src/entry-server.tsx")).render;
+        const mod = await vite.ssrLoadModule("/src/entry-server.tsx");
+        render = mod.render;
+        prefetch = mod.prefetch;
       } else {
         // Prod: use built assets (CJS format for Vercel compatibility)
         template = fs.readFileSync(
@@ -52,16 +57,35 @@ async function createServer() {
         );
         const serverModule = await import("./dist/server/entry-server.cjs");
         render = serverModule.render || serverModule.default?.render;
+        prefetch = serverModule.prefetch || serverModule.default?.prefetch;
       }
 
-      const { html: appHtml, head } = render(url);
+      // ── 路由層資料預抓（失敗時降級為空物件，不中斷 SSR） ──
+      let initialData = {};
+      if (typeof prefetch === "function") {
+        try {
+          initialData = await prefetch(url, { apiBase: API_BASE });
+        } catch (prefetchError) {
+          console.error("⚠️ Prefetch failed (continuing):", prefetchError.message);
+          initialData = {};
+        }
+      }
+
+      const {
+        html: appHtml,
+        head,
+        initialDataScript,
+      } = render(url, initialData);
 
       // 注入 SSR 內容和 head 標籤
       let html = template.replace("<!--ssr-outlet-->", appHtml);
 
-      // 如果有 head 標籤，注入到 <!--ssr-head--> 位置
-      if (head) {
-        html = html.replace("<!--ssr-head-->", head);
+      // head 標籤 + 初始資料 script 一併注入到 <!--ssr-head--> 位置
+      const headBlock = [head || "", initialDataScript || ""]
+        .filter(Boolean)
+        .join("\n");
+      if (headBlock) {
+        html = html.replace("<!--ssr-head-->", headBlock);
       }
 
       res.status(200).set({ "Content-Type": "text/html" }).end(html);

@@ -230,8 +230,13 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
   const { get } = useSiteContent();
   const gHeader = {
     tagline: get('gallery_tagline', 'Gallery'),
-    title: get('gallery_title', '相片記錄'),
-    subtitle: get('gallery_subtitle', '每張照片背後都有一個真實的蛻變故事'),
+    // 與 DirectionAwareGallery 分工：本區＝培訓現場（課程／講座照），
+    // Moments＝幕後／團隊／日常，避免兩區標題語意重疊
+    title: get('gallery_title', '培訓現場'),
+    subtitle: get(
+      'gallery_subtitle',
+      '課程、講座、陪跑會議——實際發生過的現場'
+    ),
   };
 
   // 觸控滑動追蹤

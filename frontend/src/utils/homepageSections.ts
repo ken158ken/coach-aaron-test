@@ -34,6 +34,15 @@ export interface HomepageSection {
 
 /**
  * 首頁區塊清單（依首頁從上到下順序）
+ *
+ * 2026-07 首頁改版後的順序：
+ *   Hero → 關於教練 → 主要服務項目與專長 → 真實學員留言 → Moments
+ *   → 其他人設經歷 → Podcast → Credentials 專業認證
+ *
+ * 註：`review_tagline` / `review_title` / `review_subtitle` 三個 key
+ *     在「學員真實評價」區塊併入「學員見證」後已無元件讀取。
+ *     DB 資料刻意保留（客戶可能編輯過），但不再列於此清單，
+ *     因此會被歸到 AdminContent 的 "others" 群組。
  */
 export const HOMEPAGE_SECTIONS: HomepageSection[] = [
   {
@@ -67,52 +76,28 @@ export const HOMEPAGE_SECTIONS: HomepageSection[] = [
     ],
   },
   {
-    id: 'podcast',
-    title: 'PODCAST 深海電台',
-    tagline: 'Podcast Section',
-    description: 'Podcast 區塊的標題、副標。',
-    icon: '🎙',
-    keys: ['podcast_tagline', 'podcast_title', 'podcast_subtitle'],
+    id: 'services',
+    title: '主要服務項目與專長',
+    tagline: 'Services',
+    description:
+      '服務項目區塊的標題與副標。課程內容直接讀「課程管理」的資料，依分類自動分組。',
+    icon: '🎯',
+    keys: ['services_tagline', 'services_title', 'services_subtitle'],
     hint: {
-      text: '👉 單集內容（標題、描述、時長、分類…）請到「Podcast 單集」tab 管理',
-      targetTab: 'podcast',
+      text: '👉 課程名稱、簡述、價格、分類請到「課程管理」頁編修（分類含「陪跑」「線上」「一對一」關鍵字會自動歸組）',
     },
   },
   {
     id: 'testimonial',
-    title: '學員見證幻燈片',
+    title: '真實學員留言',
     tagline: 'Student Reviews',
-    description: '學員見證 coverflow 輪播的區塊標題與副標。',
+    description:
+      '學員見證區塊的標題與副標。可在「學員見證幻燈片」tab 切換三種版型（直立式／橫式／引言牆）。',
     icon: '🏆',
     keys: ['testimonial_tagline', 'testimonial_title', 'testimonial_subtitle'],
     hint: {
-      text: '👉 幻燈片內容（照片、姓名、見證文）請到「學員見證幻燈片」tab 管理',
+      text: '👉 幻燈片內容（照片、姓名、見證文）與版型切換請到「學員見證幻燈片」tab 管理',
       targetTab: 'testimonial',
-    },
-  },
-  {
-    id: 'review',
-    title: '學員真實評價',
-    tagline: 'Real Reviews',
-    description:
-      '學員真實評價 3 格同步切換區塊的標題與副標（共用學員見證資料）。',
-    icon: '💬',
-    keys: ['review_tagline', 'review_title', 'review_subtitle'],
-    hint: {
-      text: 'ℹ️ 此區塊共用「學員見證幻燈片」資料，改那邊這邊也會一起變',
-      targetTab: 'testimonial',
-    },
-  },
-  {
-    id: 'gallery',
-    title: 'GALLERY 相片記錄',
-    tagline: 'Gallery Coverflow',
-    description: '相片記錄 3D 輪播區塊的標題與副標。',
-    icon: '🖼',
-    keys: ['gallery_tagline', 'gallery_title', 'gallery_subtitle'],
-    hint: {
-      text: '👉 輪播照片請到「相片輪播」tab 管理',
-      targetTab: 'gallery',
     },
   },
   {
@@ -124,6 +109,42 @@ export const HOMEPAGE_SECTIONS: HomepageSection[] = [
     keys: ['moments_tagline', 'moments_title', 'moments_subtitle'],
     hint: {
       text: 'ℹ️ 此區塊共用「相片輪播」資料，改那邊這邊也會一起變',
+      targetTab: 'gallery',
+    },
+  },
+  {
+    id: 'career',
+    title: '其他人設經歷',
+    tagline: 'Career Path',
+    description: '經歷輪播區塊的標題與副標（房仲業務、私人教練、總教官）。',
+    icon: '🧭',
+    keys: ['career_tagline', 'career_title', 'career_subtitle'],
+    hint: {
+      text: 'ℹ️ 三段經歷內容目前寫在程式中（CareerCarousel.tsx），尚未開放後台編輯',
+    },
+  },
+  {
+    id: 'podcast',
+    title: 'PODCAST 深海電台',
+    tagline: 'Podcast Section',
+    description: 'Podcast 區塊的標題、副標。（已移至首頁下方）',
+    icon: '🎙',
+    keys: ['podcast_tagline', 'podcast_title', 'podcast_subtitle'],
+    hint: {
+      text: '👉 單集內容（標題、描述、時長、分類…）請到「Podcast 單集」tab 管理',
+      targetTab: 'podcast',
+    },
+  },
+  {
+    id: 'gallery',
+    title: 'GALLERY 相片記錄（首頁已不顯示）',
+    tagline: 'Gallery Coverflow',
+    description:
+      '⚠️ 此區塊已從首頁移除（與 MOMENTS 相片重複），文案僅用於後台預覽，改動不會影響首頁。',
+    icon: '🖼',
+    keys: ['gallery_tagline', 'gallery_title', 'gallery_subtitle'],
+    hint: {
+      text: '👉 照片本身仍由「相片輪播」tab 管理，並會顯示在首頁的 MOMENTS 區塊',
       targetTab: 'gallery',
     },
   },

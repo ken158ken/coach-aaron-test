@@ -19,6 +19,8 @@ import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { useLanguage } from "@/context/LanguageContext";
 import { useLocalize } from "@/hooks/useLocalize";
+import { getInitialData } from "@/ssr/initialData";
+import { dataKeys } from "@/ssr/routeData";
 import type { Lesson } from "@/types";
 
 const LessonDetail: React.FC = () => {
@@ -27,8 +29,13 @@ const LessonDetail: React.FC = () => {
   const { t, language } = useLanguage();
   const { loc } = useLocalize();
 
-  const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ── SSR 預抓資料（key 帶 :id） ──
+  const ssrLesson = id ? getInitialData<Lesson>(dataKeys.lesson(id)) : undefined;
+
+  const [lesson, setLesson] = useState<Lesson | null>(ssrLesson ?? null);
+  const [loading, setLoading] = useState(!ssrLesson);
+  /** 首次 fetch 已有 SSR 資料 → 不切回 loading，避免水合後閃骨架 */
+  const skipFirstLoadingRef = useRef(Boolean(ssrLesson));
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
 
@@ -42,7 +49,7 @@ const LessonDetail: React.FC = () => {
     if (!id) return;
     (async () => {
       try {
-        setLoading(true);
+        if (!skipFirstLoadingRef.current) setLoading(true);
         setError("");
         const data = await lessonService.getById(id);
         if (!alive) return;
@@ -52,6 +59,7 @@ const LessonDetail: React.FC = () => {
         if (alive) setError(t.common.error);
       } finally {
         if (alive) setLoading(false);
+        skipFirstLoadingRef.current = false;
       }
     })();
     return () => {
@@ -113,26 +121,59 @@ const LessonDetail: React.FC = () => {
     }
   }, [activeIdx]);
 
+  // ── SEO ──
+  // 必須在 early return 之前建立，否則 loading 狀態下伺服器端輸出空 title
+  const lessonObj = (lesson ?? {}) as unknown as Record<string, unknown>;
+  const lessonsLabel = language === "en" ? "Lessons" : "教學影片";
+  const seoTitle =
+    loc(lessonObj, "title") || (id ? `${lessonsLabel} #${id}` : lessonsLabel);
+  const lessonUrl = `/lessons/${lesson?.id ?? id ?? ""}`;
+  const seoHead = (
+    <SEOHead
+      title={seoTitle}
+      description={loc(lessonObj, "description") || undefined}
+      keywords={lesson?.keywords ? lesson.keywords.split(",").map((k) => k.trim()) : ["教學影片", "健身教學", "阿倫教官"]}
+      image={lesson?.thumbnail_url || undefined}
+      url={lessonUrl}
+      type="article"
+      isArticle={Boolean(lesson)}
+      noIndex={Boolean(error) || (!loading && !lesson)}
+      publishedTime={lesson?.created_at}
+      modifiedTime={lesson?.updated_at}
+      author="阿倫教官"
+      breadcrumbs={[
+        { name: lessonsLabel, url: "/lessons" },
+        { name: seoTitle, url: lessonUrl },
+      ]}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loading theme="luxe" text={t.common.loading} />
-      </div>
+      <>
+        {seoHead}
+        <div className="min-h-screen flex items-center justify-center">
+          <Loading theme="luxe" text={t.common.loading} />
+        </div>
+      </>
     );
   }
   if (error || !lesson) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white/60 mb-4">{error || "影片不存在"}</p>
-          <button
-            onClick={() => navigate("/lessons")}
-            className="text-gold hover:underline"
-          >
-            ← {language === "en" ? "Back to lessons" : "回到教學影片"}
-          </button>
+      <>
+        {seoHead}
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-white/60 mb-4">{error || "影片不存在"}</p>
+            <button
+              onClick={() => navigate("/lessons")}
+              className="text-gold hover:underline"
+            >
+              ← {language === "en" ? "Back to lessons" : "回到教學影片"}
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -145,18 +186,7 @@ const LessonDetail: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-transparent">
-      <SEOHead
-        title={loc(lesson as unknown as Record<string, unknown>, "title")}
-        description={loc(lesson as unknown as Record<string, unknown>, "description") || undefined}
-        keywords={lesson.keywords ? lesson.keywords.split(",").map((k) => k.trim()) : ["教學影片", "健身教學", "阿倫教官"]}
-        image={lesson.thumbnail_url || undefined}
-        url={`/lessons/${lesson.id}`}
-        type="article"
-        isArticle={true}
-        publishedTime={lesson.created_at}
-        modifiedTime={lesson.updated_at}
-        author="阿倫教官"
-      />
+      {seoHead}
 
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-20 px-4">
         <div className="max-w-7xl mx-auto">
