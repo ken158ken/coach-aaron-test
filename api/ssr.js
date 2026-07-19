@@ -87,7 +87,15 @@ module.exports = async function handler(req, res) {
     const prefetch = serverModule.prefetch || serverModule.default?.prefetch;
     if (typeof prefetch === "function") {
       try {
-        initialData = await prefetch(url, { apiBase: resolveApiBase(req) });
+        // 逾時放寬：後端 API 為另一個 serverless function，冷啟動 + 查詢
+        // 實測熱機仍需 ~2s，預設 3.5s/5s 會讓預抓幾乎必定逾時、退回
+        // slug 推導的 fallback meta（內頁 SEO 形同未修）。
+        // vercel.json 給 api/ssr.js 的 maxDuration 為 10s，此處預留約 2s 給渲染與注入。
+        initialData = await prefetch(url, {
+          apiBase: resolveApiBase(req),
+          timeoutMs: 6000,
+          budgetMs: 7500,
+        });
         const keys = Object.keys(initialData);
         if (keys.length > 0) {
           console.log(`📦 Prefetched for ${url}: ${keys.join(", ")}`);
@@ -146,8 +154,11 @@ module.exports = async function handler(req, res) {
       .setHeader("Content-Type", "text/html; charset=utf-8")
       .setHeader("X-Rendered-By", "ssr")
       .setHeader(
+        // s-maxage 由 10s 拉長到 60s：每次 MISS 都要付一次「SSR 呼叫後端 API」
+        // 的成本（實測 2~4s），10s 幾乎等於每個請求都重算。
+        // stale-while-revalidate 讓過期後仍先回舊頁再背景更新，使用者不會等。
         "Cache-Control",
-        "public, s-maxage=10, stale-while-revalidate=60",
+        "public, s-maxage=60, stale-while-revalidate=600",
       )
       .end(html);
   } catch (e) {
