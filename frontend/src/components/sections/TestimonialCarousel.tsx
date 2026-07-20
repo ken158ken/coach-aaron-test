@@ -24,10 +24,7 @@ import {
 } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import {
-  AnimatedTestimonials,
-  type AnimatedTestimonialItem,
-} from '@/components/ui/animated-testimonials';
+import { CardStack, type CardStackItem } from '@/components/ui/card-stack';
 
 // ─── Aceternity AnimatedTestimonials 風格：逐字淡入 ───────────────────────
 const AnimatedQuote: React.FC<{ text: string; slideId: number }> = ({
@@ -359,18 +356,18 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
     if (initialConfig) setConfig(initialConfig);
   }, [initialConfig]);
 
-  // 前台 Aceternity animated-testimonials 的資料對應
-  //   quote       ← 見證內容
+  // 前台 Aceternity card-stack 的資料對應
+  //   content     ← 見證內容（quote 欄位）
   //   name        ← 見證者姓名
-  //   designation ← 身份/角色（achievement 欄位）
-  //   src         ← 頭像（image_url，非 http 則留空，交由元件顯示佔位）
-  const animatedItems = useMemo<AnimatedTestimonialItem[]>(
+  //   designation ← 身份/成就（achievement 欄位；資料模型沒有 role）
+  //   （card-stack 以文字為主，頭像非必要，故不對應 image_url）
+  const cardStackItems = useMemo<CardStackItem[]>(
     () =>
       slides.map((s) => ({
-        quote: s.quote,
+        id: s.id,
         name: s.name,
         designation: s.achievement,
-        src: s.image_url?.startsWith('http') ? s.image_url : undefined,
+        content: s.quote ? <>「{s.quote}」</> : null,
       })),
     [slides]
   );
@@ -397,19 +394,16 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
     );
   if (!slides.length) return null;
 
-  // ── 前台預設呈現：Aceternity animated-testimonials（單張輪播、自動播放）──
+  // ── 前台預設呈現：Aceternity card-stack（堆疊、每 5 秒翻牌循環）──
+  //    「每三個一組、五秒輪播一次」：card-stack 同時可見約 3 張，每 5 秒
+  //    最上面那張翻到最底、循環。見證超過 3 筆時持續循環（3 張可見、5 秒換一張）。
   //    admin 預覽（preview=true）仍走下方既有的 portrait/landscape/quote-grid
   //    版型分支，讓後台可預覽 card_layout 設定；is_published 由上方守門。
   if (!preview) {
     return (
       <section className="py-16 sm:py-20">
         <TestimonialHeader />
-        <AnimatedTestimonials
-          testimonials={animatedItems}
-          autoplay
-          autoplayMs={5000}
-          pauseOnHover
-        />
+        <CardStack items={cardStackItems} intervalMs={5000} visibleCount={3} />
       </section>
     );
   }

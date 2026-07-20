@@ -40,17 +40,31 @@ fi
 #     相同的推導邏輯作為 fallback；若要在 runtime 覆寫，請在 Vercel
 #     專案設定中加入 SITE_URL 環境變數。
 
-echo "=== 1/5 Building backend ==="
+echo "=== 1/6 Building backend ==="
 cd backend && npm install && npm run build && cd ..
 
-echo "=== 2/5 Building frontend ==="
+echo "=== 2/6 Building frontend ==="
 cd frontend && npm install && npm run build && cd ..
 
-echo "=== 3/5 Copying SSR assets to api/ ==="
+echo "=== 3/6 Copying SSR assets to api/ ==="
 cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs
 cp frontend/dist/client/index.html api/_ssr_template.html
 
-echo "=== 4/5 Rewriting robots.txt Sitemap host ==="
+echo "=== 4/6 Stamping service worker cache version ==="
+# sw.js 的 SW_VERSION 決定快取版本；SW 啟用時會刪除「非本版本」的所有舊快取。
+# 這裡把佔位符 __SW_BUILD_ID__ 換成本次 commit SHA（無則用時間戳），
+# 使每次部署都是新版本字串 → 每次部署自動清除使用者端舊快取。
+SW="frontend/dist/client/sw.js"
+SW_ID="${VERCEL_GIT_COMMIT_SHA:-$(date +%Y%m%d%H%M%S)}"
+if [ -f "$SW" ]; then
+  sed -i.bak "s|__SW_BUILD_ID__|${SW_ID}|g" "$SW"
+  rm -f "${SW}.bak"
+  echo "    SW_VERSION = ${SW_ID}"
+else
+  echo "    ⚠️  找不到 $SW，略過"
+fi
+
+echo "=== 5/6 Rewriting robots.txt Sitemap host ==="
 # frontend/public/robots.txt 內的 Sitemap 行是 localhost 佔位值，
 # 這裡改寫為本次部署真正的網域，確保 robots 宣告的 sitemap 位置永遠正確。
 ROBOTS="frontend/dist/client/robots.txt"
@@ -63,7 +77,7 @@ else
   echo "    ⚠️  找不到 $ROBOTS，略過"
 fi
 
-echo "=== 5/5 Removing index.html from outputDir ==="
+echo "=== 6/6 Removing index.html from outputDir ==="
 rm frontend/dist/client/index.html
 
 echo "=== Build complete ==="

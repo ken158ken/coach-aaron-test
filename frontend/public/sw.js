@@ -13,7 +13,10 @@
 
 /* eslint-disable no-restricted-globals */
 
-const SW_VERSION = "v1.2026-04-26";
+// 部署時由 scripts/vercel-build.sh 用 git commit SHA 取代 __SW_BUILD_ID__，
+// 使每次部署都是新版本字串 → 下方 activate 會清掉「不是本版本」的所有舊快取。
+// 本機開發（未經建置替換）時維持此佔位字串即可，行為一致。
+const SW_VERSION = "__SW_BUILD_ID__";
 const SHELL_CACHE = `aaron-shell-${SW_VERSION}`;
 const IMAGE_CACHE = `aaron-image-${SW_VERSION}`;
 
@@ -74,7 +77,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 其他靜態 / 文件 — stale-while-revalidate
+  // HTML 導覽（換頁 / 重新整理）— 網路優先：
+  // 部署後立即拿到新 HTML（進而載入新的 hash 化 JS/CSS），不再「慢一次」；
+  // 只有離線 / 網路失敗時才回退到快取的 shell。
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirst(SHELL_CACHE, request));
+    return;
+  }
+
+  // 其他靜態資源（hash 化的 JS/CSS/字型）— stale-while-revalidate
   event.respondWith(staleWhileRevalidate(SHELL_CACHE, request));
 });
 

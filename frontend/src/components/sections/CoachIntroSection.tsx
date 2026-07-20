@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { TextButton } from '@/components/ui';
 import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
@@ -33,8 +34,59 @@ const DEFAULT_BULLETS: string[] = [
   '逾 1000 小時教學與授課時數',
 ];
 
-/** 預設教練照（DB 無 Cloudinary URL 時 fallback） */
-const DEFAULT_IMAGE = '/images/coach-aaron.jpg';
+/**
+ * 「關於阿倫教官」輪播照片（每 3 秒交叉淡入換一張）。
+ * 預設用這 5 張 Cloudinary 照片；可由 site_content 的 `coach_intro_images`
+ * （JSON 陣列字串）覆寫。舊的單張 key `coach_intro_image_url` 已不再用於本區。
+ */
+const COACH_IMAGES: string[] = [
+  'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471250/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_3_oswqyt.jpg',
+  'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471253/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_10_irutga.jpg',
+  'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471255/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_8_r0asnz.jpg',
+  'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471245/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_2_takrul.jpg',
+  'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471246/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_4_qbqs36.jpg',
+];
+
+/** 輪播間隔（ms） */
+const IMAGE_ROTATE_MS = 3000;
+
+/** 交叉淡入輪播圖（每 IMAGE_ROTATE_MS 換一張；reduce-motion 時只顯示第一張） */
+const RotatingImage: React.FC<{ images: string[]; alt: string }> = ({ images, alt }) => {
+  const [idx, setIdx] = useState(0);
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+
+  useEffect(() => {
+    if (reduceMotion || images.length <= 1) return;
+    const t = setInterval(
+      () => setIdx((i) => (i + 1) % images.length),
+      IMAGE_ROTATE_MS
+    );
+    return () => clearInterval(t);
+  }, [reduceMotion, images.length]);
+
+  // images 變更（DB 載入）時避免索引越界
+  useEffect(() => {
+    setIdx((i) => (i >= images.length ? 0 : i));
+  }, [images.length]);
+
+  if (!images.length) return null;
+
+  return (
+    <AnimatePresence mode="sync">
+      <motion.img
+        key={images[idx]}
+        src={images[idx]}
+        alt={alt}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.8, ease: 'easeInOut' }}
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="lazy"
+      />
+    </AnimatePresence>
+  );
+};
 
 const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   className = '',
@@ -57,7 +109,7 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   const [coachName, setCoachName] = useState('阿倫教官');
   // 頭銜備選：'教練職涯培訓講師' ／ '教練的教練'
   const [coachTitle, setCoachTitle] = useState('私教變現顧問');
-  const [imageUrl, setImageUrl] = useState(DEFAULT_IMAGE);
+  const [images, setImages] = useState<string[]>(COACH_IMAGES);
   const [bullets, setBullets] = useState<string[]>(DEFAULT_BULLETS);
   // CTA 備選：'我的職涯故事' ／ '為什麼是我'
   const [cta, setCta] = useState('完整經歷');
@@ -74,8 +126,18 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
           setCoachName(content.coach_intro_name);
         if (content.coach_intro_title?.trim())
           setCoachTitle(content.coach_intro_title);
-        if (content.coach_intro_image_url?.trim())
-          setImageUrl(content.coach_intro_image_url);
+        // 輪播照片：優先讀 coach_intro_images（JSON 陣列字串），沒有就用預設 5 張
+        if (content.coach_intro_images) {
+          try {
+            const arr = JSON.parse(content.coach_intro_images);
+            if (Array.isArray(arr) && arr.length > 0) setImages(arr);
+          } catch (err) {
+            console.warn(
+              '[CoachIntroSection] 解析 coach_intro_images 失敗',
+              err
+            );
+          }
+        }
         if (content.coach_intro_cta?.trim()) setCta(content.coach_intro_cta);
         if (content.coach_intro_bullets) {
           try {
@@ -120,12 +182,8 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
             data-aos="fade-right"
             data-aos-duration="800"
           >
-            <div className="aspect-3/4 rounded-xl overflow-hidden">
-              <img
-                src={imageUrl}
-                alt={coachName}
-                className="w-full h-full object-cover"
-              />
+            <div className="aspect-3/4 rounded-xl overflow-hidden relative">
+              <RotatingImage images={images} alt={coachName} />
             </div>
             {/* 圖片裝飾框 — 也做 breathing glow */}
             <motion.div
