@@ -315,6 +315,55 @@ const QuoteGridView: React.FC<{
   );
 };
 
+// ─── 前台預設版型：三欄各自輪播的 card-stack ─────────────────
+// 桌機同時顯示最多三欄，每欄一個獨立 CardStack，各自每 5 秒翻牌。
+// 三欄餵入「同一份已發布清單」但分別以位移 0 / 1 / 2 旋轉，
+// 使任一時刻三欄頂端都是不同留言，且各欄各自循環。
+// 留言不足時欄數 = min(3, 留言數)；窄螢幕（<768px）收成單欄餵完整清單。
+const FRONT_COLUMNS = 3;
+const FRONT_INTERVAL_MS = 5000;
+
+const FrontTestimonialStacks: React.FC<{ items: CardStackItem[] }> = ({
+  items,
+}) => {
+  // SSR 安全：初值 false（=窄螢幕單欄），client 端 hydrate 後再依斷點升級為多欄
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const columnCount = isDesktop ? Math.min(FRONT_COLUMNS, items.length) : 1;
+
+  // 每欄 = 以位移 offset 旋轉後的完整清單
+  const columns = useMemo(
+    () =>
+      Array.from({ length: columnCount }, (_, offset) => [
+        ...items.slice(offset),
+        ...items.slice(0, offset),
+      ]),
+    [items, columnCount]
+  );
+
+  // 完整字面量供 Tailwind JIT 掃描
+  const gridColsClass =
+    columnCount >= 3
+      ? 'md:grid-cols-3'
+      : columnCount === 2
+        ? 'md:grid-cols-2'
+        : 'md:grid-cols-1';
+
+  return (
+    <div
+      className={`mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 ${gridColsClass}`}
+    >
+      {columns.map((colItems, i) => (
+        <CardStack
+          key={i}
+          items={colItems}
+          intervalMs={FRONT_INTERVAL_MS}
+          visibleCount={3}
+        />
+      ))}
+    </div>
+  );
+};
+
 // ─── Component ────────────────────────────────────────────────
 const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
   preview = false,
@@ -394,16 +443,17 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
     );
   if (!slides.length) return null;
 
-  // ── 前台預設呈現：Aceternity card-stack（堆疊、每 5 秒翻牌循環）──
-  //    「每三個一組、五秒輪播一次」：card-stack 同時可見約 3 張，每 5 秒
-  //    最上面那張翻到最底、循環。見證超過 3 筆時持續循環（3 張可見、5 秒換一張）。
+  // ── 前台預設呈現：三欄各自輪播的 Aceternity card-stack ──
+  //    桌機同時顯示最多三欄，每欄一個獨立 card-stack、各自每 5 秒翻牌循環；
+  //    三欄以位移 0/1/2 旋轉同一份清單，任一時刻頂端都是不同留言。
+  //    留言不足時欄數 = min(3, 留言數)；窄螢幕收成單欄餵完整清單。
   //    admin 預覽（preview=true）仍走下方既有的 portrait/landscape/quote-grid
   //    版型分支，讓後台可預覽 card_layout 設定；is_published 由上方守門。
   if (!preview) {
     return (
       <section className="py-16 sm:py-20">
         <TestimonialHeader />
-        <CardStack items={cardStackItems} intervalMs={5000} visibleCount={3} />
+        <FrontTestimonialStacks items={cardStackItems} />
       </section>
     );
   }

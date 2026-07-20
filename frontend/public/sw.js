@@ -24,14 +24,16 @@ const IMAGE_CACHE = `aaron-image-${SW_VERSION}`;
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
+    // ⚠️ 刻意「不」預快取 HTML（"/"）：
+    //   HTML 會引用 hash 化的 JS/CSS，若把 HTML 快取起來、之後又部署新版，
+    //   舊 HTML 會指向已不存在的舊 hash 檔 → CSS/JS 404、整頁壞掉。
+    //   HTML 一律走網路優先（見下方 fetch handler），永遠拿到當前部署的正確引用。
+    //   這裡只預快取「不會因部署而改變路徑」的少數靜態檔。
     caches.open(SHELL_CACHE).then((cache) =>
       cache
         .addAll([
-          "/",
           "/manifest.json",
           "/favicon.svg",
-          "/icons/icon-192.png",
-          "/icons/icon-512.png",
         ])
         .catch(() => {
           /* 個別檔案不存在不阻擋安裝 */
