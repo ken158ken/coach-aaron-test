@@ -1,22 +1,23 @@
 /**
- * ServicesSection - 主要服務項目與專長
+ * ServicesSection - 主要服務項目與專長（精簡・需求導向版）
  * @module components/sections/ServicesSection
  *
  * @description
- * 直接接既有的 `courses` 資料（`courseService.getCourses()` → `GET /api/courses`），
- * 不另開資料表。依 `course_category` 分組呈現（陪跑方案／線上課程／一對一服務），
- * 每門課顯示名稱、簡述與價格。
+ * 精簡版：不再把 9 門課全部列出，而是收斂成「三種需求 → 三種服務」的
+ * 三張卡片，一列排完。每張卡對應一個客戶痛點（成交/續約卡關、想單點補強、
+ * 想針對自己客製），並用真實 `courses` 資料算出「幾門方案／起價」，
+ * 點擊帶到課程總覽看完整內容。
  *
- * 價格顯示沿用 `pages/Courses.tsx` 的既有規則：
- * 只有後端回傳 `show_price === true` 時才揭露金額，否則顯示「價格洽詢」。
+ * 為什麼這樣做：首頁要「快速提出需求 + 有動畫」，不需要在首頁就攤開所有課程；
+ * 課程明細留在 /courses。這樣首頁篇幅大幅縮短、資訊層次更清楚。
  *
- * SSR 注意：資料在 useEffect 取得，載入中回傳固定高度骨架（不回 null），
- * 避免 SSR → hydration 之間版面跳動（CLS）。
+ * 動畫：framer-motion whileInView 逐張淡入上移（不引入新套件）。
+ * 資料仍來自 courseService.getCourses()（GET /api/courses），沿用
+ * show_price 規則計算起價。SSR：資料在 useEffect 取得，載入中顯示等高骨架。
  *
  * ─── 文案替換說明 ──────────────────────────────────────────────
- * 正式文案產出後只需改 `SERVICES_COPY`（亦可由 site_content 的
- * services_tagline / services_title / services_subtitle 覆寫），
- * 分組標題與排序改 `CATEGORY_ORDER` 即可。
+ * 區塊標題可由 site_content 的 services_tagline / services_title /
+ * services_subtitle 覆寫；三張卡的痛點與說明改 `NEED_CARDS` 即可。
  */
 
 import React, { useEffect, useState } from 'react';
@@ -26,120 +27,90 @@ import { courseService } from '@/services';
 import { useSiteContent } from '@/hooks/useSiteContent';
 import type { Course } from '@/types';
 
-// ─── 文案（定稿版，來源 REPORTS/INDEX_B2B文案_定稿草案.md 第 3 節）──
+// ─── 文案（來源 REPORTS/INDEX_B2B文案_定稿草案.md 第 3 節）──
 
-/**
- * 區塊標題文案；同名的 site_content key 若有值會優先採用。
- *
- * 主標題備選（客戶日後可替換）：
- *   '我能幫你解決什麼'（痛點導向）／'從卡關到穩定業績，三種路徑'（結構導向）
- * 導言備選：
- *   B 案：'有人卡在體驗課成交，有人卡在續約，有人是整條路都想重走一次。
- *          所以我提供三種深度的服務——你不必全買，挑最痛的那一個先解決。'
- *   C 案：'三種形式，一個目標：把你的專業變成能算得出來的收入。
- *          從一堂線上課，到一整年的陪跑，深度由你決定。'
- * CTA 備選：'看全部 9 門課' ／ '課程總覽'
- */
 const SERVICES_COPY = {
   tagline: 'Services',
-  title: '主要服務項目與專長',
-  subtitle:
-    '教練的收入問題，通常不是「不夠專業」，是缺一套流程。我把十年的私教與帶團隊經驗拆成三種形式：整套陪跑、單點補強、一對一客製。你現在卡在哪一關，就從哪裡開始。',
-  /** 無任何已發布課程時的替代說明 */
-  empty: '服務項目整理中，歡迎直接來訊詢問。',
-  /** 未登入或未開放售價時的價格文字 */
+  title: '你現在卡在哪一關？',
+  subtitle: '三種需求、三種服務。不必全買，從最痛的那一個先解決。',
   inquirePrice: '價格洽詢',
   free: '免費',
-  cta: '查看完整課程',
+  from: '起',
+  cta: '看完整課程',
 } as const;
 
 /**
- * 分組顯示順序與標題。
- * 以「關鍵字比對 course_category」的方式歸類，
- * 因此後台把分類寫成「變現陪跑方案」或「陪跑」都能正確歸到同一組。
- * 未命中的分類會以原始分類名稱附加在最後，不會消失。
+ * 三張需求卡。`match` 用關鍵字比對 course_category，
+ * 藉此把該類課程的「門數」與「起價」動態算進卡片。
  */
-const CATEGORY_ORDER: { key: string; match: string[]; title: string; description: string }[] = [
+interface NeedCard {
+  key: string;
+  /** 對應課程分類的關鍵字 */
+  match: string[];
+  /** 痛點（eyebrow） */
+  need: string;
+  /** 服務名稱 */
+  title: string;
+  /** 一句話說明（精簡） */
+  blurb: string;
+  /** 點擊前往（課程總覽） */
+  to: string;
+}
+
+const NEED_CARDS: NeedCard[] = [
   {
-    // 組別標題備選：'陪跑計畫｜從教練到經營者' ／ '主方案｜整套變現系統'
     key: 'coaching',
     match: ['陪跑'],
+    need: '想要整套系統、有人陪著落地',
     title: '變現陪跑方案',
-    description:
-      '不是聽完課就自己回去試。每週一次視訊覆盤、追蹤邀約數與成交數、訊息 24 小時內回覆——我陪你把系統真的裝到你的日常裡。三種期程對應三個階段的深度。',
+    blurb: '每週覆盤、追蹤邀約與成交數、訊息隨時問——把變現系統真正裝進你的日常。',
+    to: '/courses',
   },
   {
-    // 組別標題備選：'線上課程｜單點突破' ／ '哪裡卡住，就補哪裡'
     key: 'online',
     match: ['線上'],
+    need: '先從最痛的一個關卡補強',
     title: '線上課程',
-    description:
-      '還沒準備好投入陪跑，可以先從最痛的那一點開始。四門課各自對應一個具體關卡，隨時可看、無觀看期限。',
+    blurb: '體驗課成交、反對問題、續約話術——單點突破，隨時可看、無觀看期限。',
+    to: '/courses',
   },
   {
-    // ⚠️ DB 的 course_category 叫「一對一服務」，在此一律顯示為「一對一諮詢」，
-    //    避免被誤讀成一般民眾的一對一私教體能課（本站已停止承接 B2C）。
-    // 組別標題備選：'一對一｜針對你的狀況' ／ '客製諮詢'
     key: 'oneonone',
     match: ['一對一', '1對1'],
+    need: '想針對自己的數字客製',
     title: '一對一諮詢',
-    description:
-      '課程講的是通則，但你的瓶頸是你自己的。這兩項服務不給模板，直接從你目前的數字和心態下手，一個月一期。',
+    blurb: '課程講通則，你的瓶頸是你自己的。不給模板，直接從你的狀況下手。',
+    to: '/courses',
   },
 ];
 
-/** 分組後的結果 */
-interface ServiceGroup {
-  key: string;
-  title: string;
-  description: string;
-  courses: Course[];
+/** 某一分類的統計（門數 + 起價文字） */
+interface NeedStat {
+  count: number;
+  priceText: string | null;
 }
 
-/**
- * 依 course_category 將課程分組，並套用 CATEGORY_ORDER 的順序與標題。
- * 找不到對應分類的課程會依原始分類名稱自成一組，排在已知分組之後。
- */
-function groupCourses(courses: Course[]): ServiceGroup[] {
-  const known: ServiceGroup[] = CATEGORY_ORDER.map((c) => ({
-    key: c.key,
-    title: c.title,
-    description: c.description,
-    courses: [],
-  }));
-  const extras = new Map<string, ServiceGroup>();
+/** 計算某張需求卡對應分類的門數與起價 */
+function statFor(card: NeedCard, courses: Course[]): NeedStat {
+  const matched = courses.filter((c) => {
+    const cat = c.course_category?.trim() || '';
+    return card.match.some((m) => cat.includes(m));
+  });
+  if (matched.length === 0) return { count: 0, priceText: null };
 
-  for (const course of courses) {
-    const category = course.course_category?.trim() || '';
-    const hitIndex = CATEGORY_ORDER.findIndex((c) =>
-      c.match.some((m) => category.includes(m))
-    );
+  // 起價：只看有開放售價、且價格 > 0 的課程，取最小值
+  const prices = matched
+    .filter((c) => c.show_price && c.price && c.price > 0)
+    .map((c) => c.price as number);
 
-    if (hitIndex >= 0) {
-      known[hitIndex].courses.push(course);
-      continue;
-    }
-
-    const fallbackKey = category || 'others';
-    if (!extras.has(fallbackKey)) {
-      extras.set(fallbackKey, {
-        key: fallbackKey,
-        title: category || '其他服務',
-        description: '',
-        courses: [],
-      });
-    }
-    extras.get(fallbackKey)!.courses.push(course);
+  let priceText: string | null;
+  if (prices.length === 0) {
+    priceText = SERVICES_COPY.inquirePrice;
+  } else {
+    const min = Math.min(...prices);
+    priceText = `NT$ ${min.toLocaleString()} ${SERVICES_COPY.from}`;
   }
-
-  return [...known, ...extras.values()].filter((g) => g.courses.length > 0);
-}
-
-/** 價格文字（沿用 pages/Courses.tsx 的 show_price 規則） */
-function formatPrice(course: Course): string {
-  if (!course.show_price) return SERVICES_COPY.inquirePrice;
-  if (!course.price || course.price === 0) return SERVICES_COPY.free;
-  return `NT$ ${course.price.toLocaleString()}`;
+  return { count: matched.length, priceText };
 }
 
 // ─── Component ────────────────────────────────────────────────
@@ -167,11 +138,9 @@ const ServicesSection: React.FC = () => {
     };
   }, []);
 
-  const groups = groupCourses(courses);
-
   return (
     <section className="py-16 sm:py-20 px-4 bg-transparent">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10 sm:mb-12">
           <span className="text-gold text-xs uppercase tracking-widest">
@@ -185,82 +154,66 @@ const ServicesSection: React.FC = () => {
           </p>
         </div>
 
-        {/* 載入中骨架：固定高度佔位，避免 SSR → hydration 版面跳動 */}
-        {loading ? (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
-            aria-hidden="true"
-          >
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-52 rounded-2xl border border-white/10 bg-surface/60 animate-pulse"
-              />
-            ))}
-          </div>
-        ) : groups.length === 0 ? (
-          <p className="text-center text-sm text-white/40">
-            {SERVICES_COPY.empty}
-          </p>
-        ) : (
-          <div className="space-y-12 sm:space-y-14">
-            {groups.map((group) => (
-              <div key={group.key}>
-                {/* 分組標題 */}
-                <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h3 className="text-lg sm:text-xl font-light text-white/85">
-                    <span className="text-gold mr-2">/</span>
-                    {group.title}
+        {/* 三張需求卡，一列排完 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+          {NEED_CARDS.map((card, i) => {
+            const stat = loading ? null : statFor(card, courses);
+            return (
+              <motion.div
+                key={card.key}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{
+                  delay: Math.min(i, 4) * 0.1,
+                  duration: 0.5,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+              >
+                <Link
+                  to={card.to}
+                  className="group h-full flex flex-col gap-3 bg-surface border border-white/10 rounded-2xl p-6 sm:p-7 hover:border-gold/30 hover:-translate-y-1 transition-all duration-300"
+                >
+                  {/* 痛點 eyebrow */}
+                  <span className="text-xs text-gold/80 tracking-wide">
+                    {card.need}
+                  </span>
+
+                  {/* 服務名稱 */}
+                  <h3 className="text-lg sm:text-xl font-light text-white/90 group-hover:text-gold transition-colors duration-300">
+                    {card.title}
                   </h3>
-                  {group.description && (
-                    <p className="text-xs text-white/35">{group.description}</p>
-                  )}
-                </div>
 
-                {/* 課程卡 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                  {group.courses.map((course, i) => (
-                    <motion.div
-                      key={course.course_id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: '-60px' }}
-                      transition={{
-                        delay: Math.min(i, 5) * 0.06,
-                        duration: 0.45,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                    >
-                      <Link
-                        to={`/courses/${course.course_id}`}
-                        className="group h-full flex flex-col gap-3 bg-surface border border-white/10 rounded-2xl p-5 sm:p-6 hover:border-gold/25 transition-colors duration-300"
-                      >
-                        <h4 className="text-white/90 text-base font-medium leading-snug group-hover:text-gold transition-colors duration-300">
-                          {course.course_title}
-                        </h4>
+                  {/* 一句話說明 */}
+                  <p className="text-sm text-white/55 leading-relaxed flex-1">
+                    {card.blurb}
+                  </p>
 
-                        {course.course_description && (
-                          <p className="text-white/55 text-sm leading-relaxed line-clamp-3 flex-1">
-                            {course.course_description}
-                          </p>
-                        )}
-
-                        <div className="pt-3 mt-auto border-t border-white/5 flex items-center justify-between gap-2">
-                          <span className="text-gold text-sm">
-                            {formatPrice(course)}
-                          </span>
-                          <span className="text-xs text-white/35 group-hover:text-white/60 transition-colors duration-300">
-                            {SERVICES_COPY.cta} →
-                          </span>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                  {/* 門數 + 起價 + 前往 */}
+                  <div className="pt-3 mt-auto border-t border-white/5 flex items-center justify-between gap-2">
+                    <span className="text-xs text-white/40">
+                      {stat === null ? (
+                        <span className="inline-block w-16 h-3 rounded bg-white/10 animate-pulse align-middle" />
+                      ) : stat.count > 0 ? (
+                        <>
+                          <span className="text-white/70">{stat.count}</span> 門方案
+                          {stat.priceText && (
+                            <span className="text-gold ml-2">{stat.priceText}</span>
+                          )}
+                        </>
+                      ) : (
+                        '方案整理中'
+                      )}
+                    </span>
+                    <span className="text-xs text-white/35 group-hover:text-gold group-hover:translate-x-0.5 transition-all duration-300 shrink-0">
+                      {SERVICES_COPY.cta} →
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
