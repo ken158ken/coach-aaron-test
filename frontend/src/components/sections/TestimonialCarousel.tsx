@@ -14,7 +14,7 @@
  *              並修掉舊版「不檢查 is_published + 內建 pravatar 假資料」的 bug。
  */
 
-import React, { useState, useEffect, useCallback, CSSProperties } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   slidesService,
@@ -24,6 +24,10 @@ import {
 } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import {
+  AnimatedTestimonials,
+  type AnimatedTestimonialItem,
+} from '@/components/ui/animated-testimonials';
 
 // ─── Aceternity AnimatedTestimonials 風格：逐字淡入 ───────────────────────
 const AnimatedQuote: React.FC<{ text: string; slideId: number }> = ({
@@ -355,6 +359,22 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
     if (initialConfig) setConfig(initialConfig);
   }, [initialConfig]);
 
+  // 前台 Aceternity animated-testimonials 的資料對應
+  //   quote       ← 見證內容
+  //   name        ← 見證者姓名
+  //   designation ← 身份/角色（achievement 欄位）
+  //   src         ← 頭像（image_url，非 http 則留空，交由元件顯示佔位）
+  const animatedItems = useMemo<AnimatedTestimonialItem[]>(
+    () =>
+      slides.map((s) => ({
+        quote: s.quote,
+        name: s.name,
+        designation: s.achievement,
+        src: s.image_url?.startsWith('http') ? s.image_url : undefined,
+      })),
+    [slides]
+  );
+
   const next = useCallback(
     () => setCurrent((i) => (i + 1) % slides.length),
     [slides.length]
@@ -376,6 +396,23 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
       <div className="py-20 text-center text-white/30 text-sm">載入中...</div>
     );
   if (!slides.length) return null;
+
+  // ── 前台預設呈現：Aceternity animated-testimonials（單張輪播、自動播放）──
+  //    admin 預覽（preview=true）仍走下方既有的 portrait/landscape/quote-grid
+  //    版型分支，讓後台可預覽 card_layout 設定；is_published 由上方守門。
+  if (!preview) {
+    return (
+      <section className="py-16 sm:py-20">
+        <TestimonialHeader />
+        <AnimatedTestimonials
+          testimonials={animatedItems}
+          autoplay
+          autoplayMs={5000}
+          pauseOnHover
+        />
+      </section>
+    );
+  }
 
   const layout: TestimonialCardLayout = config.card_layout ?? 'portrait';
 

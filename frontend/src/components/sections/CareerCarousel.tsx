@@ -1,16 +1,21 @@
 /**
- * CareerCarousel - 其他人設經歷輪播（圖文版）
+ * CareerCarousel - 其他人設經歷輪播（animated-testimonials 版）
  * @module components/sections/CareerCarousel
  *
  * @description
- * 一次顯示「一個時期」，圖左文右、整張換場、可自動輪播。
- * 只用專案既有的 framer-motion，不引入新套件。
+ * 用 Aceternity「animated-testimonials」版型呈現三段職涯經歷：
+ * 圖片堆疊 + 文字淡入，整張換場、可自動輪播。
+ * 只用專案既有的 framer-motion（透過共用元件 AnimatedTestimonials），
+ * 不引入新套件。
  *
- * 每一段經歷可帶一張照片（`image`）；未提供時顯示帶期間編號的
- * 主題色佔位面板，版面仍完整，之後放上真實照片即可。
+ * 敘事採「倒敘法」：現職總教官在最前，回推到最早的房仲業務。
+ * 顯示順序 = 反轉 CAREER_EXPERIENCES（head-coach → personal-trainer → realtor）。
+ *
+ * 每一段經歷可帶一張照片（`image`）；未提供時 AnimatedTestimonials 會顯示
+ * 帶編號的主題色佔位面板，版面仍完整，之後放上真實照片即可。
  *
  * SSR 安全：期間標籤與所有內容皆為寫死字串，未用 new Date() / random，
- * 未輪到的經歷仍以隱藏節點保留在 DOM，避免職稱對 SEO 消失。
+ * 每筆 quote 由共用元件保留在隱藏 DOM，避免職稱／簡述對 SEO 消失。
  *
  * ─── 文案／照片替換說明 ────────────────────────────────────────
  *   - `CAREER_COPY`        區塊標題／副標（可再被 site_content 覆寫）
@@ -19,10 +24,12 @@
  * 同型別陣列即可（型別為 `CareerExperience[]`），其餘程式碼不動。
  */
 
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
 import { useSiteContent } from '@/hooks/useSiteContent';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import {
+  AnimatedTestimonials,
+  type AnimatedTestimonialItem,
+} from '@/components/ui/animated-testimonials';
 
 // ─── 型別 ─────────────────────────────────────────────────────
 
@@ -62,7 +69,10 @@ const CAREER_COPY = {
 /**
  * 各段經歷（定稿文案）。
  *
- * 照片：先留空 → 顯示帶期間編號的佔位面板。要放真實照片時，
+ * ⚠️ 陣列以「時間正序」保存（realtor → personal-trainer → head-coach），
+ * 供其他程式／未來後台沿用；顯示時在元件內反轉成倒敘法。
+ *
+ * 照片：先留空 → 顯示帶編號的佔位面板。要放真實照片時，
  * 把圖片放到 frontend/public/images/ 下，並在此填 image: '/images/xxx.jpg'。
  */
 export const CAREER_EXPERIENCES: CareerExperience[] = [
@@ -118,80 +128,17 @@ export const CAREER_EXPERIENCES: CareerExperience[] = [
 /** 自動輪播間隔（ms） */
 const AUTOPLAY_MS = 5000;
 
-// ─── 照片面板（有圖顯示圖，無圖顯示帶編號的主題色佔位）──────────
-const PhotoPanel: React.FC<{ exp: CareerExperience; index: number; total: number }> = ({
-  exp,
-  index,
-  total,
-}) => (
-  <div className="relative w-full h-56 md:h-auto md:min-h-[22rem] overflow-hidden bg-gradient-to-br from-white/[0.06] to-black/40">
-    {exp.image ? (
-      <img
-        src={exp.image}
-        alt={`${exp.role}｜${exp.org}`}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
-      />
-    ) : (
-      // 佔位面板：大編號 + 期間，之後填 image 即可覆蓋
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
-        <span className="text-6xl md:text-7xl font-thin text-gold/25 tabular-nums leading-none">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        <span className="text-xs tracking-widest text-white/30 uppercase">
-          {`Chapter ${index + 1} / ${total}`}
-        </span>
-      </div>
-    )}
-    {/* 底部漸層，讓期間標籤在任何圖上都清楚 */}
-    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-    <span className="absolute left-4 bottom-4 text-xs bg-black/40 backdrop-blur-sm text-gold border border-gold/25 px-3 py-1 rounded-full">
-      {exp.period}
-    </span>
-  </div>
-);
-
-// ─── 單張經歷（圖左文右）──────────────────────────────────────
-const ExperienceSlide: React.FC<{ exp: CareerExperience; index: number; total: number }> = ({
-  exp,
-  index,
-  total,
-}) => (
-  <article className="grid grid-cols-1 md:grid-cols-2 bg-surface border border-white/10 rounded-2xl overflow-hidden">
-    <PhotoPanel exp={exp} index={index} total={total} />
-
-    <div className="flex flex-col gap-4 p-6 sm:p-8">
-      <div>
-        <h3 className="text-xl sm:text-2xl font-light text-white/90 leading-tight">
-          {exp.role}
-        </h3>
-        <p className="mt-1 text-sm text-white/40">{exp.org}</p>
-      </div>
-
-      <p className="text-white/70 text-sm leading-relaxed">{exp.summary}</p>
-
-      <div className="w-8 h-px bg-gold/30" />
-
-      <ul className="space-y-2 flex-1">
-        {exp.bullets.map((b, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm text-white/60">
-            <span className="w-1.5 h-1.5 mt-1.5 bg-gold rounded-full shrink-0" />
-            {b}
-          </li>
-        ))}
-      </ul>
-
-      {exp.highlight && (
-        <div className="pt-3 border-t border-white/5">
-          <span className="text-gold text-xl sm:text-2xl font-light">
-            {exp.highlight.value}
-          </span>
-          <span className="ml-2 text-xs text-white/40">{exp.highlight.label}</span>
-        </div>
-      )}
-    </div>
-  </article>
-);
+// ─── 資料對應：CareerExperience → AnimatedTestimonialItem ──────
+//   name = role（職稱）  designation = org（單位）
+//   badge = period（期間） quote = summary（一句話簡述）
+//   src  = image（未提供 → 元件顯示佔位面板）
+const toTestimonial = (exp: CareerExperience): AnimatedTestimonialItem => ({
+  name: exp.role,
+  designation: exp.org,
+  badge: exp.period,
+  quote: exp.summary,
+  src: exp.image,
+});
 
 // ─── Component ────────────────────────────────────────────────
 
@@ -203,38 +150,19 @@ interface CareerCarouselProps {
 const CareerCarousel: React.FC<CareerCarouselProps> = ({
   experiences = CAREER_EXPERIENCES,
 }) => {
-  const [idx, setIdx] = useState(0);
-  const [direction, setDirection] = useState(1); // 1=forward, -1=backward
-  const [paused, setPaused] = useState(false);
-
   const { get } = useSiteContent();
-  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
-  const total = experiences.length;
+  if (!experiences.length) return null;
 
-  // 自動輪播；hover 中或使用者要求減少動態時停止
-  useEffect(() => {
-    if (total <= 1 || paused || reduceMotion) return;
-    const t = setInterval(() => {
-      setDirection(1);
-      setIdx((i) => (i + 1) % total);
-    }, AUTOPLAY_MS);
-    return () => clearInterval(t);
-  }, [total, paused, reduceMotion]);
-
-  if (!total) return null;
-
-  const go = (next: number, dir: number) => {
-    setDirection(dir);
-    setIdx((next + total) % total);
-  };
-  const current = experiences[idx];
+  // 倒敘法：反轉時間正序 → 現職（head-coach）在前、房仲（realtor）在後
+  const ordered = [...experiences].reverse();
+  const testimonials = ordered.map(toTestimonial);
 
   return (
     <section className="py-16 sm:py-20 px-4 bg-transparent">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-center mb-10 sm:mb-14">
           <span className="text-gold text-xs uppercase tracking-widest">
             {get('career_tagline', CAREER_COPY.tagline)}
           </span>
@@ -246,89 +174,33 @@ const CareerCarousel: React.FC<CareerCarouselProps> = ({
           </p>
         </div>
 
-        {/* 一次一張、整張滑動換場 */}
-        <div
-          className="relative"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-        >
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={current.id}
-              custom={direction}
-              variants={{
-                enter: (d: number) => ({ opacity: 0, x: d * 60 }),
-                center: { opacity: 1, x: 0 },
-                exit: (d: number) => ({ opacity: 0, x: d * -60 }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <ExperienceSlide exp={current} index={idx} total={total} />
-            </motion.div>
-          </AnimatePresence>
+        {/* animated-testimonials 版型 */}
+        <AnimatedTestimonials
+          testimonials={testimonials}
+          autoplay
+          autoplayMs={AUTOPLAY_MS}
+          pauseOnHover
+          advanceOnClick
+          showClickHint
+          clickHintText="點擊看下一段"
+          hoverScale
+        />
 
-          {/* 左右箭頭（桌機浮在卡片外側，手機貼邊） */}
-          {total > 1 && (
-            <>
-              <button
-                onClick={() => go(idx - 1, -1)}
-                aria-label="上一段經歷"
-                className="absolute top-1/2 -translate-y-1/2 left-2 md:-left-5 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-white/70 hover:text-gold hover:border-gold/40 flex items-center justify-center transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => go(idx + 1, 1)}
-                aria-label="下一段經歷"
-                className="absolute top-1/2 -translate-y-1/2 right-2 md:-right-5 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-white/70 hover:text-gold hover:border-gold/40 flex items-center justify-center transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* SEO：未顯示的經歷文字仍留在 DOM（不可見、不進無障礙樹） */}
+        {/* SEO / 無障礙：把每段重點條列也留在隱藏 DOM（quote 由元件本身保留） */}
         <div hidden aria-hidden="true">
-          {experiences.map((exp) =>
-            exp.id === current.id ? null : (
-              <div key={exp.id}>
-                <h3>
-                  {exp.role} — {exp.org}
-                </h3>
-                <p>{exp.summary}</p>
-              </div>
-            ),
-          )}
-        </div>
-
-        {/* 圓點 + 計數（一段一個圓點） */}
-        {total > 1 && (
-          <div className="flex items-center justify-center gap-4 mt-7">
-            <div className="flex gap-2">
-              {experiences.map((exp, i) => (
-                <button
-                  key={exp.id}
-                  onClick={() => go(i, i > idx ? 1 : -1)}
-                  aria-label={`第 ${i + 1} 段：${exp.role}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === idx ? 'w-6 bg-gold' : 'w-1.5 bg-white/20 hover:bg-white/40'
-                  }`}
-                />
-              ))}
+          {ordered.map((exp) => (
+            <div key={exp.id}>
+              <h3>
+                {exp.role} — {exp.org}
+              </h3>
+              <ul>
+                {exp.bullets.map((b, i) => (
+                  <li key={i}>{b}</li>
+                ))}
+              </ul>
             </div>
-            <span className="text-xs text-white/30 tabular-nums">
-              {String(idx + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-            </span>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
     </section>
   );
