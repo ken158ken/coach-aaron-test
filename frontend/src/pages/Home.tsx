@@ -10,7 +10,6 @@ import {
   CoachIntroSection,
   ServicesSection,
   CertificationMarquee,
-  PodcastExpandable,
   TestimonialCarousel,
   CareerCarousel,
   DirectionAwareGallery,
@@ -108,12 +107,11 @@ const Home: React.FC = () => {
         <CareerCarousel />
       </LazySection>
 
-      {/* 7. Podcast — 下移至頁面底部 */}
-      <LazySection minHeight="500px">
-        <PodcastExpandable />
-      </LazySection>
+      {/* Podcast 區塊已移除：podcast_episodes 表為空、僅顯示假的示範單集、
+          且點擊無實際內容（客戶確認未使用）。如日後要恢復，重新掛回
+          <PodcastExpandable /> 並在後台「Podcast 單集」新增真實單集即可。 */}
 
-      {/* 8. Credentials 專業認證 — 下移至最末作為背書收尾
+      {/* Credentials 專業認證 — 最末作為背書收尾
              CSS @keyframes marquee，無需外層動畫 */}
       <div className="relative z-10 bg-transparent">
         <CertificationMarquee />

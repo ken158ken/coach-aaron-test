@@ -125,13 +125,14 @@ export const HOMEPAGE_SECTIONS: HomepageSection[] = [
   },
   {
     id: 'podcast',
-    title: 'PODCAST 深海電台',
+    title: 'PODCAST（首頁已不顯示）',
     tagline: 'Podcast Section',
-    description: 'Podcast 區塊的標題、副標。（已移至首頁下方）',
+    description:
+      '⚠️ 此區塊已從首頁移除（podcast_episodes 無真實單集、僅顯示假的示範內容）。文案僅保留供日後恢復；改動不會影響首頁。若要恢復，需在「Podcast 單集」tab 新增真實單集並把區塊掛回首頁。',
     icon: '🎙',
     keys: ['podcast_tagline', 'podcast_title', 'podcast_subtitle'],
     hint: {
-      text: '👉 單集內容（標題、描述、時長、分類…）請到「Podcast 單集」tab 管理',
+      text: '👉 單集內容請到「Podcast 單集」tab 管理（首頁目前不顯示 Podcast 區塊）',
       targetTab: 'podcast',
     },
   },
