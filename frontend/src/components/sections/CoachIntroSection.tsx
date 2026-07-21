@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { TextButton } from '@/components/ui';
 import { contentService } from '@/services/site/content.service';
@@ -50,7 +50,26 @@ const COACH_IMAGES: string[] = [
 /** 輪播間隔（ms） */
 const IMAGE_ROTATE_MS = 3000;
 
-/** 交叉淡入輪播圖（每 IMAGE_ROTATE_MS 換一張；reduce-motion 時只顯示第一張） */
+/**
+ * 為 Cloudinary 圖片網址插入優化參數（自動格式/品質、限寬），大幅降低傳輸量。
+ * 只處理 res.cloudinary.com 的 /image/upload/ 網址；已含轉換參數者原樣返回。
+ */
+function optimizeCloudinary(url: string): string {
+  if (!url.includes('res.cloudinary.com') || !url.includes('/image/upload/')) {
+    return url;
+  }
+  if (/\/image\/upload\/[a-z]_[^/]+\//.test(url)) return url; // 已有轉換參數
+  return url.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_900/');
+}
+
+/**
+ * 交叉淡入輪播圖（每 IMAGE_ROTATE_MS 換一張）。
+ *
+ * ⚠️ 刻意用「純 CSS opacity 過渡」而非 framer-motion 的 initial:{opacity:0}：
+ * 後者會讓 SSR 直接輸出 <img style="opacity:0">，必須等 client JS 跑動畫才可見，
+ * 一旦 JS 慢/被舊 SW 卡住，圖片就整個看不到。這裡第一張在 SSR 就是 opacity-100，
+ * 不依賴 JS 也一定顯示；JS 運作時再以 CSS 過渡做交叉淡入。
+ */
 const RotatingImage: React.FC<{ images: string[]; alt: string }> = ({ images, alt }) => {
   const [idx, setIdx] = useState(0);
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -72,19 +91,19 @@ const RotatingImage: React.FC<{ images: string[]; alt: string }> = ({ images, al
   if (!images.length) return null;
 
   return (
-    <AnimatePresence mode="sync">
-      <motion.img
-        key={images[idx]}
-        src={images[idx]}
-        alt={alt}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.8, ease: 'easeInOut' }}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
-      />
-    </AnimatePresence>
+    <>
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={optimizeCloudinary(src)}
+          alt={alt}
+          loading={i === 0 ? 'eager' : 'lazy'}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+            i === idx ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      ))}
+    </>
   );
 };
 
