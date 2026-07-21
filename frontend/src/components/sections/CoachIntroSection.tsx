@@ -92,17 +92,33 @@ const RotatingImage: React.FC<{ images: string[]; alt: string }> = ({ images, al
 
   return (
     <>
-      {images.map((src, i) => (
-        <img
-          key={src}
-          src={optimizeCloudinary(src)}
-          alt={alt}
-          loading={i === 0 ? 'eager' : 'lazy'}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
-            i === idx ? 'opacity-100' : 'opacity-0'
-          }`}
-        />
-      ))}
+      {images.map((src, i) =>
+        i === 0 ? (
+          // 第一張走「正常流」：撐出容器寬高（欄位 mx-auto 需要內容寬度，
+          // 若全部 absolute 會讓欄位縮成 0 寬、圖片被壓成 0）。非當前張時
+          // 仍保留在流內（opacity-0）以維持容器尺寸。
+          <img
+            key={src}
+            src={optimizeCloudinary(src)}
+            alt={alt}
+            loading="eager"
+            className={`block w-full h-auto object-cover transition-opacity duration-700 ease-in-out ${
+              idx === 0 ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ) : (
+          // 其餘疊在第一張上方做交叉淡入
+          <img
+            key={src}
+            src={optimizeCloudinary(src)}
+            alt={alt}
+            loading="lazy"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+              i === idx ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        )
+      )}
     </>
   );
 };
@@ -201,12 +217,9 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
             data-aos="fade-right"
             data-aos-duration="800"
           >
-            {/* 用 inline aspectRatio 確保容器有高度：所有輪播圖為 absolute，
-                若僅靠 aspect-3/4 class 會在無流內容時塌成 0 高、圖片看不到 */}
-            <div
-              className="relative rounded-xl overflow-hidden"
-              style={{ aspectRatio: '3 / 4' }}
-            >
+            {/* 第一張圖走正常流撐出容器寬高（見 RotatingImage 註解）；
+                容器 relative 供其餘輪播圖 absolute 疊放 */}
+            <div className="relative rounded-xl overflow-hidden">
               <RotatingImage images={images} alt={coachName} />
             </div>
             {/* 圖片裝飾框 — 也做 breathing glow */}
