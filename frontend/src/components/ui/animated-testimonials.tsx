@@ -32,9 +32,27 @@ export interface AnimatedTestimonialItem {
   designation: string;
   /** 圖片網址；留空則顯示佔位面板 */
   src?: string;
+  /** 多張圖片網址；提供（>1 張）且該項為 active 時，會依 imageRotateMs 內層輪播。
+   *  優先於 src；非 active 的項目只顯示 images[0]。 */
+  images?: string[];
   /** 圖片上的小徽章（例如經歷期間），可省略 */
   badge?: string;
 }
+
+/**
+ * Cloudinary 傳輸優化：在 `/image/upload/` 之後插入 `f_auto,q_auto,w_900`，
+ * 讓 Cloudinary 自動選格式／壓縮並限制寬度，降低傳輸量。
+ * 非 Cloudinary（或找不到 upload 段）的網址原樣返回；已含相同轉換則不重複插入。
+ */
+const optimizeCloudinary = (url: string): string => {
+  const marker = '/image/upload/';
+  const at = url.indexOf(marker);
+  if (at === -1) return url;
+  const after = at + marker.length;
+  const rest = url.slice(after);
+  if (rest.startsWith('f_auto,q_auto,w_900/')) return url;
+  return `${url.slice(0, after)}f_auto,q_auto,w_900/${rest}`;
+};
 
 interface AnimatedTestimonialsProps {
   testimonials: AnimatedTestimonialItem[];
@@ -46,6 +64,9 @@ interface AnimatedTestimonialsProps {
   hoverScale?: boolean;
   /** 點擊提示文字（showClickHint 為 true 時顯示） */
   clickHintText?: string;
+  /** 內層照片輪播間隔（ms）；0＝不輪播（預設）。
+   *  >0 時，當前 active 項目若有多張 images，會每 imageRotateMs 換一張。 */
+  imageRotateMs?: number;
 }
 
 // 依索引決定的固定旋轉角度（取代 Math.random，確保確定性）
@@ -60,15 +81,21 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
   showClickHint = false,
   hoverScale = false,
   clickHintText = '點擊看下一張',
+  imageRotateMs = 0,
 }) => {
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState(false);
+  // 內層照片索引：只作用於「當前 active 項目」的多張 images
+  const [imageIndex, setImageIndex] = useState(0);
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
   const total = testimonials.length;
   const handleNext = () => setActive((p) => (p + 1) % total);
   const handlePrev = () => setActive((p) => (p - 1 + total) % total);
   const isActive = (index: number) => index === active;
+
+  // 當前 active 項目的照片數（用於決定是否內層輪播）
+  const activeImageCount = testimonials[active]?.images?.length ?? 0;
 
   // 自動輪播；hover（若 pauseOnHover）或 reduce-motion 時暫停
   useEffect(() => {
@@ -78,9 +105,35 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
     return () => clearInterval(t);
   }, [autoplay, total, reduceMotion, pauseOnHover, hovered, autoplayMs]);
 
+  // active 項目切換時，內層照片索引重置為 0（跳到這段經歷從第一張開始）
+  useEffect(() => {
+    setImageIndex(0);
+  }, [active]);
+
+  // 內層照片輪播：僅在 imageRotateMs>0、非 reduce-motion、當前項有多張時啟動
+  useEffect(() => {
+    if (imageRotateMs <= 0 || reduceMotion || activeImageCount <= 1) return;
+    const t = setInterval(() => {
+      setImageIndex((p) => (p + 1) % activeImageCount);
+    }, imageRotateMs);
+    return () => clearInterval(t);
+  }, [active, imageRotateMs, reduceMotion, activeImageCount]);
+
   if (!total) return null;
 
   const current = testimonials[active];
+
+  // 計算某項目「當前該顯示的圖片 URL」：
+  //   有 images → active 用 images[imageIndex]、非 active 用 images[0]；
+  //   否則 fallback 到 src；再否則 undefined（顯示佔位面板）。皆套 Cloudinary 優化。
+  const resolveSrc = (item: AnimatedTestimonialItem, itemActive: boolean): string | undefined => {
+    const imgs = item.images;
+    if (imgs && imgs.length > 0) {
+      const idx = itemActive ? imageIndex % imgs.length : 0;
+      return optimizeCloudinary(imgs[idx]);
+    }
+    return item.src ? optimizeCloudinary(item.src) : undefined;
+  };
 
   return (
     <div className="mx-auto max-w-sm px-4 md:max-w-4xl md:px-8">
@@ -116,7 +169,11 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="absolute inset-0 origin-bottom"
               >
-                <PhotoOrPlaceholder item={t} index={index} />
+                <PhotoOrPlaceholder
+                  item={t}
+                  index={index}
+                  displaySrc={resolveSrc(t, isActive(index))}
+                />
               </motion.div>
             ))}
           </AnimatePresence>
@@ -220,15 +277,20 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
   );
 };
 
-/** 有圖顯示圖，無圖顯示主題色佔位面板（首字/徽章） */
-const PhotoOrPlaceholder: React.FC<{ item: AnimatedTestimonialItem; index: number }> = ({
-  item,
-  index,
-}) => (
+/**
+ * 有圖顯示圖，無圖顯示主題色佔位面板（首字/徽章）。
+ * `displaySrc` 為呼叫端算好的「當前該顯示的圖片 URL」
+ * （已處理 images 輪播索引與 Cloudinary 優化）。
+ */
+const PhotoOrPlaceholder: React.FC<{
+  item: AnimatedTestimonialItem;
+  index: number;
+  displaySrc?: string;
+}> = ({ item, index, displaySrc }) => (
   <div className="relative h-full w-full rounded-3xl overflow-hidden">
-    {item.src ? (
+    {displaySrc ? (
       <img
-        src={item.src}
+        src={displaySrc}
         alt={item.name}
         draggable={false}
         loading="lazy"

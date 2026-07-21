@@ -50,6 +50,8 @@ export interface CareerExperience {
   bullets: string[];
   /** 照片路徑（可省略；未提供時顯示主題色佔位面板） */
   image?: string;
+  /** 多張照片（可省略）；提供時取代單張 image，該段顯示時每秒輪播一張 */
+  images?: string[];
   /** 亮點數字（可省略） */
   highlight?: {
     value: string;
@@ -88,7 +90,10 @@ export const CAREER_EXPERIENCES: CareerExperience[] = [
       '在被拒絕是日常的環境裡練出韌性',
       '看懂客戶說「我再考慮」時，真正在意的到底是什麼',
     ],
-    // image: '/images/career-realtor.jpg',
+    images: [
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556095/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_17_qsdcqo.jpg',
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556029/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_7_l7vuqk.jpg',
+    ],
     // ⚠️ 履歷載有「單月業績約 200 萬」，人設提案標為低信心，客戶提供佐證後可解除：
     // highlight: { value: '200 萬', label: '單月業績' },
   },
@@ -104,7 +109,11 @@ export const CAREER_EXPERIENCES: CareerExperience[] = [
       '同時負責諮詢、成交與續課，走完第一線私教的收入循環',
       '我教的每一套成交流程，都是自己親手跑過、被拒絕過、再修正出來的',
     ],
-    // image: '/images/career-pt.jpg',
+    images: [
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_6_rhqnrz.jpg',
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_4_nwwdvd.jpg',
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556004/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_5_fwm8am.jpg',
+    ],
     // ⚠️ 履歷載有「私教月入約 8 萬」，標為待佐證，客戶確認後可解除：
     // highlight: { value: '8 萬', label: '私教月收入' },
   },
@@ -120,7 +129,11 @@ export const CAREER_EXPERIENCES: CareerExperience[] = [
       '設定並追蹤業績與續約 KPI，建立教練育成與考核制度',
       '把「怎麼成交」「怎麼續約」拆成可以教、可以複製、可以考核的標準',
     ],
-    // image: '/images/career-head-coach.jpg',
+    images: [
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556128/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_9_tp7sdh.jpg',
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556119/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_16_knkkoy.jpg',
+      'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471265/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_12_hmvfuj.jpg',
+    ],
     highlight: { value: '50 人', label: '教練團隊' },
   },
 ];
@@ -131,13 +144,14 @@ const AUTOPLAY_MS = 5000;
 // ─── 資料對應：CareerExperience → AnimatedTestimonialItem ──────
 //   name = role（職稱）  designation = org（單位）
 //   badge = period（期間） quote = summary（一句話簡述）
-//   src  = image（未提供 → 元件顯示佔位面板）
+//   images = images（多張，該段顯示時每秒輪播）；src = image（單張 fallback）
 const toTestimonial = (exp: CareerExperience): AnimatedTestimonialItem => ({
   name: exp.role,
   designation: exp.org,
   badge: exp.period,
   quote: exp.summary,
   src: exp.image,
+  images: exp.images,
 });
 
 // ─── Component ────────────────────────────────────────────────
@@ -179,6 +193,7 @@ const CareerCarousel: React.FC<CareerCarouselProps> = ({
           testimonials={testimonials}
           autoplay
           autoplayMs={AUTOPLAY_MS}
+          imageRotateMs={1000}
           pauseOnHover
           advanceOnClick
           showClickHint

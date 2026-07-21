@@ -213,7 +213,7 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
         <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12 items-center">
           {/* Image — 從左滑入 */}
           <div
-            className="relative max-w-sm mx-auto md:max-w-none"
+            className="relative max-w-sm mx-auto md:max-w-[26rem]"
             data-aos="fade-right"
             data-aos-duration="800"
           >
