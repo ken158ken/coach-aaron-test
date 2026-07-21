@@ -201,7 +201,12 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
             data-aos="fade-right"
             data-aos-duration="800"
           >
-            <div className="aspect-3/4 rounded-xl overflow-hidden relative">
+            {/* 用 inline aspectRatio 確保容器有高度：所有輪播圖為 absolute，
+                若僅靠 aspect-3/4 class 會在無流內容時塌成 0 高、圖片看不到 */}
+            <div
+              className="relative rounded-xl overflow-hidden"
+              style={{ aspectRatio: '3 / 4' }}
+            >
               <RotatingImage images={images} alt={coachName} />
             </div>
             {/* 圖片裝飾框 — 也做 breathing glow */}
