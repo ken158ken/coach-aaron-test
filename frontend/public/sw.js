@@ -120,6 +120,19 @@ async function staleWhileRevalidate(cacheName, request) {
   return cached || fetchPromise;
 }
 
+// HTML 導覽用：網路優先，網路失敗才回退快取（離線可用）。
+async function networkFirst(cacheName, request) {
+  const cache = await caches.open(cacheName);
+  try {
+    const res = await fetch(request);
+    if (res.ok) cache.put(request, res.clone()).catch(() => {});
+    return res;
+  } catch {
+    const cached = await cache.match(request);
+    return cached || (await cache.match("/")) || Response.error();
+  }
+}
+
 // ============================================================
 // Web Push
 // ============================================================
