@@ -533,6 +533,7 @@ router.post(
             summary: `諮詢 — ${attendeeName}`,
             description: booking.user_note || "",
             attendeeEmail,
+            bookingId: booking.id, // 寫入事件 extendedProperties 供對帳
           },
         );
       }

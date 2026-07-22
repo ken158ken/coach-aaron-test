@@ -132,6 +132,8 @@ export interface CreateEventInput {
   summary: string;           // 事件標題，例：「諮詢 — 小明」
   description?: string;
   attendeeEmail?: string;    // 會議成員
+  bookingId?: string | number; // 你 DB 的 booking id → 寫入事件 extendedProperties 供對帳/去重
+  addMeet?: boolean;         // 是否自動產生 Google Meet 連結（預設 true）
 }
 
 /**
@@ -148,6 +150,7 @@ export async function createCoachEvent(
   try {
     const auth = buildAuthenticatedClient(coach.googleRefreshToken);
     const cal = google.calendar({ version: "v3", auth });
+    const addMeet = input.addMeet !== false; // 預設自動加 Meet
     const event: calendar_v3.Schema$Event = {
       summary: input.summary,
       description: input.description || "",
@@ -166,6 +169,21 @@ export async function createCoachEvent(
           { method: "popup", minutes: 30 },
         ],
       },
+      // 把 DB 的 booking id 存進事件（私有屬性，僅日曆擁有者可見），
+      // 供日後同步/對帳/去重。上限：key≤44、value≤1024 字元。
+      extendedProperties:
+        input.bookingId != null
+          ? { private: { booking_id: String(input.bookingId) } }
+          : undefined,
+      // 自動產生 Google Meet 視訊連結（線上諮詢用）。requestId 需唯一。
+      conferenceData: addMeet
+        ? {
+            createRequest: {
+              requestId: `booking-${input.bookingId ?? "x"}-${Date.now()}`,
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          }
+        : undefined,
     };
     const res = await cal.events.insert({
       calendarId: coach.googleCalendarId,
@@ -174,6 +192,8 @@ export async function createCoachEvent(
       // 事件自動進入他自己的 Google 日曆。無需會員授權 OAuth / token。
       // 非 Google 信箱也會收到 .ics 邀請信。
       sendUpdates: "all",
+      // 必帶才會保存 conferenceData（產生 Meet 連結）
+      conferenceDataVersion: addMeet ? 1 : 0,
     });
     return res.data.id || null;
   } catch (err) {

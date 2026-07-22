@@ -79,6 +79,7 @@ const AdminWhitelist = lazy(() => import("@/pages/admin/AdminWhitelist"));
 const AdminWhispers = lazy(() => import("@/pages/admin/AdminWhispers"));
 const AdminArticles = lazy(() => import("@/pages/admin/AdminArticles")); // → tiptap
 const AdminExport = lazy(() => import("@/pages/admin/AdminExport"));
+const AdminGoogleCalendar = lazy(() => import("@/pages/admin/AdminGoogleCalendar"));
 const LandingPageManager = lazy(() => import("@/pages/admin/LandingPageManager"));
 const LandingPageNew = lazy(() => import("@/pages/admin/LandingPageNew"));
 
@@ -286,6 +287,7 @@ function App(): JSX.Element {
                   <Route path="whitelist" element={<AdminWhitelist />} />
                   <Route path="whispers" element={<AdminWhispers />} />
                   <Route path="export" element={<AdminExport />} />
+                  <Route path="google-calendar" element={<AdminGoogleCalendar />} />
                 </Route>
 
                 {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}

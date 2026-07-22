@@ -12,6 +12,7 @@ export { default as AdminContent } from "./AdminContent";
 export { default as AdminWhitelist } from "./AdminWhitelist";
 export { default as AdminArticles } from "./AdminArticles";
 export { default as AdminExport } from "./AdminExport";
+export { default as AdminGoogleCalendar } from "./AdminGoogleCalendar";
 
 // Landing Page 管理
 export { default as LandingPageManager } from "./LandingPageManager";
