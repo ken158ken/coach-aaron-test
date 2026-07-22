@@ -156,11 +156,24 @@ export async function createCoachEvent(
       attendees: input.attendeeEmail
         ? [{ email: input.attendeeEmail }]
         : undefined,
-      reminders: { useDefault: true },
+      // 自訂提醒（覆蓋日曆預設）：提前 1 天 email + 提前 30 分鐘彈窗。
+      // 會員被加為 attendee 後，此事件會出現在「會員自己的 Google 日曆」，
+      // 並依 Google 規則帶提醒；attendee 亦可自行調整自己的提醒。
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: "email", minutes: 24 * 60 },
+          { method: "popup", minutes: 30 },
+        ],
+      },
     };
     const res = await cal.events.insert({
       calendarId: coach.googleCalendarId,
       requestBody: event,
+      // 關鍵：寄出邀請 → 會員（attendee）自動收到日曆邀請 email、
+      // 事件自動進入他自己的 Google 日曆。無需會員授權 OAuth / token。
+      // 非 Google 信箱也會收到 .ics 邀請信。
+      sendUpdates: "all",
     });
     return res.data.id || null;
   } catch (err) {
@@ -186,6 +199,8 @@ export async function deleteCoachEvent(
     await cal.events.delete({
       calendarId: coach.googleCalendarId,
       eventId,
+      // 通知會員（attendee）此預約已取消，同步從他日曆移除
+      sendUpdates: "all",
     });
     return true;
   } catch (err) {
