@@ -396,26 +396,64 @@ router.get(
   },
 );
 
+/**
+ * 產生「連結完成後自我關閉彈窗 + 通知開啟者刷新狀態」的 HTML。
+ * 連 Google 日曆改用彈窗流程：admin 頁面不整頁導轉、不重載，
+ * 因此網站登入狀態不會因這個 OAuth 來回而遺失。
+ * 若非彈窗（直接開此網址）則退回導向 /admin/google-calendar。
+ */
+function closePopupHtml(status: string, frontendUrl: string): string {
+  const backUrl = `${frontendUrl}/admin/google-calendar?google=${encodeURIComponent(
+    status,
+  )}`;
+  const label =
+    status === "connected" ? "✅ 已連結 Google 日曆" : `連結結果：${status}`;
+  return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>Google 日曆</title></head>
+<body style="font-family:system-ui,sans-serif;background:#0e0e10;color:#ececec;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+<div style="text-align:center;line-height:1.9">
+<p style="font-size:18px;margin:0">${label}</p>
+<p style="color:#888;font-size:14px;margin:8px 0 0">此視窗會自動關閉…</p>
+</div>
+<script>
+(function () {
+  try { if (window.opener) window.opener.postMessage({ type: "gcal", status: ${JSON.stringify(
+    status,
+  )} }, "*"); } catch (e) {}
+  setTimeout(function () {
+    window.close();
+    setTimeout(function () { window.location.replace(${JSON.stringify(
+      backUrl,
+    )}); }, 500);
+  }, 250);
+})();
+</script>
+</body></html>`;
+}
+
 /** GET /api/coach/google/callback — OAuth 回調（不需 auth，驗 state） */
 router.get(
   "/google/callback",
   async (req: Request, res: Response): Promise<void> => {
     const frontendUrl = getFrontendUrl();
+    // 一律以「自我關閉彈窗 HTML」回應，不整頁導轉 → 不影響網站登入狀態
+    const finish = (status: string): void => {
+      res.send(closePopupHtml(status, frontendUrl));
+    };
     try {
       const { code, state, error: oauthError } = req.query;
       const storedState = req.cookies.coach_oauth_state;
       res.clearCookie("coach_oauth_state", { path: "/" });
 
       if (oauthError) {
-        res.redirect(`${frontendUrl}/coach?google=denied`);
+        finish("denied");
         return;
       }
       if (!code || typeof code !== "string") {
-        res.redirect(`${frontendUrl}/coach?google=no_code`);
+        finish("no_code");
         return;
       }
       if (!state || state !== storedState) {
-        res.redirect(`${frontendUrl}/coach?google=bad_state`);
+        finish("bad_state");
         return;
       }
 
@@ -430,7 +468,7 @@ router.get(
         /* ignore */
       }
       if (!coachId) {
-        res.redirect(`${frontendUrl}/coach?google=bad_state`);
+        finish("bad_state");
         return;
       }
 
@@ -440,17 +478,17 @@ router.get(
         logger.warn("Google 未回傳 refresh_token，請教練到 Google 帳號設定撤銷後重試", {
           coachId,
         });
-        res.redirect(`${frontendUrl}/coach?google=no_refresh`);
+        finish("no_refresh");
         return;
       }
       await supabaseAdmin
         .from("coach_profile")
         .update({ google_refresh_token: refreshToken })
         .eq("id", coachId);
-      res.redirect(`${frontendUrl}/coach?google=connected`);
+      finish("connected");
     } catch (err) {
       logger.error("Google callback 失敗", err as Error);
-      res.redirect(`${frontendUrl}/coach?google=error`);
+      finish("error");
     }
   },
 );

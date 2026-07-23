@@ -53,7 +53,34 @@ const AdminGoogleCalendar: React.FC = () => {
   const isLinked = connected && valid;
 
   const handleConnect = () => {
-    window.location.href = coachService.getGoogleConnectUrl();
+    const url = coachService.getGoogleConnectUrl();
+    // 用「彈窗」授權，讓本頁不整頁重載 → 網站登入狀態不會遺失。
+    const popup = window.open(url, "gcal_oauth", "width=520,height=680");
+    if (!popup) {
+      // 彈窗被瀏覽器封鎖 → 退回整頁導轉（callback 會導回本頁）
+      window.location.href = url;
+      return;
+    }
+    // 彈窗完成後會 postMessage 通知；同源才採信，收到就刷新狀態
+    let poll = 0;
+    const onMsg = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const d = e.data as { type?: string } | null;
+      if (d && d.type === "gcal") {
+        window.removeEventListener("message", onMsg);
+        window.clearInterval(poll);
+        void loadStatus();
+      }
+    };
+    window.addEventListener("message", onMsg);
+    // 保底：偵測彈窗關閉後刷新狀態（萬一沒收到訊息，例如跨網域）
+    poll = window.setInterval(() => {
+      if (popup.closed) {
+        window.clearInterval(poll);
+        window.removeEventListener("message", onMsg);
+        void loadStatus();
+      }
+    }, 800);
   };
 
   const handleDisconnect = async () => {
