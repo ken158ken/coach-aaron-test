@@ -39,6 +39,7 @@ import { useHeartbeat } from "@/hooks/usePresence";
 /* ── A 區：公開／可索引路由 —— 必須維持靜態 import ───────────────────── */
 import Layout from "@/components/layout/Layout";
 import Home from "@/pages/Home";
+import About from "@/pages/About";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import Videos from "@/pages/Videos";
@@ -185,6 +186,7 @@ function App(): JSX.Element {
                 {/* 前台路由 */}
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
+                  <Route path="about" element={<About />} />
                   <Route path="courses" element={<Courses />} />
                   <Route path="courses/:id" element={<CourseDetail />} />
                   <Route path="videos" element={<Videos />} />
