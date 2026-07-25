@@ -28,7 +28,7 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
     let query = supabaseAdmin
       .from("users")
       .select(
-        "user_id, username, email, display_name, avatar_url, avatar_base64, sex, phone_number, is_active, email_verified, last_login_at, created_at",
+        "user_id, username, email, display_name, avatar_url, avatar_base64, phone_number, is_active, email_verified, last_login_at, created_at",
         { count: "exact" },
       )
       .is("deleted_at", null)
@@ -81,10 +81,9 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
 router.put("/users/:id", async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { sex, isActive, displayName } = req.body;
+    const { isActive, displayName } = req.body;
 
     const updateData: UpdateUserData = {};
-    if (sex !== undefined) updateData.sex = sex;
     if (isActive !== undefined) updateData.is_active = isActive;
     if (displayName !== undefined) updateData.display_name = displayName;
 

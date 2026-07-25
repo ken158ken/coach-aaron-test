@@ -505,7 +505,7 @@ router.get(
       const { data: user, error } = await supabaseAdmin
         .from("users")
         .select(
-          "user_id, username, email, display_name, avatar_url, avatar_base64, sex, phone_number, created_at",
+          "user_id, username, email, display_name, avatar_url, avatar_base64, phone_number, created_at",
         )
         .eq("user_id", req.user?.userId)
         .single();
@@ -532,7 +532,6 @@ router.get(
           username: user.username,
           email: user.email,
           displayName: user.display_name,
-          sex: user.sex,
           isAdmin,
         },
         process.env.JWT_SECRET || "",
@@ -548,7 +547,6 @@ router.get(
           displayName: user.display_name,
           avatarUrl: user.avatar_base64 || user.avatar_url,
           phoneNumber: user.phone_number,
-          sex: user.sex,
           isAdmin,
           createdAt: user.created_at,
         },

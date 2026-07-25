@@ -155,14 +155,9 @@ const Navbar: React.FC = (): JSX.Element => {
     { name: t.nav.contact, path: "/contact" },
   ];
 
-  const navLinks: NavLink[] =
-    mounted && user?.sex
-      ? [
-          ...baseNavLinks.slice(0, 1),
-          { name: t.nav.photos, path: "/photos" },
-          ...baseNavLinks.slice(1),
-        ]
-      : baseNavLinks;
+  // 註：原本會依 user.sex 插入「私密相簿 /photos」連結，但該功能已廢棄、
+  //     users.sex 欄位亦已由 migration 025 移除，故不再顯示該連結。
+  const navLinks: NavLink[] = baseNavLinks;
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
