@@ -93,8 +93,10 @@ const Courses: React.FC = () => {
   const seoHead = (
     <SEOHead
       title={t.course.pageLabel}
-      description={language === "en" ? "Explore professional fitness courses, from beginner to advanced training" : "探索專業健身課程，從初學者到進階訓練，找到適合你的課程"}
-      keywords={language === "en" ? ["fitness courses", "training courses", "coaching", "online learning"] : ["健身課程", "訓練課程", "教練課程", "線上學習"]}
+      // B2B 定位（受眾是健身教練同業，非一般健身會員）——
+      // 舊文案「探索專業健身課程…找到適合你的課程」是 B2C 語氣，與 SEOHead 的站台定位矛盾
+      description={language === "en" ? "Business training programs for personal trainers: monetization coaching, sales psychology courses and 1-on-1 consulting to turn your expertise into stable income" : "給私人教練的商業培訓方案：變現陪跑、銷售心理學線上課程與一對一顧問，把你的專業變成穩定收入。已協助 130+ 位教練突破業績瓶頸。"}
+      keywords={language === "en" ? ["personal trainer sales", "fitness coach sales", "pilates sales", "trainer monetization", "coach business training"] : ["私人教練銷售", "健身教練銷售", "皮拉提斯銷售", "私教變現陪跑", "教練變現線上課程", "教練培訓", "阿倫教官"]}
       url="/courses"
       breadcrumbs={[{ name: t.course.pageLabel, url: "/courses" }]}
     />

@@ -24,6 +24,8 @@ import {
 } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
 import { CardStack, type CardStackItem } from '@/components/ui/card-stack';
 
 // ─── Aceternity AnimatedTestimonials 風格：逐字淡入 ───────────────────────
@@ -370,20 +372,32 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
   initialSlides,
   initialConfig,
 }) => {
-  const [slides, setSlides] = useState<TestimonialSlide[]>(initialSlides ?? []);
+  // ── SSR 預抓資料：props（admin 預覽）優先，其次 __INITIAL_DATA__，
+  //    server 與 client 首次 render 讀同一份 → 不會 hydration mismatch。
+  //    SSR 資料只作「初值」：mount 後仍照常 fetch 覆蓋（SSR HTML 可能是
+  //    CDN 舊快取；且 config 預抓可能單獨失敗，必須補抓才能反映下架狀態）──
+  const ssrSlides = getInitialData<TestimonialSlide[]>(dataKeys.testimonials());
+  const seedSlides =
+    initialSlides ?? (Array.isArray(ssrSlides) ? ssrSlides : undefined);
+  const ssrConfig = getInitialData<TestimonialConfig>(
+    dataKeys.testimonialsConfig()
+  );
+
+  const [slides, setSlides] = useState<TestimonialSlide[]>(seedSlides ?? []);
   const [config, setConfig] = useState<TestimonialConfig>(
-    initialConfig ?? {
-      interval_ms: 4000,
-      is_published: true,
-      card_layout: 'portrait',
-    }
+    initialConfig ??
+      ssrConfig ?? {
+        interval_ms: 4000,
+        is_published: true,
+        card_layout: 'portrait',
+      }
   );
   const [current, setCurrent] = useState(0);
-  const [loading, setLoading] = useState(!initialSlides);
+  const [loading, setLoading] = useState(!seedSlides);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    if (initialSlides) return;
+    if (initialSlides) return; // admin 預覽由 props 供資料，不打 API
     (async () => {
       try {
         const [s, c] = await Promise.all([

@@ -133,18 +133,28 @@ const CourseDetail: React.FC = () => {
 
   // ── SEO ──
   // 必須在 early return 之前建立，否則 loading / error 狀態下伺服器端輸出空 title。
+  // 優先序：seo_* 專用欄位（032 migration 新增；目前僅能由
+  // database/scripts/seed_course_seo.mjs 或 SQL 維護，CourseEditor 尚無對應輸入框）
+  // → 產品真實文案 fallback，seo_* 為 NULL 時行為與舊版完全相同。
   const courseObj = (course ?? {}) as unknown as Record<string, unknown>;
-  const seoTitle =
+  const courseName =
     loc(courseObj, "course_title") ||
     (id ? `${t.course.pageLabel} #${id}` : t.course.pageLabel);
+  const seoTitle = loc(courseObj, "seo_title") || courseName;
+  const seoKeywordsRaw =
+    loc(courseObj, "seo_keywords") || loc(courseObj, "course_keywords");
   const courseUrl = `/courses/${course?.id ?? course?.course_id ?? id ?? ""}`;
   const seoHead = (
     <SEOHead
       title={seoTitle}
-      description={loc(courseObj, "course_description") || seoTitle}
+      description={
+        loc(courseObj, "seo_description") ||
+        loc(courseObj, "course_description") ||
+        seoTitle
+      }
       keywords={
-        course?.course_keywords
-          ? course.course_keywords.split(",").map((k) => k.trim())
+        seoKeywordsRaw
+          ? seoKeywordsRaw.split(",").map((k: string) => k.trim())
           : course?.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])
       }
       image={course?.course_thumbnail_url || course?.thumbnail}
@@ -157,7 +167,8 @@ const CourseDetail: React.FC = () => {
       showPrice={Boolean(course?.show_price)}
       breadcrumbs={[
         { name: t.course.pageLabel, url: "/courses" },
-        { name: seoTitle, url: courseUrl },
+        // 麵包屑用產品真實名稱，不用 SEO 標題（結構化資料應反映實際頁面層級）
+        { name: courseName, url: courseUrl },
       ]}
     />
   );

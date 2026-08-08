@@ -506,6 +506,13 @@ router.put(
         "currency",
         "access_duration_days",
         "status",
+        // SEO 專用欄位（032 migration；NULL 時前端 fallback 至 course_* 文案）
+        "seo_title",
+        "seo_description",
+        "seo_keywords",
+        "seo_title_en",
+        "seo_description_en",
+        "seo_keywords_en",
       ];
 
       allowedFields.forEach((field) => {

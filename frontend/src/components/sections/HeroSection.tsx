@@ -15,6 +15,25 @@ import {
 import { GlowButton, TextButton } from '@/components/ui';
 import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
+
+/** SSR 預抓的 site_content map（首頁路由才有；server / client 讀到同一份） */
+const readSSRContent = (): Record<string, string> => {
+  const data = getInitialData<Record<string, string>>(dataKeys.siteContent());
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+};
+
+/** 解析 JSON 陣列字串，失敗回 null */
+const parseJsonArray = (raw: string | undefined): string[] | null => {
+  if (!raw) return null;
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length > 0 ? arr : null;
+  } catch {
+    return null;
+  }
+};
 
 interface HeroSectionProps {
   className?: string;
@@ -40,13 +59,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   //   乙組（搭主標 B 案）：['業績', '成交', '續約', '收入']
   //   丙組（搭主標 C 案）：['教練', '軍師', '後盾', '陪跑員']
   // ⚠️ 字數請維持 2–3 字，避免翻字時版面跳動。
-  const [flipWords, setFlipWords] = useState<string[]>([
-    '系統',
-    '軍師',
-    '陪跑',
-    '實戰',
-  ]);
+  const [flipWords, setFlipWords] = useState<string[]>(
+    () =>
+      parseJsonArray(readSSRContent().hero_flip_words) ?? [
+        '系統',
+        '軍師',
+        '陪跑',
+        '實戰',
+      ]
+  );
   const [wordIndex, setWordIndex] = useState(0);
+  // SSR / hydration 首次 render 時 flip word 必須可見：framer 的 initial
+  // 會輸出 inline opacity:0 + blur，JS 到位前 H1 的關鍵詞會整個隱形。
+  // mount 後才啟用 initial，換字動畫照舊。
+  const [flipMounted, setFlipMounted] = useState(false);
+  useEffect(() => setFlipMounted(true), []);
 
   useEffect(() => {
     const t = setInterval(
@@ -80,25 +107,34 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   // 備選主標（客戶日後可直接替換，記得同步換上面的 flipWords 組別）：
   //   B 案（痛點對話，搭乙組）：'你很會教 但業績呢\n私教變現，是一門可以學的技術'
   //   C 案（同行對同行，搭丙組）：'教練的 教練\n私教變現 × 銷售心理學，帶你走過我走過的路'
-  const [heroTitle, setHeroTitle] = useState(() =>
-    getDefaultTemplate('hero_title', '私教變現 系統\n把你的專業，變成穩定的收入')
+  const [heroTitle, setHeroTitle] = useState(
+    () =>
+      readSSRContent().hero_title?.trim() ||
+      getDefaultTemplate('hero_title', '私教變現 系統\n把你的專業，變成穩定的收入')
   );
   // 副標採定稿新 A 案。備選：
   //   B 案：'十年健身產業、50 人教練團隊、130+ 位教練的實戰驗證\n專業不會自己變成收入，但它可以被設計成收入'
   //         ⚠️「130+ 位教練」屬待佐證數字，客戶確認後才可啟用
   //   C 案：'專業夠了，卡住的通常是系統\n銷售心理學 × 陪跑輔導，帶教練把技術換成穩定業績'
-  const [heroSubtitle, setHeroSubtitle] = useState(() =>
-    getDefaultTemplate(
-      'hero_subtitle',
-      '給私人教練的商業實戰培訓\n從體驗課成交、續約經營到個人品牌，一套可複製的變現系統'
-    )
+  const [heroSubtitle, setHeroSubtitle] = useState(
+    () =>
+      readSSRContent().hero_subtitle?.trim() ||
+      getDefaultTemplate(
+        'hero_subtitle',
+        '給私人教練的商業實戰培訓\n從體驗課成交、續約經營到個人品牌，一套可複製的變現系統'
+      )
   );
   // CTA 備選：主按鈕 '查看課程與方案' ／ '我要提升業績'
   //           次按鈕 '先聊聊你的狀況' ／ '免費諮詢'
-  const [ctaPrimary, setCtaPrimary] = useState('看變現方案');
-  const [ctaSecondary, setCtaSecondary] = useState('預約 1 對 1 諮詢');
+  const [ctaPrimary, setCtaPrimary] = useState(
+    () => readSSRContent().hero_cta_primary?.trim() || '看變現方案'
+  );
+  const [ctaSecondary, setCtaSecondary] = useState(
+    () => readSSRContent().hero_cta_secondary?.trim() || '預約 1 對 1 諮詢'
+  );
 
   // 從 DB 載入文案（空值或錯誤時保留 fallback）
+  // SSR 預抓資料只作初值；mount 後仍照常抓最新（SSR HTML 可能是 CDN 舊快取）
   useEffect(() => {
     contentService
       .getPublicContent()
@@ -267,7 +303,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
                     <AnimatePresence mode="wait">
                       <motion.span
                         key={wordIndex}
-                        initial={{ opacity: 0, y: 24, filter: 'blur(4px)' }}
+                        initial={flipMounted ? { opacity: 0, y: 24, filter: 'blur(4px)' } : false}
                         animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                         exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
                         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}

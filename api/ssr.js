@@ -127,19 +127,21 @@ module.exports = async function handler(req, res) {
     }
 
     // ===== 5. 注入 head 標籤和 body 內容 =====
+    // ⚠️ replacement 一律用 function 形式：字串形式會解析 $&、$`、$' 等
+    //    替換樣式，文案裡若出現這些字元會把模板炸出重複內容
     let html = template;
 
     if (html.includes("<!--ssr-outlet-->")) {
-      html = html.replace("<!--ssr-outlet-->", appHtml);
+      html = html.replace("<!--ssr-outlet-->", () => appHtml);
     } else {
       html = html.replace(
         '<div id="root"></div>',
-        `<div id="root">${appHtml}</div>`,
+        () => `<div id="root">${appHtml}</div>`,
       );
     }
 
     if (html.includes("<!--ssr-head-->")) {
-      html = html.replace("<!--ssr-head-->", headTags);
+      html = html.replace("<!--ssr-head-->", () => headTags);
     }
 
     html = html.replace(

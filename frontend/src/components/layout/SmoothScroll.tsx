@@ -23,10 +23,15 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     let lenis: any;
     let aosThrottle: ReturnType<typeof setTimeout> | null = null;
     let ro: ResizeObserver | null = null;
+    let tick: ((time: number) => void) | null = null;
+    // cleanup 可能在 dynamic import 完成前就執行（StrictMode / 快速換頁），
+    // 屆時什麼都還沒建立；用 cancelled 讓 initLenis 中止，避免洩漏整組實例
+    let cancelled = false;
 
     const initLenis = async () => {
       try {
         const Lenis = (await import("lenis")).default;
+        if (cancelled) return;
         lenis = new Lenis({
           duration: 1.0,            // 原 1.2，縮短惰性殘留（往上捲更跟手）
           easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -44,9 +49,10 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         // ── GSAP ScrollTrigger 整合 ──────────────────────────
         lenis.on("scroll", ScrollTrigger.update);
 
-        gsap.ticker.add((time) => {
+        tick = (time: number) => {
           lenis.raf(time * 1000);
-        });
+        };
+        gsap.ticker.add(tick);
         gsap.ticker.lagSmoothing(0);
 
         // ── AOS 整合：throttle 50ms，避免每 RAF 都 refresh ──
@@ -80,18 +86,26 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     initLenis();
 
     return () => {
+      cancelled = true;
       if (aosThrottle !== null) clearTimeout(aosThrottle);
       if (lenis) {
         lenis.destroy();
-        gsap.ticker.remove(lenis.raf);
       }
+      if (tick) gsap.ticker.remove(tick);
       setLenisInstance(null);
       if (ro) ro.disconnect();
     };
   }, []);
 
   // 路由切換時回到頂部 + 刷新 AOS（新頁面可能有新的 data-aos 元素）
+  // 首次 mount（= SSR hydration 完成）不捲頂：使用者可能已經在往下閱讀 SSR 內容
+  const isFirstRouteEffect = useRef(true);
   useEffect(() => {
+    if (isFirstRouteEffect.current) {
+      isFirstRouteEffect.current = false;
+      const t = setTimeout(() => AOS.refresh(), 200);
+      return () => clearTimeout(t);
+    }
     if (lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true });
     } else {

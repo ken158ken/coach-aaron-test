@@ -7,6 +7,19 @@
 @plugin "daisyui";
 @plugin "@tailwindcss/typography";
 
+/**
+ * AOS 尚未初始化前（含整段 SSR 首屏、JS 還在下載時）保持元素可見。
+ * aos.css 預設對 [data-aos^=fade] 直接設 opacity:0，AOS.init() 又在
+ * useEffect 才跑 → hydration 前所有 data-aos 內容（教練介紹整區、
+ * Credentials 標題）在畫面上是隱形的，被使用者感知成「內容沒載入」。
+ * AOS.init() 會為元素加上 .aos-init，之後動畫行為照舊。
+ * 取捨：JS 到位前已捲到該區塊者會看到最終狀態、略過進場動畫——內容可見優先。
+ */
+[data-aos]:not(.aos-init) {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 @plugin "daisyui/theme" {
   name: "studio";
   default: true;

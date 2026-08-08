@@ -8,6 +8,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { marqueeService, type MarqueeItem } from '@/services/site/marquee.service';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
 
 /**
  * 預設認證標章（DB 載入失敗時的 fallback）— cert 軌只放證照，不混業績數字。
@@ -41,8 +43,23 @@ const DEFAULT_STATS: MarqueeItem[] = [
 ];
 
 const CertificationMarquee: React.FC = () => {
-  const [certs, setCerts] = useState<MarqueeItem[]>(DEFAULT_CERTS);
-  const [stats, setStats] = useState<MarqueeItem[]>(DEFAULT_STATS);
+  // ── SSR 預抓資料：有資料時 SSR 直接輸出 DB 內容（否則用寫死預設值，
+  //    兩種情況 server / client 首次 render 都一致，不會 hydration mismatch）。
+  //    只作「初值」：mount 後仍照常 fetch 覆蓋（SSR HTML 可能是 CDN 舊快取）──
+  const ssrItems = getInitialData<MarqueeItem[]>(dataKeys.marquee());
+  const ssrCerts = Array.isArray(ssrItems)
+    ? ssrItems.filter((i) => i.type === 'cert')
+    : [];
+  const ssrStats = Array.isArray(ssrItems)
+    ? ssrItems.filter((i) => i.type === 'stat')
+    : [];
+
+  const [certs, setCerts] = useState<MarqueeItem[]>(
+    ssrCerts.length > 0 ? ssrCerts : DEFAULT_CERTS
+  );
+  const [stats, setStats] = useState<MarqueeItem[]>(
+    ssrStats.length > 0 ? ssrStats : DEFAULT_STATS
+  );
 
   useEffect(() => {
     marqueeService

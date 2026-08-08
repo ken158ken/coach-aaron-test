@@ -53,7 +53,8 @@ async function bootstrap() {
     container.innerHTML.trim().length > 0 && container.children.length > 0;
 
   if (hasSSRContent) {
-    // SSR hydration — onRecoverableError 靜默 auth 狀態差異造成的 hydration mismatch
+    // SSR hydration — hydration mismatch 降級為 warn（不靜默：mismatch 代表
+    // 某元件 server / client 首次 render 不一致，會造成整棵樹 client 重建，必須看得到）
     hydrateRoot(container, appElement, {
       onRecoverableError: (error: unknown) => {
         if (
@@ -62,6 +63,7 @@ async function bootstrap() {
             error.message.includes("#423") ||
             error.message.includes("Hydration"))
         ) {
+          console.warn("[hydration mismatch]", error.message);
           return;
         }
         console.error("React recoverable error:", error);
@@ -73,7 +75,21 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+// Vite 動態 import 失敗（多半是新部署後舊 hash chunk 已不存在）→ 重整一次拿新版。
+// 這是移除 SW controllerchange 自動 reload 後，唯一需要 reload 的情境；
+// 以 sessionStorage 防呆避免無限重整循環（bootstrap 成功後即清除，
+// 讓下一次真正的部署替換仍可觸發一次 reload）。
+const PRELOAD_RELOAD_KEY = "__preload_error_reloaded__";
+window.addEventListener("vite:preloadError", (event) => {
+  if (sessionStorage.getItem(PRELOAD_RELOAD_KEY)) return; // 重整過仍失敗 → 交給 ErrorBoundary
+  sessionStorage.setItem(PRELOAD_RELOAD_KEY, "1");
+  event.preventDefault();
+  window.location.reload();
+});
+
+bootstrap().then(() => {
+  sessionStorage.removeItem(PRELOAD_RELOAD_KEY);
+});
 
 // PWA service worker — 註冊在 React 渲染後（不擋首次渲染）
 registerServiceWorker();

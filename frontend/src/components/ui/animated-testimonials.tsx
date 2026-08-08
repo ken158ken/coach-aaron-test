@@ -88,6 +88,12 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
   // 內層照片索引：只作用於「當前 active 項目」的多張 images
   const [imageIndex, setImageIndex] = useState(0);
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  // SSR / hydration 首次 render 必須「可見」：framer-motion 的 initial 會被
+  // 序列化成 inline style（opacity:0 / blur），JS 到位前整區隱形，正是
+  // 首頁「往下捲一片空白」bug 的成因之一。mount 後才啟用 initial，
+  // 讓之後的換張進場動畫照舊。
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const total = testimonials.length;
   const handleNext = () => setActive((p) => (p + 1) % total);
@@ -153,7 +159,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
             {testimonials.map((t, index) => (
               <motion.div
                 key={`${t.name}-${index}`}
-                initial={{ opacity: 0, scale: 0.9, rotate: ROTATIONS[index % ROTATIONS.length] }}
+                initial={mounted ? { opacity: 0, scale: 0.9, rotate: ROTATIONS[index % ROTATIONS.length] } : false}
                 animate={{
                   opacity: isActive(index) ? 1 : 0.55,
                   scale: isActive(index)
@@ -196,7 +202,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
         <div className="flex flex-col justify-between py-2 md:py-4">
           <motion.div
             key={active}
-            initial={{ y: 20, opacity: 0 }}
+            initial={mounted ? { y: 20, opacity: 0 } : false}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -20, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
@@ -212,7 +218,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
                 : Array.from(current.quote).map((ch, i) => (
                     <motion.span
                       key={`${active}-${i}`}
-                      initial={{ filter: 'blur(8px)', opacity: 0, y: 4 }}
+                      initial={mounted ? { filter: 'blur(8px)', opacity: 0, y: 4 } : false}
                       animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, ease: 'easeInOut', delay: 0.012 * i }}
                       className="inline-block"

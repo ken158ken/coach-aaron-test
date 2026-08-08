@@ -9,10 +9,29 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { TextButton } from '@/components/ui';
 import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
 
 interface CoachIntroSectionProps {
   className?: string;
 }
+
+/** SSR 預抓的 site_content map（首頁路由才有；server / client 讀到同一份） */
+const readSSRContent = (): Record<string, string> => {
+  const data = getInitialData<Record<string, string>>(dataKeys.siteContent());
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+};
+
+/** 解析 JSON 陣列字串，失敗回 null */
+const parseJsonArray = (raw: string | undefined): string[] | null => {
+  if (!raw) return null;
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length > 0 ? arr : null;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * 預設 bullets（DB 無值時 fallback）
@@ -133,23 +152,38 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
   //     是設計出來的。現在我做的事很單純：把這套設計交給還在硬撐的教練。'
   //   C 案（精簡，版面吃緊時用）：'私教變現顧問、教練職涯培訓講師。台東威豪健身總教官，帶約 50 人教練團隊。
   //     第一線私教出身，專攻銷售心理學與教練經營，只服務一種人——想把專業變成收入的私人教練。'
-  const [aboutCoach, setAboutCoach] = useState(() =>
-    getDefaultTemplate(
-      'about_coach',
-      '教練職涯培訓講師、私教變現顧問。第一線私教出身，現任台東威豪健身總教官，統籌約 50 人的教練團隊，負責業績與續約 KPI、教練育成與教學品質管理。十年產業經驗讓我很確定一件事：多數教練卡住的不是專業，是沒有一套把專業換成收入的系統。所以近年我把私教與管理的實戰方法整理成課程與陪跑，只教一件事——教練怎麼把技術變成穩定業績。'
-    )
+  const [aboutCoach, setAboutCoach] = useState(
+    () =>
+      readSSRContent().about_coach?.trim() ||
+      getDefaultTemplate(
+        'about_coach',
+        '教練職涯培訓講師、私教變現顧問。第一線私教出身，現任台東威豪健身總教官，統籌約 50 人的教練團隊，負責業績與續約 KPI、教練育成與教學品質管理。十年產業經驗讓我很確定一件事：多數教練卡住的不是專業，是沒有一套把專業換成收入的系統。所以近年我把私教與管理的實戰方法整理成課程與陪跑，只教一件事——教練怎麼把技術變成穩定業績。'
+      )
   );
   // tagline 備選：'關於教練'（保守）／'我是誰，憑什麼教你'（強對話感）
-  const [tagline, setTagline] = useState('關於阿倫教官');
-  const [coachName, setCoachName] = useState('阿倫教官');
+  const [tagline, setTagline] = useState(
+    () => readSSRContent().coach_intro_tagline?.trim() || '關於阿倫教官'
+  );
+  const [coachName, setCoachName] = useState(
+    () => readSSRContent().coach_intro_name?.trim() || '阿倫教官'
+  );
   // 頭銜備選：'教練職涯培訓講師' ／ '教練的教練'
-  const [coachTitle, setCoachTitle] = useState('私教變現顧問');
-  const [images, setImages] = useState<string[]>(COACH_IMAGES);
-  const [bullets, setBullets] = useState<string[]>(DEFAULT_BULLETS);
+  const [coachTitle, setCoachTitle] = useState(
+    () => readSSRContent().coach_intro_title?.trim() || '私教變現顧問'
+  );
+  const [images, setImages] = useState<string[]>(
+    () => parseJsonArray(readSSRContent().coach_intro_images) ?? COACH_IMAGES
+  );
+  const [bullets, setBullets] = useState<string[]>(
+    () => parseJsonArray(readSSRContent().coach_intro_bullets) ?? DEFAULT_BULLETS
+  );
   // CTA 備選：'我的職涯故事' ／ '為什麼是我'
-  const [cta, setCta] = useState('完整經歷');
+  const [cta, setCta] = useState(
+    () => readSSRContent().coach_intro_cta?.trim() || '完整經歷'
+  );
 
   // 從後台載入內容，若 DB 回傳空值則保留範本
+  // SSR 預抓資料只作初值；mount 後仍照常抓最新（SSR HTML 可能是 CDN 舊快取）
   useEffect(() => {
     contentService
       .getPublicContent()

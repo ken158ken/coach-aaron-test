@@ -14,8 +14,11 @@ export interface PrefetchSpec {
   key: string;
   /** 相對 API 路徑（會接在 apiBase 之後） */
   path: string;
-  /** 此筆抓取失敗時是否可忽略（true = 只影響側欄之類的次要區塊） */
+  /** 標註用途：此筆屬次要資料（目前 prefetch 對所有 spec 一視同仁——
+   *  任何一筆失敗都只是該 key 缺席、不會擋 SSR；此欄位僅供閱讀者理解優先序） */
   optional?: boolean;
+  /** 單筆逾時（毫秒）；未設定時用 prefetch options 的全域 timeoutMs */
+  timeoutMs?: number;
 }
 
 // ── key builders（頁面元件與 SSR 共用） ──────────────────────
@@ -31,6 +34,16 @@ export const dataKeys = {
   lesson: (id: string | number) => `lesson:${id}`,
   lessonsList: () => "lessons:list",
   landing: (slug: string) => `landing:${slug}`,
+  /** 首頁：site_content 全站文案 key-value map */
+  siteContent: () => "content:site",
+  /** 首頁：學員見證 slides */
+  testimonials: () => "slides:testimonials",
+  /** 首頁：學員見證輪播設定 */
+  testimonialsConfig: () => "slides:testimonials:config",
+  /** 首頁：Moments 相片牆 slides */
+  gallery: () => "slides:gallery",
+  /** 首頁：Credentials 跑馬燈項目 */
+  marquee: () => "marquee:list",
 };
 
 // ── 路由比對 ────────────────────────────────────────────────
@@ -69,6 +82,47 @@ export function getPrefetchSpecs(url: string): PrefetchSpec[] {
   }
 
   const segments = pathname.split("/").filter(Boolean);
+
+  // / （首頁）— 各 section 的資料全部預抓，SSR HTML 才有真實內容
+  //   courses 為主要內容（ServicesSection）；其餘缺席時各元件有寫死的
+  //   fallback 或骨架，故標 optional 並給較短逾時（3000ms），
+  //   避免次要 API 偶發變慢時拖長整頁 TTFB（客端 mount 後仍會補抓）
+  if (segments.length === 0) {
+    const OPTIONAL_TIMEOUT_MS = 3000;
+    return [
+      { key: dataKeys.coursesList(), path: "/api/courses" },
+      {
+        key: dataKeys.siteContent(),
+        path: "/api/content",
+        optional: true,
+        timeoutMs: OPTIONAL_TIMEOUT_MS,
+      },
+      {
+        key: dataKeys.testimonials(),
+        path: "/api/slides/testimonials",
+        optional: true,
+        timeoutMs: OPTIONAL_TIMEOUT_MS,
+      },
+      {
+        key: dataKeys.testimonialsConfig(),
+        path: "/api/slides/testimonials/config",
+        optional: true,
+        timeoutMs: OPTIONAL_TIMEOUT_MS,
+      },
+      {
+        key: dataKeys.gallery(),
+        path: "/api/slides/gallery",
+        optional: true,
+        timeoutMs: OPTIONAL_TIMEOUT_MS,
+      },
+      {
+        key: dataKeys.marquee(),
+        path: "/api/marquee",
+        optional: true,
+        timeoutMs: OPTIONAL_TIMEOUT_MS,
+      },
+    ];
+  }
 
   // /articles
   if (segments.length === 1 && segments[0] === "articles") {

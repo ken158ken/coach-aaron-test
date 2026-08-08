@@ -78,14 +78,15 @@ async function createServer() {
       } = render(url, initialData);
 
       // 注入 SSR 內容和 head 標籤
-      let html = template.replace("<!--ssr-outlet-->", appHtml);
+      // replacement 用 function 形式，避免文案含 $&、$' 等替換樣式時炸模板
+      let html = template.replace("<!--ssr-outlet-->", () => appHtml);
 
       // head 標籤 + 初始資料 script 一併注入到 <!--ssr-head--> 位置
       const headBlock = [head || "", initialDataScript || ""]
         .filter(Boolean)
         .join("\n");
       if (headBlock) {
-        html = html.replace("<!--ssr-head-->", headBlock);
+        html = html.replace("<!--ssr-head-->", () => headBlock);
       }
 
       res.status(200).set({ "Content-Type": "text/html" }).end(html);

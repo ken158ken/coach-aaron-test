@@ -1,61 +1,48 @@
 /**
- * LazySection - 延遲渲染的 section wrapper
+ * LazySection - 延遲「繪製」的 section wrapper
  * @module components/ui/LazySection
- * @description 使用 IntersectionObserver，當元素接近視窗時才實際渲染子元素的 DOM。
- *              適用於頁面下方不需要立即呈現的長 section（Podcast、Review 等），
- *              減少初始渲染的 DOM 節點數量。
+ * @description 用 CSS `content-visibility: auto` 讓瀏覽器在元素離視窗還遠時
+ *              跳過 layout / paint，效能收益等同原本的 IntersectionObserver 版，
+ *              但 children 一律進入 DOM——因此 SSR HTML 會完整輸出內容，
+ *              不會出現「hydration 前往下捲看到空白」的問題（SEO 也吃得到內文）。
  *
- *              rootMargin 預設 "400px" = 距離視窗還有 400px 時就開始渲染，
- *              確保使用者捲動到時不會看到空白閃爍。
+ *              舊版以 `useState(false)` + IntersectionObserver 控制 `{visible && children}`，
+ *              SSR 時 visible 恆為 false → 首頁下方三個 section 在 SSR HTML 中是空 div，
+ *              JS 載完前使用者看到的就是真空。勿改回該模式。
+ *
+ *              `containIntrinsicSize` 以 minHeight 當佔位高度估值，避免捲動條跳動；
+ *              不支援 content-visibility 的舊瀏覽器會直接完整渲染（行為正確、只是少了優化）。
  */
 
-import React, { useRef, useState, useEffect } from "react";
+import React from "react";
 
 interface LazySectionProps {
   children: React.ReactNode;
-  /** 預留高度，避免 layout shift（設定約等於實際高度） */
+  /** 預留高度估值，供 contain-intrinsic-size 使用（設定約等於實際高度） */
   minHeight?: string;
-  /** 提前渲染的距離，預設 "400px" */
-  rootMargin?: string;
   className?: string;
 }
 
 const LazySection: React.FC<LazySectionProps> = ({
   children,
   minHeight = "400px",
-  rootMargin = "600px", // 原 400px → 600px：在使用者接近前 600px 就先渲染，避免捲到時才冒出
   className = "",
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin },
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [rootMargin]);
-
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{ minHeight: visible ? undefined : minHeight }}
-    >
-      {visible && children}
-    </div>
-  );
-};
+}) => (
+  <div
+    className={className}
+    style={
+      {
+        contentVisibility: "auto",
+        // 不用「auto <length>」寫法：auto 關鍵字要 Chrome 111 / FF 107 /
+        // Safari 17 才支援，在 Chrome 85–110 整條宣告會失效 → 被跳過的
+        // 子樹高度變 0，捲軸劇烈跳動。純長度值在所有支援
+        // content-visibility 的瀏覽器都有效。
+        containIntrinsicSize: minHeight,
+      } as React.CSSProperties
+    }
+  >
+    {children}
+  </div>
+);
 
 export default LazySection;

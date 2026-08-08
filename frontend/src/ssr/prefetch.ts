@@ -91,7 +91,8 @@ export async function prefetchRouteData(
     const work = Promise.allSettled(
       specs.map(async (spec) => ({
         key: spec.key,
-        value: await fetchOne(`${apiBase}${spec.path}`, timeoutMs),
+        // spec 可自帶較短逾時（例如首頁的次要區塊），避免拖長整頁 TTFB
+        value: await fetchOne(`${apiBase}${spec.path}`, spec.timeoutMs ?? timeoutMs),
       })),
     );
 

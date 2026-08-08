@@ -15,10 +15,29 @@
 
 import { useEffect, useState } from 'react';
 import { contentService } from '@/services/site/content.service';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
 
 /** 模組層級快取：避免每個 section 元件各自打一次 API */
 let cache: Record<string, string> | null = null;
 let inflight: Promise<Record<string, string>> | null = null;
+
+/**
+ * 讀取 SSR 預抓的 site_content map（首頁路由才有）。
+ * 伺服器端讀 per-request store、客戶端讀 window.__INITIAL_DATA__，
+ * 兩邊內容一致 → hydration 不會 mismatch。
+ *
+ * ⚠️ 只作為 useState「初值」（stale-while-revalidate）：client 端 mount 後
+ * 仍照常 fetch 最新資料覆蓋。SSR HTML 可能來自 CDN 快取
+ * （api/ssr.js s-maxage=60 + swr=600，最舊 11 分鐘），若以它跳過 fetch，
+ * 後台改完文案會遲遲不生效。
+ */
+const readInitialContent = (): Record<string, string> | null => {
+  const data = getInitialData<Record<string, string>>(dataKeys.siteContent());
+  return data && typeof data === 'object' && !Array.isArray(data)
+    ? data
+    : null;
+};
 
 /** 取得並快取全站內容 map（僅首次會發出請求） */
 const loadContent = (): Promise<Record<string, string>> => {
@@ -71,9 +90,11 @@ export interface UseSiteContentResult {
  */
 export function useSiteContent(): UseSiteContentResult {
   const [content, setContent] = useState<Record<string, string>>(
-    () => cache ?? {}
+    () => cache ?? readInitialContent() ?? {}
   );
-  const [loading, setLoading] = useState<boolean>(!cache);
+  const [loading, setLoading] = useState<boolean>(
+    !cache && !readInitialContent()
+  );
 
   useEffect(() => {
     let cancelled = false;

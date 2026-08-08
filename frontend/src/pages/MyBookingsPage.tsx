@@ -130,8 +130,9 @@ const MyBookingsPage: React.FC = () => {
                   {b.course && (
                     <p className="text-xs text-muted mb-1">
                       📚 關聯課程：
+                      {/* 路由只支援數字 id（App.tsx: courses/:id），slug 會 404 */}
                       <Link
-                        to={`/courses/${b.course.course_slug || b.course.course_id}`}
+                        to={`/courses/${b.course.course_id}`}
                         className="text-gold hover:underline ml-1"
                       >
                         {b.course.course_title}

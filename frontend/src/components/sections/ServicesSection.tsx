@@ -23,6 +23,8 @@ import { Link } from 'react-router-dom';
 import { courseService } from '@/services';
 import { useSiteContent } from '@/hooks/useSiteContent';
 import { Carousel, Card } from '@/components/ui/apple-cards-carousel';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
 import type { Course } from '@/types';
 
 // ─── 文案 ─────────────────────────────────────────────────────
@@ -91,8 +93,14 @@ const SkeletonCards: React.FC = () => (
 // ─── Component ────────────────────────────────────────────────
 
 const ServicesSection: React.FC = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── SSR 預抓資料（與 Courses.tsx 同模式）：有資料時 SSR 直接輸出課程卡，
+  //    server 與 client 首次 render 讀同一份 → 不會 hydration mismatch。
+  //    只作「初值」：mount 後仍照常 fetch 覆蓋（SSR HTML 可能是 CDN 舊快取）──
+  const ssrCourses = getInitialData<Course[]>(dataKeys.coursesList());
+  const initialCourses = Array.isArray(ssrCourses) ? ssrCourses : [];
+
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [loading, setLoading] = useState(initialCourses.length === 0);
   const { get } = useSiteContent();
 
   useEffect(() => {

@@ -9,6 +9,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { slidesService, type GallerySlide } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { getInitialData } from '@/ssr/initialData';
+import { dataKeys } from '@/ssr/routeData';
 
 type Dir = 'top' | 'bottom' | 'left' | 'right';
 
@@ -105,8 +107,14 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ slide, index }) => {
 
 // ─── Section ──────────────────────────────────────────────────
 const DirectionAwareGallery: React.FC = () => {
-  const [slides, setSlides] = useState<GallerySlide[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── SSR 預抓資料：有資料時 SSR 直接輸出相片牆（server / client 首次
+  //    render 讀同一份 __INITIAL_DATA__，不會 hydration mismatch）。
+  //    只作「初值」：mount 後仍照常 fetch 覆蓋（SSR HTML 可能是 CDN 舊快取）──
+  const ssrSlides = getInitialData<GallerySlide[]>(dataKeys.gallery());
+  const initialGallery = Array.isArray(ssrSlides) ? ssrSlides : undefined;
+
+  const [slides, setSlides] = useState<GallerySlide[]>(initialGallery ?? []);
+  const [loading, setLoading] = useState(!initialGallery);
 
   const { get } = useSiteContent();
   const mHeader = {

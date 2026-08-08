@@ -3,8 +3,8 @@
  * @module lib/registerSW
  *
  * 在 entry-client bootstrap 結束後呼叫一次。
- * 偵測到新 SW 待 activate 時，會自動 postMessage SKIP_WAITING + reload，
- * 確保用戶下次重整就拿到新版（避免老 SW 卡住）。
+ * 偵測到新 SW 待 activate 時，會自動 postMessage SKIP_WAITING 讓新版
+ * 靜默接管（不 reload——見下方 controllerchange 註解）。
  */
 
 export function registerServiceWorker(): void {
@@ -41,13 +41,13 @@ export function registerServiceWorker(): void {
         console.warn("[SW] 註冊失敗", err);
       });
 
-    // controller 換人 → reload 讓新 SW 正式接管
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
+    // ⚠️ 這裡「絕不」監聽 controllerchange 做 window.location.reload()：
+    //   sw.js 的 install 會 skipWaiting、activate 會 clients.claim()，
+    //   所以「首次造訪」與「每次部署後的第一次造訪」都必然觸發 controllerchange。
+    //   舊版在此 reload 造成使用者正在往下閱讀 SSR 內容時整頁重載、被拉回頂部
+    //  （首頁 SSR bug 的主因之一）。新 SW 靜默接管即可：
+    //   HTML 走 networkFirst、hash 化資源 cache miss 時直接走網路，都不需要 reload。
+    //   舊部署 chunk 被清掉的極端情況由 entry-client 的 vite:preloadError 處理。
   };
 
   if ("requestIdleCallback" in window) {
