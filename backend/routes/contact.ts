@@ -141,7 +141,9 @@ router.post(
       // 郵件內的圖片必須是絕對 URL，且多數郵件客戶端不支援 SVG，
       // 因此用點陣圖 /logo/logo-email.png（400×125，白底，2x 供高解析螢幕）。
       const siteUrl = (
-        process.env.SITE_URL || "https://coach-aaron-test.vercel.app"
+        process.env.SITE_URL ||
+          process.env.FRONTEND_URL ||
+          "https://coach-aaron-test.vercel.app"
       ).replace(/\/+$/, "");
 
       const htmlContent = `

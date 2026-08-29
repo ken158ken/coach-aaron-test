@@ -85,18 +85,28 @@ const REFERENCE_SOURCES: ReadonlyArray<{
 }> = [
   {
     table: "courses",
-    columns: ["course_thumbnail_url", "course_banner_url", "course_content"],
+    columns: [
+      "course_thumbnail_url",
+      "course_banner_url",
+      "course_content",
+      "course_content_en",
+    ],
   },
   { table: "lesson_videos", columns: ["thumbnail_url"] },
   {
     table: "articles",
-    columns: ["article_thumbnail_url", "article_banner_url", "article_content"],
+    columns: [
+      "article_thumbnail_url",
+      "article_banner_url",
+      "article_content",
+      "article_content_en",
+    ],
   },
   { table: "testimonial_slides", columns: ["image_url"] },
   { table: "gallery_slides", columns: ["image_url"] },
   { table: "site_content", columns: ["content_value", "content_value_en"] },
   // 首頁彈窗的內文 HTML 可插入本站上傳圖（前端以 site-content entity 上傳）
-  { table: "site_popups", columns: ["popup_content"] },
+  { table: "site_popups", columns: ["popup_content", "popup_content_en"] },
   { table: "content_templates", columns: ["template_value"] },
   { table: "videos", columns: ["thumbnail_url"] },
   { table: "homepage_banners", columns: ["background_url"] },
@@ -122,14 +132,15 @@ const SOFT_DELETE_TARGETS: ReadonlyArray<{
   idColumn: string;
   entity: ImageEntity;
   imageColumns: string[];
-  /** 內文欄位：清完檔案後把死掉的 storage URL 一併從 HTML 移除 */
-  htmlColumn?: string;
+  /** 內文欄位（含 _en）：清完檔案後把死掉的 storage URL 一併從 HTML 移除 */
+  htmlColumns?: string[];
 }> = [
   {
     table: "courses",
     idColumn: "course_id",
     entity: "course",
     imageColumns: ["course_thumbnail_url", "course_banner_url"],
+    htmlColumns: ["course_content", "course_content_en"],
   },
   {
     table: "lesson_videos",
@@ -142,7 +153,7 @@ const SOFT_DELETE_TARGETS: ReadonlyArray<{
     idColumn: "article_id",
     entity: "article",
     imageColumns: ["article_thumbnail_url", "article_banner_url"],
-    htmlColumn: "article_content",
+    htmlColumns: ["article_content", "article_content_en"],
   },
 ];
 
@@ -168,8 +179,14 @@ interface CleanupStats {
 // 步驟實作
 // ───────────────────────────────────────────────────────────────
 
-/** 步驟 1：清掉超過 24h 的暫存檔 */
+/**
+ * 步驟 1：清掉超過 24h 的暫存檔。
+ *
+ * ⚠️ 必須比對引用集合：finalizeHtmlImages 超過單次上限、或 finalize 失敗時，
+ * DB 裡會刻意留著 temp URL —— 這些 temp 檔「仍被引用」，刪掉會變死連結。
+ */
 async function cleanupTempFiles(
+  refs: Set<string>,
   isExpired: () => boolean,
   errors: string[],
 ): Promise<number> {
@@ -188,6 +205,7 @@ async function cleanupTempFiles(
 
       const stale = tempFiles
         .filter((f) => f.createdAt !== null && Date.parse(f.createdAt) < cutoff)
+        .filter((f) => !refs.has(`${bucket}/${f.path}`))
         .map((f) => f.path);
 
       // thumbnails bucket 的舊制：`temp_*.webp` 平放在根目錄（videos.ts 產生）
@@ -199,6 +217,7 @@ async function cleanupTempFiles(
         for (const f of rootFiles) {
           if (!f.path.startsWith("temp_")) continue;
           if (f.createdAt === null || Date.parse(f.createdAt) >= cutoff) continue;
+          if (refs.has(`${bucket}/${f.path}`)) continue;
           stale.push(f.path);
         }
       }
@@ -230,17 +249,18 @@ async function cleanupSoftDeleted(
     try {
       // 只挑「還留著圖片欄位或內文含 storage URL」的 row，
       // 處理完會被清成 NULL，不會每天重複掃到同一批。
+      const htmlColumns = target.htmlColumns ?? [];
       const orFilter = [
         ...target.imageColumns.map((c) => `${c}.not.is.null`),
-        ...(target.htmlColumn
-          ? [`${target.htmlColumn}.ilike.*/storage/v1/object/public/*`]
-          : []),
+        ...htmlColumns.map(
+          (c) => `${c}.ilike.*/storage/v1/object/public/*`,
+        ),
       ].join(",");
 
       const selectCols = [
         target.idColumn,
         ...target.imageColumns,
-        ...(target.htmlColumn ? [target.htmlColumn] : []),
+        ...htmlColumns,
       ].join(", ");
 
       const { data, error } = await supabaseAdmin
@@ -265,14 +285,14 @@ async function cleanupSoftDeleted(
 
         // 內文：把已刪除的自家圖片 URL 拿掉。
         // 一方面 URL 已成死連結，一方面下次 cron 才不會又掃到同一筆（避免卡住批次額度）。
-        if (target.htmlColumn) {
-          const html = row[target.htmlColumn];
+        for (const col of htmlColumns) {
+          const html = row[col];
           if (typeof html === "string" && html) {
             let stripped = html;
             for (const url of extractStorageUrls(html)) {
               stripped = stripped.split(url).join("");
             }
-            if (stripped !== html) patch[target.htmlColumn] = stripped;
+            if (stripped !== html) patch[col] = stripped;
           }
         }
 
@@ -293,15 +313,24 @@ async function cleanupSoftDeleted(
   return { rows, files };
 }
 
-/** 建立引用集合：`{bucket}/{path}` 字串 Set */
-async function buildReferenceSet(): Promise<Set<string> | null> {
-  const refs = new Set<string>();
+/** 引用查詢分頁大小（Supabase PostgREST 預設單次回傳上限就是 1000） */
+const REF_PAGE_SIZE = 1000;
+/** 單表分頁上限（10 頁 = 1 萬列）；讀不完代表引用集合不完整，必須放棄掃描 */
+const REF_MAX_PAGES = 10;
 
-  for (const source of REFERENCE_SOURCES) {
+/**
+ * 讀取單一來源表的全部引用（分頁到完）。
+ * @returns "ok" 讀完 / "skip" 選用表不存在 / "abort" 讀不完或查詢失敗（集合不完整，禁止刪檔）
+ */
+async function collectSourceRefs(
+  source: (typeof REFERENCE_SOURCES)[number],
+  refs: Set<string>,
+): Promise<"ok" | "skip" | "abort"> {
+  for (let page = 0; page < REF_MAX_PAGES; page++) {
     const { data, error } = await supabaseAdmin
       .from(source.table)
       .select(source.columns.join(", "))
-      .limit(5000);
+      .range(page * REF_PAGE_SIZE, (page + 1) * REF_PAGE_SIZE - 1);
 
     if (error) {
       // optional 來源：表不存在（migration 未跑）視為可略過
@@ -311,17 +340,14 @@ async function buildReferenceSet(): Promise<Set<string> | null> {
         /does not exist|find the table/i.test(error.message ?? "");
       if (source.optional && missingTable) {
         logger.info("孤兒掃描：略過不存在的選用來源表", { table: source.table });
-        continue;
+        return "skip";
       }
-
-      // 安全閥：引用集合不完整就不准刪任何東西
-      logger.error("孤兒掃描：引用來源查詢失敗，放棄本次掃描", error, {
-        table: source.table,
-      });
-      return null;
+      logger.error("孤兒掃描：引用來源查詢失敗", error, { table: source.table });
+      return "abort";
     }
 
-    for (const raw of data ?? []) {
+    const rows = data ?? [];
+    for (const raw of rows) {
       const row = raw as unknown as Record<string, unknown>;
       for (const col of source.columns) {
         const value = row[col];
@@ -335,29 +361,39 @@ async function buildReferenceSet(): Promise<Set<string> | null> {
         }
       }
     }
+
+    // 未滿一頁 = 已讀完
+    if (rows.length < REF_PAGE_SIZE) return "ok";
   }
 
+  // 讀滿 REF_MAX_PAGES 仍未見底 —— 引用集合可能不完整，寧可放棄本次掃描
+  logger.error(
+    "孤兒掃描：來源表超過分頁上限，引用集合不完整，放棄本次掃描",
+    new Error("reference source truncated"),
+    { table: source.table, maxRows: REF_PAGE_SIZE * REF_MAX_PAGES },
+  );
+  return "abort";
+}
+
+/** 建立引用集合：`{bucket}/{path}` 字串 Set；任何來源讀取不完整回傳 null（禁止刪檔） */
+async function buildReferenceSet(): Promise<Set<string> | null> {
+  const refs = new Set<string>();
+
+  // 各來源表彼此獨立，平行查詢（Set 寫入在單執行緒 event loop 上安全）
+  const results = await Promise.all(
+    REFERENCE_SOURCES.map((source) => collectSourceRefs(source, refs)),
+  );
+
+  if (results.includes("abort")) return null;
   return refs;
 }
 
-/** 步驟 3：孤兒掃描 */
+/** 步驟 3：孤兒掃描（refs 由呼叫端建好傳入，與 temp 清理共用） */
 async function cleanupOrphans(
+  refs: Set<string>,
   isExpired: () => boolean,
   errors: string[],
 ): Promise<{ deleted: number; skipped: boolean }> {
-  const refs = await buildReferenceSet();
-  if (refs === null) {
-    errors.push("孤兒掃描已跳過：引用來源查詢失敗（安全起見不刪任何檔案）");
-    return { deleted: 0, skipped: true };
-  }
-
-  // 保險絲：正常情況下 DB 一定引用著一批 storage 檔案。
-  // 引用集合完全是空的，比較可能是查詢被權限擋掉而不是真的沒圖 —— 不冒險。
-  if (refs.size === 0) {
-    errors.push("孤兒掃描已跳過：引用集合為空，疑似查詢異常（安全起見不刪任何檔案）");
-    return { deleted: 0, skipped: true };
-  }
-
   const orphanCutoff = Date.now() - ORPHAN_MIN_AGE_MS;
   let deleted = 0;
 
@@ -405,9 +441,19 @@ router.get(
   "/cleanup-images",
   async (req: Request, res: Response): Promise<void> => {
     // 驗證 CRON_SECRET（Vercel Cron 會自動帶 Authorization: Bearer <secret>）
+    // 沒設定 CRON_SECRET 時直接拒絕 —— 這是跨 6 個 bucket 的刪檔端點，
+    // 絕不能因為環境變數漏設就變成公開可打
     const secret = process.env.CRON_SECRET;
+    if (!secret) {
+      logger.error(
+        "cleanup-images：CRON_SECRET 未設定，拒絕執行",
+        new Error("CRON_SECRET missing"),
+      );
+      res.status(503).json({ error: "CRON_SECRET 未設定" });
+      return;
+    }
     const authHeader = req.headers.authorization || "";
-    if (secret && authHeader !== `Bearer ${secret}`) {
+    if (authHeader !== `Bearer ${secret}`) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
@@ -429,11 +475,27 @@ router.get(
       timestamp: new Date().toISOString(),
     };
 
-    // 1. temp TTL
+    // 0. 先建引用集合（temp 清理與孤兒掃描共用；建不完整就兩者都跳過）
+    let refs: Set<string> | null = null;
     try {
-      stats.tempFilesDeleted = await cleanupTempFiles(isExpired, errors);
+      refs = await buildReferenceSet();
     } catch (err) {
-      errors.push(`temp 清理整體失敗：${(err as Error)?.message}`);
+      errors.push(`引用集合建立失敗：${(err as Error)?.message}`);
+    }
+    if (refs !== null && refs.size === 0) {
+      // 保險絲：正常情況下 DB 一定引用著一批 storage 檔案。
+      // 引用集合完全是空的，比較可能是查詢被權限擋掉而不是真的沒圖 —— 不冒險。
+      errors.push("引用集合為空，疑似查詢異常 —— temp 清理與孤兒掃描皆跳過");
+      refs = null;
+    }
+
+    // 1. temp TTL（需要引用集合：DB 刻意留著的 temp URL 不能刪）
+    if (refs !== null) {
+      try {
+        stats.tempFilesDeleted = await cleanupTempFiles(refs, isExpired, errors);
+      } catch (err) {
+        errors.push(`temp 清理整體失敗：${(err as Error)?.message}`);
+      }
     }
 
     // 2. 軟刪除 30 天
@@ -448,9 +510,12 @@ router.get(
     }
 
     // 3. 孤兒掃描
-    if (!isExpired()) {
+    if (refs === null) {
+      stats.orphanScanSkipped = true;
+      errors.push("孤兒掃描已跳過：引用集合不完整（安全起見不刪任何檔案）");
+    } else if (!isExpired()) {
       try {
-        const result = await cleanupOrphans(isExpired, errors);
+        const result = await cleanupOrphans(refs, isExpired, errors);
         stats.orphanFilesDeleted = result.deleted;
         stats.orphanScanSkipped = result.skipped;
       } catch (err) {

@@ -211,6 +211,9 @@ export function parseStorageUrl(url: unknown): ParsedStorageUrl | null {
  * @param text HTML 或純文字
  * @returns 去重後的 URL 陣列（保持原始字串，未 decode）
  */
+/** extractStorageUrls 的 RegExp 快取（base 來自環境變數，行程內不會變） */
+let cachedPattern: { base: string; re: RegExp } | null = null;
+
 export function extractStorageUrls(text: unknown): string[] {
   if (typeof text !== "string" || !text) return [];
 
@@ -218,10 +221,16 @@ export function extractStorageUrls(text: unknown): string[] {
   if (!base || !text.includes(base)) return [];
 
   // 以 base 為錨點往後吃到「網址不可能出現的字元」為止
-  const pattern = new RegExp(
-    `${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^\\s"'<>\\\\)]+`,
-    "g",
-  );
+  if (cachedPattern === null || cachedPattern.base !== base) {
+    cachedPattern = {
+      base,
+      re: new RegExp(
+        `${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^\\s"'<>\\\\)]+`,
+        "g",
+      ),
+    };
+  }
+  const pattern = cachedPattern.re;
 
   const found = text.match(pattern) ?? [];
   const unique = new Set<string>();

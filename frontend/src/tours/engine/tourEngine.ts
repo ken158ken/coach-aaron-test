@@ -178,7 +178,12 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
     const backdrop = q("[data-tour-modal-backdrop]");
     if (closeBtn) closeBtn.click();
     else if (backdrop) backdrop.click();
-    else pressEscape(instance);
+    else if (g.close) pressEscape(instance);
+    else {
+      // 非 modal 群組（例如分頁切換）：沒有東西要關，
+      // 不能亂發合成 Escape 到頁面上，也不必等一個永遠不會消失的元素
+      return;
+    }
 
     await waitForGone(g.wait);
   }
@@ -247,6 +252,9 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
             continue;
           }
         }
+
+        // await 期間使用者可能已按 Escape 關掉導覽 —— 別在銷毀的實例上復活 highlight
+        if (destroyed) return;
 
         current = i;
         instance.moveTo(i);

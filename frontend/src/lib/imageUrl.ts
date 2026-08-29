@@ -15,9 +15,13 @@
 /** Cloudinary 網址前綴（不限帳號，業主可用任何 Cloudinary 帳號的圖） */
 export const CLOUDINARY_PREFIX = "https://res.cloudinary.com/";
 
-/** Supabase Storage 公開物件路徑特徵 */
+/**
+ * Supabase Storage 公開物件路徑特徵。
+ * bucket 限定本站管理的清單（與 backend/utils/imageUrl.ts 的 bucket 註冊表對齊），
+ * 避免前端放行了外站/未管理 bucket 的網址、到後端才被 400 擋下。
+ */
 const SUPABASE_PUBLIC_PATTERN =
-  /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/[^/]+\/.+/i;
+  /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/(thumbnails|course-images|lesson-thumbnails|article-images|content-images|lp-images|chat-images)\/.+/i;
 
 /** 允許上傳的 MIME 類型（與後端 multer fileFilter 對齊） */
 export const ACCEPTED_IMAGE_TYPES = [

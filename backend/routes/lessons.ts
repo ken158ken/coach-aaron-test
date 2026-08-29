@@ -286,8 +286,17 @@ router.put(
         body.thumbnail_url !== undefined &&
         !isAllowedLessonThumbnailUrl(body.thumbnail_url)
       ) {
-        res.status(400).json({ error: imageUrlErrorMessage("影片縮圖") });
-        return;
+        // 寬限舊資料：新驗證上線前存的任意外站網址，只要「沒有改動」就放行，
+        // 否則舊 lesson 連改標題都會被縮圖驗證卡死
+        const { data: existing } = await supabaseAdmin
+          .from("lesson_videos")
+          .select("thumbnail_url")
+          .eq("id", id)
+          .single();
+        if (body.thumbnail_url !== existing?.thumbnail_url) {
+          res.status(400).json({ error: imageUrlErrorMessage("影片縮圖") });
+          return;
+        }
       }
 
       const update: UpdateRow = {};

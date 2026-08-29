@@ -269,9 +269,11 @@ const ImageInput: React.FC<ImageInputProps> = ({
         if (hasValue) onChange("");
         return;
       }
-      if (!isCloudinaryUrl(trimmed) && !allowUrl?.test(trimmed)) {
+      // Cloudinary、本站 Storage 網址（可貼別處已上傳的圖重複使用）、
+      // 或呼叫端額外放行的來源（例如 Loom CDN）
+      if (!isAllowedImageUrl(trimmed) && !allowUrl?.test(trimmed)) {
         setUrlError(
-          `網址必須以 ${CLOUDINARY_PREFIX} 開頭${allowUrl ? `（${allowUrl.hint}）` : ""}`,
+          `網址須為 ${CLOUDINARY_PREFIX} 開頭的 Cloudinary 圖片，或本站已上傳圖片的網址${allowUrl ? `（${allowUrl.hint}）` : ""}`,
         );
         return;
       }
@@ -279,8 +281,11 @@ const ImageInput: React.FC<ImageInputProps> = ({
       setPreviewFailed(false);
       onChange(trimmed);
       setReplacing(false);
+      // value 恆為空字串的呼叫端（如 ImageGallery 的新增面板）不會觸發
+      // value-sync effect，草稿要在這裡清掉，避免再按一次 Enter 重複送出
+      setUrlDraft("");
     },
-    [hasValue, onChange],
+    [hasValue, onChange, allowUrl],
   );
 
   const handleRemove = useCallback(() => {
@@ -506,10 +511,10 @@ const ImageInput: React.FC<ImageInputProps> = ({
                   setUrlDraft(next);
                   setUrlError(
                     next.trim() === "" ||
-                      isCloudinaryUrl(next) ||
+                      isAllowedImageUrl(next.trim()) ||
                       allowUrl?.test(next.trim())
                       ? ""
-                      : `網址必須以 ${CLOUDINARY_PREFIX} 開頭${allowUrl ? `（${allowUrl.hint}）` : ""}`,
+                      : `網址須為 ${CLOUDINARY_PREFIX} 開頭的 Cloudinary 圖片，或本站已上傳圖片的網址${allowUrl ? `（${allowUrl.hint}）` : ""}`,
                   );
                 }}
                 onBlur={(e) => commitUrl(e.target.value)}

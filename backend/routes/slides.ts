@@ -2,7 +2,7 @@
  * @fileoverview 幻燈片管理路由
  * 處理學員見證幻燈片（testimonial_slides）與相片輪播（gallery_slides）的 CRUD 操作
  *
- * 圖片來源：Cloudinary（鎖 daejq0zo9）或本站上傳（content-images bucket）
+ * 圖片來源：Cloudinary（不限帳號）或本站上傳（content-images bucket）
  *   - 見證：`content-images/{id}/photo_*.webp`
  *   - 輪播：`content-images/gallery_{id}/photo_*.webp`
  * 兩者都是硬刪除，刪 row 時會一併清掉整個資料夾。

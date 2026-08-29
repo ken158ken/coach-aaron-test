@@ -16,8 +16,8 @@
  *
  * 生命週期
  * ─────────────────────────────────────────────────────────────
- *   建立/儲存 → finalizeImageUrl()：temp 檔搬到正式路徑並改寫欄位值
- *   換圖      → replaceCleanup()：舊檔是自家 storage 且與新值不同就刪掉
+ *   建立/儲存 → finalizeImageUrl()：temp 檔複製到正式路徑並改寫欄位值（temp 副本由 cron TTL 清）
+ *   換圖      → 不立即刪舊檔（可能被共用），由 cron 的引用感知孤兒掃描回收
  *   硬刪除    → deleteEntityImages()：整個 `{entityKey}/` 前綴清空
  *   軟刪除    → 不動圖，交給 routes/imageCron.ts 30 天後清
  *
@@ -347,12 +347,15 @@ export async function finalizeImageUrl(params: {
   );
   const target = `${key}/${kind}_${Date.now()}${randomToken(4)}.webp`;
 
+  // 用 copy 而非 move：若之後的 DB 回寫失敗，DB 仍指向 temp URL，
+  // 而 temp 檔還活著（24h 內），圖片不會瞬間變死連結；
+  // temp 副本由每日 cron 的 TTL 步驟回收。
   const { error } = await supabaseAdmin.storage
     .from(parsed.bucket)
-    .move(parsed.path, target);
+    .copy(parsed.path, target);
 
   if (error) {
-    logger.error("finalizeImageUrl 搬移失敗，沿用暫存 URL", error, {
+    logger.error("finalizeImageUrl 複製失敗，沿用暫存 URL", error, {
       entity,
       from: parsed.path,
       to: target,
@@ -388,19 +391,27 @@ export async function finalizeHtmlImages(params: {
   if (tempUrls.length === 0) return html;
 
   const limit = params.maxImages ?? 30;
-  let result = html;
+  // 每張圖獨立搬移，平行處理 —— 多圖文章的存檔在 Vercel 10 秒時限內
+  // 只花一次 storage 往返的時間，而不是張數 × 往返
+  const targets = tempUrls.slice(0, limit);
+  const finals = await Promise.all(
+    targets.map((tempUrl) =>
+      finalizeImageUrl({
+        entity,
+        entityKey: params.entityKey,
+        url: tempUrl,
+        kind: "content",
+      }),
+    ),
+  );
 
-  for (const tempUrl of tempUrls.slice(0, limit)) {
-    const finalUrl = await finalizeImageUrl({
-      entity,
-      entityKey: params.entityKey,
-      url: tempUrl,
-      kind: "content",
-    });
+  let result = html;
+  targets.forEach((tempUrl, i) => {
+    const finalUrl = finals[i];
     if (finalUrl && finalUrl !== tempUrl) {
       result = result.split(tempUrl).join(finalUrl);
     }
-  }
+  });
 
   if (tempUrls.length > limit) {
     logger.warn("finalizeHtmlImages: 內文暫存圖片超過單次上限，剩餘留給下次儲存或 cron", {
@@ -456,47 +467,30 @@ export async function deleteByPublicUrl(url: unknown): Promise<void> {
 }
 
 /**
- * 換圖清理：舊值是自家 storage 檔且與新值不同時刪掉舊檔。
+ * 換圖清理。
  *
- * 一定要在 DB 更新成功之後才呼叫 —— 先刪檔再更新失敗會留下壞連結。
+ * 刻意「不」立即刪除舊檔：同一個 storage URL 可能被其他欄位或其他實體共用
+ * （例如同一張圖同時當封面與 banner、或被另一篇文章的內文引用），
+ * 立即刪除會讓其他引用瞬間變成死連結。
+ * 舊檔改由每日 cron 的孤兒掃描回收 —— 那邊會先比對「全站所有引用」才刪，
+ * 完全沒人引用的舊檔會在隔天被清掉，結果一樣乾淨但不會誤殺共用圖。
  */
 export async function replaceCleanup(
-  oldUrl: unknown,
-  newUrl: unknown,
+  _oldUrl: unknown,
+  _newUrl: unknown,
 ): Promise<void> {
-  if (!oldUrl) return;
-  if (isSameStorageObject(oldUrl, newUrl)) return;
-  await deleteByPublicUrl(oldUrl);
+  /* 交由 imageCron 的引用感知孤兒掃描回收 */
 }
 
 /**
- * 內文換圖清理：刪掉「舊 HTML 有、新 HTML 沒有」的自家圖片。
+ * 內文換圖清理 —— 同 replaceCleanup 的理由，不立即刪除，
+ * 「舊 HTML 有、新 HTML 沒有」的圖交由孤兒掃描確認全站無引用後回收。
  */
 export async function replaceHtmlCleanup(
-  oldHtml: unknown,
-  newHtml: unknown,
+  _oldHtml: unknown,
+  _newHtml: unknown,
 ): Promise<number> {
-  const oldUrls = extractStorageUrls(oldHtml);
-  if (oldUrls.length === 0) return 0;
-
-  const kept = new Set(extractStorageUrls(newHtml));
-  const removedUrls = oldUrls.filter((u) => !kept.has(u));
-
-  // 依 bucket 分組刪除
-  const byBucket = new Map<ImageBucket, string[]>();
-  for (const url of removedUrls) {
-    const parsed = parseStorageUrl(url);
-    if (!parsed) continue;
-    const list = byBucket.get(parsed.bucket) ?? [];
-    list.push(parsed.path);
-    byBucket.set(parsed.bucket, list);
-  }
-
-  let total = 0;
-  for (const [bucket, paths] of byBucket) {
-    total += await removeStorageFiles(bucket, paths);
-  }
-  return total;
+  return 0;
 }
 
 /**

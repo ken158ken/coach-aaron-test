@@ -133,8 +133,7 @@ const FieldInput: React.FC<{
   onChange: (fe: FieldEdit) => void;
   /** 圖片欄位一定會拿到；非圖片欄位不會用到 */
   onUploadImage: (file: File) => Promise<string>;
-  onDeleteImage: (url: string) => void;
-}> = ({ field, onChange, onUploadImage, onDeleteImage }) => {
+}> = ({ field, onChange, onUploadImage }) => {
   const changed = isChanged(field);
 
   const set = (patch: Partial<FieldEdit>) =>
@@ -149,12 +148,17 @@ const FieldInput: React.FC<{
             set({
               cloudinaryUrl: url,
               // 換圖 / 移除都讓 public_id 失效，避免殘留舊資產的引用
-              cloudinaryPublicId: url ? field.cloudinaryPublicId : "",
+              // （url 變了就不能沿用舊 public_id —— 那是舊圖的識別碼）
+              cloudinaryPublicId:
+                url && url === field.cloudinaryUrl
+                  ? field.cloudinaryPublicId
+                  : "",
             })
           }
           // LP 圖片放在 lp-images/{projectId}/，沿用既有的 landing 上傳 API
           uploadFn={onUploadImage}
-          onRemove={onDeleteImage}
+          // 刻意不在「✕」當下就刪 storage 檔：使用者可能還沒按儲存（或儲存失敗），
+          // 立即刪檔會讓線上頁面先破圖。未被引用的舊檔由每日孤兒掃描回收。
           aspectHint="16 / 9"
         />
       </div>
@@ -362,23 +366,11 @@ const LandingPageEditor: React.FC = () => {
     return url;
   }, [projectId]);
 
-  /**
-   * 移除圖片時真的把檔案從 lp-images 刪掉。
-   * 後端 path 格式固定是 `{projectId}/{timestamp}.webp`（見 landing.ts 的驗證），
-   * 所以從 public URL 取 `/lp-images/` 之後的片段即可。
-   * 非本站上傳的網址（例如手貼的外部連結）沒有東西可刪，直接略過。
+  /*
+   * 「✕」移除圖片刻意不立即刪 storage 檔：欄位變更要等「儲存」才寫進 DB，
+   * 先刪檔會讓已發布頁面在儲存前（或儲存失敗時）就破圖。
+   * 未被任何欄位引用的舊檔由每日孤兒掃描 cron 回收。
    */
-  const handleImageDelete = useCallback(
-    (url: string) => {
-      const match = url.match(/\/lp-images\/(\d+\/\d+\.webp)(?:[?#]|$)/);
-      if (!match) return;
-      landingService.deleteImage(projectId, match[1]).catch((err) => {
-        // 刪不掉不該擋住編輯流程，留給孤兒清理 cron 收尾
-        logger.error("LP 圖片刪除失敗", err);
-      });
-    },
-    [projectId],
-  );
 
   // ── Derived ──
   const groups = useMemo(() => {
@@ -847,7 +839,6 @@ const LandingPageEditor: React.FC = () => {
                           field={fe}
                           onChange={updateField}
                           onUploadImage={handleImageUpload}
-                          onDeleteImage={handleImageDelete}
                         />
                     </div>
                   ))}

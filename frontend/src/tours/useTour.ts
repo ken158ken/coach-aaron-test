@@ -67,6 +67,8 @@ export function useTour(pathname: string): UseTourResult {
     if (handleRef.current?.isActive()) return;
 
     setRunning(true);
+    // 慢網路下 chunk 還在載時使用者可能已切到別頁 —— 記住出發點，載完先驗證沒換頁
+    const startedPath = window.location.pathname;
 
     void (async () => {
       try {
@@ -77,6 +79,11 @@ export function useTour(pathname: string): UseTourResult {
         ]);
 
         if (!aliveRef.current) return;
+        if (window.location.pathname !== startedPath) {
+          // 已經不在啟動導覽的那一頁了，別把舊頁的導覽開在新頁上
+          setRunning(false);
+          return;
+        }
 
         const isMobile = window.matchMedia(TOUR_MOBILE_QUERY).matches;
         const handle = runTour(mod.default, {
