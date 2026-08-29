@@ -180,7 +180,7 @@ const About: React.FC = () => {
                             src={item.image}
                             alt={item.imageAlt}
                             loading="lazy"
-                            className="w-full h-72 sm:h-80 md:h-96 object-cover object-top"
+                            className="w-full h-80 sm:h-96 md:h-120 object-cover object-top"
                           />
                           <span className="absolute top-3 left-3 text-[10px] sm:text-xs uppercase tracking-widest text-white/90 bg-black/55 px-2.5 py-1 rounded-full">
                             {`0${index + 1}`}
