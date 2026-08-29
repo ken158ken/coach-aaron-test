@@ -52,7 +52,10 @@ const tour: TourDefinition = {
     },
     {
       title: "導覽完成",
-      desc: "匯出的內容是<b>按下當下</b>的資料快照，不會自動更新，需要最新版就重跑一次。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      desc: "要換到其他管理頁，按<b>左上角這顆選單鈕</b>就會滑出完整清單。<br>匯出的內容是<b>按下當下</b>的資料快照，不會自動更新，需要最新版就重跑一次。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      el: '[data-tour="admin-sidebar-toggle"]',
+      side: "bottom",
+      align: "start",
       only: "mobile",
     },
   ],

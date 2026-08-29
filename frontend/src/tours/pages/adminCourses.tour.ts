@@ -136,7 +136,10 @@ const tour: TourDefinition = {
     },
     {
       title: "導覽完成",
-      desc: "左上角的選單鈕可以叫出各個管理頁。<b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      desc: "要換到其他管理頁，按<b>左上角這顆選單鈕</b>就會滑出完整清單。<br>左上角的選單鈕可以叫出各個管理頁。<b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      el: '[data-tour="admin-sidebar-toggle"]',
+      side: "bottom",
+      align: "start",
       only: "mobile",
     },
   ],

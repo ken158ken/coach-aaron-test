@@ -317,10 +317,13 @@ const AdminWhitelist: React.FC = () => {
       ),
       headerText: "後台管理權限",
       render: (item: WhitelistItem) => (
-        <Toggle
-          checked={item.isActive}
-          onChange={() => handleToggleActive(item)}
-        />
+        // 手機版沒有表頭（改成卡片排版），導覽改指這顆開關本身
+        <span data-tour="whitelist-permission-toggle">
+          <Toggle
+            checked={item.isActive}
+            onChange={() => handleToggleActive(item)}
+          />
+        </span>
       ),
     },
     { key: "createdAt" as const, header: "建立日期", hideOnMobile: true },

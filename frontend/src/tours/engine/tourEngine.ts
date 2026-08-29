@@ -18,7 +18,7 @@
 import { driver, type Config, type Driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 import "../tour.css";
-import type { ResolvedStep, TourDefinition } from "../types";
+import type { ResolvedStep, TourDefinition, TourSide } from "../types";
 
 /** popover 額外掛的 class，用來提高 CSS 覆寫的優先權 */
 const POPOVER_CLASS = "aaron-tour";
@@ -49,13 +49,31 @@ const WAIT_APPEAR_MS = 3000;
 const WAIT_GONE_MS = 1200;
 /** 彈窗出現後額外的緩衝，讓 framer-motion 的位移動畫落定再量測位置 */
 const SETTLE_MS = 260;
+/** 開場前等「資料還在載入」的錨點出現的上限（ms），逾時就當它不存在 */
+const SETTLE_APPEAR_MS = 1600;
+/** 導覽途中，非 modal 步驟的錨點還沒出現時再等一下的上限（ms） */
+const STEP_APPEAR_MS = 700;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/**
+ * 找元素——**優先回傳「看得見的那一個」**。
+ *
+ * 站上的響應式元件（例如 `DataTable`）會把桌機表格與手機卡片<b>兩套都渲染進 DOM</b>，
+ * 靠 `hidden md:block` / `md:hidden` 決定顯示哪一套。這時 `querySelector` 只會拿到
+ * 文件順序上的第一個，也就是桌機那份——在手機上它 `display:none`、量不到尺寸，
+ * 整個步驟就會被當成「元素不存在」而跳掉。
+ * 所以這裡掃過所有符合的節點，挑第一個真的有面積的；都看不見才退回第一個。
+ */
 const q = (sel?: string): HTMLElement | null => {
   if (!sel) return null;
   try {
-    return document.querySelector<HTMLElement>(sel);
+    const nodes = document.querySelectorAll<HTMLElement>(sel);
+    if (nodes.length === 0) return null;
+    for (const node of nodes) {
+      if (isVisible(node)) return node;
+    }
+    return nodes[0];
   } catch {
     // 選擇器寫錯不該炸掉整個導覽
     return null;
@@ -86,6 +104,48 @@ async function waitForGone(sel: string, timeout = WAIT_GONE_MS): Promise<void> {
   while (isVisible(q(sel)) && Date.now() < deadline) {
     await sleep(50);
   }
+}
+
+/**
+ * 有寫入副作用的按鈕字樣。
+ *
+ * 導覽只會「點開彈窗／關閉彈窗」，**永遠不該**按到會改資料庫的按鈕。
+ * 但 `groups[x].open` 是純資料，寫錯一個選擇器就可能指到「儲存」或「刪除」——
+ * 在正式站上那是不可逆的。所以真正按下去之前再攔一道，
+ * 寧可整組步驟被跳過，也不能誤觸。
+ */
+const DESTRUCTIVE_TEXT =
+  /儲存|存檔|保存|送出|提交|發佈|發布|上架|刪除|移除|清除|上傳|建立|新增並|確認送出|save|submit|delete|remove|publish|upload|create/i;
+
+/**
+ * 這顆按鈕點下去安不安全？
+ *
+ * 擋兩種：`type="submit"`（會送出表單）與字面上就在說「我要寫入」的按鈕。
+ * 彈窗的關閉鈕（`data-tour-modal-close`）與背景遮罩是結構性的關閉手段，
+ * 由元件本身提供、不帶業務邏輯，直接放行。
+ */
+function isSafeToClick(el: HTMLElement): boolean {
+  if (el.hasAttribute("data-tour-modal-close") || el.hasAttribute("data-tour-modal-backdrop")) {
+    return true;
+  }
+  // `<button>` 沒寫 type 時預設就是 submit，所以只有「真的在表單裡」才算會送出。
+  // 否則會誤擋掉一堆只是忘了寫 type="button" 的正常開窗鈕。
+  if (el instanceof HTMLButtonElement && el.type === "submit" && el.form) return false;
+  const label = `${el.textContent ?? ""} ${el.getAttribute("aria-label") ?? ""}`;
+  return !DESTRUCTIVE_TEXT.test(label);
+}
+
+/** 安全地點一顆按鈕；被判定為危險就不點並回報 false */
+function safeClick(el: HTMLElement | null): boolean {
+  if (!el) return false;
+  if (!isSafeToClick(el)) {
+    if (import.meta.env.DEV) {
+      console.warn("[tour] 拒絕點擊可能有寫入副作用的元素", el);
+    }
+    return false;
+  }
+  el.click();
+  return true;
 }
 
 /**
@@ -125,7 +185,10 @@ export interface TourHandle {
  * @param options - 裝置資訊與結束 callback
  * @returns 控制把手；沒有任何可用步驟時回傳 null
  */
-export function runTour(def: TourDefinition, options: RunTourOptions): TourHandle | null {
+export async function runTour(
+  def: TourDefinition,
+  options: RunTourOptions,
+): Promise<TourHandle | null> {
   const { isMobile, onFinish } = options;
 
   // ── 1. 依裝置解析步驟 ──────────────────────────────────
@@ -136,6 +199,22 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
       selector: isMobile && s.elMobile ? s.elMobile : s.el,
     }));
 
+  /*
+   * 開場前先等一下「還沒出現的錨點」。
+   *
+   * 步驟清單一旦定下來就不會再變，所以如果在這個瞬間某個區塊的資料還在載入
+   * （正式站的清單頁很常見：清單比頁面骨架晚幾百毫秒才畫出來），
+   * 那一步就會被永遠剔除 —— 同一頁時快時慢，導覽步數還會忽多忽少。
+   * 這裡對所有「不在 modal 裡、目前又找不到」的錨點併發等一小段時間，
+   * 真的不存在的（例如空收件匣的訊息卡）等滿就放棄，總延遲有上限。
+   */
+  const pending = resolved.filter(
+    (r) => !r.step.group && r.selector && !isVisible(q(r.selector)),
+  );
+  if (pending.length > 0) {
+    await Promise.all(pending.map((r) => waitForEl(r.selector!, SETTLE_APPEAR_MS)));
+  }
+
   // modal 內的步驟現在當然找不到元素（彈窗還沒開），所以只預先剔除
   // 「不在群組內、又確實不存在」的步驟。沒有 selector 的是置中說明卡，保留。
   const steps = resolved.filter(
@@ -144,12 +223,27 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
 
   if (steps.length === 0) return null;
 
+  /**
+   * 手機版把 `left` / `right` 一律改成垂直方位。
+   *
+   * popover 至少要 280px 左右才擺得下，390px 寬的手機扣掉目標元素根本沒有
+   * 水平空間，driver.js 硬擺的結果就是<b>整張卡蓋在要你看的東西上面</b>。
+   * 垂直方向才有餘裕，driver 也會在下方不夠時自動翻到上方。
+   */
+  const sideFor = (r: ResolvedStep): TourSide => {
+    const side = r.step.side ?? "bottom";
+    if (isMobile && (side === "left" || side === "right")) return "bottom";
+    return side;
+  };
+
   const driveSteps: DriveStep[] = steps.map((r) => ({
-    element: r.selector,
+    // 傳「解析好的元素」而不是選擇器字串：driver.js 自己查會拿到文件順序的第一個，
+    // 響應式雙版面下那可能是隱藏的桌機版。查不到就先留字串，等 goTo 再補。
+    element: (r.selector ? (q(r.selector) ?? r.selector) : undefined) as DriveStep["element"],
     popover: {
       title: r.step.title,
       description: r.step.desc,
-      ...(r.selector ? { side: r.step.side ?? "bottom", align: r.step.align ?? "start" } : {}),
+      ...(r.selector ? { side: sideFor(r), align: r.step.align ?? "start" } : {}),
     },
   }));
 
@@ -162,10 +256,16 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
   let busy = false;
 
   /**
-   * 關閉目前開著的 modal 群組。三段式，由安全到不得已：
+   * 關閉目前開著的 modal 群組。由精準到不得已依序嘗試：
    *  1. 群組指定的關閉鈕（最精準）
-   *  2. 彈窗的背景遮罩（`data-tour-modal-backdrop`，共用 Modal 都有）
-   *  3. 合成 Escape（會暫時關掉 driver 的鍵盤控制，避免連導覽一起關掉）
+   *  2. 該彈窗自己的 × 鈕（`overlay/Modal` 會掛 `data-tour-modal-close`）
+   *  3. 彈窗的背景遮罩（`Dialog` 會掛 `data-tour-modal-backdrop`）
+   *  4. 合成 Escape（會暫時關掉 driver 的鍵盤控制，避免連導覽一起關掉）
+   *
+   * 站上有兩套彈窗元件，提供的關閉手段不一樣（`Dialog` 只有遮罩、
+   * `overlay/Modal` 只有 × 鈕），所以這裡不能只認其中一種。
+   * 而「群組沒開著任何彈窗」代表它是分頁切換之類的非 modal 群組——
+   * 這時什麼都不做，尤其不能亂發 Escape 到頁面上。
    */
   async function closeCurrentGroup(): Promise<void> {
     const name = openGroup;
@@ -174,15 +274,25 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
     const g = def.groups?.[name];
     if (!g) return;
 
-    const closeBtn = q(g.close);
-    const backdrop = q("[data-tour-modal-backdrop]");
-    if (closeBtn) closeBtn.click();
-    else if (backdrop) backdrop.click();
-    else if (g.close) pressEscape(instance);
-    else {
-      // 非 modal 群組（例如分頁切換）：沒有東西要關，
-      // 不能亂發合成 Escape 到頁面上，也不必等一個永遠不會消失的元素
+    const explicit = q(g.close);
+    if (explicit) {
+      safeClick(explicit);
+      await waitForGone(g.wait);
       return;
+    }
+
+    // 沒有彈窗開著 → 這是分頁切換之類的非 modal 群組，沒東西要關，
+    // 尤其不能亂發 Escape 到頁面上
+    const openPanel = q(`${g.wait}[data-tour-modal]`) ?? q("[data-tour-modal]");
+    if (!isVisible(openPanel)) return;
+
+    // 只在「這個彈窗自己」的範圍內找關閉鈕，避免關到別的彈窗
+    const ownClose = openPanel.querySelector<HTMLElement>("[data-tour-modal-close]");
+    if (ownClose) ownClose.click();
+    else {
+      const backdrop = q("[data-tour-modal-backdrop]");
+      if (backdrop) backdrop.click();
+      else pressEscape(instance);
     }
 
     await waitForGone(g.wait);
@@ -204,11 +314,11 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
     if (!isVisible(q(g.wait))) {
       const openSel = isMobile && g.openMobile ? g.openMobile : g.open;
       const btn = q(openSel);
-      if (!btn) {
+      // 點不得（不存在，或是「儲存／刪除」這類有寫入副作用的鈕）→ 整組跳過
+      if (!safeClick(btn)) {
         failedGroups.add(name);
         return false;
       }
-      btn.click();
       const appeared = await waitForEl(g.wait);
       if (!appeared) {
         failedGroups.add(name);
@@ -223,6 +333,40 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
 
   // ── 3. 轉場：往 dir 方向找到第一個「真的能導」的步驟 ────
   let current = 0;
+
+  /*
+   * 晚到的版面位移補正。
+   *
+   * popover 的座標是「highlight 當下」算好的，之後就不會自己更新了。
+   * 但編輯器這類頁面上方常有懶載入的圖片與自訂字體，它們載完會把內容往下推——
+   * 等使用者看到時，原本在 popover 上方的目標已經<b>滑到 popover 底下被蓋住</b>。
+   * 所以每次換步都排兩次 refresh()，讓 driver 依最新座標重擺一次。
+   */
+  let repositionTimers: number[] = [];
+  /** refresh() 可能再觸發 onHighlighted，用這個旗標避免無限重排 */
+  let repositioning = false;
+
+  function clearReposition(): void {
+    repositionTimers.forEach((t) => clearTimeout(t));
+    repositionTimers = [];
+  }
+
+  function scheduleReposition(): void {
+    clearReposition();
+    for (const delay of [400, 1000]) {
+      repositionTimers.push(
+        window.setTimeout(() => {
+          if (destroyed || !instance.isActive()) return;
+          repositioning = true;
+          try {
+            instance.refresh();
+          } finally {
+            repositioning = false;
+          }
+        }, delay),
+      );
+    }
+  }
 
   async function goTo(target: number, dir: 1 | -1): Promise<void> {
     if (busy || destroyed) return;
@@ -244,9 +388,13 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
 
         if (destroyed) return;
 
-        // 群組開了之後元素才會出現；再給它一點時間（表單分頁、懶載入）
+        // 群組開了之後元素才會出現；再給它一點時間（表單分頁、懶載入）。
+        // 非群組步驟也給一段較短的等待——彈窗關掉後列表重繪需要一兩幀。
         if (r.selector && !isVisible(q(r.selector))) {
-          const found = r.step.group ? await waitForEl(r.selector, 1200) : null;
+          const found = await waitForEl(
+            r.selector,
+            r.step.group ? 1200 : STEP_APPEAR_MS,
+          );
           if (!found) {
             i += dir;
             continue;
@@ -255,6 +403,13 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
 
         // await 期間使用者可能已按 Escape 關掉導覽 —— 別在銷毀的實例上復活 highlight
         if (destroyed) return;
+
+        // 元素可能在等待期間才出現、或 React 重繪換了節點；
+        // 移動前重新解析一次，確保指到的是「現在畫面上看得見」的那一個。
+        if (r.selector) {
+          const el = q(r.selector);
+          if (el) driveSteps[i].element = el;
+        }
 
         current = i;
         instance.moveTo(i);
@@ -309,6 +464,8 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
       if (el instanceof HTMLElement && el.id !== DUMMY_ID) {
         el.setAttribute(ACTIVE_ATTR, "");
       }
+      // refresh() 造成的重新 highlight 不必再排一輪，否則會自己疊自己
+      if (!repositioning) scheduleReposition();
     },
 
     onDeselected: () => {
@@ -324,6 +481,7 @@ export function runTour(def: TourDefinition, options: RunTourOptions): TourHandl
     onDestroyed: () => {
       if (destroyed) return;
       destroyed = true;
+      clearReposition();
       clearActiveMark();
       // 導覽結束就把我們開過的彈窗收乾淨
       void closeCurrentGroup().finally(() => onFinish?.());

@@ -22,6 +22,18 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      /*
+       * 收件匣常常是空的（訊息會過期自動清掉），所以這一步錨在「整個列表區」，
+       * 空的時候指到空狀態、有訊息時指到第一張卡，兩種情況都有東西可講。
+       * 下面幾步才是有訊息時才出現的細節，沒訊息就自動跳過。
+       */
+      el: '[data-tour="whispers-list"]',
+      title: "收件匣在這裡",
+      desc: "所有悄悄話都會列在這一區，<b>由新到舊</b>排列。<br>看到「目前沒有悄悄話」不是壞掉——代表<b>還沒有人留言，或舊訊息已過期自動清掉</b>了。",
+      side: "top",
+      align: "center",
+    },
+    {
       el: '[data-tour="whispers-card"]',
       title: "一則一張卡",
       desc: "由新到舊排列，最上面的就是<b>最新一則</b>。沒有已讀／未讀狀態，建議養成固定時間掃一遍的習慣。",
@@ -50,6 +62,15 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      /* 側邊欄的入口——沒有未讀紅點，所以要靠自己定期回來看 */
+      el: '[data-tour="admin-nav-whispers"]',
+      title: "養成定期查看的習慣",
+      desc: "這個入口<b>不會跳未讀紅點</b>，訊息也不會寄信通知你。<br>因為留言有期限，建議<b>每週固定進來掃一次</b>，才不會錯過潛在客戶。",
+      side: "right",
+      align: "center",
+      only: "desktop",
+    },
+    {
       el: '[data-tour="whispers-note"]',
       title: "為什麼不能刪",
       desc: "刻意設計成唯讀，避免有人不小心把客戶留言清掉；清理交給排程自動處理，你只要負責看與回。",
@@ -66,7 +87,10 @@ const tour: TourDefinition = {
     },
     {
       title: "導覽完成",
-      desc: "只有<b>白名單裡的管理員</b>看得到這一頁，訪客的隱私是安全的。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      desc: "要換到其他管理頁，按<b>左上角這顆選單鈕</b>就會滑出完整清單。<br>只有<b>白名單裡的管理員</b>看得到這一頁，訪客的隱私是安全的。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      el: '[data-tour="admin-sidebar-toggle"]',
+      side: "bottom",
+      align: "start",
       only: "mobile",
     },
   ],

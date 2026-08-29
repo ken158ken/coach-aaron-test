@@ -232,6 +232,11 @@ const LandingPageNew: React.FC = () => {
                 {filtered.map((tpl) => (
                   <button
                     key={tpl.id}
+                    /*
+                     * 新手導覽會點第一張卡來示範「選了模板之後右側會出現什麼」。
+                     * 只改本地 state，不會建立專案（那是「建立」鈕的事）。
+                     */
+                    data-tour="lpnew-card"
                     onClick={() => {
                       setSelected(tpl);
                       setProjectName(tpl.brand_name ?? tpl.template_slug);

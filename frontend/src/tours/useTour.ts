@@ -86,13 +86,22 @@ export function useTour(pathname: string): UseTourResult {
         }
 
         const isMobile = window.matchMedia(TOUR_MOBILE_QUERY).matches;
-        const handle = runTour(mod.default, {
+        // runTour 會先等「資料還在載入」的錨點出現，所以是 async
+        const handle = await runTour(mod.default, {
           isMobile,
           onFinish: () => {
             handleRef.current = null;
             if (aliveRef.current) setRunning(false);
           },
         });
+
+        // runTour 內部會等錨點出現（最多一秒多），這段期間使用者可能已經
+        // 換頁或關掉導覽 —— 那就把剛建好的實例收掉，別讓遮罩黏在新頁上。
+        if (!aliveRef.current || window.location.pathname !== startedPath) {
+          handle?.destroy();
+          if (aliveRef.current) setRunning(false);
+          return;
+        }
 
         handleRef.current = handle;
         // 一步都湊不齊（整頁還沒載完）→ 直接復原按鈕狀態

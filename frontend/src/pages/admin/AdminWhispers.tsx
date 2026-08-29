@@ -67,10 +67,15 @@ const AdminWhispers: React.FC = () => {
         </div>
       )}
 
+      {/*
+        `whispers-list` 是新手導覽的錨點：不管收件匣是空的還是有訊息都存在，
+        導覽才不會因為「今天剛好沒人留言」就少掉一半步驟。
+      */}
+      <div data-tour="whispers-list">
       {loading ? (
         <p className="text-luxe-muted py-12 text-center text-sm">載入中...</p>
       ) : whispers.length === 0 ? (
-        <div className="text-center py-16">
+        <div className="text-center py-16" data-tour="whispers-empty">
           <p className="text-4xl mb-3">🤫</p>
           <p className="text-luxe-muted text-sm">目前沒有悄悄話</p>
         </div>
@@ -118,6 +123,7 @@ const AdminWhispers: React.FC = () => {
           })}
         </div>
       )}
+      </div>
 
       <p
         data-tour="whispers-note"

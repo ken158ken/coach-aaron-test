@@ -11,6 +11,21 @@ const tour: TourDefinition = {
   id: "admin-landing-page-new",
   title: "選擇 Landing Page 模板導覽",
 
+  groups: {
+    /**
+     * 右側的「專案名稱」與「建立」只有<b>選了模板之後</b>才會渲染，
+     * 所以導覽先幫使用者點第一張模板卡，後面兩步才有東西可指。
+     *
+     * 點卡片只是 `setSelected` 的本地 state，**不會建立任何專案**——
+     * 真正寫入資料庫的是「建立專案並開始編輯」那顆鈕，導覽只指、不按。
+     * 非 modal 群組，所以不需要 close。
+     */
+    pick: {
+      open: '[data-tour="lpnew-card"]',
+      wait: '[data-tour="lpnew-name"]',
+    },
+  },
+
   steps: [
     {
       title: "先挑一份模板",
@@ -45,6 +60,7 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      group: "pick",
       el: '[data-tour="lpnew-name"]',
       title: "專案名稱",
       desc: "這是<b>給你自己看的</b>後台名稱，不會出現在公開頁上。建議寫得能認出檔期，例如「2026 春季特訓班」，日後列表一多才好找。<br>建立後隨時可以改。",
@@ -52,6 +68,7 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      group: "pick",
       el: '[data-tour="lpnew-confirm"]',
       title: "建立並開始編輯",
       desc: "按下去會建好專案並<b>直接跳進編輯器</b>。新專案預設是<em>草稿</em>，還不會對外公開，可以慢慢改完再發布。",

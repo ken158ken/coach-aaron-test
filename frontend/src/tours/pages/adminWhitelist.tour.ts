@@ -75,6 +75,8 @@ const tour: TourDefinition = {
     },
     {
       el: '[data-tour="whitelist-permission-col"]',
+      // 手機版是卡片排版、沒有表頭，改指列上的開關本身
+      elMobile: '[data-tour="whitelist-permission-toggle"]',
       title: "後台權限開關",
       desc: "這個開關是<b>即時生效</b>的：關掉的人立刻進不了後台，但資料還留著，之後可以再打開。<br><em>千萬別關掉自己那一列</em>——關了就得請工程師去資料庫救。",
       side: "bottom",
@@ -90,7 +92,10 @@ const tour: TourDefinition = {
     },
     {
       title: "導覽完成",
-      desc: "白名單管的是<b>後台權限</b>；一般學員的資料在選單裡的「用戶」那一頁。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      desc: "要換到其他管理頁，按<b>左上角這顆選單鈕</b>就會滑出完整清單。<br>白名單管的是<b>後台權限</b>；一般學員的資料在選單裡的「用戶」那一頁。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      el: '[data-tour="admin-sidebar-toggle"]',
+      side: "bottom",
+      align: "start",
       only: "mobile",
     },
   ],

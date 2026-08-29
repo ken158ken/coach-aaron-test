@@ -113,7 +113,10 @@ const tour: TourDefinition = {
     },
     {
       title: "導覽完成",
-      desc: "其他分頁（彈窗、相片輪播、Marquee、Podcast）的操作邏輯都一樣：<b>設定列管整組、列表管單筆、彈窗裡編輯</b>。<br><b>每一頁右下角都有這顆「?」</b>，忘了就再按一次。",
+      desc: "要換到其他管理頁，按<b>左上角這顆選單鈕</b>就會滑出完整清單。<br>其他分頁（彈窗、相片輪播、Marquee、Podcast）的操作邏輯都一樣：<b>設定列管整組、列表管單筆、彈窗裡編輯</b>。<br><b>每一頁右下角都有這顆「?」</b>，忘了就再按一次。",
+      el: '[data-tour="admin-sidebar-toggle"]',
+      side: "bottom",
+      align: "start",
       only: "mobile",
     },
   ],

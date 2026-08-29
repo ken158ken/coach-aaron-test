@@ -104,7 +104,10 @@ const tour: TourDefinition = {
     },
     {
       title: "導覽完成",
-      desc: "想控制<b>誰能進這個後台</b>不是在這頁，而是選單裡的「白名單」。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      desc: "要換到其他管理頁，按<b>左上角這顆選單鈕</b>就會滑出完整清單。<br>想控制<b>誰能進這個後台</b>不是在這頁，而是選單裡的「白名單」。<br><b>每一頁右下角都有這顆「?」</b>，需要時再按一次就好。",
+      el: '[data-tour="admin-sidebar-toggle"]',
+      side: "bottom",
+      align: "start",
       only: "mobile",
     },
   ],
