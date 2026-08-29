@@ -16,7 +16,14 @@
  * ```
  */
 import React from "react";
-import { BRAND_RED, MARK_PATH_D, MARK_VIEWBOX } from "./markPath";
+import {
+  BRAND_RED,
+  MARK_PATH_D,
+  MARK_PLATE_D,
+  MARK_PLATE_VIEWBOX,
+  MARK_VIEWBOX,
+  PLATE_COLOR,
+} from "./markPath";
 
 export interface LogoMarkProps {
   /** 額外 className（建議用它控制寬高） */
@@ -25,6 +32,11 @@ export interface LogoMarkProps {
   size?: number | string;
   /** 圖形顏色，預設品牌酒紅；給 "currentColor" 可跟隨外層 CSS color */
   color?: string;
+  /**
+   * 白底剪影（預設開）：沿頭型切線鋪一層象牙白底、微外擴，
+   * 深色底上頭型才清晰可讀（業主指定樣式）。純色場合可關掉。
+   */
+  plate?: boolean;
   /**
    * 無障礙標題。有給值時以 role="img" 對外呈現；
    * 未給值時視為純裝飾（aria-hidden），由旁邊的文字負責語意。
@@ -36,10 +48,11 @@ const LogoMark: React.FC<LogoMarkProps> = ({
   className = "",
   size,
   color = BRAND_RED,
+  plate = true,
   title,
 }) => (
   <svg
-    viewBox={MARK_VIEWBOX}
+    viewBox={plate ? MARK_PLATE_VIEWBOX : MARK_VIEWBOX}
     className={className}
     style={size === undefined ? undefined : { height: size, width: size }}
     role={title ? "img" : undefined}
@@ -49,6 +62,17 @@ const LogoMark: React.FC<LogoMarkProps> = ({
     xmlns="http://www.w3.org/2000/svg"
   >
     {title ? <title>{title}</title> : null}
+    {plate ? (
+      <path
+        d={MARK_PLATE_D}
+        fill={PLATE_COLOR}
+        fillRule="nonzero"
+        stroke={PLATE_COLOR}
+        strokeWidth={24}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    ) : null}
     <path fill={color} fillRule="evenodd" d={MARK_PATH_D} />
   </svg>
 );

@@ -8,7 +8,12 @@
  * 想改文字顏色，直接在外層設定 CSS color 即可。
  */
 import React from "react";
-import { BRAND_RED, MARK_PATH_D } from "./markPath";
+import {
+  BRAND_RED,
+  MARK_PATH_D,
+  MARK_PLATE_D,
+  PLATE_COLOR,
+} from "./markPath";
 
 export interface LogoVerticalProps {
   /** 額外 className（建議用它控制寬高與文字顏色） */
@@ -42,6 +47,17 @@ const LogoVertical: React.FC<LogoVerticalProps> = ({
   >
     {title ? <title>{title}</title> : null}
 
+    {/* 白底剪影：沿頭型切線微外擴，深色底上頭型才清晰（業主指定樣式） */}
+    <path
+      d={MARK_PLATE_D}
+      fill={PLATE_COLOR}
+      fillRule="nonzero"
+      stroke={PLATE_COLOR}
+      strokeWidth={24}
+      strokeLinejoin="round"
+      strokeLinecap="round"
+      transform="translate(33.00,-4.50) scale(0.50000)"
+    />
     {/* 品牌 mark（固定酒紅，不隨主題變色） */}
     <path
       fill={BRAND_RED}
