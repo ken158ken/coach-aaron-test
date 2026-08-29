@@ -150,7 +150,8 @@ const ServicesSection: React.FC = () => {
                 card={{
                   category: course.course_category?.trim() || '課程',
                   title: course.course_title,
-                  // 圖片先留空 → 顯示主題色佔位，客戶之後塞圖
+                  // 有課程封面就顯示；沒有時 CardImage 會退回主題色佔位面板
+                  src: course.course_thumbnail_url || undefined,
                   content: <CourseContent course={course} />,
                 }}
               />
