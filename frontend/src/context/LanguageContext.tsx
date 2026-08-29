@@ -12,6 +12,10 @@ import React, {
 } from "react";
 
 /** 語言類型 */
+import { publicExtra, type PublicExtraTranslations } from "@/locales/publicExtra";
+import { memberExtra, type MemberExtraTranslations } from "@/locales/memberExtra";
+import { adminExtra, type AdminExtraTranslations } from "@/locales/adminExtra";
+
 export type Language = "zh-TW" | "en";
 
 /** 翻譯文字 */
@@ -897,10 +901,19 @@ const en: Translations = {
   },
 };
 
+/**
+ * 全站翻譯 = 本檔核心字典 + 三個分域補充檔（避免多人同改一個大檔）：
+ *   locales/publicExtra.ts（公開站）、memberExtra.ts（會員區/共用 UI）、adminExtra.ts（後台/導覽）
+ */
+export type AllTranslations = Translations &
+  PublicExtraTranslations &
+  MemberExtraTranslations &
+  AdminExtraTranslations;
+
 /** 翻譯字典 */
-const translations: Record<Language, Translations> = {
-  "zh-TW": zhTW,
-  en: en,
+const translations: Record<Language, AllTranslations> = {
+  "zh-TW": { ...zhTW, ...publicExtra.zhTW, ...memberExtra.zhTW, ...adminExtra.zhTW },
+  en: { ...en, ...publicExtra.en, ...memberExtra.en, ...adminExtra.en },
 };
 
 interface LanguageContextType {
@@ -911,7 +924,7 @@ interface LanguageContextType {
   /** 切換語言 */
   toggleLanguage: () => void;
   /** 取得翻譯 */
-  t: Translations;
+  t: AllTranslations;
   /** 是否為中文 */
   isZhTW: boolean;
 }

@@ -40,6 +40,7 @@ import { useHeartbeat } from "@/hooks/usePresence";
 import Layout from "@/components/layout/Layout";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
+import AppInstall from "@/pages/AppInstall";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import Videos from "@/pages/Videos";
@@ -187,6 +188,7 @@ function App(): JSX.Element {
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
                   <Route path="about" element={<About />} />
+                  <Route path="app" element={<AppInstall />} />
                   <Route path="courses" element={<Courses />} />
                   <Route path="courses/:id" element={<CourseDetail />} />
                   <Route path="videos" element={<Videos />} />

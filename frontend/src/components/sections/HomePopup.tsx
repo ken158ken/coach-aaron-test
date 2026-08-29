@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { contentService, type ActivePopup } from "@/services/site/content.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { LogoMark } from "@/components/brand";
 
 /** 日誌工具 */
 const logger = {
@@ -93,59 +94,60 @@ const HomePopup: React.FC = () => {
         onClick={handleClose}
       />
 
-      {/* 彈窗本體 - 白色主題 */}
+      {/* 彈窗本體 - 品牌銀刃風（bg-surface / gold token 隨深淺主題自動切換） */}
       <div
-        className={`relative bg-white rounded-2xl shadow-2xl shadow-black/20 max-w-lg w-full max-h-[70vh] overflow-hidden transition-all duration-500 ease-out ${
+        className={`relative bg-surface border border-gold/20 rounded-2xl shadow-2xl shadow-black/30 max-w-lg w-full max-h-[70vh] overflow-hidden transition-all duration-500 ease-out ${
           animateIn
             ? "opacity-100 scale-100 translate-y-0"
             : "opacity-0 scale-90 -translate-y-8"
         }`}
       >
-        {/* 頂部裝飾條 */}
-        <div className="h-1.5 bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400" />
+        {/* 頂部金色細光裝飾 */}
+        <div className="h-px bg-linear-to-r from-transparent via-gold/80 to-transparent" />
 
         {/* 關閉按鈕 */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-all z-10"
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gold/10 hover:bg-gold/20 text-muted hover:text-gold transition-all z-10"
           aria-label="關閉"
         >
           ✕
         </button>
 
-        {/* 標題 */}
+        {/* 標題（品牌 mark + 文字） */}
         {popup.popup_title && (
-          <div className="px-6 pt-5 pb-3">
-            <h2 className="text-xl font-bold text-gray-800">
+          <div className="px-6 pt-6 pb-3 flex items-center gap-3">
+            <LogoMark size={36} title="阿倫教官" />
+            <h2 className="text-lg sm:text-xl font-medium tracking-wide">
               {popup.popup_title}
             </h2>
           </div>
         )}
 
         {/* 內容 (HTML 渲染) */}
-        <div className="px-6 pb-4 overflow-y-auto max-h-[50vh]">
+        <div className="px-6 pb-4 overflow-y-auto max-h-[50vh] overscroll-contain">
           <div
-            className="prose prose-sm max-w-none
-              [&_a]:text-cyan-600 [&_a]:underline
+            className="max-w-none text-sm sm:text-base leading-relaxed
+              [&_a]:text-gold [&_a]:underline [&_a]:underline-offset-2
               [&_img]:rounded-lg [&_img]:max-w-full
-              [&_h1]:text-lg [&_h1]:text-gray-800 [&_h1]:font-bold
-              [&_h2]:text-base [&_h2]:text-gray-700 [&_h2]:font-semibold
-              [&_h3]:text-sm [&_h3]:text-gray-600
-              [&_p]:text-gray-600 [&_p]:leading-relaxed
-              [&_li]:text-gray-600
-              [&_strong]:text-gray-800
-              [&_blockquote]:border-l-cyan-400 [&_blockquote]:text-gray-500"
+              [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:mb-2
+              [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-2
+              [&_h3]:text-sm [&_h3]:font-medium
+              [&_p]:text-muted [&_p]:leading-relaxed [&_p]:mb-3
+              [&_li]:text-muted [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3
+              [&_strong]:text-gold [&_strong]:font-semibold
+              [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-3 [&_blockquote]:text-muted"
             dangerouslySetInnerHTML={{ __html: popup.popup_content }}
           />
         </div>
 
         {/* 底部按鈕 */}
-        <div className="px-6 pb-5 flex justify-end border-t border-gray-100 pt-4">
+        <div className="px-6 pb-5 flex justify-end border-t border-gold/10 pt-4">
           <button
             onClick={handleClose}
-            className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20"
+            className="px-7 py-2.5 bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 rounded-lg text-sm tracking-widest transition-all duration-200 hover:shadow-lg hover:shadow-gold/10"
           >
-            了解
+            開始探索
           </button>
         </div>
       </div>

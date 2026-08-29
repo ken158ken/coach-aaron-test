@@ -315,6 +315,19 @@ key={glareKey}
                     <span>{language === "zh-TW" ? "English" : "中文"}</span>
                   </button>
 
+                  {/* 變成 APP（PWA 安裝教學），登入與否都看得到 */}
+                  <Link
+                    to="/app"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="7" y="3" width="10" height="18" rx="2.5" strokeWidth={2} />
+                      <path strokeLinecap="round" strokeWidth={2} d="M11 17.5h2" />
+                    </svg>
+                    <span>APP</span>
+                  </Link>
+
                   <div className="my-1 border-t border-white/10" />
 
                   {mounted && user ? (
