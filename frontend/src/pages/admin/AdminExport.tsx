@@ -136,7 +136,10 @@ const AdminExport: React.FC = () => {
       )}
 
       {/* 格式選擇 */}
-      <div className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5">
+      <div
+        data-tour="export-format"
+        className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5"
+      >
         <h2 className="text-sm font-medium text-luxe-text mb-3">
           {t.exportFeature.selectFormat}
         </h2>
@@ -162,7 +165,10 @@ const AdminExport: React.FC = () => {
         <h2 className="text-base font-medium text-luxe-text mb-4">
           {t.exportFeature.moduleExport}
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div
+          data-tour="export-modules"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+        >
           {MODULES.map((mod) => {
             const isLoading = loadingKey === mod.key;
             return (
@@ -178,6 +184,7 @@ const AdminExport: React.FC = () => {
                   </div>
                 </div>
                 <button
+                  data-tour="export-module-btn"
                   onClick={() => handleModuleExport(mod.key)}
                   disabled={isLoading || loadingKey !== null}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-colors ${
@@ -207,7 +214,10 @@ const AdminExport: React.FC = () => {
       </div>
 
       {/* 全站匯出 */}
-      <div className="bg-luxe-surface border border-luxe-gold/20 rounded-xl p-6">
+      <div
+        data-tour="export-full"
+        className="bg-luxe-surface border border-luxe-gold/20 rounded-xl p-6"
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-medium text-luxe-text flex items-center gap-2">

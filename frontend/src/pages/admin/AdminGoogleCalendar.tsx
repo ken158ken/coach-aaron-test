@@ -200,13 +200,17 @@ const AdminGoogleCalendar: React.FC = () => {
       </div>
 
       {/* 連結狀態卡 */}
-      <div className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6">
+      <div
+        data-tour="gcal-status"
+        className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6"
+      >
         <h2 className="text-sm font-medium text-luxe-text mb-4">連結狀態</h2>
         {renderStatusCard()}
 
         {/* 按鈕 */}
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
+            data-tour="gcal-connect"
             onClick={handleConnect}
             disabled={loading || disconnecting}
             className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-luxe-gold/20 hover:bg-luxe-gold/30 text-luxe-gold border border-luxe-gold/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -228,6 +232,7 @@ const AdminGoogleCalendar: React.FC = () => {
           </button>
 
           <button
+            data-tour="gcal-disconnect"
             onClick={handleDisconnect}
             disabled={!connected || loading || disconnecting}
             className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -260,7 +265,10 @@ const AdminGoogleCalendar: React.FC = () => {
       </div>
 
       {/* 共用帳號說明區 */}
-      <div className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6">
+      <div
+        data-tour="gcal-shared-note"
+        className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6"
+      >
         <h2 className="text-base font-medium text-luxe-text flex items-center gap-2 mb-3">
           <span>👥</span>
           共用帳號說明
@@ -273,7 +281,10 @@ const AdminGoogleCalendar: React.FC = () => {
       </div>
 
       {/* 已啟用功能清單 */}
-      <div className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6">
+      <div
+        data-tour="gcal-features"
+        className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6"
+      >
         <h2 className="text-base font-medium text-luxe-text flex items-center gap-2 mb-1">
           <span>✨</span>
           連結後會自動啟用的功能

@@ -289,7 +289,10 @@ const AdminWhitelist: React.FC = () => {
     {
       key: "isActive" as const,
       header: (
-        <span className="inline-flex items-center gap-1.5">
+        <span
+          className="inline-flex items-center gap-1.5"
+          data-tour="whitelist-permission-col"
+        >
           <span className="text-red-400 font-medium">可進入後台管理權限</span>
           <span className="relative group/tip">
             <svg
@@ -353,7 +356,10 @@ const AdminWhitelist: React.FC = () => {
         title="白名單管理"
         subtitle="管理可登入後台的用戶白名單"
         actions={
-          <PillButton onClick={() => setShowAddModal(true)}>
+          <PillButton
+            data-tour="whitelist-add"
+            onClick={() => setShowAddModal(true)}
+          >
             新增白名單
           </PillButton>
         }
@@ -368,6 +374,7 @@ const AdminWhitelist: React.FC = () => {
       {/* Data Table */}
       <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10">
         <DataTable<WhitelistItem>
+          data-tour="whitelist-table"
           data={whitelist}
           columns={columns}
           keyExtractor={(item) => item.id}
@@ -381,13 +388,17 @@ const AdminWhitelist: React.FC = () => {
             className="absolute inset-0 bg-black/80 backdrop-blur-md"
             onClick={() => setShowAddModal(false)}
           />
-          <div className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-4 sm:p-6 max-w-md w-full mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto">
+          <div
+            data-tour-modal="whitelist-add"
+            className="relative bg-luxe-surface border border-luxe-gold/20 rounded-lg p-4 sm:p-6 max-w-md w-full mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto"
+          >
             <h3 className="text-lg font-medium text-luxe-text mb-4">
               新增白名單
             </h3>
 
             <div className="space-y-4">
               <Input
+                data-tour="whitelist-form-email"
                 label="Email *"
                 type="email"
                 value={newItem.email}
@@ -397,6 +408,7 @@ const AdminWhitelist: React.FC = () => {
                 placeholder="user@example.com"
               />
               <Input
+                data-tour="whitelist-form-name"
                 label="顯示名稱（給客戶在聊天看到的稱呼）"
                 value={newItem.displayName}
                 onChange={(e) =>
@@ -408,6 +420,7 @@ const AdminWhitelist: React.FC = () => {
                 placeholder="例：Aaron 教練 / 小恩・網站管理員"
               />
               <Textarea
+                data-tour="whitelist-form-note"
                 label="內部備註"
                 value={newItem.note}
                 onChange={(e) =>
@@ -420,12 +433,15 @@ const AdminWhitelist: React.FC = () => {
 
             <div className="flex justify-end gap-3 mt-6">
               <button
+                data-tour="whitelist-form-cancel"
                 className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text transition-colors"
                 onClick={() => setShowAddModal(false)}
               >
                 取消
               </button>
-              <PillButton onClick={handleAdd}>新增</PillButton>
+              <PillButton data-tour="whitelist-form-submit" onClick={handleAdd}>
+                新增
+              </PillButton>
             </div>
           </div>
         </div>

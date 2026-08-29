@@ -41,7 +41,7 @@ const AdminCardGrid: React.FC<{
 }> = ({ admins, selectedIds, multi, onPick, disabled }) => {
   if (admins.length === 0) return null;
   return (
-    <section>
+    <section data-tour="chat-new-admins">
       <p className="text-xs text-muted mb-2 flex items-center gap-1.5">
         <span className="text-gold">🏅</span>
         網站管理員 / 教練
@@ -130,7 +130,7 @@ const MemberCombobox: React.FC<{
   }, [q, excludeIds]);
 
   return (
-    <section>
+    <section data-tour="chat-new-search">
       <p className="text-xs text-muted mb-2">👥 其他會員</p>
       <div className="relative" ref={wrapRef}>
         <Input
@@ -265,7 +265,13 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="開啟新對話" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="開啟新對話"
+      size="lg"
+      tourId="chat-new"
+    >
       <div className="space-y-5">
         {isAdmin && (
           <div className="flex gap-2">

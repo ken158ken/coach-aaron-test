@@ -18,6 +18,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { landingService } from "../../services/site/landing.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { ImageInput } from "@/components/ui";
+// 獨立全頁路由（不在 AdminLayout 之下），所以「?」導覽鈕要自己掛一顆
+import { HelpTourButton } from "@/tours";
 import type {
   LpProjectDetail,
   LpResolvedField,
@@ -552,7 +554,7 @@ const LandingPageEditor: React.FC = () => {
             返回
           </button>
           <div className="w-px h-4 bg-luxe-gold/10" />
-          <div className="flex flex-col">
+          <div className="flex flex-col" data-tour="lped-title">
             <span className="text-sm font-medium text-luxe-text leading-tight">
               {project.project_name}
             </span>
@@ -574,6 +576,7 @@ const LandingPageEditor: React.FC = () => {
           )}
           <button
             onClick={handleToggleStatus}
+            data-tour="lped-publish"
             className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
               project.status === "published"
                 ? "text-red-400 border-red-400/20 hover:bg-red-400/5"
@@ -585,6 +588,7 @@ const LandingPageEditor: React.FC = () => {
           <button
             onClick={handleSaveFields}
             disabled={saving || changedCount === 0}
+            data-tour="lped-save"
             className={`px-4 py-1.5 text-xs rounded-lg border flex items-center gap-1.5 transition-all ${
               saved
                 ? "bg-green-500/10 text-green-400 border-green-400/30"
@@ -615,7 +619,7 @@ const LandingPageEditor: React.FC = () => {
         <aside className="w-48 shrink-0 border-r border-luxe-gold/10 bg-luxe-surface overflow-y-auto py-3">
           {/* Variant picker */}
           {variants.length > 0 && (
-            <div className="px-3 mb-4">
+            <div className="px-3 mb-4" data-tour="lped-variants">
               <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-2 px-2">
                 樣式 {savingVariant && <span className="text-luxe-gold animate-pulse">•</span>}
               </p>
@@ -650,6 +654,7 @@ const LandingPageEditor: React.FC = () => {
             </p>
             <button
               onClick={() => setActiveGroup("__info__")}
+              data-tour="lped-info-nav"
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 activeGroup === "__info__"
                   ? "bg-luxe-gold/10 text-luxe-gold"
@@ -661,7 +666,7 @@ const LandingPageEditor: React.FC = () => {
           </div>
 
           {/* Field groups */}
-          <div className="px-3">
+          <div className="px-3" data-tour="lped-groups">
             <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-1 px-2">
               頁面內容
             </p>
@@ -699,6 +704,7 @@ const LandingPageEditor: React.FC = () => {
                   <button
                     onClick={() => handleToggleSection(g)}
                     disabled={isToggling}
+                    data-tour="lped-section-toggle"
                     title={isHidden ? "目前隱藏，點擊顯示此區塊" : "目前顯示，點擊隱藏此區塊"}
                     aria-label={isHidden ? "顯示此區塊" : "隱藏此區塊"}
                     className={`shrink-0 px-2 py-2 rounded-r-lg transition-colors ${
@@ -727,7 +733,7 @@ const LandingPageEditor: React.FC = () => {
         </aside>
 
         {/* ── Main editing area ── */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto" data-tour="lped-fields">
           {/* ── Info panel ── */}
           {activeGroup === "__info__" && (
             <div className="max-w-xl mx-auto py-8 px-6 space-y-6">
@@ -899,6 +905,9 @@ const LandingPageEditor: React.FC = () => {
           </aside>
         )}
       </div>
+
+      {/* 浮動「?」頁面導覽（此路由不在 AdminLayout 下，需自行掛載） */}
+      <HelpTourButton />
     </div>
   );
 };

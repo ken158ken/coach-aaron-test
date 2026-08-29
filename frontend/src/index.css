@@ -964,6 +964,26 @@
 [data-theme="studio-light"] .bg-luxe-bg { background-color: #f8f6f1; }
 /* 淺色模式下，modal/popover 顯眼一點用白底 */
 [data-theme="studio-light"] .bg-luxe-surface-2 { background-color: #ffffff; }
+
+/* ── 新手教學引導的浮動「?」鈕（frontend/src/tours/HelpTourButton.tsx）──
+   這顆鈕的樣式必須留在 index.css：tours/tour.css 是跟著 driver.js 一起動態載入的，
+   而按鈕在導覽開始「之前」就要顯示。
+   淺色主題下 --color-gold (#c5a059) 對白底只有約 2.4:1，「?」會糊掉，
+   因此換成 --color-gold-dim (#8a6030，約 4.9:1) 並把邊框加深。 */
+[data-theme="studio-light"] .tour-fab {
+  color: var(--color-gold-dim);
+  border-color: color-mix(in srgb, var(--color-gold-dim) 40%, transparent);
+  background-color: #ffffff;
+  box-shadow: 0 6px 20px -6px rgba(30, 24, 16, 0.28);
+}
+[data-theme="studio-light"] .tour-fab:hover {
+  border-color: color-mix(in srgb, var(--color-gold-dim) 70%, transparent);
+  background-color: color-mix(in srgb, var(--color-gold-dim) 8%, #ffffff);
+}
+[data-theme="studio-light"] .tour-fab-tip {
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px -8px rgba(30, 24, 16, 0.25);
+}
 /* 帶透明度的變體：讓 bg-luxe-gold/20、border-luxe-gold/30 這類寫法自動對應 */
 [class~="bg-luxe-gold/5"]    { background-color: color-mix(in srgb, var(--color-gold) 5%,  transparent); }
 [class~="bg-luxe-gold/10"]   { background-color: color-mix(in srgb, var(--color-gold) 10%, transparent); }

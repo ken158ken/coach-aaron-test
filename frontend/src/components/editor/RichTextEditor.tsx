@@ -37,8 +37,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 編輯器工具列 */}
-      <div className="flex flex-wrap gap-1 p-2 bg-luxe-surface rounded-lg border border-luxe-gold/20">
+      {/* 編輯器工具列
+          data-tour 是新手導覽（frontend/src/tours/）的定位錨點 */}
+      <div
+        data-tour="editor-toolbar"
+        className="flex flex-wrap gap-1 p-2 bg-luxe-surface rounded-lg border border-luxe-gold/20"
+      >
         {/* 文字格式 - 第一行 */}
         <Tooltip label="粗體 (Ctrl+B)">
           <button
@@ -439,6 +443,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <button
               type="button"
               onClick={onInsertImage}
+              data-tour="editor-insert-image"
               className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
             >
               🖼️

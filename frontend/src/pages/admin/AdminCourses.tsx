@@ -456,6 +456,7 @@ const AdminCourses: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="outline"
+            data-tour="courses-quick-add"
             onClick={() => {
               resetForm();
               setShowCreateModal(true);
@@ -466,6 +467,7 @@ const AdminCourses: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="filled"
+            data-tour="courses-full-editor"
             onClick={() => navigate("/admin/courses/new")}
           >
             新增課程 →
@@ -480,6 +482,7 @@ const AdminCourses: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
+          data-tour="courses-search"
           className="flex-1 sm:max-w-sm"
           icon={
             <svg
@@ -499,6 +502,7 @@ const AdminCourses: React.FC = () => {
         />
         <select
           value={statusFilter}
+          data-tour="courses-status-filter"
           onChange={(e) => {
             setStatusFilter(e.target.value);
             setCurrentPage(1);
@@ -518,6 +522,7 @@ const AdminCourses: React.FC = () => {
         </select>
         <select
           value={categoryFilter}
+          data-tour="courses-category-filter"
           onChange={(e) => {
             setCategoryFilter(e.target.value);
             setCurrentPage(1);
@@ -539,7 +544,10 @@ const AdminCourses: React.FC = () => {
         </select>
 
         {/* 檢視模式切換 */}
-        <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
+        <div
+          data-tour="courses-view-toggle"
+          className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto"
+        >
           {viewOptions.map((opt) => (
             <button
               key={opt.mode}
@@ -568,6 +576,7 @@ const AdminCourses: React.FC = () => {
       {viewMode === "list" ? (
         <>
           <DataTable
+            data-tour="courses-table"
             columns={columns}
             data={filteredCourses}
             keyExtractor={(course) => course.course_id}
@@ -733,12 +742,14 @@ const AdminCourses: React.FC = () => {
         title={editingCourse ? "編輯課程" : "新增單堂課程"}
         size="xl"
         theme="luxe"
+        tourId="course-quick"
       >
         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
           {/* 基本資訊 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="課程名稱 *"
+              data-tour="course-form-title"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -747,6 +758,7 @@ const AdminCourses: React.FC = () => {
             />
             <Input
               label="Slug (網址識別碼)"
+              data-tour="course-form-slug"
               value={formData.slug}
               onChange={(e) =>
                 setFormData({ ...formData, slug: e.target.value })
@@ -760,6 +772,7 @@ const AdminCourses: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="價格 (NT$) *"
+              data-tour="course-form-price"
               type="number"
               value={formData.price}
               onChange={(e) =>
@@ -788,6 +801,7 @@ const AdminCourses: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TagInput
               label="分類"
+              data-tour="course-form-category"
               tags={formData.category}
               onChange={handleCategoryChange}
               theme="luxe"
@@ -797,6 +811,7 @@ const AdminCourses: React.FC = () => {
             />
             <TagInput
               label="關鍵字 (SEO)"
+              data-tour="course-form-keywords"
               tags={formData.keywords}
               onChange={handleKeywordsChange}
               theme="luxe"
@@ -818,7 +833,7 @@ const AdminCourses: React.FC = () => {
           />
 
           {/* 詳細內容編輯器 */}
-          <div>
+          <div data-tour="course-form-content">
             <label className="block text-luxe-muted text-sm mb-2">
               課程詳細內容
             </label>
@@ -836,7 +851,7 @@ const AdminCourses: React.FC = () => {
           </div>
 
           {/* 狀態 */}
-          <div>
+          <div data-tour="course-form-status">
             <label className="block text-luxe-muted text-sm mb-2">狀態</label>
             <select
               value={formData.status}
@@ -869,6 +884,7 @@ const AdminCourses: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="filled"
+            data-tour="course-form-submit"
             onClick={editingCourse ? handleUpdate : handleCreate}
           >
             {editingCourse ? "更新" : "建立"}

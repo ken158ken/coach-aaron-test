@@ -37,6 +37,8 @@ interface DataTableProps<T> {
   className?: string;
   /** 啟用欄位排序功能 */
   sortable?: boolean;
+  /** 新手導覽定位錨點（tours/ 用 `[data-tour="..."]` 找元素） */
+  "data-tour"?: string;
 }
 
 /**
@@ -54,6 +56,7 @@ function DataTable<T>({
   emptyMessage = "沒有資料",
   className = "",
   sortable = false,
+  "data-tour": dataTour,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
@@ -146,7 +149,10 @@ function DataTable<T>({
 
   if (loading) {
     return (
-      <div className={`rounded-lg border border-white/10 overflow-hidden ${className}`}>
+      <div
+        data-tour={dataTour}
+        className={`rounded-lg border border-white/10 overflow-hidden ${className}`}
+      >
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full" />
         </div>
@@ -156,7 +162,10 @@ function DataTable<T>({
 
   if (sortedData.length === 0) {
     return (
-      <div className={`rounded-lg border border-white/10 overflow-hidden ${className}`}>
+      <div
+        data-tour={dataTour}
+        className={`rounded-lg border border-white/10 overflow-hidden ${className}`}
+      >
         <div className={`px-4 py-12 text-center text-white/80`}>
           {emptyMessage}
         </div>
@@ -171,8 +180,13 @@ function DataTable<T>({
     (c) => c !== primaryColumn && c !== actionColumn && !c.hideOnMobile,
   );
 
+  /*
+   * 外層包一個版面中性的 div，只為了給新手導覽一個穩定的定位錨點：
+   * 桌機表格與手機卡片是兩份 DOM（一份被 `hidden` 藏起來），
+   * 若把 data-tour 同時掛在兩者上，querySelector 會抓到被隱藏的那份。
+   */
   return (
-    <>
+    <div data-tour={dataTour}>
       {/* 桌面版表格 */}
       <div
         className={`hidden md:block rounded-lg border border-white/10 overflow-hidden ${className}`}
@@ -317,7 +331,7 @@ function DataTable<T>({
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 

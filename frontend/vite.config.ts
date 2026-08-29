@@ -100,6 +100,16 @@ export default defineConfig(({ command, isSsrBuild }) => {
                 // 圖示
                 if (id.includes("react-icons")) return "vendor-icons";
 
+                /*
+                 * 新手教學引導（driver.js）：只有使用者在後台／會員頁按下「?」
+                 * 才會被 `tours/useTour.ts` 動態 import 進來。
+                 * 不獨立成一塊的話會落進 vendor-misc —— 而 vendor-misc 是
+                 * index.html 直接 preload 的共用 chunk，等於讓每位前台訪客都
+                 * 下載一份用不到的導覽引擎。切開後它就是純 async chunk。
+                 */
+                if (/[\\/]node_modules[\\/]driver\.js[\\/]/.test(id))
+                  return "vendor-tour";
+
                 return "vendor-misc";
               },
             },

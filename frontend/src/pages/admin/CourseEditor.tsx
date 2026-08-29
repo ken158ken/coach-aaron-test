@@ -21,6 +21,8 @@ import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks/useRichTextEditor";
 import { courseService } from "@/services/content/course.service";
 import { imageUrlError } from "@/lib/imageUrl";
+// 這頁是獨立全頁路由（不在 AdminLayout 底下），所以自己掛一顆「?」導覽鈕
+import { HelpTourButton } from "@/tours";
 
 /**
  * 驗證 YouTube 網址
@@ -719,7 +721,10 @@ const CourseEditor: React.FC = () => {
             </Tooltip>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div
+            data-tour="course-editor-actions"
+            className="flex items-center gap-3"
+          >
             <button
               type="button"
               onClick={handleSaveDraft}
@@ -755,6 +760,7 @@ const CourseEditor: React.FC = () => {
                   setHasChanges(true);
                 }}
                 placeholder="課程標題"
+                data-tour="course-editor-title"
                 className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-gray-600"
               />
             </div>
@@ -783,7 +789,7 @@ const CourseEditor: React.FC = () => {
 
               <div className="space-y-4">
                 {/* Slug（可編輯） */}
-                <div>
+                <div data-tour="course-editor-slug">
                   <div className="flex items-center gap-1.5 mb-1">
                     <label className="block text-xs text-gray-400">
                       網址代稱
@@ -867,7 +873,7 @@ const CourseEditor: React.FC = () => {
                 </div>
 
                 {/* 分類 */}
-                <div>
+                <div data-tour="course-editor-category">
                   <label className="flex items-center justify-between text-xs text-gray-400 mb-1">
                     <span>分類</span>
                     <button
@@ -905,7 +911,7 @@ const CourseEditor: React.FC = () => {
                 </div>
 
                 {/* 標籤 */}
-                <div>
+                <div data-tour="course-editor-tags">
                   <label className="block text-xs text-gray-400 mb-1">
                     標籤
                   </label>
@@ -970,7 +976,7 @@ const CourseEditor: React.FC = () => {
                 />
 
                 {/* 價格 */}
-                <div>
+                <div data-tour="course-editor-price">
                   <label className="block text-xs text-gray-400 mb-1">
                     價格 (NT$)
                   </label>
@@ -1007,7 +1013,7 @@ const CourseEditor: React.FC = () => {
                 </div>
 
                 {/* 難度等級 */}
-                <div>
+                <div data-tour="course-editor-level">
                   <label className="block text-xs text-gray-400 mb-1">
                     難度等級
                   </label>
@@ -1033,7 +1039,7 @@ const CourseEditor: React.FC = () => {
                 </div>
 
                 {/* 狀態 */}
-                <div>
+                <div data-tour="course-editor-status">
                   <label className="block text-xs text-gray-400 mb-1">
                     狀態
                   </label>
@@ -1327,6 +1333,9 @@ const CourseEditor: React.FC = () => {
         kind="content"
         title="插入圖片"
       />
+
+      {/* 右下角「?」新手導覽（本頁不在 AdminLayout 之下，需自行掛載） */}
+      <HelpTourButton />
     </div>
   );
 };

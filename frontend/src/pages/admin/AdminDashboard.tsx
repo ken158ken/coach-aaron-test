@@ -91,11 +91,12 @@ const AdminDashboard: React.FC = () => {
     fetchStats();
   }, []);
 
+  /** `tour` 為新手導覽定位錨點（frontend/src/tours/pages/adminDashboard.tour.ts） */
   const primaryStats = [
-    { value: stats?.userCount?.toLocaleString() || "0", label: "總用戶數", icon: "👥", sub: `本月新增 ${stats?.newUsersThisMonth ?? 0}` },
-    { value: stats?.courseCount?.toLocaleString() || "0", label: "線上課程", icon: "📚", sub: `預約 ${stats?.bookingCount ?? 0} 筆` },
-    { value: stats?.articleCount?.toLocaleString() || "0", label: "已發布文章", icon: "📝", sub: `共 ${(stats?.totalArticleViews ?? 0).toLocaleString()} 次閱覽` },
-    { value: `NT$ ${(stats?.monthlyRevenue || 0).toLocaleString()}`, label: "本月營收", icon: "💰", sub: `訂單 ${stats?.orderCount ?? 0} 筆` },
+    { value: stats?.userCount?.toLocaleString() || "0", label: "總用戶數", icon: "👥", sub: `本月新增 ${stats?.newUsersThisMonth ?? 0}`, tour: "dashboard-stat-users" },
+    { value: stats?.courseCount?.toLocaleString() || "0", label: "線上課程", icon: "📚", sub: `預約 ${stats?.bookingCount ?? 0} 筆`, tour: "dashboard-stat-courses" },
+    { value: stats?.articleCount?.toLocaleString() || "0", label: "已發布文章", icon: "📝", sub: `共 ${(stats?.totalArticleViews ?? 0).toLocaleString()} 次閱覽`, tour: "dashboard-stat-articles" },
+    { value: `NT$ ${(stats?.monthlyRevenue || 0).toLocaleString()}`, label: "本月營收", icon: "💰", sub: `訂單 ${stats?.orderCount ?? 0} 筆`, tour: "dashboard-stat-revenue" },
   ];
 
   const contentStats = [
@@ -126,7 +127,7 @@ const AdminDashboard: React.FC = () => {
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-40" style={dotGridStyle} />
 
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6" data-tour="dashboard-header">
         <h1 className="text-xl sm:text-2xl font-light text-luxe-text">儀表板</h1>
         <p className="text-sm text-luxe-muted">歡迎來到管理後台</p>
       </div>
@@ -137,13 +138,14 @@ const AdminDashboard: React.FC = () => {
 
       {/* 主要 StatCards */}
       <motion.div
+        data-tour="dashboard-primary-stats"
         className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         {primaryStats.map((stat) => (
-          <motion.div key={stat.label} variants={cardVariants}>
+          <motion.div key={stat.label} variants={cardVariants} data-tour={stat.tour}>
             <StatCard
               value={stat.value}
               label={stat.label}
@@ -159,6 +161,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* 內容統計 */}
       <motion.div
+        data-tour="dashboard-content-stats"
         className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6"
         variants={containerVariants}
         initial="hidden"
@@ -179,7 +182,7 @@ const AdminDashboard: React.FC = () => {
       </motion.div>
 
       {/* 排行榜 */}
-      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6" data-tour="dashboard-rankings">
         {/* 熱門文章 */}
         <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-5">
           <h2 className="text-sm font-medium text-luxe-text mb-4">📝 熱門文章（閱覽次數）</h2>
@@ -221,7 +224,10 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Google Analytics 提示 */}
-      <div className="mt-6 p-4 bg-luxe-surface/60 border border-luxe-gold/10 rounded-lg">
+      <div
+        className="mt-6 p-4 bg-luxe-surface/60 border border-luxe-gold/10 rounded-lg"
+        data-tour="dashboard-analytics"
+      >
         <p className="text-xs text-luxe-muted">
           💡 網站訪問人數、跳出率、來源分析請透過{" "}
           <a

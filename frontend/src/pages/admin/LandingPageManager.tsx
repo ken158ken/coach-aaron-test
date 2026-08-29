@@ -161,7 +161,7 @@ const LandingPageManager: React.FC = () => {
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div>
+        <div data-tour="lp-header">
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
             Landing Page 管理
           </h1>
@@ -170,6 +170,7 @@ const LandingPageManager: React.FC = () => {
         <PillButton
           theme="luxe"
           variant="filled"
+          data-tour="lp-add"
           onClick={() => navigate("/admin/landing-pages/new")}
         >
           ＋ 新增 Landing Page
@@ -184,6 +185,7 @@ const LandingPageManager: React.FC = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
           className="w-56"
+          data-tour="lp-search"
           icon={
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -194,6 +196,7 @@ const LandingPageManager: React.FC = () => {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          data-tour="lp-status-filter"
           className={SELECT_CLS}
           style={SELECT_BG}
         >
@@ -227,7 +230,10 @@ const LandingPageManager: React.FC = () => {
           </PillButton>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div
+          data-tour="lp-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
           {filtered.map((project) => {
             const tmpl = project.lp_templates;
             return (
@@ -273,7 +279,10 @@ const LandingPageManager: React.FC = () => {
                   </p>
 
                   {/* Actions */}
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-luxe-gold/5">
+                  <div
+                    data-tour="lp-card-actions"
+                    className="flex flex-wrap gap-2 pt-2 border-t border-luxe-gold/5"
+                  >
                     <button
                       onClick={() => navigate(`/admin/landing-pages/${project.id}/edit`)}
                       className="text-luxe-gold hover:underline text-xs flex-1"

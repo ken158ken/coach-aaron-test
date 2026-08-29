@@ -312,6 +312,7 @@ const AdminUsers: React.FC = () => {
       render: (user: User) => (
         <div className="flex gap-2">
           <button
+            data-tour="users-view-btn"
             onClick={(e) => {
               e.stopPropagation();
               setDetailUser(user);
@@ -321,6 +322,7 @@ const AdminUsers: React.FC = () => {
             查看
           </button>
           <button
+            data-tour="users-edit-btn"
             onClick={(e) => {
               e.stopPropagation();
               setSelectedUser(user);
@@ -344,7 +346,12 @@ const AdminUsers: React.FC = () => {
           </h1>
           <p className="text-sm sm:text-base text-luxe-muted">管理系統用戶</p>
         </div>
-        <PillButton theme="luxe" variant="outline" className="w-full sm:w-auto">
+        <PillButton
+          theme="luxe"
+          variant="outline"
+          className="w-full sm:w-auto"
+          data-tour="users-add"
+        >
           新增用戶
         </PillButton>
       </div>
@@ -352,6 +359,7 @@ const AdminUsers: React.FC = () => {
       {/* Filters + View Toggle */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
+          data-tour="users-search"
           placeholder="搜尋姓名或信箱..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -374,6 +382,7 @@ const AdminUsers: React.FC = () => {
           }
         />
         <select
+          data-tour="users-role-filter"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
           className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
@@ -389,6 +398,7 @@ const AdminUsers: React.FC = () => {
           <option value="user">一般用戶</option>
         </select>
         <select
+          data-tour="users-status-filter"
           value={activeFilter}
           onChange={(e) => setActiveFilter(e.target.value)}
           className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 pr-10 text-luxe-text text-sm focus:outline-none focus:border-luxe-gold/50 focus:ring-2 focus:ring-luxe-gold/20 appearance-none cursor-pointer hover:border-luxe-gold/40 transition-all [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
@@ -404,7 +414,10 @@ const AdminUsers: React.FC = () => {
           <option value="inactive">停用</option>
         </select>
         {/* 檢視模式切換 */}
-        <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
+        <div
+          data-tour="users-view-toggle"
+          className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto"
+        >
           {viewOptions.map((opt) => (
             <button
               key={opt.mode}
@@ -438,6 +451,7 @@ const AdminUsers: React.FC = () => {
       {viewMode === "list" ? (
         <>
           <DataTable
+            data-tour="users-table"
             columns={columns}
             data={filteredUsers}
             keyExtractor={(user) => user.user_id}
@@ -599,6 +613,7 @@ const AdminUsers: React.FC = () => {
         title="用戶詳情"
         theme="luxe"
         size="md"
+        tourId="user-detail"
       >
         {detailUser && (
           <div className="space-y-6">
@@ -616,7 +631,10 @@ const AdminUsers: React.FC = () => {
             </div>
 
             {/* 詳細欄位 */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <div
+              className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm"
+              data-tour="user-detail-fields"
+            >
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">
                   用戶 ID
@@ -664,6 +682,7 @@ const AdminUsers: React.FC = () => {
               <PillButton
                 theme="luxe"
                 variant="outline"
+                data-tour="user-detail-price"
                 onClick={() => setShowPriceModal(true)}
               >
                 💰 課程售價設定
@@ -776,10 +795,12 @@ const AdminUsers: React.FC = () => {
         onClose={() => setSelectedUser(null)}
         title="編輯用戶"
         theme="luxe"
+        tourId="user-edit"
       >
         {selectedUser && (
           <form className="space-y-4">
             <Input
+              data-tour="user-edit-name"
               label="姓名"
               defaultValue={selectedUser.name || ""}
               theme="luxe"
@@ -798,7 +819,7 @@ const AdminUsers: React.FC = () => {
               >
                 取消
               </PillButton>
-              <PillButton theme="luxe" variant="filled">
+              <PillButton theme="luxe" variant="filled" data-tour="user-edit-submit">
                 儲存
               </PillButton>
             </div>

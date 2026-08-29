@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
       <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
         <div className="studio-container">
           {/* Header */}
-          <div className="text-center mb-8 sm:mb-12">
+          <div data-tour="dash-header" className="text-center mb-8 sm:mb-12">
             <span className="inline-block text-[#d4d4d4] text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4">
               Dashboard
             </span>
@@ -65,7 +65,10 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <div
+            data-tour="dash-stats"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10"
+          >
             {stats.map((stat) => (
               <StatCard
                 key={stat.label}
@@ -79,7 +82,10 @@ const Dashboard: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Recent Courses */}
-            <div className="md:col-span-2 bg-surface rounded-lg border border-gold/10 p-6">
+            <div
+              data-tour="dash-recent"
+              className="md:col-span-2 bg-surface rounded-lg border border-gold/10 p-6"
+            >
               <h2 className="text-xl text-white/90 font-light mb-6">
                 繼續學習
               </h2>
@@ -128,12 +134,16 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-surface rounded-lg border border-gold/10 p-6">
+            <div
+              data-tour="dash-actions"
+              className="bg-surface rounded-lg border border-gold/10 p-6"
+            >
               <h2 className="text-xl text-white/90 font-light mb-6">
                 快速操作
               </h2>
               <div className="space-y-3">
                 <Link
+                  data-tour="dash-action-courses"
                   to="/courses"
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
@@ -148,6 +158,7 @@ const Dashboard: React.FC = () => {
                   <span className="text-white/90">觀看影片</span>
                 </Link>
                 <Link
+                  data-tour="dash-action-member"
                   to="/member"
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
@@ -155,6 +166,7 @@ const Dashboard: React.FC = () => {
                   <span className="text-white/90">會員中心</span>
                 </Link>
                 <Link
+                  data-tour="dash-action-contact"
                   to="/contact"
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >

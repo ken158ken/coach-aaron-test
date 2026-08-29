@@ -97,7 +97,12 @@ const AdminLessons: React.FC = () => {
             目前只支援 Loom；新增時貼 Loom 分享連結即可
           </p>
         </div>
-        <PillButton theme="luxe" variant="primary" onClick={onCreate}>
+        <PillButton
+          theme="luxe"
+          variant="primary"
+          data-tour="lessons-add"
+          onClick={onCreate}
+        >
           ＋ 新增
         </PillButton>
       </div>
@@ -115,7 +120,7 @@ const AdminLessons: React.FC = () => {
           目前沒有任何教學影片。點上面的「＋ 新增」開始建立。
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="lessons-list">
           {lessons.map((l) => (
             <div
               key={l.id}
@@ -165,7 +170,10 @@ const AdminLessons: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="mt-3 flex gap-2 flex-wrap">
+                <div
+                  className="mt-3 flex gap-2 flex-wrap"
+                  data-tour="lessons-row-actions"
+                >
                   <PillButton
                     theme="luxe"
                     variant="outline"
@@ -293,11 +301,18 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
   };
 
   return (
-    <Modal isOpen onClose={onClose} title={isEdit ? "編輯教學影片" : "新增教學影片"} size="lg">
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={isEdit ? "編輯教學影片" : "新增教學影片"}
+      size="lg"
+      tourId="lesson-form"
+    >
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
         <Field label="Loom 分享連結 *" hint="例：https://www.loom.com/share/d3479f55…">
           <input
             type="url"
+            data-tour="lesson-form-loom-url"
             className="studio-input w-full"
             placeholder="https://www.loom.com/share/..."
             value={loomUrl}
@@ -324,6 +339,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           <Field label="標題 *">
             <input
               type="text"
+              data-tour="lesson-form-title"
               className="studio-input w-full"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -358,7 +374,10 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          data-tour="lesson-form-meta"
+        >
           <Field label="分類">
             <input
               type="text"
@@ -397,6 +416,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
             </p>
           )}
           <textarea
+            data-tour="lesson-form-transcript"
             className="studio-input w-full resize-none font-mono text-xs"
             rows={6}
             placeholder={`WEBVTT\n\n00:00:00.500 --> 00:00:03.200\n大家好，今天要分享...\n\n00:00:03.200 --> 00:00:05.800\n一套心理學導向的諮詢流程`}
@@ -449,6 +469,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
         <PillButton
           theme="luxe"
           variant="primary"
+          data-tour="lesson-form-submit"
           onClick={handleSubmit}
           disabled={submitting}
         >

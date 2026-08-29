@@ -22,6 +22,8 @@ import { useRichTextEditor } from "@/hooks/useRichTextEditor";
 import { articleService } from "@/services/content/article.service";
 import ArticlePreviewModal from "@/components/admin/ArticlePreviewModal";
 import { imageUrlError } from "@/lib/imageUrl";
+// 這頁是獨立全頁路由（不在 AdminLayout 底下），所以自己掛一顆「?」導覽鈕
+import { HelpTourButton } from "@/tours";
 
 /**
  * 驗證 YouTube 網址
@@ -796,7 +798,10 @@ const ArticleEditor: React.FC = () => {
             </Tooltip>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div
+            data-tour="article-editor-actions"
+            className="flex items-center gap-3"
+          >
             {/* 字數統計 */}
             {editor && (
               <span className="text-xs text-gray-500">
@@ -848,6 +853,7 @@ const ArticleEditor: React.FC = () => {
                   setHasChanges(true);
                 }}
                 placeholder="文章標題"
+                data-tour="article-editor-title"
                 className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-gray-600"
               />
             </div>
@@ -894,7 +900,7 @@ const ArticleEditor: React.FC = () => {
 
               <div className="space-y-4">
                 {/* Slug（可編輯） */}
-                <div>
+                <div data-tour="article-editor-slug">
                   <div className="flex items-center gap-1.5 mb-1">
                     <label className="block text-xs text-gray-400">
                       網址代稱
@@ -978,7 +984,7 @@ const ArticleEditor: React.FC = () => {
                 </div>
 
                 {/* 分類 */}
-                <div>
+                <div data-tour="article-editor-category">
                   <label className="flex items-center justify-between text-xs text-gray-400 mb-1">
                     <span>分類</span>
                     <button
@@ -1016,7 +1022,7 @@ const ArticleEditor: React.FC = () => {
                 </div>
 
                 {/* 標籤 */}
-                <div>
+                <div data-tour="article-editor-tags">
                   <label className="block text-xs text-gray-400 mb-1">
                     標籤
                   </label>
@@ -1081,7 +1087,7 @@ const ArticleEditor: React.FC = () => {
                 />
 
                 {/* 狀態 */}
-                <div>
+                <div data-tour="article-editor-status">
                   <label className="block text-xs text-gray-400 mb-1">
                     狀態
                   </label>
@@ -1369,6 +1375,9 @@ const ArticleEditor: React.FC = () => {
         kind="content"
         title="插入圖片"
       />
+
+      {/* 右下角「?」新手導覽（本頁不在 AdminLayout 之下，需自行掛載） */}
+      <HelpTourButton />
     </div>
   );
 };

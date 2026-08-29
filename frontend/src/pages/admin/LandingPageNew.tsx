@@ -22,6 +22,8 @@ import {
 } from "@/services/site/landing.service";
 import type { LpTemplate, PageKind } from "@/services/site/landing.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
+// 獨立全頁路由（不在 AdminLayout 之下），所以「?」導覽鈕要自己掛一顆
+import { HelpTourButton } from "@/tours";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -159,6 +161,7 @@ const LandingPageNew: React.FC = () => {
       <div className="flex items-center gap-4 px-6 py-4 border-b border-luxe-gold/10 bg-luxe-surface shrink-0">
         <button
           onClick={() => navigate("/admin/landing-pages")}
+          data-tour="lpnew-back"
           className="flex items-center gap-1.5 text-sm text-luxe-muted hover:text-luxe-text transition-colors"
           aria-label="返回"
         >
@@ -189,10 +192,12 @@ const LandingPageNew: React.FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               theme="luxe"
               className="w-52"
+              data-tour="lpnew-search"
             />
             <select
               value={pageKind}
               onChange={(e) => setPageKind(e.target.value)}
+              data-tour="lpnew-kind-filter"
               className={SELECT_CLS}
               style={SELECT_BG}
             >
@@ -220,7 +225,10 @@ const LandingPageNew: React.FC = () => {
                 找不到符合條件的模板
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              <div
+                data-tour="lpnew-grid"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3"
+              >
                 {filtered.map((tpl) => (
                   <button
                     key={tpl.id}
@@ -296,7 +304,10 @@ const LandingPageNew: React.FC = () => {
         </div>
 
         {/* Right: Selection Panel */}
-        <div className="w-72 shrink-0 border-l border-luxe-gold/10 flex flex-col bg-luxe-surface">
+        <div
+          data-tour="lpnew-panel"
+          className="w-72 shrink-0 border-l border-luxe-gold/10 flex flex-col bg-luxe-surface"
+        >
           {selected ? (
             <div className="flex flex-col h-full p-5 gap-4">
               <div>
@@ -328,6 +339,7 @@ const LandingPageNew: React.FC = () => {
                   onChange={(e) => setProjectName(e.target.value)}
                   placeholder="例：2026 春季特訓班"
                   theme="luxe"
+                  data-tour="lpnew-name"
                   onKeyDown={(e) => { if (e.key === "Enter") handleConfirm(); }}
                 />
                 <p className="text-[10px] text-luxe-muted mt-1">可在建立後修改</p>
@@ -336,6 +348,7 @@ const LandingPageNew: React.FC = () => {
               <PillButton
                 theme="luxe"
                 variant="filled"
+                data-tour="lpnew-confirm"
                 onClick={handleConfirm}
                 disabled={!projectName.trim() || creating}
                 className="w-full"
@@ -359,6 +372,9 @@ const LandingPageNew: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 浮動「?」頁面導覽（此路由不在 AdminLayout 下，需自行掛載） */}
+      <HelpTourButton />
     </div>
   );
 };

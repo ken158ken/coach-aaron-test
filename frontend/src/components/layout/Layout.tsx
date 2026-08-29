@@ -8,6 +8,7 @@ import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import PageTransition from "./PageTransition";
+import { HelpTourButton } from "@/tours";
 
 const Layout: React.FC = (): JSX.Element => {
   return (
@@ -22,6 +23,13 @@ const Layout: React.FC = (): JSX.Element => {
         </PageTransition>
       </main>
       <Footer />
+
+      {/*
+        會員區頁面（/member、/dashboard、/booking、/my-bookings、/chat…）的
+        浮動「?」導覽鈕。公開行銷頁不在 tours/registry 裡，這顆會自己不渲染，
+        所以不需要在這裡做路由判斷。
+      */}
+      <HelpTourButton />
     </div>
   );
 };

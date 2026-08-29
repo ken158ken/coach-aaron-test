@@ -58,7 +58,15 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} theme="luxe" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      theme="luxe"
+      size="lg"
+      /* 新手導覽錨點：讓導覽能點開工具列的「插圖」鈕、走進這個彈窗再自動關掉 */
+      tourId="image-picker"
+    >
       <div className="space-y-4">
         <ImageInput
           value={url}

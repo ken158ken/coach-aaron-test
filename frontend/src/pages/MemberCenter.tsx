@@ -283,6 +283,7 @@ const MemberCenter: React.FC = () => {
               </p>
             </div>
             <button
+              data-tour="member-logout"
               onClick={logout}
               className="self-start sm:self-auto text-[#888] hover:text-[#c5a059] transition-colors text-xs sm:text-sm"
             >
@@ -291,7 +292,10 @@ const MemberCenter: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+          <div
+            data-tour="member-stats"
+            className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8"
+          >
             {stats.map((stat) => (
               <StatCard
                 key={stat.label}
@@ -303,7 +307,10 @@ const MemberCenter: React.FC = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-0.5 sm:gap-1 mb-6 sm:mb-8 border-b border-[#c5a059]/10 overflow-x-auto">
+          <div
+            data-tour="member-tabs"
+            className="flex gap-0.5 sm:gap-1 mb-6 sm:mb-8 border-b border-[#c5a059]/10 overflow-x-auto"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -330,7 +337,10 @@ const MemberCenter: React.FC = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-[#141414] rounded-lg border border-[#c5a059]/10 p-4 sm:p-6">
+          <div
+            data-tour="member-panel"
+            className="bg-[#141414] rounded-lg border border-[#c5a059]/10 p-4 sm:p-6"
+          >
             {activeTab === "profile" && (
               <div className="space-y-4 sm:space-y-6">
                 <h2 className="text-lg sm:text-xl text-white/90 font-light mb-4 sm:mb-6">
@@ -338,7 +348,10 @@ const MemberCenter: React.FC = () => {
                 </h2>
                 <div className="flex items-center gap-4 sm:gap-6 mb-4 sm:mb-6">
                   {/* 頭像區域 — 點擊開啟 AvatarPicker */}
-                  <div className="relative group flex-shrink-0">
+                  <div
+                    data-tour="member-avatar"
+                    className="relative group flex-shrink-0"
+                  >
                     {/* 頭像圓形 */}
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-[#c5a059]/40 avatar-glow">
                       {user?.avatar_url ? (
@@ -358,6 +371,7 @@ const MemberCenter: React.FC = () => {
 
                     {/* Hover 遮罩 — 更換頭貼 */}
                     <div
+                      data-tour="member-avatar-edit"
                       onClick={() =>
                         !avatarUploading && setShowAvatarPicker(true)
                       }
@@ -419,6 +433,7 @@ const MemberCenter: React.FC = () => {
                   onSubmit={handleProfileSubmit}
                 >
                   <Input
+                    data-tour="member-display-name"
                     label={t.member.displayName}
                     value={profileDisplayName}
                     onChange={(e) =>
@@ -442,6 +457,7 @@ const MemberCenter: React.FC = () => {
                     tabIndex={-1}
                   />
                   <PillButton
+                    data-tour="member-profile-save"
                     theme="studio"
                     variant="default"
                     type="submit"
@@ -599,6 +615,7 @@ const MemberCenter: React.FC = () => {
         title={t.member.selectAvatar}
         size="md"
         theme="studio"
+        tourId="member-avatar-picker"
       >
         <AvatarPicker
           onSelect={handleAvatarSelect}

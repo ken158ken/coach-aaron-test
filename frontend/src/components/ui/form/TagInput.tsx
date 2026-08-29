@@ -28,6 +28,8 @@ interface TagInputProps {
   className?: string;
   /** 標籤標題 */
   label?: string;
+  /** 新手導覽定位錨點（tours/ 用 `[data-tour="..."]` 找元素） */
+  "data-tour"?: string;
   /** 提示文字 */
   hint?: string;
 }
@@ -109,6 +111,7 @@ const TagInput: React.FC<TagInputProps> = ({
   className = "",
   label,
   hint,
+  "data-tour": dataTour,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
@@ -187,7 +190,7 @@ const TagInput: React.FC<TagInputProps> = ({
   };
 
   return (
-    <div className={className}>
+    <div className={className} data-tour={dataTour}>
       {/* 標籤 */}
       {label && (
         <label className={`block text-sm font-medium mb-2 ${styles.label}`}>

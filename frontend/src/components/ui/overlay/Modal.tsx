@@ -14,6 +14,12 @@ interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   theme?: string;
   className?: string;
+  /**
+   * 新手導覽用的彈窗識別碼。給了之後彈窗面板會帶 `data-tour-modal="<id>"`、
+   * 關閉鈕會帶 `data-tour-modal-close`，導覽引擎就能「開啟 → 導覽 → 自動關閉」。
+   * 沒給也不影響：引擎找不到關閉鈕時會改送 Escape（本元件本來就吃 Escape）。
+   */
+  tourId?: string;
 }
 
 /**
@@ -29,6 +35,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = "md",
   className = "",
+  tourId,
 }) => {
   useScrollLock(isOpen);
 
@@ -68,6 +75,7 @@ const Modal: React.FC<ModalProps> = ({
 
       {/* Modal */}
       <div
+        data-tour-modal={tourId}
         className={`
           relative
           w-full
@@ -89,6 +97,8 @@ const Modal: React.FC<ModalProps> = ({
             <h2 className="text-base sm:text-lg font-medium">{title}</h2>
             <button
               onClick={onClose}
+              data-tour-modal-close=""
+              aria-label="關閉"
               className="p-1 transition-colors text-muted hover:text-inherit"
             >
               <svg

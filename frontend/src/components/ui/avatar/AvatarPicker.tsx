@@ -414,7 +414,10 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
   return (
     <div className="flex flex-col gap-4">
       {/* Tab 列 */}
-      <div className="flex gap-1 border-b border-luxe-gold/10 overflow-x-auto">
+      <div
+        data-tour="avatar-picker-tabs"
+        className="flex gap-1 border-b border-luxe-gold/10 overflow-x-auto"
+      >
         {TABS.map((tab) => (
           <button
             key={tab.key}

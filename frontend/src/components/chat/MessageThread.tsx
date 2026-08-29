@@ -201,9 +201,13 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gold/15 shrink-0">
+      <div
+        className="flex items-center gap-3 px-4 py-3 border-b border-gold/15 shrink-0"
+        data-tour="chat-thread-header"
+      >
         {onBack && (
           <button
+            data-tour="chat-back"
             onClick={onBack}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors lg:hidden"
             title="返回"
@@ -256,6 +260,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
         {/* 匯出下拉 */}
         <div className="relative">
           <button
+            data-tour="chat-export"
             onClick={() => setShowExportMenu((v) => !v)}
             disabled={exportingFmt !== null}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
@@ -307,7 +312,11 @@ const MessageThread: React.FC<MessageThreadProps> = ({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3">
+      <div
+        ref={scrollRef}
+        data-tour="chat-messages"
+        className="flex-1 overflow-y-auto px-3 py-3"
+      >
         {loading && (
           <div className="text-center py-8 text-muted text-sm">載入中...</div>
         )}

@@ -322,6 +322,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
         aria-controls={`${fieldId}-pane`}
         disabled={disabled}
         onClick={() => switchTab(id)}
+        data-tour={`image-input-tab-${id}`}
         className={`${tabText} rounded-md transition-colors disabled:opacity-50 ${
           active
             ? "bg-luxe-gold/20 text-luxe-gold"
@@ -336,7 +337,12 @@ const ImageInput: React.FC<ImageInputProps> = ({
   const visibleError = uploadError || urlError || error || "";
 
   return (
-    <div className={`w-full ${className}`}>
+    /*
+     * data-tour-* 是新手導覽的定位錨點（frontend/src/tours/）。
+     * ImageInput 是全站共用元件，導覽用的選擇器一次寫在這裡，
+     * 所有用到圖片欄位的頁面（課程、文章、影片、LP…）就都能導覽「雙模式上傳」。
+     */
+    <div className={`w-full ${className}`} data-tour="image-input">
       {/* ── 標題列 + 頁籤 ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
         {label && (
@@ -349,6 +355,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
         <div
           role="tablist"
           aria-label="圖片來源"
+          data-tour="image-input-tabs"
           className="flex items-center gap-1 p-0.5 rounded-lg bg-luxe-surface border border-luxe-gold/10 ml-auto"
         >
           {tabButton("upload", "上傳圖片")}
@@ -396,7 +403,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex items-center gap-2 mt-1.5" data-tour="image-input-actions">
             <button
               type="button"
               disabled={disabled || uploading}
@@ -441,6 +448,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
                 type="button"
                 disabled={disabled || uploading}
                 onClick={() => fileRef.current?.click()}
+                data-tour="image-input-dropzone"
                 onDragOver={handleDragOver}
                 onDragLeave={() => setDragging(false)}
                 onDrop={handleDrop}
@@ -485,7 +493,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
               </button>
             </>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex gap-2" data-tour="image-input-url-row">
               <input
                 id={`${fieldId}-url`}
                 type="url"

@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, useTheme, useLanguage } from "@/context";
+import { HelpTourButton } from "@/tours";
 import AdminSidebar from "./AdminSidebar";
 
 /** 行動版斷點 (px) */
@@ -119,6 +120,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
               {/* 漢堡選單 */}
               <button
                 onClick={toggleSidebar}
+                data-tour="admin-sidebar-toggle"
                 className="p-1.5 sm:p-2 text-luxe-muted hover:text-luxe-gold transition-colors shrink-0"
                 aria-label="Toggle sidebar"
               >
@@ -160,10 +162,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
             </div>
 
             {/* Right: Controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
+            <div
+              data-tour="admin-topbar-controls"
+              className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0"
+            >
               {/* Theme & Language Toggle */}
               <button
                 onClick={toggleColorMode}
+                data-tour="admin-theme-toggle"
                 title={isDark ? t.theme.light : t.theme.dark}
                 className="p-1.5 sm:p-2 text-luxe-muted hover:text-luxe-gold transition-colors"
               >
@@ -232,6 +238,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* 浮動「?」導覽鈕 —— 每個 admin 路由對應一份步驟定義（tours/registry.ts） */}
+      <HelpTourButton />
     </div>
   );
 };

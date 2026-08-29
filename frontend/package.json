@@ -60,6 +60,7 @@
     "boring-avatars": "^2.0.4",
     "daisyui": "^5.0.0",
     "date-fns": "^4.1.0",
+    "driver.js": "^1.8.0",
     "express": "^5.2.1",
     "framer-motion": "^12.38.0",
     "grapesjs": "^0.22.14",

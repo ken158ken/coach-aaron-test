@@ -80,7 +80,7 @@ const MyBookingsPage: React.FC = () => {
           </p>
         </div>
         <Link to="/booking">
-          <PillButton theme="luxe" variant="outline">
+          <PillButton theme="luxe" variant="outline" data-tour="mybookings-new">
             + 新增預約
           </PillButton>
         </Link>
@@ -92,6 +92,7 @@ const MyBookingsPage: React.FC = () => {
         </div>
       )}
 
+      <div data-tour="mybookings-list">
       {loading ? (
         <div className="text-center py-12 text-muted">載入中...</div>
       ) : bookings.length === 0 ? (
@@ -106,6 +107,7 @@ const MyBookingsPage: React.FC = () => {
           {bookings.map((b) => (
             <div
               key={b.id}
+              data-tour="mybookings-card"
               className="bg-surface rounded-lg border border-gold/15 p-4"
             >
               <div className="flex items-start justify-between gap-4">
@@ -120,6 +122,7 @@ const MyBookingsPage: React.FC = () => {
                       ~ {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
                     </span>
                     <span
+                      data-tour="mybookings-status"
                       className={`text-xs px-2 py-0.5 rounded-full border ${
                         STATUS_STYLE[b.status] || ""
                       }`}
@@ -161,6 +164,7 @@ const MyBookingsPage: React.FC = () => {
                     theme="luxe"
                     variant="outline"
                     size="sm"
+                    data-tour="mybookings-cancel"
                     onClick={() => handleCancel(b)}
                   >
                     取消
@@ -171,6 +175,7 @@ const MyBookingsPage: React.FC = () => {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };

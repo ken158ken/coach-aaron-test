@@ -479,6 +479,7 @@ const AdminArticles: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="outline"
+            data-tour="articles-quick-add"
             onClick={() => {
               resetForm();
               setShowCreateModal(true);
@@ -489,6 +490,7 @@ const AdminArticles: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="filled"
+            data-tour="articles-full-editor"
             onClick={() => navigate("/admin/articles/new")}
           >
             新增文章 →
@@ -511,6 +513,7 @@ const AdminArticles: React.FC = () => {
           }}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           theme="luxe"
+          data-tour="articles-search"
           className="w-full sm:w-64"
           icon={
             <svg
@@ -530,6 +533,7 @@ const AdminArticles: React.FC = () => {
         />
         <select
           value={statusFilter}
+          data-tour="articles-status-filter"
           onChange={(e) => {
             setStatusFilter(e.target.value);
             setCurrentPage(1);
@@ -549,6 +553,7 @@ const AdminArticles: React.FC = () => {
         </select>
         <select
           value={categoryFilter}
+          data-tour="articles-category-filter"
           onChange={(e) => {
             setCategoryFilter(e.target.value);
             setCurrentPage(1);
@@ -570,6 +575,7 @@ const AdminArticles: React.FC = () => {
         </select>
         <select
           value={featuredFilter}
+          data-tour="articles-featured-filter"
           onChange={(e) => {
             setFeaturedFilter(e.target.value);
             setCurrentPage(1);
@@ -591,7 +597,10 @@ const AdminArticles: React.FC = () => {
         </PillButton>
 
         {/* 檢視模式切換 */}
-        <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto">
+        <div
+          data-tour="articles-view-toggle"
+          className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10 ml-auto"
+        >
           {viewOptions.map((opt) => (
             <button
               key={opt.mode}
@@ -633,6 +642,7 @@ const AdminArticles: React.FC = () => {
       {viewMode === "list" ? (
         <>
           <DataTable
+            data-tour="articles-table"
             columns={columns}
             data={filteredArticles}
             keyExtractor={(article) => String(article.article_id)}
@@ -766,12 +776,14 @@ const AdminArticles: React.FC = () => {
         title={editingArticle ? "編輯文章" : "新增文章"}
         theme="luxe"
         size="xl"
+        tourId="article-quick"
       >
         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
           {/* 基本資訊 */}
           <div className="space-y-4">
             <Input
               label="標題 *"
+              data-tour="article-form-title"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -823,7 +835,7 @@ const AdminArticles: React.FC = () => {
           />
 
           {/* 內容編輯器 */}
-          <div>
+          <div data-tour="article-form-content">
             <label className="block text-luxe-muted text-sm mb-2">
               文章內容
             </label>
@@ -841,7 +853,10 @@ const AdminArticles: React.FC = () => {
           </div>
 
           {/* 狀態與精選 */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div
+            data-tour="article-form-status"
+            className="flex flex-col sm:flex-row gap-4"
+          >
             <div className="flex-1">
               <label className="block text-luxe-muted text-sm mb-2">狀態</label>
               <select
@@ -878,6 +893,7 @@ const AdminArticles: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="outline"
+            data-tour="article-form-cancel"
             onClick={() => {
               setShowCreateModal(false);
               setEditingArticle(null);
@@ -889,6 +905,7 @@ const AdminArticles: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="filled"
+            data-tour="article-form-submit"
             onClick={editingArticle ? handleUpdate : handleCreate}
           >
             {editingArticle ? "更新" : "建立"}

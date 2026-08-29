@@ -1,0 +1,327 @@
+/**
+ * 新手教學引導 — driver.js 樣式覆寫
+ *
+ * driver.js 的預設外觀是白底藍鈕，跟站上的「淺色銀刃 / 深色金線」語彙差太多。
+ * 這支檔案把 popover 整個換成站上的設計 token：
+ *   圓角 14px、Noto Sans TC、金色點綴、深淺主題各一套色。
+ *
+ * 載入順序：`tourEngine.ts` 先 import `driver.js/dist/driver.css` 再 import 本檔，
+ * 所以同權重時本檔勝出；再加上 `.aaron-tour`（driver 的 popoverClass）疊一層
+ * class 提高優先權，確保不受 bundler 併檔順序影響。
+ *
+ * 顏色一律引用 index.css 的 CSS 變數，`[data-theme="studio-light"]` 一切換就跟著變，
+ * 不硬編任何主題色（金色在淺色底下的對比不足，因此文字改用 --color-gold-dim）。
+ */
+
+/* ─────────────────────────────────────────────────────────
+   1. Popover 容器
+   ───────────────────────────────────────────────────────── */
+.driver-popover.aaron-tour {
+  --tour-surface: var(--color-surface-2, #1e1e1e);
+  --tour-text: var(--color-text-main, #f0f0f0);
+  --tour-muted: var(--color-muted, #888);
+  --tour-gold: var(--color-gold, #c5a059);
+  /* 金色文字在深色底夠亮；淺色主題下方會換成 gold-dim */
+  --tour-gold-text: var(--color-gold, #c5a059);
+  --tour-line: color-mix(in srgb, var(--tour-gold) 22%, transparent);
+  --tour-line-soft: color-mix(in srgb, var(--tour-gold) 12%, transparent);
+
+  background-color: var(--tour-surface);
+  color: var(--tour-text);
+  border: 1px solid var(--tour-line);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+  min-width: 260px;
+  max-width: 340px;
+  font-family: var(--font-body, "Noto Sans TC", sans-serif);
+  box-shadow:
+    0 24px 60px -12px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+    0 1px 0 color-mix(in srgb, var(--tour-gold) 18%, transparent) inset;
+}
+
+/* 頂部一條極細金線，呼應站上卡片的「銀刃」語彙 */
+.driver-popover.aaron-tour::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 14px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--tour-gold) 65%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   2. 標題
+   ───────────────────────────────────────────────────────── */
+.driver-popover.aaron-tour .driver-popover-title {
+  font-family: var(--font-body, "Noto Sans TC", sans-serif);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--tour-text);
+  padding-right: 30px;
+  padding-left: 14px;
+}
+
+/* 標題前的金色小方塊 */
+.driver-popover.aaron-tour .driver-popover-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--tour-gold);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tour-gold) 60%, transparent);
+}
+
+/* ─────────────────────────────────────────────────────────
+   3. 內文
+   ───────────────────────────────────────────────────────── */
+.driver-popover.aaron-tour .driver-popover-description {
+  margin-top: 9px;
+  font-size: 13.5px;
+  line-height: 1.85;
+  color: var(--tour-muted);
+  letter-spacing: 0.01em;
+}
+
+.driver-popover.aaron-tour .driver-popover-description b,
+.driver-popover.aaron-tour .driver-popover-description strong {
+  color: var(--tour-text);
+  font-weight: 600;
+}
+
+.driver-popover.aaron-tour .driver-popover-description code {
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--tour-line-soft);
+  color: var(--tour-gold-text);
+  word-break: break-all;
+}
+
+.driver-popover.aaron-tour .driver-popover-description em {
+  font-style: normal;
+  color: var(--tour-gold-text);
+}
+
+/* ─────────────────────────────────────────────────────────
+   4. 關閉鈕
+   ───────────────────────────────────────────────────────── */
+.driver-popover.aaron-tour .driver-popover-close-btn {
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  line-height: 24px;
+  border-radius: 7px;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--tour-muted);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.driver-popover.aaron-tour .driver-popover-close-btn:hover,
+.driver-popover.aaron-tour .driver-popover-close-btn:focus-visible {
+  color: var(--tour-gold-text);
+  background-color: var(--tour-line-soft);
+}
+
+/* ─────────────────────────────────────────────────────────
+   5. 頁尾：進度 + 按鈕
+   ───────────────────────────────────────────────────────── */
+.driver-popover.aaron-tour .driver-popover-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tour-line-soft);
+  gap: 10px;
+}
+
+.driver-popover.aaron-tour .driver-popover-progress-text {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tour-muted);
+  opacity: 0.85;
+}
+
+.driver-popover.aaron-tour .driver-popover-navigation-btns {
+  gap: 8px;
+}
+
+.driver-popover.aaron-tour .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+}
+
+.driver-popover.aaron-tour .driver-popover-footer-btn {
+  font-family: var(--font-body, "Noto Sans TC", sans-serif);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 6px 15px;
+  border-radius: 9px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* 上一步 —— 低調的線框鈕 */
+.driver-popover.aaron-tour .driver-popover-prev-btn {
+  background-color: transparent;
+  border: 1px solid var(--tour-line);
+  color: var(--tour-muted);
+}
+
+.driver-popover.aaron-tour .driver-popover-prev-btn:hover:not(.driver-popover-btn-disabled),
+.driver-popover.aaron-tour .driver-popover-prev-btn:focus-visible {
+  background-color: var(--tour-line-soft);
+  border-color: color-mix(in srgb, var(--tour-gold) 45%, transparent);
+  color: var(--tour-gold-text);
+}
+
+/* 下一步 / 完成 —— 金色主鈕 */
+.driver-popover.aaron-tour .driver-popover-next-btn {
+  background-color: color-mix(in srgb, var(--tour-gold) 88%, #000);
+  border: 1px solid color-mix(in srgb, var(--tour-gold) 88%, #000);
+  color: #14100a;
+  font-weight: 600;
+}
+
+.driver-popover.aaron-tour .driver-popover-next-btn:hover:not(.driver-popover-btn-disabled),
+.driver-popover.aaron-tour .driver-popover-next-btn:focus-visible {
+  background-color: var(--tour-gold);
+  border-color: var(--tour-gold);
+  color: #100c06;
+}
+
+.driver-popover.aaron-tour .driver-popover-footer-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--tour-gold) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────
+   6. 箭頭 —— driver.js 用 border trick，四個方位各染一次
+   ───────────────────────────────────────────────────────── */
+.driver-popover.aaron-tour .driver-popover-arrow {
+  border-width: 7px;
+}
+.driver-popover.aaron-tour .driver-popover-arrow-side-left {
+  border-left-color: var(--tour-surface);
+}
+.driver-popover.aaron-tour .driver-popover-arrow-side-right {
+  border-right-color: var(--tour-surface);
+}
+.driver-popover.aaron-tour .driver-popover-arrow-side-top {
+  border-top-color: var(--tour-surface);
+}
+.driver-popover.aaron-tour .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--tour-surface);
+}
+
+/* ─────────────────────────────────────────────────────────
+   7. 淺色主題
+   ───────────────────────────────────────────────────────── */
+[data-theme="studio-light"] .driver-popover.aaron-tour {
+  --tour-surface: #ffffff;
+  --tour-text: rgba(20, 16, 12, 0.92);
+  --tour-muted: rgba(40, 36, 30, 0.66);
+  /* #c5a059 在白底只有 ~2.4:1，文字改用 gold-dim（~4.9:1）才讀得到 */
+  --tour-gold-text: var(--color-gold-dim, #8a6030);
+  --tour-line: rgba(0, 0, 0, 0.1);
+  --tour-line-soft: rgba(0, 0, 0, 0.05);
+
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 24px 60px -18px rgba(30, 24, 16, 0.28),
+    0 2px 8px rgba(30, 24, 16, 0.06);
+}
+
+[data-theme="studio-light"] .driver-popover.aaron-tour::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-gold-dim, #8a6030) 45%, transparent),
+    transparent
+  );
+}
+
+[data-theme="studio-light"] .driver-popover.aaron-tour .driver-popover-title::before {
+  background: var(--color-gold-dim, #8a6030);
+  box-shadow: none;
+}
+
+[data-theme="studio-light"] .driver-popover.aaron-tour .driver-popover-next-btn {
+  background-color: var(--color-gold-dim, #8a6030);
+  border-color: var(--color-gold-dim, #8a6030);
+  color: #ffffff;
+}
+
+[data-theme="studio-light"] .driver-popover.aaron-tour .driver-popover-next-btn:hover:not(.driver-popover-btn-disabled) {
+  background-color: #6f4c26;
+  border-color: #6f4c26;
+}
+
+/* ─────────────────────────────────────────────────────────
+   8. 手機版：popover 貼齊左右、字級略縮
+   ───────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .driver-popover.aaron-tour {
+    max-width: calc(100vw - 24px);
+    min-width: 0;
+    padding: 15px 15px 12px;
+    border-radius: 12px;
+  }
+  .driver-popover.aaron-tour .driver-popover-title {
+    font-size: 14.5px;
+  }
+  .driver-popover.aaron-tour .driver-popover-description {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .driver-popover.aaron-tour .driver-popover-footer-btn {
+    padding: 7px 14px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   9. 被聚焦元素的金色描邊
+   driver.js 是在 SVG 遮罩上「挖洞」，元素本身不會被蓋住；
+   這裡再補一圈光暈，讓聚焦目標在深色黑幕上更清楚。
+
+   掛在 `[data-tour-active]`（引擎自己加的）而不是 driver 的
+   `.driver-active-element` —— 後者是 class，React 一重繪就被 `className` 蓋掉，
+   外框會閃爍；data 屬性 React 不會動。詳見 tourEngine.ts 的 ACTIVE_ATTR。
+   ───────────────────────────────────────────────────────── */
+.driver-active [data-tour-active] {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-gold, #c5a059) 55%, transparent),
+    0 0 22px -2px color-mix(in srgb, var(--color-gold, #c5a059) 45%, transparent);
+  transition: box-shadow 0.25s ease;
+}
+
+/* ─────────────────────────────────────────────────────────
+   10. 尊重「減少動態效果」偏好
+   ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .driver-fade .driver-overlay,
+  .driver-fade .driver-popover {
+    animation: none !important;
+  }
+  .driver-active [data-tour-active] {
+    transition: none;
+  }
+}

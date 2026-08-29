@@ -381,7 +381,7 @@ const AdminVideos: React.FC = () => {
 
   // ===== 列表檢視 =====
   const renderListView = () => (
-    <div className="space-y-1 overflow-x-auto">
+    <div className="space-y-1 overflow-x-auto" data-tour="videos-list">
       {/* 表頭 */}
       <div className="grid grid-cols-[40px_40px_1fr_100px_80px_100px] gap-2 px-4 py-2 text-xs text-luxe-muted border-b border-luxe-gold/10 min-w-130">
         <span></span>
@@ -485,7 +485,7 @@ const AdminVideos: React.FC = () => {
           : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4";
 
     return (
-      <div className={`grid ${gridClass} gap-3`}>
+      <div className={`grid ${gridClass} gap-3`} data-tour="videos-list">
         {filteredVideos.map((video, index) => {
           const thumb = getVideoThumbnail(video);
           return (
@@ -597,6 +597,7 @@ const AdminVideos: React.FC = () => {
           <PillButton
             theme="luxe"
             variant="outline"
+            data-tour="videos-add"
             onClick={() => setShowAddModal(true)}
           >
             ＋ 新增影片
@@ -605,6 +606,7 @@ const AdminVideos: React.FC = () => {
             <PillButton
               theme="luxe"
               variant="filled"
+              data-tour="videos-save-order"
               onClick={handleSaveOrder}
               disabled={saving}
               className="animate-pulse"
@@ -622,6 +624,7 @@ const AdminVideos: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
+          data-tour="videos-search"
           className="flex-1 sm:max-w-sm"
           icon={
             <svg
@@ -641,7 +644,10 @@ const AdminVideos: React.FC = () => {
         />
 
         {/* 檢視模式切換 */}
-        <div className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10">
+        <div
+          data-tour="videos-view-toggle"
+          className="flex gap-1 bg-luxe-surface rounded-lg p-1 border border-luxe-gold/10"
+        >
           {viewOptions.map((opt) => (
             <button
               key={opt.mode}
@@ -709,7 +715,10 @@ const AdminVideos: React.FC = () => {
         >
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-          <div className="relative z-10 w-full max-w-3xl bg-luxe-surface border border-luxe-gold/20 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+          <div
+            data-tour-modal="video-add"
+            className="relative z-10 w-full max-w-3xl bg-luxe-surface border border-luxe-gold/20 rounded-xl shadow-2xl flex flex-col max-h-[90vh]"
+          >
 
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-luxe-gold/10 shrink-0">
@@ -717,7 +726,14 @@ const AdminVideos: React.FC = () => {
                 <h2 className="text-base font-medium text-luxe-text">批量新增影片</h2>
                 <p className="text-xs text-luxe-muted mt-0.5">可一次新增多部影片，依序填入後批量送出</p>
               </div>
-              <button onClick={closeAddModal} className="text-luxe-muted hover:text-luxe-text text-lg leading-none">✕</button>
+              <button
+                onClick={closeAddModal}
+                data-tour-modal-close=""
+                aria-label="關閉"
+                className="text-luxe-muted hover:text-luxe-text text-lg leading-none"
+              >
+                ✕
+              </button>
             </div>
 
             {/* 影片列清單 */}
@@ -743,6 +759,7 @@ const AdminVideos: React.FC = () => {
                           onChange={(e) => handleRowUrlChange(row.id, e.target.value)}
                           placeholder="https://www.instagram.com/p/..."
                           theme="luxe"
+                          data-tour="videos-row-url"
                           className="w-full text-sm"
                         />
                         {row.url && (
@@ -764,6 +781,7 @@ const AdminVideos: React.FC = () => {
                           onChange={(e) => updateRow(row.id, { title: e.target.value })}
                           placeholder="影片標題"
                           theme="luxe"
+                          data-tour="videos-row-title"
                           className="w-full text-sm"
                         />
                       </div>
@@ -798,6 +816,7 @@ const AdminVideos: React.FC = () => {
               <button
                 type="button"
                 onClick={addNewRow}
+                data-tour="videos-add-row"
                 className="w-full py-3 border border-dashed border-luxe-gold/20 rounded-xl text-xs text-luxe-muted/60 hover:border-luxe-gold/40 hover:text-luxe-muted transition-all"
               >
                 ＋ 再加一部影片
@@ -819,6 +838,7 @@ const AdminVideos: React.FC = () => {
                 <PillButton
                   theme="luxe"
                   variant="filled"
+                  data-tour="videos-batch-submit"
                   onClick={handleBatchSubmit}
                   disabled={addRows.every((r) => !r.url.trim() || !r.title.trim()) || addSubmitting}
                 >

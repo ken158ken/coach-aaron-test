@@ -191,7 +191,7 @@ const BookingPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 sm:py-16">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-8" data-tour="booking-header">
         <h1 className="text-2xl sm:text-3xl font-light text-inherit mb-2">
           預約 {profile.display_name} 的諮詢時間
         </h1>
@@ -217,7 +217,7 @@ const BookingPage: React.FC = () => {
       {/* 內容：左月曆 / 右時段 */}
       <div className="grid lg:grid-cols-2 gap-6 bg-surface/40 rounded-xl border border-gold/15 p-4 sm:p-6">
         {/* 月曆 */}
-        <div>
+        <div data-tour="booking-calendar">
           <DayPicker
             mode="single"
             locale={zhTW}
@@ -245,7 +245,7 @@ const BookingPage: React.FC = () => {
         </div>
 
         {/* 時段 */}
-        <div>
+        <div data-tour="booking-slots">
           <h3 className="text-inherit font-medium mb-3">
             {selectedDay
               ? `${format(selectedDay, "yyyy 年 MM 月 dd 日", { locale: zhTW })} 可預約時段`
@@ -258,6 +258,7 @@ const BookingPage: React.FC = () => {
             {slotsOfDay.map((s) => (
               <button
                 key={s.startIso}
+                data-tour="booking-slot"
                 onClick={() => openSubmitModal(s)}
                 className="px-3 py-2 text-sm rounded-lg border border-gold/20 text-inherit hover:border-gold/50 hover:bg-gold/5 transition-colors"
               >
@@ -268,7 +269,7 @@ const BookingPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-6 text-sm text-muted">
+      <div className="mt-6 text-sm text-muted" data-tour="booking-my-link">
         想看自己的預約紀錄？前往{" "}
         <Link to="/my-bookings" className="text-gold hover:underline">
           我的預約
@@ -282,10 +283,14 @@ const BookingPage: React.FC = () => {
         title="送出預約"
         theme="luxe"
         size="lg"
+        tourId="booking-submit"
       >
         {pickedSlot && (
           <div className="space-y-4">
-            <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg">
+            <div
+              className="p-3 bg-gold/5 border border-gold/20 rounded-lg"
+              data-tour="booking-form-slot"
+            >
               <p className="text-inherit text-sm">
                 時段：
                 <span className="text-gold ml-1">
@@ -302,6 +307,7 @@ const BookingPage: React.FC = () => {
                 想諮詢的課程（選填）
               </label>
               <select
+                data-tour="booking-form-course"
                 value={form.courseId}
                 onChange={(e) =>
                   setForm({ ...form, courseId: e.target.value })
@@ -318,6 +324,7 @@ const BookingPage: React.FC = () => {
             </div>
 
             <Textarea
+              data-tour="booking-form-note"
               label="想聊什麼？（選填）"
               value={form.userNote}
               onChange={(e) => setForm({ ...form, userNote: e.target.value })}
@@ -326,7 +333,10 @@ const BookingPage: React.FC = () => {
               rows={4}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              data-tour="booking-form-contact"
+            >
               <Input
                 label="聯絡 Email"
                 value={form.contactEmail}
@@ -361,6 +371,7 @@ const BookingPage: React.FC = () => {
               <PillButton
                 theme="luxe"
                 variant="filled"
+                data-tour="booking-form-submit"
                 onClick={handleSubmit}
                 disabled={saving}
               >

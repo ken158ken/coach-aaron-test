@@ -92,6 +92,7 @@ const NotificationsPage: React.FC = () => {
             theme="luxe"
             variant="outline"
             size="sm"
+            data-tour="notif-mark-all"
             onClick={() => markAllRead()}
           >
             全部已讀
@@ -100,7 +101,10 @@ const NotificationsPage: React.FC = () => {
       </div>
 
       {/* 推播通知設定 */}
-      <div className="mb-6 p-4 rounded-lg border border-gold/15 bg-surface-2/40">
+      <div
+        className="mb-6 p-4 rounded-lg border border-gold/15 bg-surface-2/40"
+        data-tour="notif-push"
+      >
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-medium">📱 瀏覽器推播通知</h3>
@@ -130,7 +134,7 @@ const NotificationsPage: React.FC = () => {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4" data-tour="notif-filter">
         {(["all", "unread"] as Filter[]).map((f) => (
           <button
             key={f}
@@ -163,6 +167,7 @@ const NotificationsPage: React.FC = () => {
           {filtered.map((n) => (
             <div
               key={n.id}
+              data-tour="notif-item"
               className={`flex items-start gap-3 px-4 py-3 rounded-lg border transition-colors ${
                 n.is_read
                   ? "border-gold/10 bg-surface-2/30"
@@ -191,6 +196,7 @@ const NotificationsPage: React.FC = () => {
                 )}
               </button>
               <button
+                data-tour="notif-delete"
                 onClick={() => remove(n.id)}
                 className="text-muted hover:text-red-400 text-xs px-1 shrink-0"
                 title="刪除"

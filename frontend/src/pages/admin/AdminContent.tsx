@@ -91,6 +91,7 @@ const SectionItemRow: React.FC<SectionItemRowProps> = ({
   onDelete,
 }) => (
   <div
+    data-tour="content-item-row"
     className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
       item.is_active ? 'border-luxe-gold/10' : 'border-luxe-gold/5 opacity-60'
     }`}
@@ -1026,8 +1027,9 @@ const AdminContent: React.FC = () => {
       </div>
 
       {/* Tab 切換 */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div data-tour="content-tabs" className="flex flex-wrap gap-2 mb-6">
         <button
+          data-tour="content-tab-content"
           onClick={() => setActiveTab('content')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'content'
@@ -1048,6 +1050,7 @@ const AdminContent: React.FC = () => {
           🪟 首頁彈窗
         </button>
         <button
+          data-tour="content-tab-testimonial"
           onClick={() => setActiveTab('testimonial')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'testimonial'
@@ -1109,6 +1112,7 @@ const AdminContent: React.FC = () => {
             <PillButton
               theme="luxe"
               variant="outline"
+              data-tour="content-add-field"
               onClick={() => setShowCreateModal(true)}
             >
               + 新增欄位
@@ -1318,7 +1322,10 @@ const AdminContent: React.FC = () => {
       {activeTab === 'testimonial' && (
         <div>
           {/* Config Bar */}
-          <div className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10">
+          <div
+            data-tour="testimonial-config"
+            className="flex flex-wrap items-center gap-4 mb-5 p-4 bg-luxe-surface rounded-lg border border-luxe-gold/10"
+          >
             {/* 發布狀態 */}
             <div className="flex items-center gap-3">
               <Toggle
@@ -1471,6 +1478,7 @@ const AdminContent: React.FC = () => {
             <PillButton
               theme="luxe"
               variant="outline"
+              data-tour="testimonial-add"
               onClick={() => openTestimonialModal()}
             >
               + 新增幻燈片
@@ -2247,6 +2255,7 @@ const AdminContent: React.FC = () => {
         title={editingTestimonial ? '編輯學員見證' : '新增學員見證'}
         theme="luxe"
         size="lg"
+        tourId="testimonial-form"
       >
         <div className="space-y-4">
           <ImageInput
@@ -2305,6 +2314,7 @@ const AdminContent: React.FC = () => {
             <PillButton
               theme="luxe"
               variant="filled"
+              data-tour="testimonial-form-submit"
               onClick={handleSaveTestimonial}
               disabled={saving}
             >

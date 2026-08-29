@@ -43,6 +43,13 @@ interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   theme?: string;
   className?: string;
+  /**
+   * 新手導覽用的彈窗識別碼（frontend/src/tours/）。
+   * 給了之後面板會帶上 `data-tour-modal="<id>"`，導覽引擎就能等它出現、
+   * 在裡面繼續導覽欄位，走完再自動關閉。
+   * 本元件沒有 × 關閉鈕，導覽會改用 Escape 收掉（上面的 keydown 監聽會接住）。
+   */
+  tourId?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -52,6 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   size = "md",
+  tourId,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -100,6 +108,12 @@ export const Modal: React.FC<ModalProps> = ({
         <motion.div
           className={overlayClasses}
           onClick={handleBackdropClick}
+          /*
+           * 新手導覽關閉此彈窗的首選手段：直接 click 這層背景。
+           * 本元件沒有 × 鈕，導覽若改送 Escape，driver.js 也會收到同一顆 Escape
+           * 而把整段導覽一起關掉 —— 點背景才只關彈窗、不影響導覽。
+           */
+          data-tour-modal-backdrop=""
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -107,6 +121,7 @@ export const Modal: React.FC<ModalProps> = ({
         >
           <motion.div
             ref={modalRef}
+            data-tour-modal={tourId}
             className={`${modalClasses} ${sizeClasses[size]}`}
             onClick={(e) => e.stopPropagation()}
             initial={{ scale: 0.94, opacity: 0, y: 12 }}

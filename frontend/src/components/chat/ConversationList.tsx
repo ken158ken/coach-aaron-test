@@ -68,12 +68,16 @@ const ConversationList: React.FC<ConversationListProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface border-r border-gold/15">
+    <div
+      className="flex flex-col h-full bg-surface border-r border-gold/15"
+      data-tour="chat-list"
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gold/15">
         <h2 className="font-medium">訊息</h2>
         {onNewChat && (
           <button
+            data-tour="chat-new"
             onClick={onNewChat}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
             title="新對話"

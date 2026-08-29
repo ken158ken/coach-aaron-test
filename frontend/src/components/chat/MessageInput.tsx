@@ -81,7 +81,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
   };
 
   return (
-    <div className="border-t border-gold/15 bg-surface px-4 py-3">
+    <div
+      className="border-t border-gold/15 bg-surface px-4 py-3"
+      data-tour="chat-input"
+    >
       {error && (
         <div className="mb-2 text-xs text-red-400">{error}</div>
       )}

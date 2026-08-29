@@ -306,7 +306,7 @@ const CoachDashboard: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div data-tour="coach-tabs" className="flex flex-wrap gap-2 mb-6">
         {[
           { k: "pending", label: `🔔 待審核 (${pendingList.length})` },
           { k: "all", label: "📅 全部預約" },
@@ -315,6 +315,7 @@ const CoachDashboard: React.FC = () => {
         ].map((t) => (
           <button
             key={t.k}
+            data-tour={`coach-tab-${t.k}`}
             onClick={() => setTab(t.k as TabType)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               tab === t.k
@@ -329,7 +330,7 @@ const CoachDashboard: React.FC = () => {
 
       {/* Pending Tab */}
       {tab === "pending" && (
-        <div className="space-y-3">
+        <div data-tour="coach-pending-list" className="space-y-3">
           {pendingList.length === 0 ? (
             <div className="text-center py-12 text-muted">
               沒有待審核的預約
@@ -416,10 +417,13 @@ const CoachDashboard: React.FC = () => {
 
       {/* Schedule Tab */}
       {tab === "schedule" && (
-        <div className="space-y-8">
+        <div data-tour="coach-schedule-panel" className="space-y-8">
           {/* Profile 設定 */}
           {profile && (
-            <section className="bg-surface rounded-lg border border-gold/15 p-4">
+            <section
+              data-tour="coach-profile-settings"
+              className="bg-surface rounded-lg border border-gold/15 p-4"
+            >
               <h2 className="text-inherit font-medium mb-3">基本設定</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
@@ -524,6 +528,7 @@ const CoachDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gold/15">
               <h2 className="text-inherit font-medium">每週可預約時段</h2>
               <PillButton
+                data-tour="coach-add-rule"
                 theme="luxe"
                 variant="outline"
                 size="sm"
@@ -591,6 +596,7 @@ const CoachDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gold/15">
               <h2 className="text-inherit font-medium">休假區間</h2>
               <PillButton
+                data-tour="coach-add-timeoff"
                 theme="luxe"
                 variant="outline"
                 size="sm"
@@ -662,7 +668,10 @@ const CoachDashboard: React.FC = () => {
 
       {/* Google Tab */}
       {tab === "google" && (
-        <section className="bg-surface rounded-lg border border-gold/15 p-6 max-w-xl">
+        <section
+          data-tour="coach-google-panel"
+          className="bg-surface rounded-lg border border-gold/15 p-6 max-w-xl"
+        >
           <h2 className="text-inherit font-medium mb-3">Google 日曆同步</h2>
           <p className="text-sm text-muted mb-4">
             連結後，可預約時段會自動避開你 Google 日曆中已有的行程；批准預約時也會自動在日曆建立事件。
@@ -722,6 +731,7 @@ const CoachDashboard: React.FC = () => {
         title="審核預約"
         theme="luxe"
         size="lg"
+        tourId="coach-review"
       >
         {reviewing && (
           <div className="space-y-4">
@@ -755,6 +765,7 @@ const CoachDashboard: React.FC = () => {
               )}
             </div>
             <Textarea
+              data-tour="coach-review-note"
               label="批註（選填，拒絕時建議說明理由）"
               value={reviewNote}
               onChange={(e) => setReviewNote(e.target.value)}
@@ -762,7 +773,10 @@ const CoachDashboard: React.FC = () => {
               theme="luxe"
               rows={3}
             />
-            <div className="flex justify-end gap-3 pt-2 border-t border-gold/10">
+            <div
+              data-tour="coach-review-actions"
+              className="flex justify-end gap-3 pt-2 border-t border-gold/10"
+            >
               <PillButton
                 theme="luxe"
                 variant="outline"
@@ -929,6 +943,7 @@ const BookingCard: React.FC<{
   onOpen: () => void;
 }> = ({ b, onOpen }) => (
   <div
+    data-tour="coach-pending-card"
     onClick={onOpen}
     className="bg-surface rounded-lg border border-gold/15 p-4 cursor-pointer hover:border-gold/40 transition-colors"
   >

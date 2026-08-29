@@ -285,6 +285,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   return (
     <aside
+      data-tour="admin-sidebar"
       className={`
         fixed left-0 top-0 bottom-0
         bg-luxe-surface border-r border-luxe-gold/10
@@ -365,6 +366,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <Link
                 to={item.path}
                 onClick={onNavigate}
+                data-tour={`admin-nav-${item.labelKey}`}
                 className={`
                   relative flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3
                   rounded-lg text-sm transition-colors
