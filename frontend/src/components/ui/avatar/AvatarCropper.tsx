@@ -7,6 +7,7 @@
 import React, { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import type { Area, Point } from "react-easy-crop";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** 日誌工具 */
 const logger = {
@@ -85,6 +86,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
   onCropComplete,
   onCancel,
 }) => {
+  const { t } = useLanguage();
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -183,7 +185,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
       </div>
 
       <p className="text-xs text-luxe-muted text-center">
-        拖曳調整位置 · 滾輪或滑桿縮放
+        {t.avatarUi.cropHint}
       </p>
 
       {/* 按鈕列 */}
@@ -193,7 +195,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
           disabled={processing}
           className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text border border-luxe-gold/20 rounded-lg transition-colors disabled:opacity-50"
         >
-          取消
+          {t.common.cancel}
         </button>
         <button
           onClick={handleConfirm}
@@ -203,10 +205,10 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
           {processing ? (
             <>
               <div className="w-3.5 h-3.5 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
-              處理中…
+              {t.avatarUi.processing}
             </>
           ) : (
-            "確認裁切"
+            t.avatarUi.confirmCrop
           )}
         </button>
       </div>

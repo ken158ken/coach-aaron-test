@@ -6,14 +6,15 @@
 import React, { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format, isToday, isYesterday } from "date-fns";
-import { zhTW } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
 import {
   type ChatConversation,
   type ChatUser,
-  getConversationName,
-  previewText,
 } from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
+import { localizedConversationName, localizedPreviewText } from "./chatNames";
 import { usePresenceMany } from "@/hooks/usePresence";
 import PresenceDot from "./PresenceDot";
 import UnreadBadge from "./UnreadBadge";
@@ -25,11 +26,12 @@ interface ConversationListProps {
   onNewChat?: () => void;
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, t: AllTranslations, isZh: boolean): string {
   const d = new Date(iso);
-  if (isToday(d)) return format(d, "HH:mm", { locale: zhTW });
-  if (isYesterday(d)) return "昨天";
-  return format(d, "MM/dd", { locale: zhTW });
+  const dfLocale = isZh ? zhTW : enUS;
+  if (isToday(d)) return format(d, "HH:mm", { locale: dfLocale });
+  if (isYesterday(d)) return t.dateTime.yesterday;
+  return format(d, "MM/dd", { locale: dfLocale });
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({
@@ -38,6 +40,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onNewChat,
 }) => {
   const { user } = useAuth();
+  const { t, isZhTW } = useLanguage();
   const { conversationId } = useParams();
   const me = Number(user?.user_id || 0);
 
@@ -74,13 +77,13 @@ const ConversationList: React.FC<ConversationListProps> = ({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gold/15">
-        <h2 className="font-medium">訊息</h2>
+        <h2 className="font-medium">{t.chatUi.messages}</h2>
         {onNewChat && (
           <button
             data-tour="chat-new"
             onClick={onNewChat}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
-            title="新對話"
+            title={t.chatUi.newChat}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -92,22 +95,29 @@ const ConversationList: React.FC<ConversationListProps> = ({
       {/* List */}
       <div className="flex-1 overflow-y-auto">
         {loading && (
-          <div className="text-center py-12 text-muted text-sm">載入中...</div>
+          <div className="text-center py-12 text-muted text-sm">
+            {t.common.loading}
+          </div>
         )}
         {!loading && conversations.length === 0 && (
-          <div className="text-center py-12 text-muted text-sm">
-            尚無對話
-            <br />
+          <div className="text-center py-12 px-4 text-muted text-sm">
+            <div className="text-4xl mb-3" aria-hidden="true">
+              💬
+            </div>
+            <p>{t.chatUi.noConversations}</p>
+            <p className="text-xs text-muted/70 mt-1">
+              {t.chatUi.noConversationsHint}
+            </p>
             <button
               onClick={onNewChat}
-              className="mt-2 text-gold hover:underline"
+              className="mt-3 px-4 py-2 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 transition-colors"
             >
-              開啟新對話
+              ＋ {t.chatUi.startNewChat}
             </button>
           </div>
         )}
         {conversations.map((c) => {
-          const name = getConversationName(c, me);
+          const name = localizedConversationName(c, me, t);
           const isActive = c.id === conversationId;
           const partner =
             c.type === "dm"
@@ -159,21 +169,21 @@ const ConversationList: React.FC<ConversationListProps> = ({
                     <h3 className="font-medium text-sm truncate">{name}</h3>
                     {c.my_left_at && (
                       <span className="text-[10px] text-muted bg-zinc-500/15 border border-zinc-500/30 rounded-full px-1.5 py-0.5 shrink-0">
-                        已離開
+                        {t.chatUi.left}
                       </span>
                     )}
                   </div>
                   {c.last_message && (
                     <span className="text-[10px] text-muted shrink-0">
-                      {formatTime(c.last_message.created_at)}
+                      {formatTime(c.last_message.created_at, t, isZhTW)}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-muted truncate">
                     {c.last_message
-                      ? previewText(c.last_message)
-                      : "（尚無訊息）"}
+                      ? localizedPreviewText(c.last_message, t)
+                      : t.chatUi.noMessagesYet}
                   </p>
                   <UnreadBadge count={c.unread_count || 0} />
                 </div>

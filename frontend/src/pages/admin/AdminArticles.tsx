@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 // 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
 import { RichTextEditor } from "@/components/ui/editor";
+import { useLanguage } from "@/context/LanguageContext";
 import { articleService } from "@/services/content/article.service";
 import type { Article, ArticleStatus } from "@/types";
 
@@ -38,15 +39,35 @@ const logger = {
  */
 type ViewMode = "list" | "card-sm" | "card-md" | "card-lg";
 
-const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
-  { mode: "list", icon: "☰", label: "清單" },
-  { mode: "card-sm", icon: "▪▪▪", label: "小圖" },
-  { mode: "card-md", icon: "◻◻", label: "中圖" },
-  { mode: "card-lg", icon: "⬜", label: "大圖" },
+/** 檢視模式的圖示（文案在字典裡，見元件內的 viewOptions） */
+const viewIcons: { mode: ViewMode; icon: string }[] = [
+  { mode: "list", icon: "☰" },
+  { mode: "card-sm", icon: "▪▪▪" },
+  { mode: "card-md", icon: "◻◻" },
+  { mode: "card-lg", icon: "⬜" },
 ];
 
 const AdminArticles: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const tp = t.adminArticlesPage;
+
+  /** 檢視模式選項（label 需要字典，所以放在元件內） */
+  const viewOptions = useMemo(
+    () =>
+      viewIcons.map(({ mode, icon }) => ({
+        mode,
+        icon,
+        label: {
+          list: tp.view.list,
+          "card-sm": tp.view.cardSm,
+          "card-md": tp.view.cardMd,
+          "card-lg": tp.view.cardLg,
+        }[mode],
+      })),
+    [tp],
+  );
+
   const dialog = useDialog();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,12 +130,12 @@ const AdminArticles: React.FC = () => {
       } else {
         console.error("Failed to fetch articles:", res);
         setArticles([]);
-        setError("載入文章失敗：數據格式錯誤");
+        setError(tp.toast.loadFailedFormat);
       }
     } catch (err) {
       console.error("Failed to fetch articles:", err);
       setArticles([]);
-      setError("載入文章失敗");
+      setError(tp.toast.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -161,7 +182,7 @@ const AdminArticles: React.FC = () => {
     try {
       setError("");
       if (!formData.title.trim()) {
-        setError("標題為必填");
+        setError(tp.toast.titleRequired);
         return;
       }
 
@@ -183,7 +204,7 @@ const AdminArticles: React.FC = () => {
       fetchArticles();
     } catch (err) {
       logger.error("Failed to create article", err);
-      setError("建立文章失敗");
+      setError(tp.toast.createFailed);
     }
   };
 
@@ -210,16 +231,19 @@ const AdminArticles: React.FC = () => {
       fetchArticles();
     } catch (err) {
       logger.error("Failed to update article", err);
-      setError("更新文章失敗");
+      setError(tp.toast.updateFailed);
     }
   };
 
   const handleDelete = async (article: Article) => {
     const confirmed = await dialog.confirm({
-      title: "刪除文章",
-      message: `確定要刪除「${article.article_title}」嗎？此操作無法復原。`,
+      title: tp.confirm.deleteTitle,
+      message: tp.confirm.deleteMessage.replace(
+        "{title}",
+        article.article_title,
+      ),
       variant: "danger",
-      confirmText: "刪除",
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
 
@@ -228,7 +252,7 @@ const AdminArticles: React.FC = () => {
       fetchArticles();
     } catch (err) {
       console.error("Failed to delete article:", err);
-      setError("刪除文章失敗");
+      setError(tp.toast.deleteFailed);
     }
   };
 
@@ -256,7 +280,7 @@ const AdminArticles: React.FC = () => {
       logger.info("Featured toggled successfully");
     } catch (err) {
       logger.error("Failed to toggle featured", err);
-      setError("切換精選狀態失敗");
+      setError(tp.toast.toggleFeaturedFailed);
     }
   };
 
@@ -308,19 +332,19 @@ const AdminArticles: React.FC = () => {
         dot: "bg-gray-400",
         text: "text-gray-400",
         bg: "bg-gray-500/10",
-        label: "草稿",
+        label: t.common.draft,
       },
       published: {
         dot: "bg-emerald-400",
         text: "text-emerald-400",
         bg: "bg-emerald-500/10",
-        label: "已發布",
+        label: t.common.published,
       },
       archived: {
         dot: "bg-amber-400",
         text: "text-amber-400",
         bg: "bg-amber-500/10",
-        label: "已封存",
+        label: tp.statusArchived,
       },
     };
     const s = config[status];
@@ -341,19 +365,19 @@ const AdminArticles: React.FC = () => {
         dot: "bg-gray-400",
         text: "text-gray-300",
         bg: "bg-black/60 backdrop-blur-sm",
-        label: "草稿",
+        label: t.common.draft,
       },
       published: {
         dot: "bg-emerald-400",
         text: "text-emerald-300",
         bg: "bg-black/60 backdrop-blur-sm",
-        label: "已發布",
+        label: t.common.published,
       },
       archived: {
         dot: "bg-amber-400",
         text: "text-amber-300",
         bg: "bg-black/60 backdrop-blur-sm",
-        label: "已封存",
+        label: tp.statusArchived,
       },
     };
     const s = config[status];
@@ -370,7 +394,7 @@ const AdminArticles: React.FC = () => {
   const columns = [
     {
       key: "article_title" as const,
-      header: "標題",
+      header: t.adminCommon.colTitle,
       isPrimary: true,
       sortValue: (article: Article) =>
         (article.article_title || "").toLowerCase(),
@@ -378,10 +402,10 @@ const AdminArticles: React.FC = () => {
         <p className="text-luxe-text">{article.article_title}</p>
       ),
     },
-    { key: "article_category" as const, header: "分類" },
+    { key: "article_category" as const, header: t.adminCommon.colCategory },
     {
       key: "is_featured" as const,
-      header: "精選",
+      header: tp.col.featured,
       sortValue: (article: Article) => (article.is_featured ? 1 : 0),
       render: (article: Article) => (
         <button
@@ -394,27 +418,27 @@ const AdminArticles: React.FC = () => {
               ? "bg-luxe-gold/20 text-luxe-gold hover:bg-luxe-gold/30"
               : "bg-luxe-muted/10 text-luxe-muted/50 hover:bg-luxe-gold/10 hover:text-luxe-gold/70"
           }`}
-          title={article.is_featured ? "取消精選" : "設為精選"}
+          title={article.is_featured ? tp.featured.unset : tp.featured.set}
         >
-          {article.is_featured ? "★ 精選" : "☆ 普通"}
+          {article.is_featured ? tp.featured.on : tp.featured.off}
         </button>
       ),
     },
     {
       key: "status" as const,
-      header: "狀態",
+      header: t.adminCommon.colStatus,
       render: (article: Article) => getStatusBadge(article.status),
     },
     {
       key: "view_count" as const,
-      header: "瀏覽",
+      header: tp.col.views,
       hideOnMobile: true,
       sortValue: (article: Article) => article.view_count || 0,
       render: (article: Article) => article.view_count?.toLocaleString() || "0",
     },
     {
       key: "rating_average" as const,
-      header: "評分",
+      header: tp.col.rating,
       hideOnMobile: true,
       sortValue: (article: Article) => article.rating_average || 0,
       render: (article: Article) =>
@@ -424,13 +448,13 @@ const AdminArticles: React.FC = () => {
     },
     {
       key: "created_at" as const,
-      header: "建立日期",
+      header: t.adminCommon.colCreatedAt,
       hideOnMobile: true,
       render: (article: Article) => article.created_at?.split("T")[0] || "-",
     },
     {
       key: "actions" as const,
-      header: "操作",
+      header: t.adminCommon.colActions,
       sortable: false,
       render: (article: Article) => (
         <div className="flex gap-2">
@@ -440,19 +464,19 @@ const AdminArticles: React.FC = () => {
             }
             className="text-luxe-gold hover:underline text-sm"
           >
-            編輯
+            {t.common.edit}
           </button>
           <button
             onClick={() => openEditModal(article)}
             className="text-blue-400 hover:underline text-sm"
           >
-            快速編輯
+            {tp.quickEdit}
           </button>
           <button
             onClick={() => handleDelete(article)}
             className="text-red-400 hover:underline text-sm"
           >
-            刪除
+            {t.common.delete}
           </button>
         </div>
       ),
@@ -460,7 +484,7 @@ const AdminArticles: React.FC = () => {
   ];
 
   if (loading && articles.length === 0) {
-    return <Loading text="載入中..." />;
+    return <Loading text={t.common.loading} />;
   }
 
   return (
@@ -469,10 +493,10 @@ const AdminArticles: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
-            文章管理
+            {t.admin.articles}
           </h1>
           <p className="text-sm sm:text-base text-luxe-muted">
-            管理網站文章與部落格內容
+            {tp.pageSubtitle}
           </p>
         </div>
         <div className="flex gap-3">
@@ -485,7 +509,7 @@ const AdminArticles: React.FC = () => {
               setShowCreateModal(true);
             }}
           >
-            快速新增
+            {tp.quickAdd}
           </PillButton>
           <PillButton
             theme="luxe"
@@ -493,7 +517,7 @@ const AdminArticles: React.FC = () => {
             data-tour="articles-full-editor"
             onClick={() => navigate("/admin/articles/new")}
           >
-            新增文章 →
+            {tp.newArticle}
           </PillButton>
         </div>
       </div>
@@ -501,7 +525,7 @@ const AdminArticles: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6">
         <Input
-          placeholder="搜尋文章..."
+          placeholder={tp.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -546,10 +570,10 @@ const AdminArticles: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部狀態</option>
-          <option value="draft">草稿</option>
-          <option value="published">已發布</option>
-          <option value="archived">已封存</option>
+          <option value="all">{tp.filter.allStatus}</option>
+          <option value="draft">{t.common.draft}</option>
+          <option value="published">{t.common.published}</option>
+          <option value="archived">{tp.statusArchived}</option>
         </select>
         <select
           value={categoryFilter}
@@ -566,7 +590,7 @@ const AdminArticles: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部分類</option>
+          <option value="all">{tp.filter.allCategories}</option>
           {uniqueCategories.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
@@ -588,12 +612,12 @@ const AdminArticles: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部文章</option>
-          <option value="featured">★ 僅精選</option>
-          <option value="normal">☆ 普通文章</option>
+          <option value="all">{tp.filter.allArticles}</option>
+          <option value="featured">{tp.filter.featuredOnly}</option>
+          <option value="normal">{tp.filter.normalOnly}</option>
         </select>
         <PillButton theme="luxe" variant="outline" onClick={handleSearch}>
-          搜尋
+          {t.common.search}
         </PillButton>
 
         {/* 檢視模式切換 */}
@@ -621,13 +645,17 @@ const AdminArticles: React.FC = () => {
       {/* 篩選結果計數 */}
       {featuredFilter !== "all" && (
         <div className="mb-3 text-xs text-luxe-muted">
-          {featuredFilter === "featured" ? "★ 精選" : "☆ 普通"}文章：
-          {
-            articles.filter((a) =>
-              featuredFilter === "featured" ? a.is_featured : !a.is_featured,
-            ).length
-          }{" "}
-          篇
+          {(featuredFilter === "featured"
+            ? tp.filter.featuredCount
+            : tp.filter.normalCount
+          ).replace(
+            "{n}",
+            String(
+              articles.filter((a) =>
+                featuredFilter === "featured" ? a.is_featured : !a.is_featured,
+              ).length,
+            ),
+          )}
         </div>
       )}
 
@@ -648,7 +676,7 @@ const AdminArticles: React.FC = () => {
             keyExtractor={(article) => String(article.article_id)}
             loading={loading}
             theme="luxe"
-            emptyMessage="沒有找到文章"
+            emptyMessage={tp.emptyState}
             sortable
           />
           <div className="mt-6">
@@ -663,10 +691,12 @@ const AdminArticles: React.FC = () => {
       ) : (
         <>
           {loading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : filteredArticles.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              沒有找到文章
+              {tp.emptyState}
             </div>
           ) : (
             <div
@@ -702,7 +732,7 @@ const AdminArticles: React.FC = () => {
                     {/* 精選浮標 */}
                     {article.is_featured && (
                       <span className="absolute top-1.5 right-1.5 bg-luxe-gold/90 text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
-                        ★ 精選
+                        {tp.featured.on}
                       </span>
                     )}
                   </div>
@@ -718,11 +748,14 @@ const AdminArticles: React.FC = () => {
                     </h3>
                     {viewMode !== "card-sm" && (
                       <p className="text-xs text-luxe-muted line-clamp-2 mb-2">
-                        {article.article_description || "無描述"}
+                        {article.article_description || tp.noDescription}
                       </p>
                     )}
                     <div className="flex items-center justify-between text-[10px] text-luxe-muted">
-                      <span>{article.article_category || "未分類"}</span>
+                      <span>
+                        {article.article_category ||
+                          t.adminCommon.uncategorized}
+                      </span>
                       <span>👁 {article.view_count || 0}</span>
                     </div>
 
@@ -734,19 +767,21 @@ const AdminArticles: React.FC = () => {
                         }
                         className="text-luxe-gold hover:underline text-xs flex-1"
                       >
-                        編輯
+                        {t.common.edit}
                       </button>
                       <button
                         onClick={() => handleToggleFeatured(article)}
                         className="text-yellow-400 hover:underline text-xs"
                       >
-                        {article.is_featured ? "取消精選" : "精選"}
+                        {article.is_featured
+                          ? tp.featured.unset
+                          : tp.featured.short}
                       </button>
                       <button
                         onClick={() => handleDelete(article)}
                         className="text-red-400 hover:underline text-xs"
                       >
-                        刪除
+                        {t.common.delete}
                       </button>
                     </div>
                   </div>
@@ -773,7 +808,7 @@ const AdminArticles: React.FC = () => {
           setEditingArticle(null);
           resetForm();
         }}
-        title={editingArticle ? "編輯文章" : "新增文章"}
+        title={editingArticle ? tp.form.editTitle : tp.form.createTitle}
         theme="luxe"
         size="xl"
         tourId="article-quick"
@@ -782,7 +817,7 @@ const AdminArticles: React.FC = () => {
           {/* 基本資訊 */}
           <div className="space-y-4">
             <Input
-              label="標題 *"
+              label={tp.form.title}
               data-tour="article-form-title"
               value={formData.title}
               onChange={(e) =>
@@ -791,41 +826,41 @@ const AdminArticles: React.FC = () => {
               theme="luxe"
             />
             <Input
-              label="Slug (網址識別碼)"
+              label={tp.form.slug}
               value={formData.slug}
               onChange={(e) =>
                 setFormData({ ...formData, slug: e.target.value })
               }
               theme="luxe"
-              placeholder="自動生成如留空"
+              placeholder={tp.form.slugPlaceholder}
             />
           </div>
 
           {/* 分類與關鍵字 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TagInput
-              label="分類"
+              label={t.adminCommon.colCategory}
               tags={formData.category}
               onChange={handleCategoryChange}
               theme="luxe"
-              placeholder="輸入後按 Enter 新增"
-              hint="可新增多個分類"
+              placeholder={tp.form.tagPlaceholder}
+              hint={tp.form.categoryHint}
               maxTags={5}
             />
             <TagInput
-              label="關鍵字 (SEO)"
+              label={tp.form.keywords}
               tags={formData.keywords}
               onChange={handleKeywordsChange}
               theme="luxe"
-              placeholder="輸入後按 Enter 新增"
-              hint="用於搜尋引擎優化"
+              placeholder={tp.form.tagPlaceholder}
+              hint={tp.form.keywordsHint}
               maxTags={10}
             />
           </div>
 
           {/* 簡介 */}
           <Textarea
-            label="簡介 (SEO 描述)"
+            label={tp.form.description}
             value={formData.description}
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
@@ -837,7 +872,7 @@ const AdminArticles: React.FC = () => {
           {/* 內容編輯器 */}
           <div data-tour="article-form-content">
             <label className="block text-luxe-muted text-sm mb-2">
-              文章內容
+              {tp.form.content}
             </label>
             <ImageUploadTargetProvider
               value={{ entity: "article", entityKey: editingArticle?.article_id ?? null }}
@@ -846,7 +881,7 @@ const AdminArticles: React.FC = () => {
                 content={formData.content}
                 onChange={handleContentChange}
                 theme="luxe"
-                placeholder="開始撰寫文章內容..."
+                placeholder={tp.form.contentPlaceholder}
                 minHeight="350px"
               />
             </ImageUploadTargetProvider>
@@ -858,7 +893,9 @@ const AdminArticles: React.FC = () => {
             className="flex flex-col sm:flex-row gap-4"
           >
             <div className="flex-1">
-              <label className="block text-luxe-muted text-sm mb-2">狀態</label>
+              <label className="block text-luxe-muted text-sm mb-2">
+                {t.adminCommon.colStatus}
+              </label>
               <select
                 value={formData.status}
                 onChange={(e) =>
@@ -869,9 +906,9 @@ const AdminArticles: React.FC = () => {
                 }
                 className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-2 text-luxe-text [&>option]:bg-luxe-bg [&>option]:text-luxe-text"
               >
-                <option value="draft">草稿</option>
-                <option value="published">發布</option>
-                <option value="archived">封存</option>
+                <option value="draft">{t.common.draft}</option>
+                <option value="published">{t.admin.publish}</option>
+                <option value="archived">{tp.statusArchive}</option>
               </select>
             </div>
             <div className="flex items-end pb-2">
@@ -884,7 +921,7 @@ const AdminArticles: React.FC = () => {
                   }
                   className="w-4 h-4 rounded border-luxe-gold/30"
                 />
-                <span className="text-luxe-text">設為精選</span>
+                <span className="text-luxe-text">{tp.form.setFeatured}</span>
               </label>
             </div>
           </div>
@@ -900,7 +937,7 @@ const AdminArticles: React.FC = () => {
               resetForm();
             }}
           >
-            取消
+            {t.common.cancel}
           </PillButton>
           <PillButton
             theme="luxe"
@@ -908,7 +945,7 @@ const AdminArticles: React.FC = () => {
             data-tour="article-form-submit"
             onClick={editingArticle ? handleUpdate : handleCreate}
           >
-            {editingArticle ? "更新" : "建立"}
+            {editingArticle ? tp.updateBtn : tp.createBtn}
           </PillButton>
         </div>
       </Modal>

@@ -12,6 +12,7 @@ import React, {
   useEffect,
 } from "react";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useLanguage } from "@/context/LanguageContext";
 import Moveable from "react-moveable";
 import type {
   AnyBlock,
@@ -64,6 +65,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   canvasWidth = 800,
   canvasHeight = 1200,
 }) => {
+  const { t } = useLanguage();
   const [state, dispatch] = useReducer(editorReducer, {
     ...initialEditorState,
     canvasWidth,
@@ -166,7 +168,12 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
       state.blocks.length > 0
         ? Math.max(...state.blocks.map((b) => b.zIndex))
         : 0;
-    const block = createTextBlock(50, 50 + state.blocks.length * 30, maxZ + 1);
+    const block = createTextBlock(
+      50,
+      50 + state.blocks.length * 30,
+      maxZ + 1,
+      `<p>${t.blockEditor.seedText}</p>`,
+    );
     dispatch({ type: "ADD_BLOCK", payload: block });
     dispatch({ type: "SELECT_BLOCK", payload: block.id });
     setShowAddMenu(false);
@@ -176,11 +183,11 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   const handleAddImage = useCallback(() => {
     setError("");
     if (!imageUrl.trim()) {
-      setError("請輸入圖片網址");
+      setError(t.blockEditor.errNeedImageUrl);
       return;
     }
     if (!isAllowedImageUrl(imageUrl)) {
-      setError("圖片來源不合法，請使用本站上傳的圖片或 Cloudinary 網址。");
+      setError(t.blockEditor.errImageSource);
       return;
     }
 
@@ -188,7 +195,13 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
       state.blocks.length > 0
         ? Math.max(...state.blocks.map((b) => b.zIndex))
         : 0;
-    const block = createImageBlock(imageUrl, 50, 50, maxZ + 1);
+    const block = createImageBlock(
+      imageUrl,
+      50,
+      50,
+      maxZ + 1,
+      t.richEditor.defaultAlt,
+    );
     dispatch({ type: "ADD_BLOCK", payload: block });
     dispatch({ type: "SELECT_BLOCK", payload: block.id });
     setShowImageModal(false);
@@ -199,11 +212,11 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   const handleAddVideo = useCallback(() => {
     setError("");
     if (!videoUrl.trim()) {
-      setError("請輸入 YouTube 網址");
+      setError(t.blockEditor.errNeedYoutubeUrl);
       return;
     }
     if (!isValidYouTubeUrl(videoUrl)) {
-      setError("只支援 YouTube 影片！");
+      setError(t.blockEditor.errYoutubeOnly);
       return;
     }
 
@@ -296,7 +309,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
         case "spacer":
           return (
             <div className="w-full h-full border border-dashed border-gray-500/30 flex items-center justify-center text-gray-500 text-xs">
-              間隔
+              {t.blockEditor.spacer}
             </div>
           );
         default:
@@ -321,7 +334,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               type="button"
               onClick={() => setShowAddMenu(!showAddMenu)}
               className="w-10 h-10 flex items-center justify-center rounded-lg bg-luxe-gold text-black hover:bg-luxe-gold/90 transition-colors"
-              title="新增區塊"
+              title={t.blockEditor.addBlock}
             >
               <svg
                 className="w-6 h-6"
@@ -346,7 +359,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   onClick={handleAddText}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-luxe-gold/10 rounded flex items-center gap-2"
                 >
-                  <span className="text-lg">📝</span> 文字區塊
+                  <span className="text-lg">📝</span> {t.blockEditor.blockText}
                 </button>
                 <button
                   type="button"
@@ -356,7 +369,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   }}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-luxe-gold/10 rounded flex items-center gap-2"
                 >
-                  <span className="text-lg">🖼️</span> 圖片
+                  <span className="text-lg">🖼️</span> {t.blockEditor.blockImage}
                 </button>
                 <button
                   type="button"
@@ -366,7 +379,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   }}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-luxe-gold/10 rounded flex items-center gap-2"
                 >
-                  <span className="text-lg">🎬</span> YouTube 影片
+                  <span className="text-lg">🎬</span> {t.blockEditor.blockVideo}
                 </button>
                 <hr className="my-2 border-luxe-gold/20" />
                 <button
@@ -374,14 +387,14 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   onClick={handleAddDivider}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-luxe-gold/10 rounded flex items-center gap-2"
                 >
-                  <span className="text-lg">➖</span> 分隔線
+                  <span className="text-lg">➖</span> {t.blockEditor.blockDivider}
                 </button>
                 <button
                   type="button"
                   onClick={handleAddSpacer}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-luxe-gold/10 rounded flex items-center gap-2"
                 >
-                  <span className="text-lg">↕️</span> 間隔
+                  <span className="text-lg">↕️</span> {t.blockEditor.blockSpacer}
                 </button>
               </div>
             )}
@@ -396,7 +409,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             onClick={() => dispatch({ type: "UNDO" })}
             disabled={state.historyIndex <= 0}
             className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-luxe-gold/10 disabled:opacity-30"
-            title="復原 (Ctrl+Z)"
+            title={t.blockEditor.undo}
           >
             <svg
               className="w-5 h-5"
@@ -419,7 +432,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             onClick={() => dispatch({ type: "REDO" })}
             disabled={state.historyIndex >= state.history.length - 1}
             className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-luxe-gold/10 disabled:opacity-30"
-            title="重做 (Ctrl+Y)"
+            title={t.blockEditor.redo}
           >
             <svg
               className="w-5 h-5"
@@ -445,7 +458,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 ? "bg-luxe-gold/20 text-luxe-gold"
                 : "hover:bg-luxe-gold/10"
             }`}
-            title="顯示格線"
+            title={t.blockEditor.showGrid}
           >
             <svg
               className="w-5 h-5"
@@ -642,7 +655,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
       {!readonly && showPropertyPanel && selectedBlock && (
         <div className="w-64 bg-luxe-black border-l border-luxe-gold/20 p-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium">屬性</h3>
+            <h3 className="font-medium">{t.blockEditor.properties}</h3>
             <button
               type="button"
               onClick={() => setShowPropertyPanel(false)}
@@ -655,7 +668,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
           {/* 通用屬性 */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">位置</label>
+              <label className="block text-xs text-gray-400 mb-1">{t.blockEditor.position}</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -683,7 +696,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 mb-1">尺寸</label>
+              <label className="block text-xs text-gray-400 mb-1">{t.blockEditor.size}</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -694,7 +707,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                     })
                   }
                   className="w-1/2 px-2 py-1 bg-luxe-bg border border-luxe-gold/30 rounded text-sm"
-                  placeholder="寬"
+                  placeholder={t.blockEditor.width}
                 />
                 <input
                   type="number"
@@ -705,13 +718,13 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                     })
                   }
                   className="w-1/2 px-2 py-1 bg-luxe-bg border border-luxe-gold/30 rounded text-sm"
-                  placeholder="高"
+                  placeholder={t.blockEditor.height}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 mb-1">旋轉</label>
+              <label className="block text-xs text-gray-400 mb-1">{t.blockEditor.rotation}</label>
               <input
                 type="range"
                 min="-180"
@@ -734,7 +747,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               <>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    字體大小
+                    {t.blockEditor.fontSize}
                   </label>
                   <input
                     type="number"
@@ -751,7 +764,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    背景顏色
+                    {t.blockEditor.bgColor}
                   </label>
                   <input
                     type="color"
@@ -768,7 +781,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    文繞圖
+                    {t.blockEditor.textWrap}
                   </label>
                   <select
                     value={(selectedBlock as TextBlock).floatMode}
@@ -779,9 +792,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                     }
                     className="w-full px-2 py-1 bg-luxe-bg border border-luxe-gold/30 rounded text-sm"
                   >
-                    <option value="none">無</option>
-                    <option value="left">靠左（文字繞右）</option>
-                    <option value="right">靠右（文字繞左）</option>
+                    <option value="none">{t.blockEditor.none}</option>
+                    <option value="left">{t.blockEditor.wrapLeft}</option>
+                    <option value="right">{t.blockEditor.wrapRight}</option>
                   </select>
                 </div>
               </>
@@ -792,7 +805,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               <>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    圓角
+                    {t.blockEditor.borderRadius}
                   </label>
                   <input
                     type="range"
@@ -809,7 +822,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    填充模式
+                    {t.blockEditor.objectFit}
                   </label>
                   <select
                     value={(selectedBlock as ImageBlock).objectFit}
@@ -823,14 +836,14 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                     }
                     className="w-full px-2 py-1 bg-luxe-bg border border-luxe-gold/30 rounded text-sm"
                   >
-                    <option value="cover">裁切填滿</option>
-                    <option value="contain">完整顯示</option>
-                    <option value="fill">拉伸填滿</option>
+                    <option value="cover">{t.blockEditor.fitCover}</option>
+                    <option value="contain">{t.blockEditor.fitContain}</option>
+                    <option value="fill">{t.blockEditor.fitFill}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    文繞圖
+                    {t.blockEditor.textWrap}
                   </label>
                   <select
                     value={(selectedBlock as ImageBlock).floatMode}
@@ -841,9 +854,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                     }
                     className="w-full px-2 py-1 bg-luxe-bg border border-luxe-gold/30 rounded text-sm"
                   >
-                    <option value="none">無</option>
-                    <option value="left">靠左</option>
-                    <option value="right">靠右</option>
+                    <option value="none">{t.blockEditor.none}</option>
+                    <option value="left">{t.blockEditor.alignLeft}</option>
+                    <option value="right">{t.blockEditor.alignRight}</option>
                   </select>
                 </div>
               </>
@@ -861,7 +874,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 }
                 className="w-full px-3 py-2 text-sm bg-luxe-gold/10 hover:bg-luxe-gold/20 rounded"
               >
-                複製區塊
+                {t.blockEditor.duplicate}
               </button>
               <div className="flex gap-2">
                 <button
@@ -874,7 +887,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   }
                   className="flex-1 px-2 py-1 text-xs bg-luxe-gold/10 hover:bg-luxe-gold/20 rounded"
                 >
-                  移至最前
+                  {t.blockEditor.bringToFront}
                 </button>
                 <button
                   type="button"
@@ -886,7 +899,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   }
                   className="flex-1 px-2 py-1 text-xs bg-luxe-gold/10 hover:bg-luxe-gold/20 rounded"
                 >
-                  移至最後
+                  {t.blockEditor.sendToBack}
                 </button>
               </div>
               <button
@@ -899,7 +912,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 }
                 className="w-full px-3 py-2 text-sm bg-luxe-gold/10 hover:bg-luxe-gold/20 rounded"
               >
-                {selectedBlock.locked ? "🔓 解除鎖定" : "🔒 鎖定位置"}
+                {selectedBlock.locked ? t.blockEditor.unlock : t.blockEditor.lock}
               </button>
               <button
                 type="button"
@@ -908,7 +921,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 }
                 className="w-full px-3 py-2 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded"
               >
-                刪除區塊
+                {t.blockEditor.deleteBlock}
               </button>
             </div>
           </div>
@@ -917,12 +930,12 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 
       {/* 圖片新增 Modal */}
       {showImageModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+        <div className="fixed inset-0 modal-layer modal-scroll flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
           <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 my-auto">
-            <h3 className="text-lg font-medium mb-4">新增 Cloudinary 圖片</h3>
+            <h3 className="text-lg font-medium mb-4">{t.blockEditor.addImageTitle}</h3>
             <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <p className="text-sm text-amber-400">
-                ⚠️ 只支援 Cloudinary 圖片！請先上傳至 Cloudinary 再貼上網址。
+                {t.blockEditor.cloudinaryNotice}
               </p>
             </div>
             <input
@@ -943,14 +956,14 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 }}
                 className="px-4 py-2 text-sm hover:bg-gray-700 rounded"
               >
-                取消
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleAddImage}
                 className="px-4 py-2 text-sm bg-luxe-gold text-black rounded hover:bg-luxe-gold/90"
               >
-                新增
+                {t.common.create}
               </button>
             </div>
           </div>
@@ -959,11 +972,11 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 
       {/* 影片新增 Modal */}
       {showVideoModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+        <div className="fixed inset-0 modal-layer modal-scroll flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
           <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 my-auto">
-            <h3 className="text-lg font-medium mb-4">新增 YouTube 影片</h3>
+            <h3 className="text-lg font-medium mb-4">{t.blockEditor.addVideoTitle}</h3>
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-sm text-red-400">⚠️ 只支援 YouTube 影片！</p>
+              <p className="text-sm text-red-400">{t.blockEditor.youtubeOnlyNotice}</p>
             </div>
             <input
               type="url"
@@ -983,14 +996,14 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 }}
                 className="px-4 py-2 text-sm hover:bg-gray-700 rounded"
               >
-                取消
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleAddVideo}
                 className="px-4 py-2 text-sm bg-luxe-gold text-black rounded hover:bg-luxe-gold/90"
               >
-                新增
+                {t.common.create}
               </button>
             </div>
           </div>

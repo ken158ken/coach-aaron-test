@@ -4,11 +4,14 @@
  * @description 共用的 Tiptap 編輯器，支援完整的格式化功能
  *
  * 注意：此元件已棄用，建議使用 components/ui/editor/RichTextEditor
+ *
+ * 工具列文案在 `locales/adminExtra.ts` 的 `adminRichEditor` namespace。
  */
 
 import React from "react";
 import { Editor, EditorContent } from "@tiptap/react";
 import { Tooltip } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface RichTextEditorProps {
   editor: Editor | null;
@@ -31,9 +34,27 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onInsertLink,
   onInsertImageGallery,
 }) => {
+  const { t } = useLanguage();
+  const te = t.adminRichEditor;
+
   if (!editor) {
     return null;
   }
+
+  /**
+   * 字體選單：中文字體的顯示名走字典（英文介面會附上英文名），
+   * 西文字體本來就是英文原名，兩種語言都直接用字面值。
+   */
+  const fontOptions: { label: string; value: string }[] = [
+    { label: te.fontDefault, value: "" },
+    { label: te.fontJhengHei, value: "Microsoft JhengHei" },
+    { label: te.fontPMingLiU, value: "PMingLiU" },
+    { label: te.fontKai, value: "DFKai-SB" },
+    { label: "Arial", value: "Arial" },
+    { label: "Times New Roman", value: "Times New Roman" },
+    { label: "Courier New", value: "Courier New" },
+    { label: "Georgia", value: "Georgia" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -44,7 +65,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         className="flex flex-wrap gap-1 p-2 bg-luxe-surface rounded-lg border border-luxe-gold/20"
       >
         {/* 文字格式 - 第一行 */}
-        <Tooltip label="粗體 (Ctrl+B)">
+        <Tooltip label={te.bold}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -53,7 +74,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <strong>B</strong>
           </button>
         </Tooltip>
-        <Tooltip label="斜體 (Ctrl+I)">
+        <Tooltip label={te.italic}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -62,7 +83,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <em>I</em>
           </button>
         </Tooltip>
-        <Tooltip label="底線 (Ctrl+U)">
+        <Tooltip label={te.underline}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleUnderline().run()}
@@ -71,7 +92,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <u>U</u>
           </button>
         </Tooltip>
-        <Tooltip label="刪除線">
+        <Tooltip label={te.strike}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -80,7 +101,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <s>S</s>
           </button>
         </Tooltip>
-        <Tooltip label="下標">
+        <Tooltip label={te.subscript}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleSubscript().run()}
@@ -89,7 +110,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             X<sub>2</sub>
           </button>
         </Tooltip>
-        <Tooltip label="上標">
+        <Tooltip label={te.superscript}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleSuperscript().run()}
@@ -103,7 +124,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
         {/* 文字顏色 */}
         <div className="relative group">
-          <Tooltip label="文字顏色">
+          <Tooltip label={te.textColor}>
             <button
               type="button"
               className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
@@ -129,7 +150,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 key={color}
                 type="button"
                 onClick={() => editor.chain().focus().setColor(color).run()}
-                title={`設定文字顏色: ${color}`}
+                title={te.setTextColorTitle.replace("{color}", color)}
                 className="w-6 h-6 rounded border border-luxe-gold/20 hover:scale-110 transition-transform"
                 style={{ backgroundColor: color }}
               />
@@ -137,17 +158,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <button
               type="button"
               onClick={() => editor.chain().focus().unsetColor().run()}
-              title="清除文字顏色"
+              title={te.clearTextColorTitle}
               className="col-span-5 text-xs text-gray-400 hover:text-white py-1"
             >
-              清除顏色
+              {te.clearTextColor}
             </button>
           </div>
         </div>
 
         {/* 螢光筆 */}
         <div className="relative group">
-          <Tooltip label="螢光筆">
+          <Tooltip label={te.highlight}>
             <button
               type="button"
               className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor.isActive("highlight") ? "bg-luxe-gold text-black" : ""}`}
@@ -175,7 +196,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 onClick={() =>
                   editor.chain().focus().toggleHighlight({ color }).run()
                 }
-                title={`設定螢光筆顏色: ${color}`}
+                title={te.setHighlightTitle.replace("{color}", color)}
                 className="w-6 h-6 rounded border border-luxe-gold/20 hover:scale-110 transition-transform"
                 style={{ backgroundColor: color }}
               />
@@ -183,36 +204,27 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <button
               type="button"
               onClick={() => editor.chain().focus().unsetHighlight().run()}
-              title="清除螢光筆"
+              title={te.clearHighlightTitle}
               className="col-span-5 text-xs text-gray-400 hover:text-white py-1"
             >
-              清除螢光筆
+              {te.clearHighlight}
             </button>
           </div>
         </div>
 
         {/* 字體選擇 */}
         <div className="relative group">
-          <Tooltip label="字體">
+          <Tooltip label={te.font}>
             <button
               type="button"
               className="px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1"
             >
-              <span>字體</span>
+              <span>{te.font}</span>
               <span className="text-[10px]">▼</span>
             </button>
           </Tooltip>
           <div className="absolute top-full left-0 mt-1 p-2 bg-luxe-black border border-luxe-gold/30 rounded-lg shadow-xl hidden group-hover:block z-50 min-w-[160px]">
-            {[
-              { name: "預設", value: "" },
-              { name: "微軟正黑體", value: "Microsoft JhengHei" },
-              { name: "新細明體", value: "PMingLiU" },
-              { name: "標楷體", value: "DFKai-SB" },
-              { name: "Arial", value: "Arial" },
-              { name: "Times New Roman", value: "Times New Roman" },
-              { name: "Courier New", value: "Courier New" },
-              { name: "Georgia", value: "Georgia" },
-            ].map((font) => (
+            {fontOptions.map((font) => (
               <button
                 key={font.value}
                 type="button"
@@ -221,11 +233,11 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     ? editor.chain().focus().setFontFamily(font.value).run()
                     : editor.chain().focus().unsetFontFamily().run()
                 }
-                title={`設定字體: ${font.name}`}
+                title={te.setFontTitle.replace("{name}", font.label)}
                 className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
                 style={{ fontFamily: font.value || "inherit" }}
               >
-                {font.name}
+                {font.label}
               </button>
             ))}
           </div>
@@ -234,7 +246,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 標題 */}
-        <Tooltip label="大標題 (H1)">
+        <Tooltip label={te.heading1}>
           <button
             type="button"
             onClick={() =>
@@ -245,7 +257,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             H1
           </button>
         </Tooltip>
-        <Tooltip label="中標題 (H2)">
+        <Tooltip label={te.heading2}>
           <button
             type="button"
             onClick={() =>
@@ -256,7 +268,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             H2
           </button>
         </Tooltip>
-        <Tooltip label="小標題 (H3)">
+        <Tooltip label={te.heading3}>
           <button
             type="button"
             onClick={() =>
@@ -271,7 +283,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 列表 */}
-        <Tooltip label="項目符號">
+        <Tooltip label={te.bulletList}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -280,7 +292,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             •
           </button>
         </Tooltip>
-        <Tooltip label="編號列表">
+        <Tooltip label={te.orderedList}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -289,7 +301,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             1.
           </button>
         </Tooltip>
-        <Tooltip label="待辦清單">
+        <Tooltip label={te.taskList}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleTaskList().run()}
@@ -302,7 +314,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 區塊 */}
-        <Tooltip label="引用區塊">
+        <Tooltip label={te.blockquote}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
@@ -311,7 +323,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             ❝
           </button>
         </Tooltip>
-        <Tooltip label="程式碼區塊">
+        <Tooltip label={te.codeBlock}>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
@@ -320,7 +332,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             {"</>"}
           </button>
         </Tooltip>
-        <Tooltip label="分隔線">
+        <Tooltip label={te.divider}>
           <button
             type="button"
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
@@ -333,7 +345,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <span className="w-px bg-luxe-gold/30 mx-1" />
 
         {/* 對齊 */}
-        <Tooltip label="靠左對齊">
+        <Tooltip label={te.alignLeft}>
           <button
             type="button"
             onClick={() => editor.chain().focus().setTextAlign("left").run()}
@@ -342,7 +354,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             ⬅
           </button>
         </Tooltip>
-        <Tooltip label="置中對齊">
+        <Tooltip label={te.alignCenter}>
           <button
             type="button"
             onClick={() => editor.chain().focus().setTextAlign("center").run()}
@@ -351,7 +363,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             ⬛
           </button>
         </Tooltip>
-        <Tooltip label="靠右對齊">
+        <Tooltip label={te.alignRight}>
           <button
             type="button"
             onClick={() => editor.chain().focus().setTextAlign("right").run()}
@@ -365,7 +377,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
         {/* 表格 */}
         <div className="relative group">
-          <Tooltip label="表格">
+          <Tooltip label={te.table}>
             <button
               type="button"
               className={`px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 flex items-center gap-1 ${editor.isActive("table") ? "bg-luxe-gold text-black" : ""}`}
@@ -383,52 +395,52 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
                   .run()
               }
-              title="插入 3x3 表格"
+              title={te.insertTableTitle}
               className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
             >
-              📊 插入表格 (3x3)
+              📊 {te.insertTable}
             </button>
             {editor.isActive("table") && (
               <>
                 <button
                   type="button"
                   onClick={() => editor.chain().focus().addColumnAfter().run()}
-                  title="在右側新增一欄"
+                  title={te.addColumnTitle}
                   className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
                 >
-                  ➕ 新增欄
+                  ➕ {te.addColumn}
                 </button>
                 <button
                   type="button"
                   onClick={() => editor.chain().focus().addRowAfter().run()}
-                  title="在下方新增一列"
+                  title={te.addRowTitle}
                   className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20"
                 >
-                  ➕ 新增列
+                  ➕ {te.addRow}
                 </button>
                 <button
                   type="button"
                   onClick={() => editor.chain().focus().deleteColumn().run()}
-                  title="刪除當前欄"
+                  title={te.deleteColumnTitle}
                   className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
                 >
-                  ➖ 刪除欄
+                  ➖ {te.deleteColumn}
                 </button>
                 <button
                   type="button"
                   onClick={() => editor.chain().focus().deleteRow().run()}
-                  title="刪除當前列"
+                  title={te.deleteRowTitle}
                   className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
                 >
-                  ➖ 刪除列
+                  ➖ {te.deleteRow}
                 </button>
                 <button
                   type="button"
                   onClick={() => editor.chain().focus().deleteTable().run()}
-                  title="刪除整個表格"
+                  title={te.deleteTableTitle}
                   className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-luxe-gold/20 text-red-400"
                 >
-                  🗑️ 刪除表格
+                  🗑️ {te.deleteTable}
                 </button>
               </>
             )}
@@ -439,7 +451,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
         {/* 插入媒體 */}
         {onInsertImage && (
-          <Tooltip label="插入圖片">
+          <Tooltip label={te.insertImage}>
             <button
               type="button"
               onClick={onInsertImage}
@@ -451,7 +463,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Tooltip>
         )}
         {onInsertImageGallery && (
-          <Tooltip label="插入圖片庫（最多3張一排）">
+          <Tooltip label={te.insertGallery}>
             <button
               type="button"
               onClick={onInsertImageGallery}
@@ -462,7 +474,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Tooltip>
         )}
         {onInsertYoutube && (
-          <Tooltip label="插入 YouTube">
+          <Tooltip label={te.insertYoutube}>
             <button
               type="button"
               onClick={onInsertYoutube}
@@ -473,7 +485,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Tooltip>
         )}
         {onInsertLoom && (
-          <Tooltip label="插入 Loom">
+          <Tooltip label={te.insertLoom}>
             <button
               type="button"
               onClick={onInsertLoom}
@@ -484,7 +496,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Tooltip>
         )}
         {onInsertLink && (
-          <Tooltip label="插入連結">
+          <Tooltip label={te.insertLink}>
             <button
               type="button"
               onClick={onInsertLink}
@@ -495,7 +507,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Tooltip>
         )}
         {editor.isActive("link") && (
-          <Tooltip label="移除連結">
+          <Tooltip label={te.removeLink}>
             <button
               type="button"
               onClick={() => editor.chain().focus().unsetLink().run()}

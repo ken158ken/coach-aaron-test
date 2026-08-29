@@ -22,60 +22,73 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { courseService } from '@/services';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useLanguage } from '@/context/LanguageContext';
+import { useLocalize } from '@/hooks/useLocalize';
 import { Carousel, Card } from '@/components/ui/apple-cards-carousel';
 import { getInitialData } from '@/ssr/initialData';
 import { dataKeys } from '@/ssr/routeData';
 import type { Course } from '@/types';
 
-// ─── 文案 ─────────────────────────────────────────────────────
+/** loc() 需要 index signature，Course 介面沒有 → 統一轉型（沿用本專案既有寫法） */
+const asRecord = (course: Course): Record<string, unknown> =>
+  course as unknown as Record<string, unknown>;
 
-const SERVICES_COPY = {
-  tagline: 'Services',
-  title: '所有課程與服務',
-  subtitle: '左右滑動看完整方案，點任一張卡看課程內容與價格。',
-  inquirePrice: '價格洽詢',
-  free: '免費',
-  detail: '看課程詳情',
-} as const;
+/** 價格標籤（由字典帶入，避免 formatPrice 依賴 React context） */
+interface PriceLabels {
+  inquire: string;
+  free: string;
+}
 
 /**
  * 格式化價格（沿用 Courses.tsx 的規則）：
- *   - 未開放售價（show_price 非 true）→ 價格洽詢
+ *   - 未開放售價（show_price 非 true）→ 洽詢價格
  *   - 價格為 0 / 未填 → 免費
  *   - 其他 → NT$ 千分位
  */
-function formatPrice(course: Course): string {
-  if (!course.show_price) return SERVICES_COPY.inquirePrice;
-  if (!course.price || course.price === 0) return SERVICES_COPY.free;
+function formatPrice(course: Course, labels: PriceLabels): string {
+  if (!course.show_price) return labels.inquire;
+  if (!course.price || course.price === 0) return labels.free;
   return `NT$ ${course.price.toLocaleString()}`;
 }
 
 // ─── 課程 → modal 詳情內容 ────────────────────────────────────
 
-const CourseContent: React.FC<{ course: Course }> = ({ course }) => (
-  <div className="flex flex-col gap-5">
-    {course.course_description && (
-      <p className="whitespace-pre-line leading-relaxed text-white/70">
-        {course.course_description}
-      </p>
-    )}
+const CourseContent: React.FC<{ course: Course }> = ({ course }) => {
+  const { t } = useLanguage();
+  const { loc } = useLocalize();
+  // DB 內容：英文模式讀 course_description_en，空值自動 fallback 中文
+  const description = loc(asRecord(course), 'course_description');
 
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/5 pt-4">
-      <div>
-        <span className="text-xs text-white/40">價格</span>
-        <p className="text-lg font-light text-gold">{formatPrice(course)}</p>
+  return (
+    <div className="flex flex-col gap-5">
+      {description && (
+        <p className="whitespace-pre-line leading-relaxed text-white/70">
+          {description}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/5 pt-4">
+        <div>
+          <span className="text-xs text-white/40">{t.course.price}</span>
+          <p className="text-lg font-light text-gold">
+            {formatPrice(course, {
+              inquire: t.course.inquirePrice,
+              free: t.course.free,
+            })}
+          </p>
+        </div>
       </div>
-    </div>
 
-    <Link
-      to={`/courses/${course.course_id}`}
-      className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/30 px-5 py-2 text-sm text-gold transition-colors hover:bg-gold/10"
-    >
-      {SERVICES_COPY.detail}
-      <span aria-hidden="true">→</span>
-    </Link>
-  </div>
-);
+      <Link
+        to={`/courses/${course.course_id}`}
+        className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/30 px-5 py-2 text-sm text-gold transition-colors hover:bg-gold/10"
+      >
+        {t.course.viewDetail}
+        <span aria-hidden="true">→</span>
+      </Link>
+    </div>
+  );
+};
 
 // ─── 載入中骨架（等高佔位卡）──────────────────────────────────
 
@@ -102,6 +115,16 @@ const ServicesSection: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [loading, setLoading] = useState(initialCourses.length === 0);
   const { get } = useSiteContent();
+  const { t, isZhTW } = useLanguage();
+  const { loc } = useLocalize();
+  const copy = t.servicesSection;
+
+  /**
+   * site_content 只存中文（`GET /api/content` 未回傳 content_value_en）：
+   * 中文模式 DB 值優先，英文模式一律用字典。
+   */
+  const pick = (key: string, dict: string): string =>
+    isZhTW ? get(key, dict) : dict;
 
   useEffect(() => {
     let cancelled = false;
@@ -127,13 +150,13 @@ const ServicesSection: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8 sm:mb-10">
           <span className="text-gold text-xs uppercase tracking-widest">
-            {get('services_tagline', SERVICES_COPY.tagline)}
+            {pick('services_tagline', copy.tagline)}
           </span>
           <h2 className="mt-2 text-2xl sm:text-3xl font-light text-white/90">
-            {get('services_title', SERVICES_COPY.title)}
+            {pick('services_title', copy.title)}
           </h2>
           <p className="mt-2 text-sm text-white/40 max-w-xl mx-auto">
-            {get('services_subtitle', SERVICES_COPY.subtitle)}
+            {pick('services_subtitle', copy.subtitle)}
           </p>
         </div>
 
@@ -148,8 +171,11 @@ const ServicesSection: React.FC = () => {
                 index={i}
                 layoutIdPrefix="service-course"
                 card={{
-                  category: course.course_category?.trim() || '課程',
-                  title: course.course_title,
+                  // DB 內容：英文模式讀 course_category_en / course_title_en
+                  category:
+                    loc(asRecord(course), 'course_category').trim() ||
+                    copy.defaultCategory,
+                  title: loc(asRecord(course), 'course_title'),
                   // 有課程封面就顯示；沒有時 CardImage 會退回主題色佔位面板
                   src: course.course_thumbnail_url || undefined,
                   content: <CourseContent course={course} />,
@@ -158,7 +184,7 @@ const ServicesSection: React.FC = () => {
             ))}
           />
         ) : (
-          <p className="text-center text-sm text-white/40">課程整理中，敬請期待。</p>
+          <p className="text-center text-sm text-white/40">{copy.empty}</p>
         )}
       </div>
     </section>

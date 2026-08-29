@@ -6,7 +6,8 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/context";
+import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { StatCard, PillButton } from "@/components/ui";
 import SEOHead from "@/components/seo/SEOHead";
 
@@ -17,40 +18,51 @@ import SEOHead from "@/components/seo/SEOHead";
  */
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   // Auth guard 已由 App.tsx RequireAuth 統一處理
 
   const stats = [
     {
       value: "85%",
-      label: "本週進度",
+      label: t.dashboard.statWeeklyProgress,
       trend: { value: 5, direction: "up" as const },
     },
     {
       value: "12",
-      label: "完成課堂",
+      label: t.dashboard.statCompletedLessons,
       trend: { value: 20, direction: "up" as const },
     },
     {
       value: "156",
-      label: "累計分鐘",
+      label: t.dashboard.statTotalMinutes,
       trend: { value: 15, direction: "up" as const },
     },
     {
       value: "7",
-      label: "連續天數",
+      label: t.dashboard.statStreakDays,
       trend: { value: 2, direction: "down" as const },
     },
   ];
 
   const recentCourses = [
-    { id: "1", title: "初學者健身入門", progress: 75, lastAccess: "今天" },
-    { id: "2", title: "增肌實戰計畫", progress: 30, lastAccess: "昨天" },
+    {
+      id: "1",
+      title: t.dashboard.demoCourse1,
+      progress: 75,
+      lastAccess: t.dashboard.today,
+    },
+    {
+      id: "2",
+      title: t.dashboard.demoCourse2,
+      progress: 30,
+      lastAccess: t.dashboard.yesterday,
+    },
   ];
 
   return (
     <div className="min-h-screen bg-transparent relative">
-      <SEOHead title="管理後台 | 阿倫教官" noIndex={true} />
+      <SEOHead title={t.dashboard.seoTitle} noIndex={true} />
       <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
         <div className="studio-container">
           {/* Header */}
@@ -59,9 +71,14 @@ const Dashboard: React.FC = () => {
               Dashboard
             </span>
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white/90 mb-3 sm:mb-4">
-              歡迎回來，{user?.name || "學員"}
+              {t.dashboard.welcome.replace(
+                "{name}",
+                user?.name || t.dashboard.guestName,
+              )}
             </h1>
-            <p className="text-sm sm:text-base text-white/50">繼續您的健身之旅</p>
+            <p className="text-sm sm:text-base text-white/50">
+              {t.dashboard.subtitle}
+            </p>
           </div>
 
           {/* Stats Grid */}
@@ -87,7 +104,7 @@ const Dashboard: React.FC = () => {
               className="md:col-span-2 bg-surface rounded-lg border border-gold/10 p-6"
             >
               <h2 className="text-xl text-white/90 font-light mb-6">
-                繼續學習
+                {t.dashboard.continueLearning}
               </h2>
               {recentCourses.length > 0 ? (
                 <div className="space-y-4">
@@ -105,7 +122,10 @@ const Dashboard: React.FC = () => {
                           {course.title}
                         </h3>
                         <p className="text-muted text-sm">
-                          {course.lastAccess}學習
+                          {t.dashboard.lastStudied.replace(
+                            "{when}",
+                            course.lastAccess,
+                          )}
                         </p>
                         {/* Progress Bar */}
                         <div className="mt-2 h-1.5 bg-transparent rounded-full overflow-hidden">
@@ -123,10 +143,10 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted mb-4">尚未開始任何課程</p>
+                  <p className="text-muted mb-4">{t.dashboard.noCoursesStarted}</p>
                   <Link to="/courses">
                     <PillButton theme="studio" variant="default">
-                      瀏覽課程
+                      {t.member.browseCourses}
                     </PillButton>
                   </Link>
                 </div>
@@ -139,7 +159,7 @@ const Dashboard: React.FC = () => {
               className="bg-surface rounded-lg border border-gold/10 p-6"
             >
               <h2 className="text-xl text-white/90 font-light mb-6">
-                快速操作
+                {t.dashboard.quickActions}
               </h2>
               <div className="space-y-3">
                 <Link
@@ -148,14 +168,14 @@ const Dashboard: React.FC = () => {
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">📚</span>
-                  <span className="text-white/90">瀏覽課程</span>
+                  <span className="text-white/90">{t.member.browseCourses}</span>
                 </Link>
                 <Link
                   to="/videos"
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">🎬</span>
-                  <span className="text-white/90">觀看影片</span>
+                  <span className="text-white/90">{t.dashboard.actionWatchVideos}</span>
                 </Link>
                 <Link
                   data-tour="dash-action-member"
@@ -163,7 +183,7 @@ const Dashboard: React.FC = () => {
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">👤</span>
-                  <span className="text-white/90">會員中心</span>
+                  <span className="text-white/90">{t.nav.memberCenter}</span>
                 </Link>
                 <Link
                   data-tour="dash-action-contact"
@@ -171,7 +191,7 @@ const Dashboard: React.FC = () => {
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-transparent transition-colors"
                 >
                   <span className="text-lg">✉️</span>
-                  <span className="text-white/90">聯絡教練</span>
+                  <span className="text-white/90">{t.dashboard.actionContactCoach}</span>
                 </Link>
               </div>
             </div>

@@ -39,6 +39,7 @@ const INITIAL_FORM_DATA: ContactFormData = {
  */
 const Contact: React.FC = () => {
   const { t } = useLanguage();
+  const extra = t.contactExtra;
   const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
 
   const [loading, setLoading] = useState(false);
@@ -54,37 +55,37 @@ const Contact: React.FC = () => {
     const { name, email, subject, message } = formData;
 
     if (!name.trim() || name.trim().length < 2) {
-      return "請輸入至少 2 個字的姓名";
+      return extra.validation.nameMin;
     }
     if (name.trim().length > 50) {
-      return "姓名不能超過 50 個字";
+      return extra.validation.nameMax;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      return "請輸入有效的電子郵件地址";
+      return extra.validation.emailInvalid;
     }
 
     // 電話可選，但若填寫要驗證格式
     if (formData.phone.trim()) {
       const phoneRegex = /^[0-9+\-() ]{7,20}$/;
       if (!phoneRegex.test(formData.phone.trim())) {
-        return "電話格式不正確";
+        return extra.validation.phoneInvalid;
       }
     }
 
     if (!subject.trim() || subject.trim().length < 2) {
-      return "請輸入訊息主旨";
+      return extra.validation.subjectRequired;
     }
     if (subject.trim().length > 100) {
-      return "主旨不能超過 100 個字";
+      return extra.validation.subjectMax;
     }
 
     if (!message.trim() || message.trim().length < 10) {
-      return "訊息內容至少需要 10 個字";
+      return extra.validation.messageMin;
     }
     if (message.trim().length > 2000) {
-      return "訊息內容不能超過 2000 個字";
+      return extra.validation.messageMax;
     }
 
     return null;
@@ -129,7 +130,7 @@ const Contact: React.FC = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "送出失敗");
+        throw new Error(result.error || extra.errors.sendFailed);
       }
 
       setToast({
@@ -139,7 +140,7 @@ const Contact: React.FC = () => {
       setFormData(INITIAL_FORM_DATA);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "送出失敗，請稍後再試";
+        err instanceof Error ? err.message : extra.errors.sendFailedRetry;
       setToast({ message, type: "error" });
     } finally {
       setLoading(false);
@@ -156,24 +157,24 @@ const Contact: React.FC = () => {
       bg: "linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)",
     },
     {
-      name: "LINE 官方",
+      name: extra.social.lineOfficialName,
       href: SOCIAL_LINKS.LINE_OFFICIAL,
       icon: "💬",
       desc: COACH_INFO.LINE_ID,
       bg: "#06C755",
     },
     {
-      name: "LINE 社群",
+      name: extra.social.lineGroupName,
       href: SOCIAL_LINKS.LINE_GROUP,
       icon: "👥",
-      desc: "私人教練專業變現",
+      desc: extra.social.lineGroupDesc,
       bg: "#06a845",
     },
     {
       name: "Facebook",
       href: SOCIAL_LINKS.FACEBOOK,
       icon: "👤",
-      desc: "阿倫教官",
+      desc: extra.social.facebookDesc,
       bg: "#1877F2",
     },
     {
@@ -187,14 +188,14 @@ const Contact: React.FC = () => {
       name: "Podcast",
       href: SOCIAL_LINKS.PODCAST,
       icon: "🎙️",
-      desc: "陪你健身",
+      desc: extra.social.podcastDesc,
       bg: "#9b59b6",
     },
     {
       name: "Notion",
       href: SOCIAL_LINKS.NOTION,
       icon: "📝",
-      desc: "教練筆記",
+      desc: extra.social.notionDesc,
       bg: "#191919",
     },
   ];
@@ -205,17 +206,7 @@ const Contact: React.FC = () => {
       <SEOHead
         title={t.contact.heading}
         description={t.contact.subtitle}
-        keywords={[
-          "聯絡阿倫教官",
-          "教練諮詢",
-          "免費諮詢",
-          "私人教練培訓",
-          "私人教練銷售",
-          "健身教練銷售",
-          "皮拉提斯銷售",
-          "阿倫教官LINE",
-          "教練業績提升",
-        ]}
+        keywords={extra.seoKeywords}
         url="/contact"
       />
       <div className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 relative z-10">
@@ -239,23 +230,23 @@ const Contact: React.FC = () => {
               </div>
               <div className="flex-1">
                 <h2 className="text-lg sm:text-xl text-white/90 font-medium mb-1">
-                  {COACH_INFO.NAME}
+                  {t.coachInfo.name}
                 </h2>
                 <p className="text-sm text-gold mb-2">
-                  {COACH_INFO.TITLE}
+                  {t.coachInfo.title}
                 </p>
                 <div className="flex flex-wrap gap-2 text-xs text-muted">
                   <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
-                    NSCA-CPT 認證
+                    {extra.badges.nsca}
                   </span>
                   <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
-                    TQUK 心理諮詢師
+                    {extra.badges.tquk}
                   </span>
                   <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
-                    NLP 心理執行師
+                    {extra.badges.nlp}
                   </span>
                   <span className="bg-[#c5a059]/10 px-2 py-1 rounded">
-                    130+ 教練培訓
+                    {extra.badges.coachesTrained}
                   </span>
                 </div>
               </div>
@@ -324,7 +315,7 @@ const Contact: React.FC = () => {
                   disabled={loading}
                   className="w-full"
                 >
-                  {loading ? t.common.submit + "..." : t.contact.formSubmit}
+                  {loading ? extra.sending : t.contact.formSubmit}
                 </PillButton>
                 <p className="text-xs text-muted text-center">
                   {t.contact.formNote}
@@ -387,7 +378,7 @@ const Contact: React.FC = () => {
                     {t.contact.businessHours}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90">
-                    {COACH_INFO.BUSINESS_HOURS}
+                    {t.coachInfo.businessHours}
                   </p>
                 </motion.div>
               </div>
@@ -396,7 +387,7 @@ const Contact: React.FC = () => {
               <h3 className="text-sm sm:text-base text-white/90 mb-2 font-light">
                 {t.contact.socialSection}
               </h3>
-              <p className="text-xs text-white/35 mb-4">Hover 查看，點擊前往</p>
+              <p className="text-xs text-white/35 mb-4">{extra.hoverHint}</p>
 
               <ImagesBadge
                 items={socialItems}

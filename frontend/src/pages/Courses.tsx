@@ -25,7 +25,7 @@ import type { Course } from "@/types";
  */
 const Courses: React.FC = () => {
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { loc } = useLocalize();
   // ── SSR 預抓資料 ──
   const ssrCourses = getInitialData<Course[]>(dataKeys.coursesList());
@@ -79,9 +79,23 @@ const Courses: React.FC = () => {
   };
 
   // 從課程資料提取所有分類
-  const categories = [...new Set(courses.map((c) => c.course_category).filter((c): c is string => !!c))];
+  // value = 資料庫中文原值（篩選比對用，切語言不會變）
+  // label = 依語言顯示的標籤（英文模式讀 course_category_en）
+  const categoryMap = new Map<string, string>();
+  courses.forEach((c) => {
+    if (!c.course_category || categoryMap.has(c.course_category)) return;
+    categoryMap.set(
+      c.course_category,
+      loc(c as unknown as Record<string, unknown>, "course_category") ||
+        c.course_category,
+    );
+  });
+  const categories = [...categoryMap.entries()].map(([value, label]) => ({
+    value,
+    label,
+  }));
 
-  // 套用篩選
+  // 套用篩選（一律比對資料庫中文原值，與顯示標籤無關）
   const filteredCourses = courses.filter((c) => {
     if (selectedLevel && c.course_level !== selectedLevel) return false;
     if (selectedCategory && c.course_category !== selectedCategory) return false;
@@ -95,8 +109,8 @@ const Courses: React.FC = () => {
       title={t.course.pageLabel}
       // B2B 定位（受眾是健身教練同業，非一般健身會員）——
       // 舊文案「探索專業健身課程…找到適合你的課程」是 B2C 語氣，與 SEOHead 的站台定位矛盾
-      description={language === "en" ? "Business training programs for personal trainers: monetization coaching, sales psychology courses and 1-on-1 consulting to turn your expertise into stable income" : "給私人教練的商業培訓方案：變現陪跑、銷售心理學線上課程與一對一顧問，把你的專業變成穩定收入。已協助 130+ 位教練突破業績瓶頸。"}
-      keywords={language === "en" ? ["personal trainer sales", "fitness coach sales", "pilates sales", "trainer monetization", "coach business training"] : ["私人教練銷售", "健身教練銷售", "皮拉提斯銷售", "私教變現陪跑", "教練變現線上課程", "教練培訓", "阿倫教官"]}
+      description={t.coursesExtra.seoDescription}
+      keywords={t.coursesExtra.seoKeywords}
       url="/courses"
       breadcrumbs={[{ name: t.course.pageLabel, url: "/courses" }]}
     />
@@ -120,7 +134,7 @@ const Courses: React.FC = () => {
         <PageHeader
           label="Courses"
           title={t.course.pageLabel}
-          subtitle={language === "en" ? "Explore professional fitness courses and start your training journey" : "探索專業健身課程，開啟你的訓練旅程"}
+          subtitle={t.coursesExtra.subtitle}
         />
           {/* ── Filter Bar ── */}
           {(courses.length > 0) && (
@@ -149,11 +163,11 @@ const Courses: React.FC = () => {
                   </button>
                   {categories.map((cat) => (
                     <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`page-filter-pill shrink-0 ${selectedCategory === cat ? "active" : ""}`}
+                      key={cat.value}
+                      onClick={() => setSelectedCategory(cat.value)}
+                      className={`page-filter-pill shrink-0 ${selectedCategory === cat.value ? "active" : ""}`}
                     >
-                      {cat}
+                      {cat.label}
                     </button>
                   ))}
                 </div>
@@ -202,7 +216,7 @@ const Courses: React.FC = () => {
                       <div className="aspect-16/10 overflow-hidden">
                         <img
                           src={course.course_thumbnail_url}
-                          alt={course.course_title}
+                          alt={loc(course as unknown as Record<string, unknown>, "course_title")}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>

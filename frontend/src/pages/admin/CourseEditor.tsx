@@ -5,10 +5,16 @@
  * @features localStorage 自動暫存、分類管理、使用說明
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useScrollLock } from "@/hooks/useScrollLock";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { useAuth } from "@/context";
+import { useAuth, useLanguage } from "@/context";
 import {
   Loading,
   Tooltip,
@@ -72,15 +78,18 @@ interface Category {
 const STORAGE_KEY = "course_draft";
 const CATEGORIES_KEY = "course_categories";
 
-/** 預設分類 */
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: "strength", name: "肌力訓練", slug: "strength" },
-  { id: "cardio", name: "有氧體能", slug: "cardio" },
-  { id: "flexibility", name: "柔軟度訓練", slug: "flexibility" },
-  { id: "nutrition", name: "營養規劃", slug: "nutrition" },
-  { id: "mindset", name: "心態訓練", slug: "mindset" },
-  { id: "running", name: "跑步訓練", slug: "running" },
-];
+/**
+ * 預設分類的骨架：id 與 slug 是資料（存進 localStorage、寫進課程欄位），
+ * 顯示名稱走字典（`defaultCategories[id]`），所以這裡不放中文。
+ */
+const DEFAULT_CATEGORY_SEEDS = [
+  { id: "strength", slug: "strength" },
+  { id: "cardio", slug: "cardio" },
+  { id: "flexibility", slug: "flexibility" },
+  { id: "nutrition", slug: "nutrition" },
+  { id: "mindset", slug: "mindset" },
+  { id: "running", slug: "running" },
+] as const;
 
 /** 日誌工具 */
 const logger = {
@@ -98,6 +107,10 @@ const CourseEditor: React.FC = () => {
 
   // 使用美化對話框
   const dialog = useDialog();
+
+  const { t } = useLanguage();
+  /** 本頁字典（縮短取用路徑） */
+  const tx = t.adminCourseEditorPage;
 
   // 客戶端掛載狀態 (防止 SSR 水合問題)
   const [mounted, setMounted] = useState(false);
@@ -126,7 +139,23 @@ const CourseEditor: React.FC = () => {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // 分類管理
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  /** 預設分類（名稱依語言取字典） */
+  const defaultCategories = useMemo<Category[]>(
+    () =>
+      DEFAULT_CATEGORY_SEEDS.map((seed) => ({
+        ...seed,
+        name: tx.defaultCategories[seed.id],
+      })),
+    [tx],
+  );
+  /** 顯示用分類名稱：預設分類跟著語言走，使用者自訂的用存下來的名稱 */
+  const categoryLabel = useCallback(
+    (cat: Category) =>
+      (tx.defaultCategories as Record<string, string | undefined>)[cat.id] ??
+      cat.name,
+    [tx],
+  );
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
@@ -139,7 +168,9 @@ const CourseEditor: React.FC = () => {
   /** 圖片上傳目標：已存檔課程用 id，新課程走 temp（後端儲存時搬正） */
   const uploadEntityKey = isNew ? null : (id ?? null);
 
-  useScrollLock(showCategoryModal || showHelpModal);
+  /* 手寫彈窗（分類管理／使用說明）的捲動鎖 + Escape */
+  useModalBehavior(showCategoryModal, () => setShowCategoryModal(false));
+  useModalBehavior(showHelpModal, () => setShowHelpModal(false));
 
   // Slug 狀態
   const [slugDuplicate, setSlugDuplicate] = useState(false);
@@ -199,7 +230,7 @@ const CourseEditor: React.FC = () => {
   // 使用共用的富文本編輯器 Hook
   const editor = useRichTextEditor({
     content: course.content,
-    placeholder: "開始撰寫課程內容...（輸入 @ 可提及他人）",
+    placeholder: tx.form.contentPlaceholder,
     onUpdate: (html) => {
       setCourse((prev) => ({ ...prev, content: html }));
       setHasChanges(true);
@@ -223,15 +254,12 @@ const CourseEditor: React.FC = () => {
           logger.info("已載入分類:", parsed);
         }
       } else {
-        localStorage.setItem(
-          CATEGORIES_KEY,
-          JSON.stringify(DEFAULT_CATEGORIES),
-        );
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(defaultCategories));
       }
     } catch (error) {
       logger.error("載入分類失敗:", error);
     }
-  }, []);
+  }, [defaultCategories]);
 
   // 載入草稿 (從 localStorage，僅客戶端)
   useEffect(() => {
@@ -246,8 +274,11 @@ const CourseEditor: React.FC = () => {
           if (data.savedAt) {
             const savedTime = new Date(data.savedAt);
             const confirmed = await dialog.confirm({
-              title: "恢復草稿",
-              message: `發現上次編輯的草稿（${savedTime.toLocaleString()}）\n\n是否要恢復？`,
+              title: tx.confirm.restoreDraftTitle,
+              message: tx.confirm.restoreDraftMessage.replace(
+                "{time}",
+                savedTime.toLocaleString(),
+              ),
             });
             if (confirmed) {
               setCourse(data.course);
@@ -265,6 +296,7 @@ const CourseEditor: React.FC = () => {
     }, 100);
 
     return () => clearTimeout(timer);
+    // 字典刻意不列入相依：切語言不該再問一次「是否恢復草稿」。
   }, [mounted, isNew, editor, dialog]);
 
   // 載入既有課程資料（編輯模式）
@@ -317,8 +349,8 @@ const CourseEditor: React.FC = () => {
       } catch (error) {
         logger.error("載入課程失敗:", error);
         await dialog.alert({
-          title: "載入失敗",
-          message: "載入課程失敗，請返回重試",
+          title: t.adminCommon.loadFailed,
+          message: tx.toast.loadFailedMessage,
           type: "error",
         });
       } finally {
@@ -327,6 +359,8 @@ const CourseEditor: React.FC = () => {
     };
 
     loadCourse();
+    // 只在進入編輯模式時載入一次；字典（t/tx）刻意不列入相依，
+    // 否則切換語言會重新抓資料、覆蓋掉尚未儲存的編輯內容。
   }, [isNew, id, mounted, editor]);
 
   // 自動儲存到 localStorage (每 30 秒，僅客戶端)
@@ -426,12 +460,12 @@ const CourseEditor: React.FC = () => {
   /** 插入 YouTube（強制 YouTube 驗證 + 即時預覽） */
   const handleInsertYoutube = useCallback(async () => {
     const url = await dialog.prompt({
-      title: "插入 YouTube 影片",
-      message: "請輸入 YouTube 影片網址：",
+      title: tx.insert.youtubeTitle,
+      message: tx.insert.youtubeMessage,
       placeholder: "https://www.youtube.com/watch?v=...",
       validation: (value) => {
         if (!isValidYouTubeUrl(value)) {
-          return "❌ 只能使用 YouTube 影片網址！\n支援格式：youtube.com/watch?v=, youtu.be/, youtube.com/shorts/";
+          return tx.insert.youtubeInvalid;
         }
         return null;
       },
@@ -441,7 +475,7 @@ const CourseEditor: React.FC = () => {
           <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
             <iframe
               src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube 預覽"
+              title={tx.insert.youtubePreviewTitle}
               className="w-full aspect-video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -456,8 +490,8 @@ const CourseEditor: React.FC = () => {
       if (!isValidYouTubeUrl(url)) {
         await dialog.alert({
           type: "error",
-          title: "無效的影片網址",
-          message: "只能使用 YouTube 影片網址！",
+          title: tx.insert.youtubeInvalidTitle,
+          message: tx.insert.youtubeInvalidMessage,
         });
         return;
       }
@@ -470,20 +504,20 @@ const CourseEditor: React.FC = () => {
         })
         .run();
     }
-  }, [editor, dialog]);
+  }, [editor, dialog, tx]);
 
   /** 插入連結 */
   const handleInsertLink = useCallback(async () => {
     const url = await dialog.prompt({
-      title: "插入連結",
-      message: "請輸入網址：",
+      title: tx.insert.linkTitle,
+      message: tx.insert.linkMessage,
       placeholder: "https://...",
       validation: (value) => {
         try {
           new URL(value);
           return null;
         } catch {
-          return "請輸入有效的網址";
+          return tx.insert.linkInvalid;
         }
       },
     });
@@ -491,7 +525,7 @@ const CourseEditor: React.FC = () => {
     if (url && editor) {
       editor.chain().focus().setLink({ href: url }).run();
     }
-  }, [editor, dialog]);
+  }, [editor, dialog, tx]);
 
   /** 手動儲存草稿到 localStorage */
   const handleSaveDraft = useCallback(async () => {
@@ -504,27 +538,27 @@ const CourseEditor: React.FC = () => {
       setLastSaved(new Date());
       setHasChanges(false);
       await dialog.alert({
-        title: "儲存成功",
-        message: "草稿已儲存到瀏覽器！",
+        title: tx.toast.draftSavedTitle,
+        message: tx.toast.draftSavedMessage,
         type: "success",
       });
       logger.info("手動儲存草稿成功");
     } catch (error) {
       logger.error("儲存草稿失敗:", error);
       await dialog.alert({
-        title: "儲存失敗",
-        message: "儲存失敗，請稍後再試",
+        title: t.adminCommon.saveFailed,
+        message: tx.toast.saveFailedMessage,
         type: "error",
       });
     }
-  }, [course, dialog]);
+  }, [course, dialog, t, tx]);
 
   /** 發布課程 */
   const handlePublish = useCallback(async () => {
     if (!course.title.trim()) {
       await dialog.alert({
-        title: "提示",
-        message: "請輸入課程標題",
+        title: tx.toast.titleRequiredTitle,
+        message: tx.toast.titleRequiredMessage,
         type: "warning",
       });
       return;
@@ -532,12 +566,15 @@ const CourseEditor: React.FC = () => {
 
     // 驗證圖片網址：自家 Storage 上傳結果 或 Cloudinary 皆可
     // （舊版誤用只認 Cloudinary 的驗證，導致「上傳截圖」成功後反而無法存檔）
-    const coverError = imageUrlError(course.coverImage, "封面圖片");
-    const bannerError = imageUrlError(course.bannerImage, "Banner 圖片");
-    if (coverError || bannerError) {
+    // lib 的錯誤字串是固定繁中，這裡只取「合不合法」，訊息走本頁字典
+    const coverInvalid = imageUrlError(course.coverImage) !== null;
+    const bannerInvalid = imageUrlError(course.bannerImage) !== null;
+    if (coverInvalid || bannerInvalid) {
       await dialog.alert({
-        title: "圖片網址錯誤",
-        message: coverError || bannerError || "",
+        title: tx.toast.imageUrlErrorTitle,
+        message: coverInvalid
+          ? tx.toast.coverUrlInvalid
+          : tx.toast.bannerUrlInvalid,
         type: "error",
       });
       return;
@@ -572,22 +609,22 @@ const CourseEditor: React.FC = () => {
       localStorage.removeItem(STORAGE_KEY);
       setHasChanges(false);
       await dialog.alert({
-        title: "發布成功",
-        message: "課程已發布！",
+        title: tx.toast.publishSuccessTitle,
+        message: tx.toast.publishSuccessMessage,
         type: "success",
       });
       navigate("/admin/courses");
     } catch (error) {
       logger.error("發布失敗:", error);
       await dialog.alert({
-        title: "發布失敗",
-        message: "發布失敗，請稍後再試",
+        title: tx.toast.publishFailedTitle,
+        message: tx.toast.publishFailedMessage,
         type: "error",
       });
     } finally {
       setIsSaving(false);
     }
-  }, [course, generateSlug, isNew, id, navigate, dialog]);
+  }, [course, generateSlug, isNew, id, navigate, dialog, tx]);
 
   /** 新增分類 */
   const handleAddCategory = useCallback(() => {
@@ -617,10 +654,10 @@ const CourseEditor: React.FC = () => {
   const handleDeleteCategory = useCallback(
     async (categoryId: string) => {
       const confirmed = await dialog.confirm({
-        title: "刪除分類",
-        message: "確定要刪除此分類嗎？",
+        title: tx.confirm.deleteCategoryTitle,
+        message: tx.confirm.deleteCategoryMessage,
         variant: "danger",
-        confirmText: "刪除",
+        confirmText: t.common.delete,
       });
       if (!confirmed) return;
 
@@ -637,29 +674,29 @@ const CourseEditor: React.FC = () => {
       // TODO: 同步到資料庫
       logger.info("刪除分類:", categoryId);
     },
-    [categories, course.category, dialog],
+    [categories, course.category, dialog, t, tx],
   );
 
   /** 返回列表 */
   const handleBack = useCallback(async () => {
     if (hasChanges) {
       const confirmed = await dialog.confirm({
-        title: "離開頁面",
-        message: "有未儲存的變更，確定要離開嗎？",
+        title: tx.confirm.leaveTitle,
+        message: tx.confirm.leaveMessage,
         variant: "danger",
-        confirmText: "離開",
-        cancelText: "繼續編輯",
+        confirmText: tx.confirm.leaveConfirm,
+        cancelText: tx.confirm.leaveCancel,
       });
       if (!confirmed) return;
     }
     navigate("/admin/courses");
-  }, [navigate, hasChanges, dialog]);
+  }, [navigate, hasChanges, dialog, tx]);
 
   // 權限保護
   if (authLoading || isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-luxe-bg">
-        <Loading text={isLoading ? "載入課程資料..." : "載入中..."} />
+        <Loading text={isLoading ? tx.loadingCourse : t.common.loading} />
       </div>
     );
   }
@@ -696,21 +733,28 @@ const CourseEditor: React.FC = () => {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              返回
+              {t.common.back}
             </button>
             <span className="text-gray-500">|</span>
-            <h1 className="font-medium">{isNew ? "新增課程" : "編輯課程"}</h1>
+            <h1 className="font-medium">
+              {isNew ? t.admin.newCourse : tx.editTitle}
+            </h1>
             {hasChanges && (
-              <span className="text-xs text-amber-400">● 未儲存</span>
+              <span className="text-xs text-amber-400">
+                ● {t.adminCommon.unsavedChanges}
+              </span>
             )}
             {lastSaved && (
               <span className="text-xs text-gray-500">
-                上次儲存：{lastSaved.toLocaleTimeString()}
+                {tx.lastSavedAt.replace(
+                  "{time}",
+                  lastSaved.toLocaleTimeString(),
+                )}
               </span>
             )}
 
             {/* 說明按鈕 */}
-            <Tooltip label="使用說明">
+            <Tooltip label={tx.helpTooltip}>
               <button
                 type="button"
                 onClick={() => setShowHelpModal(true)}
@@ -731,7 +775,7 @@ const CourseEditor: React.FC = () => {
               disabled={isSaving}
               className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50"
             >
-              {isSaving ? "儲存中..." : "儲存草稿"}
+              {isSaving ? t.adminCommon.saving : t.admin.saveDraft}
             </button>
             <button
               type="button"
@@ -739,7 +783,7 @@ const CourseEditor: React.FC = () => {
               disabled={isSaving}
               className="px-4 py-2 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg disabled:opacity-50 font-medium"
             >
-              發布課程
+              {tx.publishCourse}
             </button>
           </div>
         </div>
@@ -759,7 +803,7 @@ const CourseEditor: React.FC = () => {
                   setCourse((prev) => ({ ...prev, title: e.target.value }));
                   setHasChanges(true);
                 }}
-                placeholder="課程標題"
+                placeholder={tx.form.titlePlaceholder}
                 data-tour="course-editor-title"
                 className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-gray-600"
               />
@@ -784,7 +828,7 @@ const CourseEditor: React.FC = () => {
           <div className="space-y-6">
             <div className="p-4 bg-luxe-surface rounded-lg border border-luxe-gold/20">
               <h2 className="text-sm font-medium text-luxe-gold mb-4">
-                課程資訊
+                {tx.sidebar.panelTitle}
               </h2>
 
               <div className="space-y-4">
@@ -792,39 +836,36 @@ const CourseEditor: React.FC = () => {
                 <div data-tour="course-editor-slug">
                   <div className="flex items-center gap-1.5 mb-1">
                     <label className="block text-xs text-gray-400">
-                      網址代稱
+                      {tx.form.slugLabel}
                     </label>
                     <div className="relative">
                       <button
                         type="button"
                         onClick={() => setShowSlugHelp((p) => !p)}
                         className="w-4 h-4 rounded-full bg-gray-600 text-gray-300 text-xs flex items-center justify-center hover:bg-luxe-gold hover:text-black transition-colors"
-                        title="什麼是網址代稱？"
+                        title={tx.form.slugHelpTooltip}
                       >
                         ?
                       </button>
                       {showSlugHelp && (
                         <div className="absolute left-6 top-0 z-50 w-64 p-3 bg-luxe-surface border border-luxe-gold/30 rounded-lg shadow-xl text-xs text-gray-300 leading-relaxed">
                           <p className="font-medium text-luxe-gold mb-1">
-                            網址代稱 (Slug)
+                            {tx.sidebar.slugHelpTitle}
                           </p>
-                          <p>影響課程網址的美觀度，例如：</p>
+                          <p>{tx.sidebar.slugHelpIntro}</p>
                           <p className="text-luxe-gold/80 my-1">
                             /courses/<strong>beginner-training</strong>
                           </p>
-                          <p>
-                            可輸入簡單英文，僅允許小寫英文、數字、連字符 (-)
-                            和底線 (_)。
-                          </p>
+                          <p>{tx.sidebar.slugHelpRule}</p>
                           <p className="mt-1 text-gray-500">
-                            留空則自動產生時間戳代碼。
+                            {tx.sidebar.slugHelpFallback}
                           </p>
                           <button
                             type="button"
                             onClick={() => setShowSlugHelp(false)}
                             className="mt-2 text-luxe-gold hover:underline"
                           >
-                            知道了
+                            {tx.sidebar.slugHelpGotIt}
                           </button>
                         </div>
                       )}
@@ -838,16 +879,18 @@ const CourseEditor: React.FC = () => {
                       type="text"
                       value={course.slug}
                       onChange={(e) => handleSlugChange(e.target.value)}
-                      placeholder="留空自動產生"
+                      placeholder={tx.form.slugPlaceholder}
                       className="flex-1 min-w-0 px-2 py-1.5 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
                     />
                   </div>
                   {slugChecking && (
-                    <p className="text-xs text-gray-500 mt-1">檢查中...</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {tx.form.slugChecking}
+                    </p>
                   )}
                   {slugDuplicate && !slugChecking && (
                     <p className="text-xs text-red-400 mt-1">
-                      ⚠️ 此網址代稱已被使用，請更換其他名稱
+                      ⚠️ {tx.form.slugDuplicate}
                     </p>
                   )}
                 </div>
@@ -855,7 +898,7 @@ const CourseEditor: React.FC = () => {
                 {/* 簡介 */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    課程簡介
+                    {tx.form.descriptionLabel}
                   </label>
                   <textarea
                     value={course.description}
@@ -866,7 +909,7 @@ const CourseEditor: React.FC = () => {
                       }));
                       setHasChanges(true);
                     }}
-                    placeholder="簡短描述課程內容..."
+                    placeholder={tx.form.descriptionPlaceholder}
                     rows={5}
                     className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none resize-none text-sm"
                   />
@@ -875,13 +918,13 @@ const CourseEditor: React.FC = () => {
                 {/* 分類 */}
                 <div data-tour="course-editor-category">
                   <label className="flex items-center justify-between text-xs text-gray-400 mb-1">
-                    <span>分類</span>
+                    <span>{tx.form.categoryLabel}</span>
                     <button
                       type="button"
                       onClick={() => setShowCategoryModal(true)}
                       className="text-luxe-gold hover:underline"
                     >
-                      管理分類
+                      {t.admin.manageCategories}
                     </button>
                   </label>
                   <select
@@ -901,10 +944,10 @@ const CourseEditor: React.FC = () => {
                       backgroundSize: "1.25em 1.25em",
                     }}
                   >
-                    <option value="">選擇分類</option>
+                    <option value="">{tx.form.categoryPlaceholder}</option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.slug}>
-                        {cat.name}
+                        {categoryLabel(cat)}
                       </option>
                     ))}
                   </select>
@@ -913,7 +956,7 @@ const CourseEditor: React.FC = () => {
                 {/* 標籤 */}
                 <div data-tour="course-editor-tags">
                   <label className="block text-xs text-gray-400 mb-1">
-                    標籤
+                    {tx.form.tagsLabel}
                   </label>
                   <div className="flex gap-2 mb-2">
                     <input
@@ -921,7 +964,7 @@ const CourseEditor: React.FC = () => {
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && handleAddTag()}
-                      placeholder="輸入標籤..."
+                      placeholder={tx.form.tagsPlaceholder}
                       className="flex-1 px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
                     />
                     <button
@@ -953,8 +996,8 @@ const CourseEditor: React.FC = () => {
 
                 {/* 封面圖片 (縮圖) */}
                 <ImageInput
-                  label="封面縮圖"
-                  hint="列表卡片用"
+                  label={tx.form.coverLabel}
+                  hint={tx.form.coverHint}
                   value={course.coverImage}
                   onChange={(url) => setImageField("coverImage", url)}
                   entity="course"
@@ -965,8 +1008,8 @@ const CourseEditor: React.FC = () => {
 
                 {/* Banner 圖片 (大圖) */}
                 <ImageInput
-                  label="Banner 大圖"
-                  hint="內頁頂部橫幅用"
+                  label={tx.form.bannerLabel}
+                  hint={tx.form.bannerHint}
                   value={course.bannerImage}
                   onChange={(url) => setImageField("bannerImage", url)}
                   entity="course"
@@ -978,7 +1021,7 @@ const CourseEditor: React.FC = () => {
                 {/* 價格 */}
                 <div data-tour="course-editor-price">
                   <label className="block text-xs text-gray-400 mb-1">
-                    價格 (NT$)
+                    {tx.form.priceLabel}
                   </label>
                   <input
                     type="text"
@@ -987,7 +1030,7 @@ const CourseEditor: React.FC = () => {
                       setCourse((prev) => ({ ...prev, price: e.target.value }));
                       setHasChanges(true);
                     }}
-                    placeholder="例：3000"
+                    placeholder={tx.form.pricePlaceholder}
                     className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
                   />
                 </div>
@@ -995,7 +1038,7 @@ const CourseEditor: React.FC = () => {
                 {/* 課程時長 */}
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">
-                    課程時長
+                    {tx.form.durationLabel}
                   </label>
                   <input
                     type="text"
@@ -1007,7 +1050,7 @@ const CourseEditor: React.FC = () => {
                       }));
                       setHasChanges(true);
                     }}
-                    placeholder="例：60 分鐘"
+                    placeholder={tx.form.durationPlaceholder}
                     className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
                   />
                 </div>
@@ -1015,7 +1058,7 @@ const CourseEditor: React.FC = () => {
                 {/* 難度等級 */}
                 <div data-tour="course-editor-level">
                   <label className="block text-xs text-gray-400 mb-1">
-                    難度等級
+                    {tx.form.levelLabel}
                   </label>
                   <select
                     value={course.level}
@@ -1031,17 +1074,19 @@ const CourseEditor: React.FC = () => {
                       backgroundSize: "1.25em 1.25em",
                     }}
                   >
-                    <option value="beginner">初學者</option>
-                    <option value="intermediate">中級</option>
-                    <option value="advanced">高級</option>
-                    <option value="all">所有程度</option>
+                    <option value="beginner">{tx.level.beginner}</option>
+                    <option value="intermediate">
+                      {tx.level.intermediate}
+                    </option>
+                    <option value="advanced">{tx.level.advanced}</option>
+                    <option value="all">{tx.level.all}</option>
                   </select>
                 </div>
 
                 {/* 狀態 */}
                 <div data-tour="course-editor-status">
                   <label className="block text-xs text-gray-400 mb-1">
-                    狀態
+                    {tx.form.statusLabel}
                   </label>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -1056,7 +1101,7 @@ const CourseEditor: React.FC = () => {
                         }}
                         className="accent-luxe-gold"
                       />
-                      <span className="text-sm">草稿</span>
+                      <span className="text-sm">{t.common.draft}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1073,7 +1118,7 @@ const CourseEditor: React.FC = () => {
                         }}
                         className="accent-luxe-gold"
                       />
-                      <span className="text-sm">已發布</span>
+                      <span className="text-sm">{t.common.published}</span>
                     </label>
                   </div>
                 </div>
@@ -1083,13 +1128,13 @@ const CourseEditor: React.FC = () => {
             {/* 操作說明 */}
             <div className="p-4 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg">
               <h3 className="text-xs font-medium text-luxe-gold mb-2">
-                💡 使用提示
+                💡 {tx.tips.heading}
               </h3>
               <ul className="text-xs text-gray-400 space-y-1">
-                <li>• 滑鼠移到按鈕上可看詳細說明</li>
-                <li>• 草稿每 30 秒自動儲存到瀏覽器</li>
-                <li>• 點擊「管理分類」可新增/刪除分類</li>
-                <li>• 按 Enter 快速新增標籤</li>
+                <li>• {tx.tips.hover}</li>
+                <li>• {tx.tips.autosave}</li>
+                <li>• {tx.tips.categories}</li>
+                <li>• {tx.tips.tagEnter}</li>
               </ul>
             </div>
           </div>
@@ -1098,10 +1143,12 @@ const CourseEditor: React.FC = () => {
 
       {/* 分類管理 Modal */}
       {showCategoryModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
-          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto my-auto">
+        <div className="fixed inset-0 modal-layer modal-scroll flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-md mx-3 sm:mx-4 max-h-[80vh] overflow-y-auto modal-scroll my-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">管理分類</h3>
+              <h3 className="text-lg font-medium">
+                {t.admin.manageCategories}
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowCategoryModal(false)}
@@ -1118,7 +1165,7 @@ const CourseEditor: React.FC = () => {
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-                placeholder="輸入新分類名稱..."
+                placeholder={tx.categoryModal.namePlaceholder}
                 className="flex-1 px-3 py-2 bg-luxe-bg border border-luxe-gold/30 rounded-lg focus:border-luxe-gold outline-none text-sm"
               />
               <button
@@ -1126,7 +1173,7 @@ const CourseEditor: React.FC = () => {
                 onClick={handleAddCategory}
                 className="px-4 py-2 bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90 text-sm font-medium"
               >
-                新增
+                {t.common.create}
               </button>
             </div>
 
@@ -1138,7 +1185,7 @@ const CourseEditor: React.FC = () => {
                   className="flex items-center justify-between p-3 bg-luxe-surface rounded-lg"
                 >
                   <div>
-                    <p className="text-sm font-medium">{cat.name}</p>
+                    <p className="text-sm font-medium">{categoryLabel(cat)}</p>
                     <p className="text-xs text-gray-500">slug: {cat.slug}</p>
                   </div>
                   <button
@@ -1146,14 +1193,14 @@ const CourseEditor: React.FC = () => {
                     onClick={() => handleDeleteCategory(cat.id)}
                     className="text-red-400 hover:text-red-300 text-sm"
                   >
-                    刪除
+                    {t.common.delete}
                   </button>
                 </div>
               ))}
             </div>
 
             <p className="mt-4 text-xs text-gray-500">
-              ⚠️ 分類目前儲存在瀏覽器中，之後會同步到資料庫
+              ⚠️ {tx.categoryModal.storageNote}
             </p>
           </div>
         </div>
@@ -1161,11 +1208,11 @@ const CourseEditor: React.FC = () => {
 
       {/* 使用說明 Modal */}
       {showHelpModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
-          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-2xl mx-3 sm:mx-4 max-h-[85vh] overflow-y-auto my-auto">
+        <div className="fixed inset-0 modal-layer modal-scroll flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/70">
+          <div className="bg-luxe-bg border border-luxe-gold/30 rounded-xl p-4 sm:p-6 w-full max-w-2xl mx-3 sm:mx-4 max-h-[85vh] overflow-y-auto modal-scroll my-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-medium text-luxe-gold">
-                📚 課程編輯器使用說明
+                📚 {tx.help.title}
               </h3>
               <button
                 type="button"
@@ -1179,21 +1226,25 @@ const CourseEditor: React.FC = () => {
             <div className="space-y-6 text-sm">
               {/* 基本操作 */}
               <section>
-                <h4 className="text-luxe-gold font-medium mb-2">🖊️ 基本操作</h4>
+                <h4 className="text-luxe-gold font-medium mb-2">
+                  🖊️ {tx.help.basicsHeading}
+                </h4>
                 <ul className="space-y-2 text-gray-300">
                   <li>
-                    1. <strong>輸入標題</strong>：在最上方的大輸入框輸入課程標題
+                    1. <strong>{tx.help.basicsStep1}</strong>
+                    {tx.help.basicsStep1Desc}
                   </li>
                   <li>
-                    2. <strong>撰寫內容</strong>
-                    ：在編輯區域直接打字，就像使用 Word 一樣
+                    2. <strong>{tx.help.basicsStep2}</strong>
+                    {tx.help.basicsStep2Desc}
                   </li>
                   <li>
-                    3. <strong>儲存草稿</strong>
-                    ：點擊「儲存草稿」按鈕，會存到瀏覽器中（不會遺失）
+                    3. <strong>{tx.help.basicsStep3}</strong>
+                    {tx.help.basicsStep3Desc}
                   </li>
                   <li>
-                    4. <strong>發布課程</strong>：確認內容後點擊「發布課程」
+                    4. <strong>{tx.help.basicsStep4}</strong>
+                    {tx.help.basicsStep4Desc}
                   </li>
                 </ul>
               </section>
@@ -1201,41 +1252,43 @@ const CourseEditor: React.FC = () => {
               {/* 工具列說明 */}
               <section>
                 <h4 className="text-luxe-gold font-medium mb-2">
-                  🔧 工具列按鈕說明
+                  🔧 {tx.help.toolbarHeading}
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-luxe-surface rounded-lg">
                     <p className="font-medium">B I U</p>
                     <p className="text-gray-400 text-xs">
-                      粗體、斜體、底線 - 選取文字後點擊
+                      {tx.help.toolbarFormatDesc}
                     </p>
                   </div>
                   <div className="p-3 bg-luxe-surface rounded-lg">
                     <p className="font-medium">H1 H2 H3</p>
                     <p className="text-gray-400 text-xs">
-                      標題大小 - H1 最大，H3 最小
+                      {tx.help.toolbarHeadingDesc}
                     </p>
                   </div>
                   <div className="p-3 bg-luxe-surface rounded-lg">
-                    <p className="font-medium">• 列表 / 1. 列表</p>
-                    <p className="text-gray-400 text-xs">項目符號或編號列表</p>
+                    <p className="font-medium">{tx.help.toolbarListName}</p>
+                    <p className="text-gray-400 text-xs">
+                      {tx.help.toolbarListDesc}
+                    </p>
                   </div>
                   <div className="p-3 bg-luxe-surface rounded-lg">
                     <p className="font-medium">⬅ ⬛ ➡</p>
                     <p className="text-gray-400 text-xs">
-                      文字對齊：左、中、右
+                      {tx.help.toolbarAlignDesc}
                     </p>
                   </div>
                   <div className="p-3 bg-luxe-surface rounded-lg">
-                    <p className="font-medium">🖼️ 圖片</p>
+                    <p className="font-medium">{tx.help.toolbarImageName}</p>
                     <p className="text-gray-400 text-xs">
-                      插入網路圖片（貼上圖片網址）
+                      {tx.help.toolbarImageDesc}
                     </p>
                   </div>
                   <div className="p-3 bg-luxe-surface rounded-lg">
-                    <p className="font-medium">🎬 影片</p>
+                    <p className="font-medium">{tx.help.toolbarVideoName}</p>
                     <p className="text-gray-400 text-xs">
-                      插入 YouTube 影片（貼上 YT 網址）
+                      {tx.help.toolbarVideoDesc}
                     </p>
                   </div>
                 </div>
@@ -1244,57 +1297,62 @@ const CourseEditor: React.FC = () => {
               {/* 右側欄位說明 */}
               <section>
                 <h4 className="text-luxe-gold font-medium mb-2">
-                  📋 右側設定說明
+                  📋 {tx.help.fieldsHeading}
                 </h4>
                 <ul className="space-y-2 text-gray-300">
                   <li>
-                    <strong>網址代稱</strong>
-                    ：課程的網址名稱，點「自動產生」會根據標題產生
+                    <strong>{tx.form.slugLabel}</strong>
+                    {tx.help.fieldSlugDesc}
                   </li>
                   <li>
-                    <strong>課程簡介</strong>
-                    ：簡短介紹課程內容，會顯示在課程列表
+                    <strong>{tx.form.descriptionLabel}</strong>
+                    {tx.help.fieldDescriptionDesc}
                   </li>
                   <li>
-                    <strong>分類</strong>
-                    ：選擇課程類型，點「管理分類」可以新增或刪除分類
+                    <strong>{tx.form.categoryLabel}</strong>
+                    {tx.help.fieldCategoryDesc}
                   </li>
                   <li>
-                    <strong>標籤</strong>
-                    ：輸入關鍵字後按 Enter 或點 + 新增
+                    <strong>{tx.form.tagsLabel}</strong>
+                    {tx.help.fieldTagsDesc}
                   </li>
                   <li>
-                    <strong>封面圖片</strong>
-                    ：貼上圖片網址，建議使用 Cloudinary
+                    <strong>{tx.help.fieldCover}</strong>
+                    {tx.help.fieldCoverDesc}
                   </li>
                   <li>
-                    <strong>價格</strong>
-                    ：填入課程價格（新台幣）
+                    <strong>{tx.help.fieldPrice}</strong>
+                    {tx.help.fieldPriceDesc}
                   </li>
                   <li>
-                    <strong>課程時長</strong>
-                    ：例如「60 分鐘」或「8 週課程」
+                    <strong>{tx.form.durationLabel}</strong>
+                    {tx.help.fieldDurationDesc}
                   </li>
                   <li>
-                    <strong>難度等級</strong>
-                    ：選擇適合的學員程度
+                    <strong>{tx.form.levelLabel}</strong>
+                    {tx.help.fieldLevelDesc}
                   </li>
                 </ul>
               </section>
 
               {/* 小技巧 */}
               <section>
-                <h4 className="text-luxe-gold font-medium mb-2">💡 小技巧</h4>
+                <h4 className="text-luxe-gold font-medium mb-2">
+                  💡 {tx.help.tipsHeading}
+                </h4>
                 <ul className="space-y-2 text-gray-300">
                   <li>
-                    • 草稿會<strong>每 30 秒自動儲存</strong>
-                    ，不用擔心意外關閉
+                    • {tx.help.tipAutosaveLead}
+                    <strong>{tx.help.tipAutosaveStrong}</strong>
+                    {tx.help.tipAutosaveTail}
                   </li>
                   <li>
-                    • 滑鼠<strong>停在按鈕上</strong>會顯示說明文字
+                    • {tx.help.tipHoverLead}
+                    <strong>{tx.help.tipHoverStrong}</strong>
+                    {tx.help.tipHoverTail}
                   </li>
                   <li>
-                    • 想插入圖片？建議先上傳到{" "}
+                    • {tx.help.tipImageLead}{" "}
                     <a
                       href="https://cloudinary.com"
                       target="_blank"
@@ -1303,10 +1361,12 @@ const CourseEditor: React.FC = () => {
                     >
                       Cloudinary
                     </a>{" "}
-                    再貼上網址
+                    {tx.help.tipImageTail}
                   </li>
                   <li>
-                    • 可以嵌入<strong>訓練影片</strong>讓學員更好理解動作
+                    • {tx.help.tipVideoLead}
+                    <strong>{tx.help.tipVideoStrong}</strong>
+                    {tx.help.tipVideoTail}
                   </li>
                 </ul>
               </section>
@@ -1317,7 +1377,7 @@ const CourseEditor: React.FC = () => {
               onClick={() => setShowHelpModal(false)}
               className="mt-6 w-full py-3 bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90 font-medium"
             >
-              我知道了！
+              {tx.help.gotIt}
             </button>
           </div>
         </div>
@@ -1331,7 +1391,7 @@ const CourseEditor: React.FC = () => {
         entity="course"
         entityKey={uploadEntityKey}
         kind="content"
-        title="插入圖片"
+        title={tx.insert.imageTitle}
       />
 
       {/* 右下角「?」新手導覽（本頁不在 AdminLayout 之下，需自行掛載） */}

@@ -5,6 +5,7 @@
 
 import React, { useRef, useState } from "react";
 import { PillButton } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface MessageInputProps {
   onSend: (data: { content: string; image: File | null }) => Promise<void>;
@@ -15,6 +16,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
+  const { t } = useLanguage();
   const [content, setContent] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -30,11 +32,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
       return;
     }
     if (!ALLOWED_MIMES.includes(file.type)) {
-      setError("僅支援 jpg/png/webp/gif");
+      setError(t.chatUi.imageTypeError);
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("圖片不可超過 5 MB");
+      setError(t.chatUi.imageTooLarge);
       return;
     }
     setImage(file);
@@ -67,7 +69,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
         setImage(sentImage);
         setPreview(sentPreview);
       }
-      setError(err instanceof Error ? err.message : "送出失敗，已還原內容");
+      setError(
+        err instanceof Error ? err.message : t.chatUi.sendFailedRestored,
+      );
     } finally {
       setSending(false);
     }
@@ -92,13 +96,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
         <div className="relative inline-block mb-2">
           <img
             src={preview}
-            alt="預覽"
+            alt={t.chatUi.previewAlt}
             className="max-h-32 rounded-lg border border-gold/20"
           />
           <button
             onClick={() => pickImage(null)}
             className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-black/70 text-white text-xs flex items-center justify-center hover:bg-black"
-            aria-label="移除圖片"
+            aria-label={t.chatUi.removeImage}
           >
             ✕
           </button>
@@ -109,7 +113,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
           onClick={() => fileRef.current?.click()}
           disabled={disabled || sending}
           className="p-2 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors shrink-0 disabled:opacity-50"
-          title="附加圖片"
+          title={t.chatUi.attachImage}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -126,7 +130,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="輸入訊息... (Enter 送出 / Shift+Enter 換行)"
+          placeholder={t.chatUi.inputPlaceholder}
           rows={1}
           disabled={disabled || sending}
           className="studio-input flex-1 px-3 py-2 rounded-lg resize-none max-h-32 text-sm"
@@ -137,7 +141,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) => {
           onClick={handleSend}
           disabled={disabled || sending || (!content.trim() && !image)}
         >
-          {sending ? "..." : "送出"}
+          {sending ? "..." : t.common.submit}
         </PillButton>
       </div>
     </div>

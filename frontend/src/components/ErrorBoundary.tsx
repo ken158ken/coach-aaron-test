@@ -5,6 +5,27 @@
 
 import React from "react";
 
+/**
+ * ErrorBoundary 掛在 LanguageProvider 之外（entry-client 最外層），
+ * 沒有 context 可用，語言直接讀 localStorage（key 與 LanguageContext 一致）。
+ * 讀取失敗（隱私模式等）就退回中文。
+ */
+function errBoundaryText(): { title: string; unknown: string; reload: string } {
+  let en = false;
+  try {
+    en = localStorage.getItem("app_language") === "en";
+  } catch {
+    /* localStorage 不可用時維持中文 */
+  }
+  return en
+    ? {
+        title: "Something went wrong loading this page",
+        unknown: "Unknown error",
+        reload: "Reload",
+      }
+    : { title: "頁面載入發生錯誤", unknown: "未知錯誤", reload: "重新載入" };
+}
+
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
@@ -48,10 +69,10 @@ class ErrorBoundary extends React.Component<
         >
           <div style={{ textAlign: "center", maxWidth: "500px" }}>
             <h1 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
-              頁面載入發生錯誤
+              {errBoundaryText().title}
             </h1>
             <p style={{ color: "#999", marginBottom: "1.5rem" }}>
-              {this.state.error?.message || "未知錯誤"}
+              {this.state.error?.message || errBoundaryText().unknown}
             </p>
             <button
               onClick={() => window.location.reload()}
@@ -66,7 +87,7 @@ class ErrorBoundary extends React.Component<
                 letterSpacing: "0.1em",
               }}
             >
-              重新載入
+              {errBoundaryText().reload}
             </button>
           </div>
         </div>

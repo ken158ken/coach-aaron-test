@@ -14,13 +14,17 @@ import React, {
   useContext,
 } from "react";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useOverlayEscape } from "@/hooks/useOverlayEscape";
+import { useLanguage } from "@/context/LanguageContext";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ============ 共用樣式 ============
 
+/* 捲動由這層遮罩負責（內容層刻意不夾 overflow，見下方 contentClasses）。
+ * modal-scroll 切斷捲動鏈，捲到底不會再帶動底下的頁面／主內容容器。 */
 const overlayClasses =
-  "fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm";
+  "fixed inset-0 modal-layer modal-scroll flex items-start justify-center overflow-y-auto py-6 sm:py-10 bg-black/70 backdrop-blur-sm";
 /** 用 surface-2（modal/popover 層）讓 modal 跟頁面 bg-surface 在淺色與深色都有對比 */
 const modalClasses =
   "bg-surface-2 border border-gold/30 rounded-xl shadow-2xl w-full mx-3 sm:mx-4 overflow-visible my-auto text-inherit relative";
@@ -70,20 +74,11 @@ export const Modal: React.FC<ModalProps> = ({
 
   useScrollLock(isOpen);
 
-  // ESC 關閉
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen && typeof window !== "undefined") {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-    return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("keydown", handleKeyDown);
-      }
-    };
-  }, [isOpen, onClose]);
+  /*
+   * ESC 關閉 —— 走共用堆疊，疊層時只關最上面那一層。
+   * （以前每層各自監聽 window，按一次 Escape 會把好幾層一起收掉。）
+   */
+  useOverlayEscape(isOpen, onClose);
 
   // 點擊背景關閉
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -177,17 +172,21 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
   message,
   placeholder = "",
   defaultValue = "",
-  confirmText = "確定",
-  cancelText = "取消",
+  confirmText,
+  cancelText,
   type = "text",
   validateUrl,
-  validationError = "請輸入有效的網址",
+  validationError,
   validation,
   // showPreview 為舊版相容保留，現在 renderPreview 總是會顯示
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   showPreview: _showPreview = false,
   renderPreview,
 }) => {
+  const { t } = useLanguage();
+  const resolvedConfirmText = confirmText ?? t.common.confirm;
+  const resolvedCancelText = cancelText ?? t.common.cancel;
+  const resolvedValidationError = validationError ?? t.uiCommon.invalidUrl;
   const [value, setValue] = useState(defaultValue);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -208,16 +207,16 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
         return validation(val);
       }
       if (validateUrl && !validateUrl(val)) {
-        return validationError;
+        return resolvedValidationError;
       }
       return null;
     },
-    [validation, validateUrl, validationError],
+    [validation, validateUrl, resolvedValidationError],
   );
 
   const handleConfirm = () => {
     if (!value.trim()) {
-      setError("請輸入內容");
+      setError(t.uiCommon.inputRequired);
       return;
     }
     const validationErr = getValidationError(value);
@@ -249,7 +248,7 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-sm text-muted hover:text-inherit transition-colors"
           >
-            {cancelText}
+            {resolvedCancelText}
           </button>
           <button
             type="button"
@@ -257,7 +256,7 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
             disabled={!value.trim() || !isValid}
             className="px-4 py-2 text-sm bg-gold text-black rounded-lg hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {confirmText}
+            {resolvedConfirmText}
           </button>
         </>
       }
@@ -320,11 +319,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = "確定",
-  cancelText = "取消",
+  confirmText,
+  cancelText,
   variant,
   danger,
 }) => {
+  const { t } = useLanguage();
+  const resolvedConfirmText = confirmText ?? t.common.confirm;
+  const resolvedCancelText = cancelText ?? t.common.cancel;
   // 向後兼容：onCancel 作為 onClose 的別名，danger 作為 variant 的別名
   const handleClose = onClose || onCancel || (() => {});
   const resolvedVariant = variant || (danger ? "danger" : "default");
@@ -346,7 +348,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             onClick={handleClose}
             className="px-4 py-2 text-sm text-muted hover:text-inherit transition-colors"
           >
-            {cancelText}
+            {resolvedCancelText}
           </button>
           <button
             type="button"
@@ -357,7 +359,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 : "bg-gold hover:bg-gold/90 text-black"
             }`}
           >
-            {confirmText}
+            {resolvedConfirmText}
           </button>
         </>
       }

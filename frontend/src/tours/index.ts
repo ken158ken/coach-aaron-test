@@ -24,4 +24,5 @@ export type {
   TourModalGroup,
   TourSide,
   TourAlign,
+  TourUiText,
 } from "./types";

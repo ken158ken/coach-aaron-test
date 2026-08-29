@@ -10,10 +10,14 @@
  *     SSR 完全碰不到 `window`。
  *  3. RWD：用 matchMedia 判斷桌機／手機，交給引擎挑對應的步驟與選擇器。
  *  4. 換頁或元件卸載時強制收掉還開著的導覽，避免遮罩留在畫面上。
+ *  5. i18n：引擎是純模組（拿不到 context），所以語言與外框按鈕文字
+ *     都在這裡從 `useLanguage()` 讀好再傳進去。步驟文案本身是就地雙語
+ *     （`TourStep.titleEn` / `descEn`），引擎只負責挑一份。
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { findTour } from "./registry";
+import { useLanguage } from "@/context/LanguageContext";
 import type { TourHandle } from "./engine/tourEngine";
 
 /** 與 AdminLayout 的 MOBILE_BREAKPOINT 對齊，兩邊對「手機版」的認知才一致 */
@@ -36,6 +40,7 @@ export interface UseTourResult {
  */
 export function useTour(pathname: string): UseTourResult {
   const entry = findTour(pathname);
+  const { language, t } = useLanguage();
   const [running, setRunning] = useState(false);
   const handleRef = useRef<TourHandle | null>(null);
   /** 避免 async 載入完成後元件已卸載還去 setState */
@@ -89,6 +94,13 @@ export function useTour(pathname: string): UseTourResult {
         // runTour 會先等「資料還在載入」的錨點出現，所以是 async
         const handle = await runTour(mod.default, {
           isMobile,
+          isEn: language === "en",
+          ui: {
+            next: t.tourUi.next,
+            prev: t.tourUi.prev,
+            done: t.tourUi.done,
+            closeAria: t.tourUi.closeAria,
+          },
           onFinish: () => {
             handleRef.current = null;
             if (aliveRef.current) setRunning(false);
@@ -112,7 +124,7 @@ export function useTour(pathname: string): UseTourResult {
         if (aliveRef.current) setRunning(false);
       }
     })();
-  }, [entry]);
+  }, [entry, language, t]);
 
   return {
     available: Boolean(entry),

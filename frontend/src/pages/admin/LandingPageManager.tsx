@@ -15,10 +15,8 @@ import React, {
 } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { PillButton, Input, useDialog } from "@/components/ui";
-import {
-  landingService,
-  STATUS_LABELS,
-} from "@/services/site/landing.service";
+import { useLanguage } from "@/context/LanguageContext";
+import { landingService } from "@/services/site/landing.service";
 import type {
   LpProject,
   ProjectStatus,
@@ -27,6 +25,9 @@ import type {
 // ─────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────
+
+/** 狀態顯示順序（文案改由 `adminLandingPagesPage.status` 查表） */
+const STATUS_ORDER: ProjectStatus[] = ["draft", "review", "published", "archived"];
 
 const STATUS_BADGE: Record<ProjectStatus, { bg: string; text: string }> = {
   draft:     { bg: "bg-yellow-500/20", text: "text-yellow-400" },
@@ -53,10 +54,11 @@ const SELECT_BG = {
 // ─────────────────────────────────────────────────────────
 
 const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
+  const { t } = useLanguage();
   const s = STATUS_BADGE[status] ?? STATUS_BADGE.draft;
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${s.bg} ${s.text}`}>
-      {STATUS_LABELS[status] ?? status}
+      {t.adminLandingPagesPage.status[status] ?? status}
     </span>
   );
 };
@@ -68,6 +70,8 @@ const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
 const LandingPageManager: React.FC = () => {
   const navigate = useNavigate();
   const dialog = useDialog();
+  const { t, isZhTW } = useLanguage();
+  const lp = t.adminLandingPagesPage;
 
   const [projects, setProjects] = useState<LpProject[]>([]);
   const [total, setTotal] = useState(0);
@@ -89,11 +93,11 @@ const LandingPageManager: React.FC = () => {
       setProjects(res.data);
       setTotal(res.total);
     } catch {
-      setError("無法載入專案列表");
+      setError(t.adminLandingPagesPage.loadFailed);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, t]);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
@@ -125,21 +129,24 @@ const LandingPageManager: React.FC = () => {
           ),
         );
       } catch {
-        dialog.alert({ title: "操作失敗", message: "狀態更新失敗" });
+        dialog.alert({
+          title: lp.statusUpdateFailedTitle,
+          message: lp.statusUpdateFailedMessage,
+        });
       }
     },
-    [dialog],
+    [dialog, lp],
   );
 
   // ── Delete project ──
   const handleDelete = useCallback(
     async (project: LpProject) => {
       const confirmed = await dialog.confirm({
-        title: "刪除確認",
-        message: `確定要刪除「${project.project_name}」嗎？此操作不可復原。`,
+        title: lp.deleteConfirmTitle,
+        message: lp.deleteConfirmMessage.replace("{name}", project.project_name),
         variant: "danger",
-        confirmText: "刪除",
-        cancelText: "取消",
+        confirmText: t.common.delete,
+        cancelText: t.common.cancel,
       });
       if (!confirmed) return;
       try {
@@ -147,10 +154,13 @@ const LandingPageManager: React.FC = () => {
         setProjects((prev) => prev.filter((p) => p.id !== project.id));
         setTotal((t) => t - 1);
       } catch {
-        dialog.alert({ title: "刪除失敗", message: "無法刪除此專案" });
+        dialog.alert({
+          title: lp.deleteFailedTitle,
+          message: lp.deleteFailedMessage,
+        });
       }
     },
-    [dialog],
+    [dialog, lp, t],
   );
 
   // ─────────────────────────────────────────────────────────
@@ -163,9 +173,11 @@ const LandingPageManager: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div data-tour="lp-header">
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
-            Landing Page 管理
+            {lp.pageTitle}
           </h1>
-          <p className="text-sm text-luxe-muted">共 {total} 個專案</p>
+          <p className="text-sm text-luxe-muted">
+            {lp.projectCount.replace("{n}", String(total))}
+          </p>
         </div>
         <PillButton
           theme="luxe"
@@ -173,14 +185,14 @@ const LandingPageManager: React.FC = () => {
           data-tour="lp-add"
           onClick={() => navigate("/admin/landing-pages/new")}
         >
-          ＋ 新增 Landing Page
+          {lp.addBtn}
         </PillButton>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-5">
         <Input
-          placeholder="搜尋專案..."
+          placeholder={lp.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
@@ -200,33 +212,35 @@ const LandingPageManager: React.FC = () => {
           className={SELECT_CLS}
           style={SELECT_BG}
         >
-          <option value="all">全部狀態</option>
-          {(Object.keys(STATUS_LABELS) as ProjectStatus[]).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+          <option value="all">{lp.allStatuses}</option>
+          {STATUS_ORDER.map((s) => (
+            <option key={s} value={s}>{lp.status[s]}</option>
           ))}
         </select>
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="text-center py-16 text-luxe-muted text-sm">載入中...</div>
+        <div className="text-center py-16 text-luxe-muted text-sm">{t.common.loading}</div>
       ) : error ? (
         <div className="text-center py-16">
           <p className="text-red-400 mb-3">{error}</p>
-          <PillButton theme="luxe" variant="outline" onClick={fetchProjects}>重試</PillButton>
+          <PillButton theme="luxe" variant="outline" onClick={fetchProjects}>
+            {t.adminCommon.retry}
+          </PillButton>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-luxe-muted">
           <p className="text-4xl mb-3">📄</p>
           <p className="text-base mb-5">
-            {projects.length === 0 ? "尚無 Landing Page 專案" : "找不到符合條件的專案"}
+            {projects.length === 0 ? lp.emptyState : lp.noResults}
           </p>
           <PillButton
             theme="luxe"
             variant="outline"
             onClick={() => navigate("/admin/landing-pages/new")}
           >
-            立即建立
+            {lp.createFirstBtn}
           </PillButton>
         </div>
       ) : (
@@ -275,7 +289,12 @@ const LandingPageManager: React.FC = () => {
                     {project.custom_slug ? `/${project.custom_slug}` : project.project_code}
                   </p>
                   <p className="text-[10px] text-luxe-muted/60 mb-2">
-                    更新 {new Date(project.updated_at).toLocaleDateString("zh-TW")}
+                    {lp.updatedAt.replace(
+                      "{date}",
+                      new Date(project.updated_at).toLocaleDateString(
+                        isZhTW ? "zh-TW" : "en-US",
+                      ),
+                    )}
                   </p>
 
                   {/* Actions */}
@@ -287,7 +306,7 @@ const LandingPageManager: React.FC = () => {
                       onClick={() => navigate(`/admin/landing-pages/${project.id}/edit`)}
                       className="text-luxe-gold hover:underline text-xs flex-1"
                     >
-                      編輯
+                      {t.common.edit}
                     </button>
                     {project.status === "published" && project.custom_slug && (
                       <Link
@@ -296,20 +315,20 @@ const LandingPageManager: React.FC = () => {
                         rel="noopener noreferrer"
                         className="text-blue-400 hover:underline text-xs"
                       >
-                        預覽
+                        {t.adminCommon.preview}
                       </Link>
                     )}
                     <button
                       onClick={() => handleToggleStatus(project)}
                       className="text-emerald-400 hover:underline text-xs"
                     >
-                      {project.status === "published" ? "下架" : "發布"}
+                      {project.status === "published" ? lp.unpublishBtn : t.admin.publish}
                     </button>
                     <button
                       onClick={() => handleDelete(project)}
                       className="text-red-400 hover:underline text-xs"
                     >
-                      刪除
+                      {t.common.delete}
                     </button>
                   </div>
                 </div>

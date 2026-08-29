@@ -14,11 +14,14 @@ import { useChatNotificationContext } from "@/context/ChatNotificationContext";
 import ConversationList from "@/components/chat/ConversationList";
 import MessageThread from "@/components/chat/MessageThread";
 import NewChatModal from "@/components/chat/NewChatModal";
+import { useLanguage } from "@/context/LanguageContext";
 
 const ChatPage: React.FC = () => {
   const { conversationId } = useParams();
+  const { t } = useLanguage();
   const navigate = useNavigate();
-  const { conversations, refreshConversations } = useChatNotificationContext();
+  const { conversations, conversationsLoaded, refreshConversations } =
+    useChatNotificationContext();
   const [activeConv, setActiveConv] = useState<ChatConversation | null>(null);
   const [activeLoading, setActiveLoading] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
@@ -61,7 +64,7 @@ const ChatPage: React.FC = () => {
       >
         <ConversationList
           conversations={conversations}
-          loading={conversations.length === 0}
+          loading={!conversationsLoaded}
           onNewChat={() => setShowNewChat(true)}
         />
       </div>
@@ -76,18 +79,18 @@ const ChatPage: React.FC = () => {
           <div className="flex-1 flex items-center justify-center text-muted text-sm">
             <div className="text-center">
               <div className="text-5xl mb-3">💬</div>
-              <p>選擇左側對話開始聊天</p>
+              <p>{t.chatUi.pickConversation}</p>
               <button
                 onClick={() => setShowNewChat(true)}
                 className="mt-3 text-gold hover:underline"
               >
-                或開啟新對話
+                {t.chatUi.orStartNew}
               </button>
             </div>
           </div>
         ) : activeLoading ? (
           <div className="flex-1 flex items-center justify-center text-muted text-sm">
-            載入中...
+            {t.common.loading}
           </div>
         ) : activeConv ? (
           <MessageThread
@@ -101,7 +104,7 @@ const ChatPage: React.FC = () => {
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted text-sm">
-            對話不存在或已被移除
+            {t.chatUi.conversationMissing}
           </div>
         )}
       </div>

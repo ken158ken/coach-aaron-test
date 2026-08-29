@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** 排序方向 */
 type SortDirection = "asc" | "desc" | null;
@@ -53,11 +54,12 @@ function DataTable<T>({
   keyExtractor,
   onRowClick,
   loading = false,
-  emptyMessage = "沒有資料",
+  emptyMessage,
   className = "",
   sortable = false,
   "data-tour": dataTour,
 }: DataTableProps<T>) {
+  const { t } = useLanguage();
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
 
@@ -167,7 +169,7 @@ function DataTable<T>({
         className={`rounded-lg border border-white/10 overflow-hidden ${className}`}
       >
         <div className={`px-4 py-12 text-center text-white/80`}>
-          {emptyMessage}
+          {emptyMessage ?? t.common.noData}
         </div>
       </div>
     );
@@ -252,7 +254,7 @@ function DataTable<T>({
         {/* 手機版排序選擇器 */}
         {sortable && (
           <div className="flex items-center gap-2 px-1">
-            <span className={`text-xs text-[#888]`}>排序：</span>
+            <span className={`text-xs text-[#888]`}>{t.dataTable.sortLabel}</span>
             <select
               value={sortKey ? `${sortKey}:${sortDir}` : ""}
               onChange={(e) => {
@@ -267,7 +269,7 @@ function DataTable<T>({
               }}
               className={`text-xs rounded border px-2 py-1.5 bg-transparent text-[#888] border-[#c5a059]/20 focus:outline-none focus:border-[#c5a059]/50`}
             >
-              <option value="">預設</option>
+              <option value="">{t.dataTable.sortDefault}</option>
               {columns
                 .filter(
                   (c) => String(c.key) !== "actions" && c.sortable !== false,

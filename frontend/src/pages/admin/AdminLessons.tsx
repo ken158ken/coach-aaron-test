@@ -14,10 +14,12 @@
 import React, { useEffect, useState } from "react";
 import { PillButton, Modal, useDialog, ImageInput } from "@/components/ui";
 import { lessonService } from "@/services/content/lesson.service";
+import { useLanguage } from "@/context/LanguageContext";
 import type { Lesson, LessonInput } from "@/types";
 
 const AdminLessons: React.FC = () => {
   const dialog = useDialog();
+  const { t } = useLanguage();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,7 +34,7 @@ const AdminLessons: React.FC = () => {
       setLessons(data || []);
     } catch (err) {
       console.error("Failed to fetch admin lessons:", err);
-      setError("載入失敗");
+      setError(t.adminCommon.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -54,10 +56,13 @@ const AdminLessons: React.FC = () => {
 
   const onDelete = async (lesson: Lesson) => {
     const ok = await dialog.confirm({
-      title: "刪除教學影片",
-      message: `確定要刪除「${lesson.title}」？這是軟刪除，不會真的從 DB 消失。`,
-      confirmText: "刪除",
-      cancelText: "取消",
+      title: t.adminLessonsPage.confirm.deleteTitle,
+      message: t.adminLessonsPage.confirm.deleteMessage.replace(
+        "{title}",
+        lesson.title,
+      ),
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
       danger: true,
     });
     if (!ok) return;
@@ -66,7 +71,10 @@ const AdminLessons: React.FC = () => {
       void fetchLessons();
     } catch (err) {
       console.error(err);
-      void dialog.alert({ title: "刪除失敗", message: String(err) });
+      void dialog.alert({
+        title: t.adminCommon.deleteFailed,
+        message: String(err),
+      });
     }
   };
 
@@ -78,7 +86,10 @@ const AdminLessons: React.FC = () => {
       void fetchLessons();
     } catch (err) {
       console.error(err);
-      void dialog.alert({ title: "切換失敗", message: String(err) });
+      void dialog.alert({
+        title: t.adminLessonsPage.error.toggleFailedTitle,
+        message: String(err),
+      });
     }
   };
 
@@ -92,9 +103,11 @@ const AdminLessons: React.FC = () => {
     <div className="p-6 sm:p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-light tracking-wider">教學影片管理</h1>
+          <h1 className="text-2xl font-light tracking-wider">
+            {t.adminLessonsPage.pageTitle}
+          </h1>
           <p className="text-sm text-muted mt-1">
-            目前只支援 Loom；新增時貼 Loom 分享連結即可
+            {t.adminLessonsPage.pageSubtitle}
           </p>
         </div>
         <PillButton
@@ -103,7 +116,7 @@ const AdminLessons: React.FC = () => {
           data-tour="lessons-add"
           onClick={onCreate}
         >
-          ＋ 新增
+          ＋ {t.adminLessonsPage.addLesson}
         </PillButton>
       </div>
 
@@ -114,10 +127,10 @@ const AdminLessons: React.FC = () => {
       )}
 
       {loading ? (
-        <p className="text-muted">載入中...</p>
+        <p className="text-muted">{t.common.loading}</p>
       ) : lessons.length === 0 ? (
         <p className="text-muted py-12 text-center">
-          目前沒有任何教學影片。點上面的「＋ 新增」開始建立。
+          {t.adminLessonsPage.empty}
         </p>
       ) : (
         <div className="space-y-3" data-tour="lessons-list">
@@ -147,7 +160,9 @@ const AdminLessons: React.FC = () => {
                         : "bg-gray-500/15 text-gray-400 border border-gray-500/30"
                     }`}
                   >
-                    {l.is_published ? "已發佈" : "草稿"}
+                    {l.is_published
+                      ? t.adminLessonsPage.statusPublished
+                      : t.common.draft}
                   </span>
                 </div>
                 {l.category && (
@@ -163,7 +178,13 @@ const AdminLessons: React.FC = () => {
                 <div className="mt-2 flex items-center gap-3 text-xs text-muted">
                   <span>👁 {l.view_count}</span>
                   {l.transcript && Array.isArray(l.transcript) && (
-                    <span>📝 {l.transcript.length} 句逐字稿</span>
+                    <span>
+                      📝{" "}
+                      {t.adminLessonsPage.transcriptLines.replace(
+                        "{n}",
+                        String(l.transcript.length),
+                      )}
+                    </span>
                   )}
                   <span className="font-mono text-[10px] opacity-60">
                     {l.loom_id.slice(0, 12)}…
@@ -180,7 +201,7 @@ const AdminLessons: React.FC = () => {
                     size="sm"
                     onClick={() => onEdit(l)}
                   >
-                    編輯
+                    {t.common.edit}
                   </PillButton>
                   <PillButton
                     theme="luxe"
@@ -188,7 +209,9 @@ const AdminLessons: React.FC = () => {
                     size="sm"
                     onClick={() => onTogglePublish(l)}
                   >
-                    {l.is_published ? "下架" : "發佈"}
+                    {l.is_published
+                      ? t.adminLessonsPage.unpublish
+                      : t.adminLessonsPage.publish}
                   </PillButton>
                   <PillButton
                     theme="luxe"
@@ -196,7 +219,7 @@ const AdminLessons: React.FC = () => {
                     size="sm"
                     onClick={() => onDelete(l)}
                   >
-                    刪除
+                    {t.common.delete}
                   </PillButton>
                 </div>
               </div>
@@ -234,6 +257,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
   onSaved,
 }) => {
   const dialog = useDialog();
+  const { t } = useLanguage();
   const [title, setTitle] = useState(lesson?.title || "");
   const [titleEn, setTitleEn] = useState(lesson?.title_en || "");
   const [description, setDescription] = useState(lesson?.description || "");
@@ -259,8 +283,8 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
   const handleSubmit = async () => {
     if (!title.trim() || !loomUrl.trim()) {
       void dialog.alert({
-        title: "缺欄位",
-        message: "標題與 Loom 連結為必填",
+        title: t.adminLessonsPage.error.missingFieldsTitle,
+        message: t.adminLessonsPage.error.missingFieldsMessage,
       });
       return;
     }
@@ -294,7 +318,10 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
       onSaved();
     } catch (err) {
       console.error(err);
-      void dialog.alert({ title: "儲存失敗", message: String(err) });
+      void dialog.alert({
+        title: t.adminCommon.saveFailed,
+        message: String(err),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -304,12 +331,19 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
     <Modal
       isOpen
       onClose={onClose}
-      title={isEdit ? "編輯教學影片" : "新增教學影片"}
+      title={
+        isEdit
+          ? t.adminLessonsPage.form.editTitle
+          : t.adminLessonsPage.form.createTitle
+      }
       size="lg"
       tourId="lesson-form"
     >
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
-        <Field label="Loom 分享連結 *" hint="例：https://www.loom.com/share/d3479f55…">
+        <Field
+          label={t.adminLessonsPage.form.loomUrl}
+          hint={t.adminLessonsPage.form.loomUrlHint}
+        >
           <input
             type="url"
             data-tour="lesson-form-loom-url"
@@ -321,8 +355,8 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
         </Field>
 
         <ImageInput
-          label="封面截圖"
-          hint="不填則自動抓 Loom 縮圖"
+          label={t.adminLessonsPage.form.thumbnail}
+          hint={t.adminLessonsPage.form.thumbnailHint}
           value={thumbnailUrl}
           onChange={setThumbnailUrl}
           entity="lesson"
@@ -331,12 +365,12 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           aspectHint="16 / 9"
           allowUrl={{
             test: (url) => url.startsWith("https://cdn.loom.com/"),
-            hint: "或 https://cdn.loom.com/ 的 Loom 縮圖網址",
+            hint: t.adminLessonsPage.form.thumbnailUrlHint,
           }}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="標題 *">
+          <Field label={t.adminLessonsPage.form.title}>
             <input
               type="text"
               data-tour="lesson-form-title"
@@ -345,7 +379,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
               onChange={(e) => setTitle(e.target.value)}
             />
           </Field>
-          <Field label="標題（英）">
+          <Field label={t.adminLessonsPage.form.titleEn}>
             <input
               type="text"
               className="studio-input w-full"
@@ -356,7 +390,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="描述">
+          <Field label={t.adminLessonsPage.form.description}>
             <textarea
               className="studio-input w-full resize-none"
               rows={3}
@@ -364,7 +398,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
-          <Field label="描述（英）">
+          <Field label={t.adminLessonsPage.form.descriptionEn}>
             <textarea
               className="studio-input w-full resize-none"
               rows={3}
@@ -378,28 +412,28 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           className="grid grid-cols-1 md:grid-cols-3 gap-4"
           data-tour="lesson-form-meta"
         >
-          <Field label="分類">
+          <Field label={t.adminCommon.colCategory}>
             <input
               type="text"
               className="studio-input w-full"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="例：教練養成"
+              placeholder={t.adminLessonsPage.form.categoryPlaceholder}
             />
           </Field>
           <Field
-            label="標籤"
-            hint="用逗號分隔（前端會自動切 #）"
+            label={t.adminLessonsPage.form.keywords}
+            hint={t.adminLessonsPage.form.keywordsHint}
           >
             <input
               type="text"
               className="studio-input w-full"
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
-              placeholder="心理學,諮詢,體驗課"
+              placeholder={t.adminLessonsPage.form.keywordsPlaceholder}
             />
           </Field>
-          <Field label="排序">
+          <Field label={t.adminCommon.colSortOrder}>
             <input
               type="number"
               className="studio-input w-full"
@@ -409,17 +443,23 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           </Field>
         </div>
 
-        <Field label="逐字稿" hint="貼 Loom 匯出的 VTT / SRT 全文，後端會自動 parse 成可同步的格式">
+        <Field
+          label={t.adminLessonsPage.form.transcript}
+          hint={t.adminLessonsPage.form.transcriptHint}
+        >
           {existingLineCount > 0 && !transcriptRaw && (
             <p className="text-xs text-muted mb-2">
-              目前已有 {existingLineCount} 句逐字稿；要更換才需要重貼，否則留空即可。
+              {t.adminLessonsPage.form.transcriptExisting.replace(
+                "{n}",
+                String(existingLineCount),
+              )}
             </p>
           )}
           <textarea
             data-tour="lesson-form-transcript"
             className="studio-input w-full resize-none font-mono text-xs"
             rows={6}
-            placeholder={`WEBVTT\n\n00:00:00.500 --> 00:00:03.200\n大家好，今天要分享...\n\n00:00:03.200 --> 00:00:05.800\n一套心理學導向的諮詢流程`}
+            placeholder={t.adminLessonsPage.form.transcriptPlaceholder}
             value={transcriptRaw}
             onChange={(e) => setTranscriptRaw(e.target.value)}
           />
@@ -430,19 +470,19 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
               onChange={(e) => setFetchTranscript(e.target.checked)}
               disabled={!!transcriptRaw.trim()}
             />
-            或請後端自動嘗試從 Loom 抓取（best-effort，可能失敗）
+            {t.adminLessonsPage.form.transcriptFetch}
           </label>
           <div className="mt-2 flex items-center gap-2 text-xs text-muted">
-            <span>逐字稿語言：</span>
+            <span>{t.adminLessonsPage.form.transcriptLang}</span>
             <select
               className="studio-input"
               value={transcriptLang}
               onChange={(e) => setTranscriptLang(e.target.value)}
             >
-              <option value="zh-TW">繁體中文</option>
-              <option value="zh-CN">簡體中文</option>
-              <option value="en">English</option>
-              <option value="ja">日本語</option>
+              <option value="zh-TW">{t.adminLessonsPage.lang.zhTW}</option>
+              <option value="zh-CN">{t.adminLessonsPage.lang.zhCN}</option>
+              <option value="en">{t.adminLessonsPage.lang.en}</option>
+              <option value="ja">{t.adminLessonsPage.lang.ja}</option>
             </select>
           </div>
         </Field>
@@ -453,7 +493,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
             checked={isPublished}
             onChange={(e) => setIsPublished(e.target.checked)}
           />
-          <span>立即發佈</span>
+          <span>{t.adminLessonsPage.form.publishNow}</span>
         </label>
       </div>
 
@@ -464,7 +504,7 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           onClick={onClose}
           disabled={submitting}
         >
-          取消
+          {t.common.cancel}
         </PillButton>
         <PillButton
           theme="luxe"
@@ -473,7 +513,11 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({
           onClick={handleSubmit}
           disabled={submitting}
         >
-          {submitting ? "儲存中..." : isEdit ? "儲存變更" : "新增"}
+          {submitting
+            ? t.adminCommon.saving
+            : isEdit
+              ? t.adminLessonsPage.form.saveChanges
+              : t.adminLessonsPage.addLesson}
         </PillButton>
       </div>
     </Modal>

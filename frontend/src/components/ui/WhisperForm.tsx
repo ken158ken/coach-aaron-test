@@ -5,11 +5,13 @@
 
 import React, { useState } from "react";
 import { API_BASE_URL } from "@/constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TW_PHONE_REGEX = /^09\d{8}$/;
 
 const WhisperForm: React.FC = () => {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
   const [message, setMessage] = useState("");
@@ -22,11 +24,11 @@ const WhisperForm: React.FC = () => {
     const c = contact.trim().replace(/\s/g, "");
     const m = message.trim();
 
-    if (n.length < 1 || n.length > 50) return "姓名需在 1–50 字以內";
-    if (!c) return "請填寫聯絡方式";
+    if (n.length < 1 || n.length > 50) return t.whisperForm.nameLength;
+    if (!c) return t.whisperForm.contactRequired;
     if (!EMAIL_REGEX.test(c) && !TW_PHONE_REGEX.test(c))
-      return "聯絡方式需為有效 Email 或台灣手機（09xxxxxxxx）";
-    if (m.length < 1 || m.length > 100) return "悄悄話需在 1–100 字以內";
+      return t.whisperForm.contactInvalid;
+    if (m.length < 1 || m.length > 100) return t.whisperForm.messageLength;
     return null;
   };
 
@@ -50,13 +52,13 @@ const WhisperForm: React.FC = () => {
       });
       const data = await resp.json();
       if (resp.ok && data.ok) {
-        setResult({ ok: true, text: data.message || "悄悄話已送出！" });
+        setResult({ ok: true, text: data.message || t.whisperForm.sent });
         setName(""); setContact(""); setMessage("");
       } else {
-        setResult({ ok: false, text: data.error || "送出失敗，請稍後再試" });
+        setResult({ ok: false, text: data.error || t.whisperForm.sendFailed });
       }
     } catch {
-      setResult({ ok: false, text: "網路錯誤，請稍後再試" });
+      setResult({ ok: false, text: t.whisperForm.networkError });
     } finally {
       setLoading(false);
     }
@@ -64,9 +66,11 @@ const WhisperForm: React.FC = () => {
 
   return (
     <div className="rounded-xl bg-black/60 border border-white/8 p-5 sm:p-6">
-      <h3 className="text-base font-medium text-white/90 mb-1">悄悄話</h3>
+      <h3 className="text-base font-medium text-white/90 mb-1">
+        {t.whisperForm.heading}
+      </h3>
       <p className="text-xs text-white/40 mb-4">
-        不想公開留言？可以在這裡說悄悄話（100字以內），訊息 30 天後自動消失。
+        {t.whisperForm.intro}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -82,13 +86,15 @@ const WhisperForm: React.FC = () => {
         />
 
         <div>
-          <label className="block text-xs text-white/50 mb-1">姓名 *</label>
+          <label className="block text-xs text-white/50 mb-1">
+          {t.whisperForm.nameLabel}
+        </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={50}
-            placeholder="你的名字"
+            placeholder={t.whisperForm.namePlaceholder}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-gold/40"
             required
           />
@@ -96,14 +102,15 @@ const WhisperForm: React.FC = () => {
 
         <div>
           <label className="block text-xs text-white/50 mb-1">
-            聯絡方式 * <span className="text-white/30">（Email 或台灣手機，不對外公開）</span>
+            {t.whisperForm.contactLabel}{" "}
+          <span className="text-white/30">{t.whisperForm.contactNote}</span>
           </label>
           <input
             type="text"
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             maxLength={100}
-            placeholder="email@example.com 或 09xxxxxxxx"
+            placeholder={t.whisperForm.contactPlaceholder}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-gold/40"
             required
           />
@@ -111,7 +118,7 @@ const WhisperForm: React.FC = () => {
 
         <div>
           <label className="block text-xs text-white/50 mb-1">
-            悄悄話 *
+            {t.whisperForm.messageLabel}
             <span className="ml-1 text-white/30">（{message.length}/100）</span>
           </label>
           <textarea
@@ -119,7 +126,7 @@ const WhisperForm: React.FC = () => {
             onChange={(e) => setMessage(e.target.value.slice(0, 100))}
             maxLength={100}
             rows={3}
-            placeholder="想說的話..."
+            placeholder={t.whisperForm.messagePlaceholder}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-gold/40 resize-none"
             required
           />
@@ -136,11 +143,11 @@ const WhisperForm: React.FC = () => {
           disabled={loading}
           className="w-full py-2.5 bg-gold/15 hover:bg-gold/25 border border-gold/30 text-gold text-sm rounded-lg transition-colors disabled:opacity-50"
         >
-          {loading ? "送出中..." : "送出悄悄話"}
+          {loading ? t.bookingPage.submitting : t.whisperForm.submit}
         </button>
 
         <p className="text-[10px] text-white/25 text-center">
-          訊息經過嚴格消毒，30天後自動刪除，不對外公開
+          {t.whisperForm.footer}
         </p>
       </form>
     </div>

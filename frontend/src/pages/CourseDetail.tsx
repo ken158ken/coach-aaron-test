@@ -84,7 +84,7 @@ const CourseDetail: React.FC = () => {
           setReviews([]);
         }
       } else {
-        setError(language === "en" ? "Course not found" : "找不到課程");
+        setError(t.courseDetailExtra.notFound);
       }
     } catch (err) {
       console.error("Failed to fetch course:", err);
@@ -93,7 +93,7 @@ const CourseDetail: React.FC = () => {
       setLoading(false);
       skipFirstLoadingRef.current = false;
     }
-  }, [id, user, language, t]);
+  }, [id, user, t]);
 
   useEffect(() => { fetchCourse(); }, [fetchCourse]);
 
@@ -155,7 +155,7 @@ const CourseDetail: React.FC = () => {
       keywords={
         seoKeywordsRaw
           ? seoKeywordsRaw.split(",").map((k: string) => k.trim())
-          : course?.keywords || (language === "en" ? ["fitness", "courses", "training"] : ["健身", "課程", "訓練"])
+          : course?.keywords || t.courseDetailExtra.fallbackKeywords
       }
       image={course?.course_thumbnail_url || course?.thumbnail}
       url={courseUrl}
@@ -188,7 +188,7 @@ const CourseDetail: React.FC = () => {
         {seoHead}
         <div className="min-h-screen bg-transparent flex items-center justify-center">
           <div className="text-center">
-            <p className="text-white/60 mb-4">{error || (language === "en" ? "Course not found" : "找不到課程")}</p>
+            <p className="text-white/60 mb-4">{error || t.courseDetailExtra.notFound}</p>
             <Link to="/courses" className="text-[#d4d4d4] hover:underline">{t.course.backToList}</Link>
           </div>
         </div>
@@ -368,7 +368,7 @@ const CourseDetail: React.FC = () => {
                         <textarea
                           value={reviewComment}
                           onChange={handleCommentChange}
-                          placeholder={language === "en" ? "Share your thoughts about this course (optional)..." : "分享你對這門課程的看法（可選）..."}
+                          placeholder={t.courseDetailExtra.reviewPlaceholder}
                           className={`w-full bg-transparent border rounded-lg px-4 py-3 text-white/80 text-sm focus:outline-none resize-none transition-colors ${
                             !commentValidation.isValid && reviewComment
                               ? "border-red-500/50 focus:border-red-500"

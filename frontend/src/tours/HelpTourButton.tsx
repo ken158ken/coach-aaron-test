@@ -19,6 +19,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTour } from "./useTour";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface HelpTourButtonProps {
   /** 額外 class（例如個別頁面要微調位置） */
@@ -34,6 +35,7 @@ const RAISED_PREFIXES = ["/chat"];
 const HelpTourButton: React.FC<HelpTourButtonProps> = ({ className = "" }) => {
   const { pathname } = useLocation();
   const { available, running, start } = useTour(pathname);
+  const { t } = useLanguage();
   const [hovered, setHovered] = useState(false);
 
   const raised = RAISED_PREFIXES.some(
@@ -95,7 +97,7 @@ const HelpTourButton: React.FC<HelpTourButtonProps> = ({ className = "" }) => {
                          px-3 py-1.5 text-xs tracking-wide text-luxe-text
                          shadow-lg shadow-black/25"
             >
-              頁面導覽
+              {t.tourUi.tipLabel}
               <span className="ml-2 hidden text-[10px] text-luxe-muted sm:inline">?</span>
             </motion.span>
           )}
@@ -108,8 +110,8 @@ const HelpTourButton: React.FC<HelpTourButtonProps> = ({ className = "" }) => {
           onFocus={() => setHovered(true)}
           onBlur={() => setHovered(false)}
           disabled={running}
-          aria-label="開始頁面導覽"
-          title="頁面導覽"
+          aria-label={t.tourUi.startAria}
+          title={t.tourUi.tipLabel}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}

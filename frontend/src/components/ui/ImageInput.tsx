@@ -18,11 +18,13 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   ACCEPT_ATTR,
+  ACCEPTED_IMAGE_TYPES,
   CLOUDINARY_PREFIX,
+  MAX_IMAGE_BYTES,
   isAllowedImageUrl,
   isCloudinaryUrl,
-  validateImageFile,
 } from "@/lib/imageUrl";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   uploadImage,
   type ImageEntity,
@@ -163,6 +165,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
   onRemove,
   allowUrl,
 }) => {
+  const { t } = useLanguage();
   const fieldId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -190,6 +193,33 @@ const ImageInput: React.FC<ImageInputProps> = ({
   // 卸載時取消進行中的上傳，避免 setState on unmounted
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  /** 檔案格式 / 大小驗證 — lib/imageUrl 的 validateImageFile 只有中文，這裡走翻譯字典 */
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (
+        !ACCEPTED_IMAGE_TYPES.includes(
+          file.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
+        )
+      ) {
+        return t.imageInput.errUnsupportedType;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        const mb = (file.size / 1024 / 1024).toFixed(1);
+        return t.imageInput.errTooLarge.replace("{size}", mb);
+      }
+      return null;
+    },
+    [t],
+  );
+
+  /** 網址不合法時的說明（含呼叫端額外放行來源的提示） */
+  const urlSourceError = useCallback(
+    () =>
+      t.imageInput.errUrlSource.replace("{prefix}", CLOUDINARY_PREFIX) +
+      (allowUrl ? t.imageInput.errUrlSourceExtra.replace("{hint}", allowUrl.hint) : ""),
+    [t, allowUrl],
+  );
+
   const hasValue = Boolean(value && value.trim());
   const valueInvalid =
     hasValue && !isAllowedImageUrl(value) && !allowUrl?.test(value);
@@ -198,7 +228,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
   // ── 上傳 ────────────────────────────────────────────────
   const doUpload = useCallback(
     async (file: File) => {
-      const fileError = validateImageFile(file);
+      const fileError = validateFile(file);
       if (fileError) {
         setUploadError(fileError);
         return;
@@ -230,14 +260,14 @@ const ImageInput: React.FC<ImageInputProps> = ({
         setPreviewFailed(false);
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") return;
-        setUploadError((err as Error)?.message || "上傳失敗，請重試。");
+        setUploadError((err as Error)?.message || t.imageInput.errUploadFailed);
       } finally {
         abortRef.current = null;
         setUploading(false);
         setProgress(0);
       }
     },
-    [entity, entityKey, kind, onChange, uploadFn],
+    [entity, entityKey, kind, onChange, uploadFn, validateFile, t],
   );
 
   const handleDrop = useCallback(
@@ -272,9 +302,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
       // Cloudinary、本站 Storage 網址（可貼別處已上傳的圖重複使用）、
       // 或呼叫端額外放行的來源（例如 Loom CDN）
       if (!isAllowedImageUrl(trimmed) && !allowUrl?.test(trimmed)) {
-        setUrlError(
-          `網址須為 ${CLOUDINARY_PREFIX} 開頭的 Cloudinary 圖片，或本站已上傳圖片的網址${allowUrl ? `（${allowUrl.hint}）` : ""}`,
-        );
+        setUrlError(urlSourceError());
         return;
       }
       setUrlError("");
@@ -285,7 +313,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
       // value-sync effect，草稿要在這裡清掉，避免再按一次 Enter 重複送出
       setUrlDraft("");
     },
-    [hasValue, onChange, allowUrl],
+    [hasValue, onChange, allowUrl, urlSourceError],
   );
 
   const handleRemove = useCallback(() => {
@@ -359,12 +387,12 @@ const ImageInput: React.FC<ImageInputProps> = ({
         )}
         <div
           role="tablist"
-          aria-label="圖片來源"
+          aria-label={t.imageInput.sourceTablist}
           data-tour="image-input-tabs"
           className="flex items-center gap-1 p-0.5 rounded-lg bg-luxe-surface border border-luxe-gold/10 ml-auto"
         >
-          {tabButton("upload", "上傳圖片")}
-          {tabButton("url", "Cloudinary 網址")}
+          {tabButton("upload", t.imageInput.tabUpload)}
+          {tabButton("url", t.imageInput.tabUrl)}
         </div>
       </div>
 
@@ -380,13 +408,17 @@ const ImageInput: React.FC<ImageInputProps> = ({
           >
             {previewFailed ? (
               <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${textSize} text-luxe-muted`}>
-                <span>圖片無法載入</span>
+                <span>{t.imageInput.previewFailed}</span>
                 <span className="text-gray-500 break-all px-3 text-center">{value}</span>
               </div>
             ) : (
               <img
                 src={value}
-                alt={label ? `${label}預覽` : "圖片預覽"}
+                alt={
+                  label
+                    ? t.imageInput.previewAltLabeled.replace("{label}", label)
+                    : t.imageInput.previewAlt
+                }
                 className="w-full h-full object-cover"
                 onError={() => setPreviewFailed(true)}
               />
@@ -398,11 +430,14 @@ const ImageInput: React.FC<ImageInputProps> = ({
                   <>
                     <Spinner />
                     <span className="text-[11px] text-white force-white">
-                      上傳中 {progress > 0 ? `${progress}%` : ""}
+                      {t.imageInput.uploading}{" "}
+                      {progress > 0 ? `${progress}%` : ""}
                     </span>
                   </>
                 ) : (
-                  <span className="text-[11px] text-white force-white">放開以替換圖片</span>
+                  <span className="text-[11px] text-white force-white">
+                    {t.imageInput.dropToReplace}
+                  </span>
                 )}
               </div>
             )}
@@ -415,7 +450,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
               onClick={() => setReplacing((r) => !r)}
               className={`${textSize} px-2.5 py-1 rounded-md border border-luxe-gold/20 text-luxe-muted hover:text-luxe-gold hover:border-luxe-gold/50 transition-colors disabled:opacity-50`}
             >
-              {replacing ? "取消更換" : "更換"}
+              {replacing ? t.imageInput.cancelReplace : t.imageInput.replace}
             </button>
             <button
               type="button"
@@ -423,10 +458,10 @@ const ImageInput: React.FC<ImageInputProps> = ({
               onClick={handleRemove}
               className={`${textSize} px-2.5 py-1 rounded-md border border-luxe-gold/10 text-luxe-muted hover:text-red-400 hover:border-red-500 transition-colors disabled:opacity-50`}
             >
-              移除
+              {t.imageInput.remove}
             </button>
             <span className={`${textSize} text-gray-500 truncate ml-auto max-w-[45%]`} title={value}>
-              {isCloudinaryUrl(value) ? "Cloudinary" : "已上傳"}
+              {isCloudinaryUrl(value) ? "Cloudinary" : t.imageInput.uploaded}
             </span>
           </div>
         </div>
@@ -467,7 +502,8 @@ const ImageInput: React.FC<ImageInputProps> = ({
                   <>
                     <Spinner className={compact ? "w-4 h-4" : "w-5 h-5"} />
                     <span className={`${textSize} text-luxe-gold`}>
-                      上傳中{progress > 0 ? ` ${progress}%` : "…"}
+                      {t.imageInput.uploading}
+                      {progress > 0 ? ` ${progress}%` : "…"}
                     </span>
                     <span
                       className="w-full max-w-45 h-1 rounded-full bg-luxe-gold/10 overflow-hidden"
@@ -486,11 +522,14 @@ const ImageInput: React.FC<ImageInputProps> = ({
                   <>
                     <UploadIcon className={`${compact ? "w-4 h-4" : "w-5 h-5"} text-luxe-gold`} />
                     <span className={`${textSize} text-luxe-muted`}>
-                      拖曳圖片到這裡，或<span className="text-luxe-gold">點擊選擇檔案</span>
+                      {t.imageInput.dropzoneHint}
+                      <span className="text-luxe-gold">
+                        {t.imageInput.dropzoneClick}
+                      </span>
                     </span>
                     {!compact && (
                       <span className="text-[10px] text-gray-500">
-                        JPG / PNG / WebP / GIF / AVIF，最大 5 MB，上傳後自動壓縮
+                        {t.imageInput.dropzoneMeta}
                       </span>
                     )}
                   </>
@@ -514,7 +553,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
                       isAllowedImageUrl(next.trim()) ||
                       allowUrl?.test(next.trim())
                       ? ""
-                      : `網址須為 ${CLOUDINARY_PREFIX} 開頭的 Cloudinary 圖片，或本站已上傳圖片的網址${allowUrl ? `（${allowUrl.hint}）` : ""}`,
+                      : urlSourceError(),
                   );
                 }}
                 onBlur={(e) => commitUrl(e.target.value)}
@@ -536,7 +575,7 @@ const ImageInput: React.FC<ImageInputProps> = ({
                 onClick={() => commitUrl(urlDraft)}
                 className={`${textSize} px-3 py-2 rounded-lg bg-luxe-gold/15 hover:bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30 transition-colors whitespace-nowrap disabled:opacity-40`}
               >
-                套用
+                {t.imageInput.apply}
               </button>
             </div>
           )}
@@ -549,11 +588,16 @@ const ImageInput: React.FC<ImageInputProps> = ({
       )}
       {!visibleError && valueInvalid && (
         <p className={`${textSize} text-red-400 mt-1`}>
-          目前的網址不是允許的來源（可能是舊資料）。請改用上傳，或貼上 {CLOUDINARY_PREFIX} 開頭的網址。
+          {t.imageInput.legacyUrlWarning.replace(
+            "{prefix}",
+            CLOUDINARY_PREFIX,
+          )}
         </p>
       )}
       {!visibleError && !valueInvalid && required && !hasValue && (
-        <p className={`${textSize} text-gray-500 mt-1`}>此欄位為必填</p>
+        <p className={`${textSize} text-gray-500 mt-1`}>
+          {t.imageInput.requiredField}
+        </p>
       )}
     </div>
   );

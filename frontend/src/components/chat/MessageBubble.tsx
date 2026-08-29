@@ -5,11 +5,13 @@
 
 import React from "react";
 import { format, isToday, isYesterday } from "date-fns";
-import { zhTW } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
 import type { ChatMessage, ChatUser } from "@/services/social/chat.service";
 import type { PresenceStatus } from "@/services/social/presence.service";
 import UserAvatar from "./UserAvatar";
 import PresenceDot from "./PresenceDot";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 
 interface MessageBubbleProps {
   msg: ChatMessage;
@@ -23,11 +25,13 @@ interface MessageBubbleProps {
   senderStatus?: PresenceStatus;
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, t: AllTranslations, isZh: boolean): string {
   const d = new Date(iso);
-  if (isToday(d)) return format(d, "HH:mm", { locale: zhTW });
-  if (isYesterday(d)) return "昨天 " + format(d, "HH:mm", { locale: zhTW });
-  return format(d, "MM/dd HH:mm", { locale: zhTW });
+  const dfLocale = isZh ? zhTW : enUS;
+  if (isToday(d)) return format(d, "HH:mm", { locale: dfLocale });
+  if (isYesterday(d))
+    return t.dateTime.yesterday + " " + format(d, "HH:mm", { locale: dfLocale });
+  return format(d, "MM/dd HH:mm", { locale: dfLocale });
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -39,6 +43,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   sender,
   senderStatus,
 }) => {
+  const { t, isZhTW } = useLanguage();
   // 系統訊息（XXX 加入群組 / 被移除 / 離開）— 中央灰字小提示，不分左右
   if (msg.message_type === "system") {
     return (
@@ -94,7 +99,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             >
               <img
                 src={msg.image_url}
-                alt="附圖"
+                alt={t.chatUi.attachedImageAlt}
                 className="rounded-lg max-h-64 max-w-full object-contain"
                 loading="lazy"
               />
@@ -111,7 +116,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
         </div>
         <span className="text-[10px] text-muted px-1">
-          {formatTime(msg.created_at)}
+          {formatTime(msg.created_at, t, isZhTW)}
         </span>
       </div>
     </div>

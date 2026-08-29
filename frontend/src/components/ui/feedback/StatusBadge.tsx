@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export type StatusType =
   | "draft"
@@ -28,14 +29,7 @@ const statusStyles: Record<StatusType, string> = {
   pending: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
-const statusLabels: Record<StatusType, string> = {
-  draft: "草稿",
-  published: "已發布",
-  archived: "已封存",
-  active: "啟用",
-  inactive: "停用",
-  pending: "待審核",
-};
+
 
 /**
  * StatusBadge - 狀態標籤元件
@@ -50,6 +44,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   text,
   className = "",
 }) => {
+  const { t } = useLanguage();
   return (
     <span
       className={`
@@ -59,7 +54,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         ${className}
       `}
     >
-      {text || statusLabels[status] || status}
+      {text || t.statusBadge[status] || status}
     </span>
   );
 };

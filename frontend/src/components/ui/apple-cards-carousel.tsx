@@ -21,6 +21,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from "@/context/LanguageContext";
 
 // ─── 型別 ─────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ interface CardProps {
 }
 
 export const Card: React.FC<CardProps> = ({ card, index, layoutIdPrefix }) => {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const layoutId = layoutIdPrefix ? `${layoutIdPrefix}-${index}` : undefined;
@@ -134,7 +136,7 @@ export const Card: React.FC<CardProps> = ({ card, index, layoutIdPrefix }) => {
         type="button"
         layoutId={layoutId}
         onClick={() => setOpen(true)}
-        aria-label={`展開：${card.title}`}
+        aria-label={t.carouselUi.expand.replace("{title}", card.title)}
         className="group relative z-10 flex h-72 w-56 shrink-0 flex-col justify-end overflow-hidden rounded-3xl border border-white/10 bg-surface text-left transition-colors duration-300 hover:border-gold/30 sm:h-96 sm:w-72"
       >
         <CardImage card={card} index={index} />
@@ -171,7 +173,7 @@ export const Card: React.FC<CardProps> = ({ card, index, layoutIdPrefix }) => {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="關閉"
+                aria-label={t.chatUi.close}
                 className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition-colors hover:border-gold/40 hover:text-gold"
               >
                 <CloseIcon className="h-4 w-4" />
@@ -198,6 +200,7 @@ interface CarouselProps {
 }
 
 export const Carousel: React.FC<CarouselProps> = ({ items }) => {
+  const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -245,7 +248,7 @@ export const Carousel: React.FC<CarouselProps> = ({ items }) => {
           type="button"
           onClick={() => scrollBy(-1)}
           disabled={!canLeft}
-          aria-label="上一批"
+          aria-label={t.carouselUi.prevBatch}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-surface text-white/70 transition-colors enabled:hover:border-gold/40 enabled:hover:text-gold disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -254,7 +257,7 @@ export const Carousel: React.FC<CarouselProps> = ({ items }) => {
           type="button"
           onClick={() => scrollBy(1)}
           disabled={!canRight}
-          aria-label="下一批"
+          aria-label={t.carouselUi.nextBatch}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-surface text-white/70 transition-colors enabled:hover:border-gold/40 enabled:hover:text-gold disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ArrowRight className="h-4 w-4" />

@@ -18,6 +18,7 @@ import React, { useEffect, useState } from "react";
 import Modal from "./overlay/Modal";
 import PillButton from "./buttons/PillButton";
 import ImageInput, { type ImageEntity, type ImageKind } from "./ImageInput";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface ImagePickerModalProps {
   isOpen: boolean;
@@ -40,10 +41,11 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
   entity,
   entityKey = null,
   kind = "content",
-  title = "插入圖片",
+  title,
   aspectHint = "16 / 9",
-  confirmText = "插入",
+  confirmText,
 }) => {
+  const { t } = useLanguage();
   const [url, setUrl] = useState("");
 
   // 每次開啟都從空白開始，避免帶入上一次插入的圖
@@ -61,7 +63,7 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={title}
+      title={title ?? t.uiCommon.insertImage}
       theme="luxe"
       size="lg"
       /* 新手導覽錨點：讓導覽能點開工具列的「插圖」鈕、走進這個彈窗再自動關掉 */
@@ -78,7 +80,7 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
         />
         <div className="flex justify-end gap-3 pt-1">
           <PillButton theme="luxe" variant="outline" onClick={onClose}>
-            取消
+            {t.common.cancel}
           </PillButton>
           <PillButton
             theme="luxe"
@@ -86,7 +88,7 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
             onClick={handleConfirm}
             disabled={!url.trim()}
           >
-            {confirmText}
+            {confirmText ?? t.uiCommon.insert}
           </PillButton>
         </div>
       </div>

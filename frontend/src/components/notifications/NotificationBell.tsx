@@ -9,6 +9,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import { useNotificationContext } from "@/context/NotificationContext";
 import type { Notification } from "@/services/notifications/notification.service";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface NotificationBellProps {
   className?: string;
@@ -36,6 +37,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
   className = "",
   iconClassName = "w-4 h-4",
 }) => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { notifications, unreadCount, markRead, markAllRead } =
     useNotificationContext();
@@ -65,8 +67,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
         onClick={() => setOpen((v) => !v)}
         className="relative flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 transition-all"
         style={{ background: "rgba(255,255,255,0.05)" }}
-        aria-label="通知"
-        title="通知"
+        aria-label={t.uiCommon.notifications}
+        title={t.uiCommon.notifications}
       >
         <svg
           className={iconClassName}
@@ -91,7 +93,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
       {open && (
         <div className="absolute right-0 mt-2 w-80 sm:w-96 max-h-[70vh] flex flex-col rounded-lg border border-gold/20 shadow-2xl bg-surface-2 overflow-hidden z-[60]">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gold/15">
-            <span className="text-sm font-medium">通知</span>
+            <span className="text-sm font-medium">{t.uiCommon.notifications}</span>
             <div className="flex items-center gap-3 text-xs">
               {unreadCount > 0 && (
                 <button

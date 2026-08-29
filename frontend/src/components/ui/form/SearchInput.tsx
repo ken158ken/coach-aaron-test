@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface SearchInputProps {
   value: string;
@@ -24,16 +25,17 @@ interface SearchInputProps {
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
-  placeholder = "搜尋...",
+  placeholder,
   className = "",
 }) => {
+  const { t } = useLanguage();
   return (
     <div className={`relative ${className}`}>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t.formUi.searchPlaceholder}
         className="
           w-full pl-10 pr-4 py-2.5
           bg-luxe-surface border border-luxe-gold/20 rounded-lg

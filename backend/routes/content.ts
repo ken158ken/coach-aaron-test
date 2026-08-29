@@ -26,7 +26,9 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
   try {
     const { data, error } = await supabaseAdmin
       .from("site_content")
-      .select("content_key, content_name, content_value, content_type")
+      .select(
+        "content_key, content_name, content_value, content_value_en, content_type",
+      )
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
 
@@ -57,7 +59,9 @@ router.get(
 
       const { data, error } = await supabaseAdmin
         .from("site_popups")
-        .select("popup_id, popup_title, popup_content, show_once")
+        .select(
+          "popup_id, popup_title, popup_content, popup_title_en, popup_content_en, show_once",
+        )
         .eq("is_active", true)
         .or(`start_date.is.null,start_date.lte.${now}`)
         .or(`end_date.is.null,end_date.gte.${now}`)

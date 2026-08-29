@@ -1005,3 +1005,39 @@
 [class~="hover:text-luxe-gold"]:hover  { color: var(--color-gold); }
 /* admin 專用的 bg-luxe-bg 刻意鎖死為 dark（不跟著淺色切換）— admin 永遠視覺一致 */
 
+
+/* ══════════════════════════════════════════════════════
+   Modal 疊層與捲動行為（共用）
+   ──────────────────────────────────────────────────────
+   站上有兩套 modal 元件（ui/Dialog.tsx、ui/overlay/Modal.tsx）外加不少
+   手寫的 `fixed inset-0` 彈窗，原本 z-index 散落在 z-50 / z-[100] / z-[9999]，
+   而頁面轉場的 .page-blade-container 是 z-index:9990 —— z-50 / z-[100] 的
+   彈窗會被轉場光刃蓋過去。這裡統一成一個層級尺標。
+   ══════════════════════════════════════════════════════ */
+
+:root {
+  /* 一般 modal：要蓋過 page-blade-container(9990) 與 admin 側欄(z-40) */
+  --z-modal: 9999;
+  /* 疊在 modal 之上的第二層（confirm / prompt / 插圖選擇器） */
+  --z-modal-nested: 10000;
+}
+
+/** modal 遮罩層：統一 z-index */
+.modal-layer {
+  z-index: var(--z-modal);
+}
+
+/** 疊在別的 modal 之上時用這層 */
+.modal-layer-nested {
+  z-index: var(--z-modal-nested);
+}
+
+/**
+ * modal 內的可捲動區域。
+ * overscroll-behavior: contain 會切斷「捲動鏈」——
+ * 捲到底之後不會再把外層頁面 / 主內容容器一起帶著滾。
+ */
+.modal-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}

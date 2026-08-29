@@ -23,6 +23,7 @@ import {
   type TestimonialCardLayout,
 } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useLanguage } from '@/context/LanguageContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { getInitialData } from '@/ssr/initialData';
 import { dataKeys } from '@/ssr/routeData';
@@ -148,10 +149,19 @@ function cardStyle(pos: number, layout: keyof typeof LAYOUTS): CSSProperties {
 // ─── Header（從 DB 讀取 tagline/title/subtitle）──────────────
 const TestimonialHeader: React.FC = () => {
   const { get } = useSiteContent();
+  const { t, isZhTW } = useLanguage();
+  const copy = t.testimonials;
+  /**
+   * site_content 只存中文（`GET /api/content` 未回傳 content_value_en）：
+   * 中文模式 DB 值優先，英文模式一律用字典。
+   */
+  const pick = (key: string, dict: string): string =>
+    isZhTW ? get(key, dict) : dict;
+
   return (
     <div className="text-center mb-10 sm:mb-12 px-4" data-aos="fade-up">
       <span className="text-gold text-xs uppercase tracking-widest">
-        {get('testimonial_tagline', 'Student Reviews')}
+        {pick('testimonial_tagline', copy.tagline)}
       </span>
       {/* 標題備選：'教練同業的實戰回饋' ／ '合作教練怎麼說'
           導言備選：'我的學生，都是教練。所以這些回饋談的不是體重掉了幾公斤，
@@ -159,13 +169,10 @@ const TestimonialHeader: React.FC = () => {
                    '來自現役教練同業的真實回饋——關於業績、續約，
                     以及重新相信自己專業值多少錢這件事。' */}
       <h2 className="mt-2 text-2xl sm:text-3xl font-light text-white/90">
-        {get('testimonial_title', '真實學員留言')}
+        {pick('testimonial_title', copy.title)}
       </h2>
       <p className="mt-2 text-sm text-white/40">
-        {get(
-          'testimonial_subtitle',
-          '這裡的每一則留言，都來自現役私人教練'
-        )}
+        {pick('testimonial_subtitle', copy.subtitle)}
       </p>
     </div>
   );
@@ -183,6 +190,8 @@ const QuoteGridView: React.FC<{
   slides: TestimonialSlide[];
   intervalMs: number;
 }> = ({ slides, intervalMs }) => {
+  const { t } = useLanguage();
+  const copy = t.testimonials;
   const [groupIdx, setGroupIdx] = useState(0);
   const [direction, setDirection] = useState(1); // 1=forward, -1=backward
   const [paused, setPaused] = useState(false);
@@ -193,11 +202,11 @@ const QuoteGridView: React.FC<{
   // 自動輪播（整組切換）；只有一組、hover 中或使用者要求減少動態時不啟動
   useEffect(() => {
     if (totalGroups <= 1 || paused || reduceMotion) return;
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       setDirection(1);
       setGroupIdx((i) => (i + 1) % totalGroups);
     }, intervalMs);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [totalGroups, paused, reduceMotion, intervalMs]);
 
   // 資料變少時避免 groupIdx 越界
@@ -266,7 +275,7 @@ const QuoteGridView: React.FC<{
                   {hasAvatar ? (
                     <img
                       src={card.image_url}
-                      alt={card.name || '學員'}
+                      alt={card.name || copy.avatarAlt}
                       loading="lazy"
                       className="w-9 h-9 rounded-full object-cover border border-white/15 shrink-0"
                     />
@@ -303,7 +312,7 @@ const QuoteGridView: React.FC<{
             <button
               key={i}
               onClick={() => goTo(i)}
-              aria-label={`第 ${i + 1} 組`}
+              aria-label={copy.groupLabel.replace('{n}', String(i + 1))}
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 i === groupIdx
                   ? 'w-6 bg-gold'
@@ -382,6 +391,8 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
   const ssrConfig = getInitialData<TestimonialConfig>(
     dataKeys.testimonialsConfig()
   );
+  const { t } = useLanguage();
+  const copy = t.testimonials;
 
   const [slides, setSlides] = useState<TestimonialSlide[]>(seedSlides ?? []);
   const [config, setConfig] = useState<TestimonialConfig>(
@@ -446,14 +457,16 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
 
   useEffect(() => {
     if (slides.length <= 1 || paused) return;
-    const t = setInterval(next, config.interval_ms);
-    return () => clearInterval(t);
+    const timer = setInterval(next, config.interval_ms);
+    return () => clearInterval(timer);
   }, [slides.length, config.interval_ms, paused, next]);
 
   if (!preview && !config.is_published) return null;
   if (loading)
     return (
-      <div className="py-20 text-center text-white/30 text-sm">載入中...</div>
+      <div className="py-20 text-center text-white/30 text-sm">
+        {t.common.loading}
+      </div>
     );
   if (!slides.length) return null;
 
@@ -532,7 +545,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
                     >
                       <img
                         src={slide.image_url}
-                        alt={slide.name || '學員見證'}
+                        alt={slide.name || copy.slideAlt}
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -572,7 +585,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
                     >
                       <img
                         src={slide.image_url}
-                        alt={slide.name || '學員見證'}
+                        alt={slide.name || copy.slideAlt}
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -640,7 +653,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
           <>
             <button
               onClick={prev}
-              aria-label="上一張"
+              aria-label={copy.prev}
               className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/60 border border-gold/25 flex items-center justify-center text-white/60 hover:text-gold hover:border-gold/50 hover:bg-black/80 transition-all duration-200"
             >
               <svg
@@ -659,7 +672,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
             </button>
             <button
               onClick={next}
-              aria-label="下一張"
+              aria-label={copy.next}
               className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/60 border border-gold/25 flex items-center justify-center text-white/60 hover:text-gold hover:border-gold/50 hover:bg-black/80 transition-all duration-200"
             >
               <svg
@@ -687,7 +700,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              aria-label={`第 ${i + 1} 張`}
+              aria-label={copy.slideLabel.replace('{n}', String(i + 1))}
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 i === current
                   ? 'w-6 bg-gold'

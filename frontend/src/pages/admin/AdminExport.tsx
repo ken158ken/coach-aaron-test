@@ -12,42 +12,51 @@ import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getAuthToken } from "@/services/api";
 
-// ===== 格式選項 =====
+/**
+ * 格式選項：`labelKey` 對應核心字典的 `exportFeature.format*`。
+ * 模組層級常數不能碰 `t`，所以只存 key，渲染時再查字典。
+ */
 const FORMAT_OPTIONS = [
-  { value: "xlsx", label: "Excel (.xlsx)" },
-  { value: "docx", label: "Word (.docx)" },
-  { value: "html", label: "網頁 (.html)" },
-  { value: "md",   label: "Markdown (.md)" },
-  { value: "txt",  label: "純文字 (.txt)" },
+  { value: "xlsx", labelKey: "formatXlsx" },
+  { value: "docx", labelKey: "formatDocx" },
+  { value: "html", labelKey: "formatHtml" },
+  { value: "md",   labelKey: "formatMd" },
+  { value: "txt",  labelKey: "formatTxt" },
 ] as const;
 
 type ExportFormat = (typeof FORMAT_OPTIONS)[number]["value"];
 
-// ===== 模組清單 =====
+/** 模組清單：名稱／說明改由 `adminExportPage.moduleNames|moduleDescs` 依 key 查表 */
 const MODULES = [
-  { key: "users",         icon: "👥", name: "使用者名單",    desc: "所有會員資料（不含密碼）" },
-  { key: "courses",       icon: "📚", name: "課程",          desc: "課程名稱、分類、價格、狀態" },
-  { key: "articles",      icon: "📰", name: "文章",          desc: "文章標題、分類、狀態、瀏覽數" },
-  { key: "videos",        icon: "🎬", name: "Reels 影片",    desc: "影片標題、平台、連結" },
-  { key: "lessons",       icon: "🎓", name: "教學影片",      desc: "Loom 教學影片、時長、關鍵字" },
-  { key: "bookings",      icon: "📅", name: "預約記錄",      desc: "預約者、時段、狀態、備註" },
-  { key: "chat_all",      icon: "💬", name: "所有聊天記錄",  desc: "所有對話訊息（最多 5,000 則）" },
-  { key: "marquee",       icon: "📢", name: "跑馬燈",        desc: "認證與成果跑馬燈文字" },
-  { key: "podcast",       icon: "🎙️", name: "Podcast",       desc: "Podcast 集數列表" },
-  { key: "notifications", icon: "🔔", name: "通知記錄",      desc: "系統通知記錄（最多 3,000 筆）" },
-  { key: "site_content",  icon: "📝", name: "站內文案",      desc: "網站各區塊文案鍵值" },
-  { key: "whitelist",     icon: "🛡️", name: "管理員白名單",  desc: "管理員 Email 清單" },
-  { key: "landing_pages", icon: "🏠", name: "Landing Pages", desc: "動態頁面專案列表" },
-];
+  { key: "users",         icon: "👥" },
+  { key: "courses",       icon: "📚" },
+  { key: "articles",      icon: "📰" },
+  { key: "videos",        icon: "🎬" },
+  { key: "lessons",       icon: "🎓" },
+  { key: "bookings",      icon: "📅" },
+  { key: "chat_all",      icon: "💬" },
+  { key: "marquee",       icon: "📢" },
+  { key: "podcast",       icon: "🎙️" },
+  { key: "notifications", icon: "🔔" },
+  { key: "site_content",  icon: "📝" },
+  { key: "whitelist",     icon: "🛡️" },
+  { key: "landing_pages", icon: "🏠" },
+] as const;
+
+type ModuleKey = (typeof MODULES)[number]["key"];
 
 // ===== 下載觸發函式 =====
-async function triggerDownload(url: string, token: string): Promise<void> {
+async function triggerDownload(
+  url: string,
+  token: string,
+  failMsg: string,
+): Promise<void> {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error || "下載失敗");
+    throw new Error((body as { error?: string }).error || failMsg);
   }
   const disposition = res.headers.get("content-disposition") || "";
   let filename = "export";
@@ -82,7 +91,11 @@ const AdminExport: React.FC = () => {
     if (!token) return;
     setLoadingKey(moduleKey);
     try {
-      await triggerDownload(`/api/admin/export/${moduleKey}?format=${format}`, token);
+      await triggerDownload(
+        `/api/admin/export/${moduleKey}?format=${format}`,
+        token,
+        t.adminExportPage.downloadFailed,
+      );
       showToast(t.exportFeature.exportSuccess, true);
     } catch (err) {
       showToast((err as Error).message || t.exportFeature.exportFailed, false);
@@ -96,7 +109,11 @@ const AdminExport: React.FC = () => {
     if (!token) return;
     setLoadingKey("__full__");
     try {
-      await triggerDownload(`/api/admin/export/full?format=${format}`, token);
+      await triggerDownload(
+        `/api/admin/export/full?format=${format}`,
+        token,
+        t.adminExportPage.downloadFailed,
+      );
       showToast(t.exportFeature.exportSuccess, true);
     } catch (err) {
       showToast((err as Error).message || t.exportFeature.exportFailed, false);
@@ -106,8 +123,10 @@ const AdminExport: React.FC = () => {
   };
 
   /** 目前選中格式的顯示文字（給按鈕標籤用） */
-  const formatLabel =
-    FORMAT_OPTIONS.find((o) => o.value === format)?.label ?? format.toUpperCase();
+  const selectedFormat = FORMAT_OPTIONS.find((o) => o.value === format);
+  const formatLabel = selectedFormat
+    ? t.exportFeature[selectedFormat.labelKey]
+    : format.toUpperCase();
 
   return (
     <div className="space-y-8">
@@ -118,7 +137,7 @@ const AdminExport: React.FC = () => {
           {t.exportFeature.exportCenter}
         </h1>
         <p className="text-sm text-luxe-muted mt-1">
-          選擇格式後點擊各模組的匯出按鈕，或一次匯出全站資料。
+          {t.adminExportPage.pageSubtitle}
         </p>
       </div>
 
@@ -154,7 +173,7 @@ const AdminExport: React.FC = () => {
                   : "border-luxe-gold/20 text-luxe-muted hover:border-luxe-gold/40 hover:text-luxe-text"
               }`}
             >
-              {opt.label}
+              {t.exportFeature[opt.labelKey]}
             </button>
           ))}
         </div>
@@ -179,8 +198,12 @@ const AdminExport: React.FC = () => {
                 <div className="flex items-start gap-3 min-w-0">
                   <span className="text-xl shrink-0 mt-0.5">{mod.icon}</span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-luxe-text truncate">{mod.name}</p>
-                    <p className="text-xs text-luxe-muted mt-0.5 leading-relaxed">{mod.desc}</p>
+                    <p className="text-sm font-medium text-luxe-text truncate">
+                      {t.adminExportPage.moduleNames[mod.key as ModuleKey]}
+                    </p>
+                    <p className="text-xs text-luxe-muted mt-0.5 leading-relaxed">
+                      {t.adminExportPage.moduleDescs[mod.key as ModuleKey]}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -196,14 +219,14 @@ const AdminExport: React.FC = () => {
                   {isLoading ? (
                     <>
                       <span className="w-3 h-3 border border-t-transparent border-luxe-gold rounded-full animate-spin" />
-                      匯出中
+                      {t.adminExportPage.exportingShort}
                     </>
                   ) : (
                     <>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                      匯出
+                      {t.adminExportPage.exportBtn}
                     </>
                   )}
                 </button>
@@ -247,7 +270,7 @@ const AdminExport: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                {t.exportFeature.fullExportBtn}（{formatLabel}）
+                {t.exportFeature.fullExportBtn} ({formatLabel})
               </>
             )}
           </button>

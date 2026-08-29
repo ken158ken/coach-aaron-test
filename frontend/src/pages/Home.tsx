@@ -17,6 +17,7 @@ import {
 import HomePopup from "@/components/sections/HomePopup";
 import SEOHead from "@/components/seo/SEOHead";
 import LazySection from "@/components/ui/LazySection";
+import { useLanguage } from "@/context/LanguageContext";
 
 /**
  * Home - 網站首頁
@@ -35,39 +36,18 @@ import LazySection from "@/components/ui/LazySection";
  * @returns {JSX.Element} 首頁
  */
 const Home: React.FC = () => {
+  const { t } = useLanguage();
+
   return (
     <div className="relative min-h-screen bg-transparent">
-      {/* SEO Meta 標籤 */}
+      {/* SEO Meta 標籤（文案見 locales 的 homeSeo namespace） */}
       <SEOHead
-        title="私教變現專家 | 銷售心理學助健身教練月入8萬"
-        description="10年健身產業經驗，整合銷售心理學與實戰技巧。專為私人教練打造的業績突破系統，已協助130+教練年收破百萬。不擅長銷售？學生續約卡關？讓阿倫教官幫你把專業換成穩定收入，100天月入8萬起。"
-        keywords={[
-          "阿倫教官",
-          "私人教練變現",
-          "銷售心理學",
-          "健身教練續課",
-          "教練業績提升",
-          "健身房銷售",
-          "學生續約技巧",
-          "健身教練收入",
-          "教練培訓",
-          "NLP心理學",
-          "健身教練行銷",
-          "私教經營",
-          "教練職涯發展",
-          "私人教練銷售",
-          "健身教練銷售",
-          "皮拉提斯銷售",
-          // 2026-07 改版新增：對應新的服務項目與經歷區塊
-          "私教變現陪跑",
-          "教練變現線上課程",
-          "教練一對一顧問",
-          "教練經理",
-          "健身總教官",
-        ]}
+        title={t.homeSeo.title}
+        description={t.homeSeo.description}
+        keywords={t.homeSeo.keywords}
         image="/images/og-default.jpg"
         url="/"
-        author="阿倫教官"
+        author={t.homeSeo.author}
       />
 
       {/* 首頁自定義彈窗 */}

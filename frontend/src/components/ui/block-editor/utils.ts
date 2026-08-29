@@ -70,6 +70,8 @@ export const createTextBlock = (
   x: number = 50,
   y: number = 50,
   zIndex: number = 1,
+  /** 新區塊的預設內容（由呼叫端帶入翻譯後的提示語） */
+  seedContent?: string,
 ): TextBlock => ({
   id: generateId(),
   type: "text",
@@ -80,7 +82,7 @@ export const createTextBlock = (
   rotation: 0,
   zIndex,
   locked: false,
-  content: "<p>雙擊編輯文字...</p>",
+  content: seedContent ?? "<p></p>",
   textAlign: "left",
   fontSize: 16,
   backgroundColor: "transparent",
@@ -96,6 +98,8 @@ export const createImageBlock = (
   x: number = 50,
   y: number = 50,
   zIndex: number = 1,
+  /** 圖片 alt（由呼叫端帶入翻譯後的預設值） */
+  altText?: string,
 ): ImageBlock => ({
   id: generateId(),
   type: "image",
@@ -107,7 +111,7 @@ export const createImageBlock = (
   zIndex,
   locked: false,
   src,
-  alt: "圖片",
+  alt: altText ?? "",
   objectFit: "cover",
   borderRadius: 8,
   floatMode: "none",

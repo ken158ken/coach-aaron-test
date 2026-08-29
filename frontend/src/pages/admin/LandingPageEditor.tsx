@@ -17,6 +17,7 @@ import React, {
 import { useNavigate, useParams } from "react-router-dom";
 import { landingService } from "../../services/site/landing.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useLanguage } from "@/context/LanguageContext";
 import { ImageInput } from "@/components/ui";
 // 獨立全頁路由（不在 AdminLayout 之下），所以「?」導覽鈕要自己掛一顆
 import { HelpTourButton } from "@/tours";
@@ -56,38 +57,16 @@ const logger = {
   error: (msg: string, e?: unknown) => console.error(`[LPEditor] ${msg}`, e ?? ""),
 };
 
-/** 分組 label */
-const GROUP_LABELS: Record<string, string> = {
-  hero: "Hero 主視覺",
-  about: "關於我們",
-  intro: "介紹",
-  features: "核心特色",
-  benefits: "方案優勢",
-  services: "服務項目",
-  process: "服務流程",
-  blocks: "圖文交錯區塊",
-  scenes: "大圖段落",
-  cards: "圖文卡片",
-  stats: "數字統計",
-  testimonials: "學員見證",
-  reviews: "好評回饋",
-  pricing: "費用方案",
-  plans: "課程方案",
-  faq: "常見問題",
-  team: "教練團隊",
-  gallery: "成果展示",
-  cta: "行動呼籲",
-  contact: "聯絡資訊",
-  footer: "頁尾",
-  meta: "SEO / Meta",
-  seo: "SEO 設定",
-  social: "社群連結",
-  general: "其他",
-};
-
-function getGroupLabel(group: string): string {
+/**
+ * 分組 label —— 文案在字典的 `adminLandingPageEditorPage.group`，
+ * 那裡的 key 順序就是這裡的比對順序（先命中先贏）。
+ */
+function getGroupLabel(
+  group: string,
+  groupLabels: Record<string, string>,
+): string {
   const k = group.toLowerCase();
-  for (const [key, label] of Object.entries(GROUP_LABELS)) {
+  for (const [key, label] of Object.entries(groupLabels)) {
     if (k.includes(key)) return label;
   }
   return group;
@@ -134,7 +113,12 @@ const FieldInput: React.FC<{
   /** 圖片欄位一定會拿到；非圖片欄位不會用到 */
   onUploadImage: (file: File) => Promise<string>;
 }> = ({ field, onChange, onUploadImage }) => {
+  const { t } = useLanguage();
   const changed = isChanged(field);
+  const textPlaceholder = t.adminLandingPageEditorPage.fieldPlaceholder.replace(
+    "{label}",
+    field.field_label,
+  );
 
   const set = (patch: Partial<FieldEdit>) =>
     onChange({ ...field, ...patch });
@@ -170,7 +154,7 @@ const FieldInput: React.FC<{
       <textarea
         value={field.text}
         onChange={(e) => set({ text: e.target.value })}
-        placeholder={`請輸入 ${field.field_label}…`}
+        placeholder={textPlaceholder}
         rows={4}
         className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 resize-y min-h-20 transition-colors ${
           changed
@@ -219,7 +203,7 @@ const FieldInput: React.FC<{
       type="text"
       value={field.text}
       onChange={(e) => set({ text: e.target.value })}
-      placeholder={`請輸入 ${field.field_label}…`}
+      placeholder={textPlaceholder}
       className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
         changed
           ? "border-luxe-gold/50"
@@ -235,6 +219,8 @@ const FieldInput: React.FC<{
 
 const LandingPageEditor: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const tp = t.adminLandingPageEditorPage;
   const { id } = useParams<{ id: string }>();
   const projectId = id ? parseInt(id, 10) : NaN;
 
@@ -267,7 +253,7 @@ const LandingPageEditor: React.FC = () => {
   // ── Load project ──
   useEffect(() => {
     if (isNaN(projectId)) {
-      setError("無效的專案 ID");
+      setError(tp.invalidProjectId);
       setLoading(false);
       return;
     }
@@ -309,14 +295,14 @@ const LandingPageEditor: React.FC = () => {
         }
       } catch (err) {
         logger.error("載入專案失敗", err);
-        setError("無法載入專案資料，請重新整理");
+        setError(tp.loadFailed);
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [projectId]);
+  }, [projectId, tp]);
 
   // ── Variant handler ──
   const handleVariantChange = useCallback(async (variantId: number | null) => {
@@ -326,11 +312,11 @@ const LandingPageEditor: React.FC = () => {
       await landingService.setVariant(projectId, variantId);
     } catch (err) {
       logger.error("樣式切換失敗", err);
-      alert("樣式切換失敗");
+      alert(tp.variantFailed);
     } finally {
       setSavingVariant(false);
     }
-  }, [projectId]);
+  }, [projectId, tp]);
 
   // ── Section visibility handler ──
   const handleToggleSection = useCallback(async (group: string) => {
@@ -353,12 +339,12 @@ const LandingPageEditor: React.FC = () => {
       );
     } catch (err) {
       logger.error("區塊顯示切換失敗", err);
-      alert("區塊顯示切換失敗，請稍後再試");
+      alert(tp.sectionToggleFailed);
       setHiddenSections(prevHidden); // rollback
     } finally {
       setSavingSection(null);
     }
-  }, [hiddenSections, project, projectId]);
+  }, [hiddenSections, project, projectId, tp]);
 
   // ── Image upload handler ──
   const handleImageUpload = useCallback(async (file: File): Promise<string> => {
@@ -431,11 +417,11 @@ const LandingPageEditor: React.FC = () => {
       logger.info("欄位儲存成功", { count: changed.length });
     } catch (err) {
       logger.error("儲存失敗", err);
-      alert("儲存失敗，請稍後再試");
+      alert(tp.saveFailed);
     } finally {
       setSaving(false);
     }
-  }, [fieldEdits, projectId]);
+  }, [fieldEdits, projectId, tp]);
 
   const handleSaveInfo = useCallback(async () => {
     if (!project) return;
@@ -453,11 +439,11 @@ const LandingPageEditor: React.FC = () => {
       logger.info("專案資訊儲存成功");
     } catch (err) {
       logger.error("儲存專案資訊失敗", err);
-      alert("儲存失敗，請稍後再試");
+      alert(tp.saveFailed);
     } finally {
       setSavingInfo(false);
     }
-  }, [project, projectId, projectName, customSlug]);
+  }, [project, projectId, projectName, customSlug, tp]);
 
   const handleToggleStatus = useCallback(async () => {
     if (!project) return;
@@ -473,9 +459,9 @@ const LandingPageEditor: React.FC = () => {
       );
     } catch (err) {
       logger.error("狀態切換失敗", err);
-      alert("操作失敗");
+      alert(tp.actionFailed);
     }
-  }, [project, projectId]);
+  }, [project, projectId, tp]);
 
   const handleBack = useCallback(() => {
     navigate("/admin/landing-pages");
@@ -496,7 +482,7 @@ const LandingPageEditor: React.FC = () => {
       <div className="h-screen flex items-center justify-center bg-luxe-bg">
         <div className="flex flex-col items-center gap-4">
           <div className="w-7 h-7 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
-          <p className="text-luxe-muted text-sm">載入中…</p>
+          <p className="text-luxe-muted text-sm">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -505,12 +491,12 @@ const LandingPageEditor: React.FC = () => {
   if (error || !project) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-luxe-bg gap-4">
-        <p className="text-red-400 text-sm">{error ?? "找不到此專案"}</p>
+        <p className="text-red-400 text-sm">{error ?? tp.notFound}</p>
         <button
           onClick={handleBack}
           className="text-luxe-muted text-sm hover:text-luxe-text transition-colors"
         >
-          ← 返回管理頁
+          {tp.backToList}
         </button>
       </div>
     );
@@ -524,10 +510,10 @@ const LandingPageEditor: React.FC = () => {
         : "text-yellow-400";
 
   const statusLabel: Record<string, string> = {
-    draft: "草稿",
-    review: "審核中",
-    published: "已發布",
-    archived: "已封存",
+    draft: t.common.draft,
+    review: tp.statusReview,
+    published: t.common.published,
+    archived: tp.statusArchived,
   };
 
   return (
@@ -543,7 +529,7 @@ const LandingPageEditor: React.FC = () => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            返回
+            {t.common.back}
           </button>
           <div className="w-px h-4 bg-luxe-gold/10" />
           <div className="flex flex-col" data-tour="lped-title">
@@ -563,7 +549,7 @@ const LandingPageEditor: React.FC = () => {
               onClick={handlePreview}
               className="px-3 py-1.5 text-xs text-luxe-muted hover:text-luxe-text border border-luxe-gold/20 rounded-lg transition-colors"
             >
-              預覽
+              {t.adminCommon.preview}
             </button>
           )}
           <button
@@ -575,7 +561,7 @@ const LandingPageEditor: React.FC = () => {
                 : "text-green-400 border-green-400/20 hover:bg-green-400/5"
             }`}
           >
-            {project.status === "published" ? "下架" : "發布"}
+            {project.status === "published" ? tp.unpublish : t.admin.publish}
           </button>
           <button
             onClick={handleSaveFields}
@@ -592,14 +578,14 @@ const LandingPageEditor: React.FC = () => {
             {saving ? (
               <>
                 <div className="w-3 h-3 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
-                儲存中…
+                {t.adminCommon.saving}
               </>
             ) : saved ? (
-              "已儲存"
+              t.adminCommon.saveSuccess
             ) : changedCount > 0 ? (
-              `儲存 (${changedCount})`
+              tp.saveWithCount.replace("{n}", String(changedCount))
             ) : (
-              "無變更"
+              tp.noChanges
             )}
           </button>
         </div>
@@ -613,7 +599,8 @@ const LandingPageEditor: React.FC = () => {
           {variants.length > 0 && (
             <div className="px-3 mb-4" data-tour="lped-variants">
               <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-2 px-2">
-                樣式 {savingVariant && <span className="text-luxe-gold animate-pulse">•</span>}
+                {tp.variantsLabel}{" "}
+                {savingVariant && <span className="text-luxe-gold animate-pulse">•</span>}
               </p>
               <div className="flex flex-wrap gap-1.5 px-2">
                 {variants.map((v) => {
@@ -642,7 +629,7 @@ const LandingPageEditor: React.FC = () => {
           {/* Project info section */}
           <div className="px-3 mb-4">
             <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-2 px-2">
-              專案資訊
+              {tp.projectInfoLabel}
             </p>
             <button
               onClick={() => setActiveGroup("__info__")}
@@ -653,17 +640,17 @@ const LandingPageEditor: React.FC = () => {
                   : "text-luxe-muted hover:text-luxe-text hover:bg-white/3"
               }`}
             >
-              基本設定
+              {tp.basicSettings}
             </button>
           </div>
 
           {/* Field groups */}
           <div className="px-3" data-tour="lped-groups">
             <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest mb-1 px-2">
-              頁面內容
+              {tp.pageContentLabel}
             </p>
             <p className="text-[9px] text-luxe-muted/30 mb-2 px-2 leading-snug">
-              點眼睛圖示可隱藏該區塊（不會在公開頁顯示）
+              {tp.sectionToggleHint}
             </p>
             {groups.map((g) => {
               const hasChanges = fieldEdits
@@ -687,7 +674,7 @@ const LandingPageEditor: React.FC = () => {
                     }`}
                   >
                     <span className={`truncate ${isHidden ? "line-through opacity-40" : ""}`}>
-                      {getGroupLabel(g)}
+                      {getGroupLabel(g, tp.group)}
                     </span>
                     {hasChanges && (
                       <span className="w-1.5 h-1.5 rounded-full bg-luxe-gold shrink-0" />
@@ -697,8 +684,12 @@ const LandingPageEditor: React.FC = () => {
                     onClick={() => handleToggleSection(g)}
                     disabled={isToggling}
                     data-tour="lped-section-toggle"
-                    title={isHidden ? "目前隱藏，點擊顯示此區塊" : "目前顯示，點擊隱藏此區塊"}
-                    aria-label={isHidden ? "顯示此區塊" : "隱藏此區塊"}
+                    title={
+                      isHidden ? tp.showSectionTitle : tp.hideSectionTitle
+                    }
+                    aria-label={
+                      isHidden ? tp.showSectionAria : tp.hideSectionAria
+                    }
                     className={`shrink-0 px-2 py-2 rounded-r-lg transition-colors ${
                       isToggling ? "animate-pulse" : ""
                     } ${
@@ -730,13 +721,13 @@ const LandingPageEditor: React.FC = () => {
           {activeGroup === "__info__" && (
             <div className="max-w-xl mx-auto py-8 px-6 space-y-6">
               <h2 className="text-lg font-semibold text-luxe-text">
-                專案基本設定
+                {tp.projectBasicSettings}
               </h2>
 
               <div className="space-y-4 bg-luxe-surface rounded-xl p-5 border border-luxe-gold/10">
                 <div>
                   <label className="block text-xs text-luxe-muted mb-1.5">
-                    專案名稱
+                    {tp.projectName}
                   </label>
                   <input
                     type="text"
@@ -748,7 +739,7 @@ const LandingPageEditor: React.FC = () => {
 
                 <div>
                   <label className="block text-xs text-luxe-muted mb-1.5">
-                    自訂網址 Slug
+                    {tp.customSlug}
                   </label>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-luxe-muted/60">/page/</span>
@@ -768,13 +759,13 @@ const LandingPageEditor: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4 text-xs text-luxe-muted">
                   <div>
-                    <span className="text-luxe-muted/50">專案代碼</span>
+                    <span className="text-luxe-muted/50">{tp.projectCode}</span>
                     <p className="text-luxe-text mt-0.5 font-mono text-[11px]">
                       {project.project_code}
                     </p>
                   </div>
                   <div>
-                    <span className="text-luxe-muted/50">模板</span>
+                    <span className="text-luxe-muted/50">{tp.template}</span>
                     <p className="text-luxe-text mt-0.5 text-[11px]">
                       {project.lp_templates?.template_code ?? "—"}
                     </p>
@@ -786,7 +777,7 @@ const LandingPageEditor: React.FC = () => {
                   disabled={savingInfo}
                   className="w-full py-2 text-xs font-medium bg-luxe-gold/10 text-luxe-gold border border-luxe-gold/20 rounded-lg hover:bg-luxe-gold/20 transition-colors disabled:opacity-50"
                 >
-                  {savingInfo ? "儲存中…" : "儲存基本資訊"}
+                  {savingInfo ? t.adminCommon.saving : tp.saveInfo}
                 </button>
               </div>
             </div>
@@ -797,17 +788,17 @@ const LandingPageEditor: React.FC = () => {
             <div className="max-w-2xl mx-auto py-8 px-6 space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-luxe-text">
-                  {getGroupLabel(activeGroup)}
+                  {getGroupLabel(activeGroup, tp.group)}
                 </h2>
                 {activeFields.some(isChanged) && (
                   <span className="text-[10px] text-luxe-gold border border-luxe-gold/20 px-2 py-0.5 rounded-full">
-                    未儲存變更
+                    {tp.unsavedBadge}
                   </span>
                 )}
               </div>
 
               {activeFields.length === 0 ? (
-                <p className="text-luxe-muted text-sm">此分組沒有欄位。</p>
+                <p className="text-luxe-muted text-sm">{tp.emptyGroup}</p>
               ) : (
                 <div className="space-y-4">
                   {activeFields.map((fe) => (
@@ -851,7 +842,7 @@ const LandingPageEditor: React.FC = () => {
           {activeGroup === null && (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <p className="text-luxe-muted text-sm">
-                從左側選擇一個分組開始編輯
+                {tp.pickGroup}
               </p>
             </div>
           )}
@@ -861,12 +852,12 @@ const LandingPageEditor: React.FC = () => {
         {project.lp_templates?.thumbnail_url && (
           <aside className="w-64 shrink-0 border-l border-luxe-gold/10 bg-luxe-surface hidden xl:flex flex-col p-4 gap-3 overflow-y-auto">
             <p className="text-[10px] text-luxe-muted/50 uppercase tracking-widest">
-              模板預覽
+              {tp.templatePreview}
             </p>
             <div className="aspect-video rounded-lg overflow-hidden border border-luxe-gold/10">
               <img
                 src={project.lp_templates.thumbnail_url}
-                alt="模板縮圖"
+                alt={tp.templateThumbAlt}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -881,7 +872,7 @@ const LandingPageEditor: React.FC = () => {
                 rel="noopener noreferrer"
                 className="text-center text-[11px] text-luxe-gold hover:underline"
               >
-                查看已發布頁面 →
+                {tp.viewPublished}
               </a>
             )}
 
@@ -889,7 +880,10 @@ const LandingPageEditor: React.FC = () => {
             {changedCount > 0 && (
               <div className="mt-auto pt-3 border-t border-luxe-gold/10">
                 <p className="text-[11px] text-luxe-muted text-center">
-                  <span className="text-luxe-gold font-semibold">{changedCount}</span> 個欄位有未儲存的變更
+                  <span className="text-luxe-gold font-semibold">
+                    {changedCount}
+                  </span>{" "}
+                  {tp.changedFieldsLabel}
                 </p>
               </div>
             )}

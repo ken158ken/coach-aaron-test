@@ -18,7 +18,7 @@
 import { driver, type Config, type Driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 import "../tour.css";
-import type { ResolvedStep, TourDefinition, TourSide } from "../types";
+import type { ResolvedStep, TourDefinition, TourSide, TourUiText } from "../types";
 
 /** popover 額外掛的 class，用來提高 CSS 覆寫的優先權 */
 const POPOVER_CLASS = "aaron-tour";
@@ -113,9 +113,14 @@ async function waitForGone(sel: string, timeout = WAIT_GONE_MS): Promise<void> {
  * 但 `groups[x].open` 是純資料，寫錯一個選擇器就可能指到「儲存」或「刪除」——
  * 在正式站上那是不可逆的。所以真正按下去之前再攔一道，
  * 寧可整組步驟被跳過，也不能誤觸。
+ *
+ * ⚠️ 後台改成雙語之後，同一顆按鈕在英文介面下顯示的是英文字樣，
+ * 所以**中英文都要收**——只留中文的話，切到 EN 這道防線等於失效。
+ * 這裡刻意不收 `add` / `new`（那是「開啟彈窗」的按鈕字樣，擋掉會讓
+ * 整組 modal 步驟被跳過），只收真的會寫進資料庫的動詞。
  */
 const DESTRUCTIVE_TEXT =
-  /儲存|存檔|保存|送出|提交|發佈|發布|上架|刪除|移除|清除|上傳|建立|新增並|確認送出|save|submit|delete|remove|publish|upload|create/i;
+  /儲存|存檔|保存|送出|提交|發佈|發布|上架|刪除|移除|清除|上傳|建立|新增並|確認送出|停權|封鎖|核准|婉拒|save|submit|send|delete|remove|publish|unpublish|upload|create|confirm|invite|suspend|ban|approve|reject|archive|restore|discard/i;
 
 /**
  * 這顆按鈕點下去安不安全？
@@ -168,9 +173,21 @@ function pressEscape(instance: Driver): void {
 export interface RunTourOptions {
   /** 是否為手機版版面（由 useTour 依 matchMedia 判定） */
   isMobile: boolean;
+  /** 顯示英文版步驟文案（由 useTour 依目前語言判定） */
+  isEn?: boolean;
+  /** 導覽外框的按鈕文字；省略則沿用中文預設 */
+  ui?: TourUiText;
   /** 導覽結束（完成或中途關閉）時呼叫 */
   onFinish?: () => void;
 }
+
+/** `ui` 沒傳時的後備文字，確保引擎單獨使用也不會出現空按鈕 */
+const FALLBACK_UI: TourUiText = {
+  next: "下一步",
+  prev: "上一步",
+  done: "完成",
+  closeAria: "結束導覽",
+};
 
 /** `runTour` 的回傳值，讓呼叫端可以在 unmount 時強制收掉 */
 export interface TourHandle {
@@ -189,7 +206,13 @@ export async function runTour(
   def: TourDefinition,
   options: RunTourOptions,
 ): Promise<TourHandle | null> {
-  const { isMobile, onFinish } = options;
+  const { isMobile, isEn = false, ui = FALLBACK_UI, onFinish } = options;
+
+  /**
+   * 挑語言：英文缺漏時回退中文。
+   * 導覽是輔助功能，寧可某一步暫時是中文，也不要出現空白卡片。
+   */
+  const pick = (zh: string, en?: string): string => (isEn && en ? en : zh);
 
   // ── 1. 依裝置解析步驟 ──────────────────────────────────
   const resolved: ResolvedStep[] = def.steps
@@ -241,8 +264,8 @@ export async function runTour(
     // 響應式雙版面下那可能是隱藏的桌機版。查不到就先留字串，等 goTo 再補。
     element: (r.selector ? (q(r.selector) ?? r.selector) : undefined) as DriveStep["element"],
     popover: {
-      title: r.step.title,
-      description: r.step.desc,
+      title: pick(r.step.title, r.step.titleEn),
+      description: pick(r.step.desc, r.step.descEn),
       ...(r.selector ? { side: sideFor(r), align: r.step.align ?? "start" } : {}),
     },
   }));
@@ -446,9 +469,9 @@ export async function runTour(
     showProgress: true,
     showButtons: ["next", "previous", "close"],
     progressText: "{{current}} / {{total}}",
-    nextBtnText: "下一步",
-    prevBtnText: "上一步",
-    doneBtnText: "完成",
+    nextBtnText: ui.next,
+    prevBtnText: ui.prev,
+    doneBtnText: ui.done,
 
     // 導覽節奏由我們接管（要先開／關 modal 再移動）
     onNextClick: () => {
@@ -474,7 +497,7 @@ export async function runTour(
 
     onPopoverRender: (popover) => {
       // 讓關閉鈕有語意標籤；driver.js 預設只有一個 ×
-      popover.closeButton.setAttribute("aria-label", "結束導覽");
+      popover.closeButton.setAttribute("aria-label", ui.closeAria);
       popover.wrapper.setAttribute("data-tour-popover", def.id);
     },
 

@@ -11,84 +11,36 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui";
 import SEOHead from "@/components/seo/SEOHead";
+import { useLanguage } from "@/context/LanguageContext";
 
-/** 職涯時間軸單筆資料 */
-interface TimelineItem {
-  period: string;
-  role: string;
-  org: string;
-  summary: string;
-  points: string[];
+/**
+ * 職涯時間軸的「非文字」資料。
+ * 文案（period / role / org / summary / points / imageAlt）改由
+ * `t.aboutPage.timeline.items` 依索引提供，兩邊長度必須一致；
+ * `id` 只作為 React key 與日後追蹤用，不顯示給使用者。
+ */
+interface TimelineMedia {
+  id: string;
   image: string;
-  imageAlt: string;
 }
 
-/** 職涯時間軸（依時間正序：早 → 現在） */
-const TIMELINE: TimelineItem[] = [
+/** 職涯時間軸圖片（依時間正序：早 → 現在，需與字典 items 對齊） */
+const TIMELINE_MEDIA: TimelineMedia[] = [
   {
-    period: "早期・業務時期",
-    role: "房仲業務經紀人",
-    org: "房仲不動產業",
-    summary:
-      "職涯不是從健身房開始，是從房仲開始的；學會的不是話術，是讀人。",
-    points: [
-      "完整銷售流程跑過無數遍",
-      "在被拒絕是日常的環境練出韌性",
-      "看懂客戶「我再考慮」背後真正在意什麼",
-    ],
+    id: "real-estate",
     image:
       "https://res.cloudinary.com/daejq0zo9/image/upload/f_auto,q_auto,w_900/v1784556095/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_17_qsdcqo.jpg",
-    imageAlt: "阿倫教官早期業務時期",
   },
   {
-    period: "轉職・入行",
-    role: "私人教練",
-    org: "成吉思汗健身（連鎖健身品牌）",
-    summary:
-      "把業務時期的銷售能力搬進健身房，快速建立穩定私教客群；專業與銷售雙軌並進。",
-    points: [
-      "體能評估、身體組成分析、個人化課表",
-      "同時負責諮詢、成交與續課",
-      "走完第一線私教收入循環",
-    ],
+    id: "personal-trainer",
     image:
       "https://res.cloudinary.com/daejq0zo9/image/upload/f_auto,q_auto,w_900/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_6_rhqnrz.jpg",
-    imageAlt: "阿倫教官私人教練時期",
   },
   {
-    period: "現職・教練經理／總教官",
-    role: "教練經理／總教官",
-    org: "威豪健身 Pro Fitness（台東）",
-    summary:
-      "帶團隊後才真正看懂——一個人業績好是天賦，一整團都好是系統。",
-    points: [
-      "統籌約 50 人教練團隊（排班、教學品質、招募、客訴）",
-      "設定並追蹤業績與續約 KPI",
-      "建立教練育成與考核制度",
-    ],
+    id: "head-coach",
     image:
       "https://res.cloudinary.com/daejq0zo9/image/upload/f_auto,q_auto,w_900/v1784556128/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_9_tp7sdh.jpg",
-    imageAlt: "阿倫教官現任總教官帶團隊",
   },
-];
-
-/** 專業證照 */
-const CERTIFICATIONS: string[] = [
-  "NSCA-CPT（美國肌力與體能協會 私人教練認證）",
-  "TQUK 英國心理諮詢認證",
-  "NLP 執行師",
-  "Andaction 生活教練",
-  "健身教練 C 級",
-];
-
-/** 成就數據卡片 */
-const STATS: Array<{ value: string; label: string }> = [
-  { value: "10 年", label: "產業經驗" },
-  { value: "約 50 人", label: "統籌教練團隊" },
-  { value: "1000+ 小時", label: "教學與授課" },
-  { value: "130+", label: "協助教練提升收入" },
-  { value: "58 集", label: "Podcast《陪你健身》" },
-  { value: "冠軍", label: "2019 Fit Model 174cm 組" },
 ];
 
 /**
@@ -97,26 +49,18 @@ const STATS: Array<{ value: string; label: string }> = [
  * @returns {JSX.Element} 關於頁
  */
 const About: React.FC = () => {
+  const { t } = useLanguage();
+  const about = t.aboutPage;
+
   return (
     <div className="relative min-h-screen bg-transparent">
       <SEOHead
-        title="關於阿倫教官 ｜ 私教變現顧問 ｜ Coach Aaron"
-        description="阿倫教官（Coach Aaron）｜私教變現顧問、教練職涯培訓講師。第一線私教出身，現任台東威豪健身總教官，統籌約 50 人教練團隊。純 B2B，專教教練把專業變成穩定收入：從房仲讀人、私教落地到帶團隊系統化的十年職涯經歷。"
-        keywords={[
-          "阿倫教官",
-          "Coach Aaron",
-          "私教變現顧問",
-          "教練職涯培訓",
-          "私人教練培訓",
-          "威豪健身總教官",
-          "教練經理",
-          "健身教練變現",
-          "教練育成",
-          "私教變現",
-        ]}
+        title={about.seo.title}
+        description={about.seo.description}
+        keywords={about.seo.keywords}
         url="/about"
-        author="阿倫教官"
-        breadcrumbs={[{ name: "關於阿倫教官", url: "/about" }]}
+        author={about.seo.author}
+        breadcrumbs={[{ name: about.seo.breadcrumb, url: "/about" }]}
       />
 
       <div className="relative z-10 pt-20 sm:pt-24 pb-16 sm:pb-24 px-4">
@@ -124,15 +68,15 @@ const About: React.FC = () => {
           {/* ── Hero / 標題區 ── */}
           <PageHeader
             label="About Coach Aaron"
-            title="阿倫教官 Coach Aaron"
-            subtitle="私教變現顧問 ｜ 教練職涯培訓講師"
+            title={about.hero.title}
+            subtitle={about.hero.subtitle}
           />
           <p
             className="text-center text-muted text-base sm:text-lg font-light leading-relaxed max-w-2xl mx-auto -mt-2 mb-16 sm:mb-24"
             data-aos="fade-up"
           >
-            第一線私教出身，現任台東威豪健身總教官，
-            <span className="text-gold">專教教練把專業變成穩定收入。</span>
+            {about.hero.leadBefore}
+            <span className="text-gold">{about.hero.leadHighlight}</span>
           </p>
 
           {/* ── 職涯時間軸 ── */}
@@ -142,7 +86,7 @@ const About: React.FC = () => {
                 Career Timeline
               </span>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white/90">
-                職涯時間軸
+                {about.timeline.heading}
               </h2>
             </div>
 
@@ -154,11 +98,14 @@ const About: React.FC = () => {
               />
 
               <div className="space-y-10 sm:space-y-14">
-                {TIMELINE.map((item, index) => {
+                {TIMELINE_MEDIA.map((media, index) => {
+                  const item = about.timeline.items[index];
+                  // 字典與圖片陣列長度不一致時直接略過，避免 render 期間爆錯
+                  if (!item) return null;
                   const flip = index % 2 === 1;
                   return (
                     <div
-                      key={item.role}
+                      key={media.id}
                       className="relative md:grid md:grid-cols-2 md:gap-10 lg:gap-14 md:items-center"
                       data-aos="fade-up"
                       data-aos-delay={index * 60}
@@ -177,7 +124,7 @@ const About: React.FC = () => {
                       >
                         <div className="relative rounded-xl overflow-hidden border border-gold/15 bg-surface">
                           <img
-                            src={item.image}
+                            src={media.image}
                             alt={item.imageAlt}
                             loading="lazy"
                             className="w-full h-80 sm:h-96 md:h-120 object-cover object-top"
@@ -236,11 +183,11 @@ const About: React.FC = () => {
                 Certifications
               </span>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white/90">
-                專業證照
+                {about.certifications.heading}
               </h2>
             </div>
             <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 max-w-3xl mx-auto">
-              {CERTIFICATIONS.map((cert) => (
+              {about.certifications.items.map((cert) => (
                 <span
                   key={cert}
                   className="inline-flex items-center gap-2 text-sm sm:text-base text-white/85 bg-surface border border-gold/20 rounded-full px-4 py-2"
@@ -259,11 +206,11 @@ const About: React.FC = () => {
                 By The Numbers
               </span>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white/90">
-                成就數據
+                {about.stats.heading}
               </h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {STATS.map((stat, index) => (
+              {about.stats.items.map((stat, index) => (
                 <div
                   key={stat.label}
                   className="rounded-xl bg-surface border border-white/8 hover:border-gold/30 transition-colors p-5 sm:p-6 text-center"
@@ -288,25 +235,23 @@ const About: React.FC = () => {
                 My Story
               </span>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white/90">
-                我的職涯故事
+                {about.story.heading}
               </h2>
             </div>
             <div className="max-w-3xl mx-auto rounded-2xl bg-surface border border-gold/15 p-6 sm:p-10">
               <div className="space-y-5 text-base sm:text-lg text-white/75 font-light leading-relaxed">
                 <p>
-                  我的職涯不是從健身房開始的，是從房仲開始的。在被拒絕是日常的環境裡，我沒學會什麼漂亮話術，反而練出一件更值錢的能力——
-                  <span className="text-white/90">讀人</span>
-                  ，聽懂客戶那句「我再考慮」背後真正在意的是什麼。
-                </p>
-                <p>
-                  轉行當私人教練之後，我把這套本事搬進健身房，很快建立起穩定客群，走完諮詢、成交到續課的完整收入循環。帶團隊後我才真正看懂——一個人業績好是天賦，一整團都好是系統。於是我把私教與管理的實戰整理成方法：從讀人、成交，到把它變成可以複製的制度。
-                </p>
-                <p>
-                  現在我只教一件事——
-                  <span className="text-gold">
-                    教練怎麼把技術變成穩定業績。
+                  {about.story.p1Before}
+                  <span className="text-white/90">
+                    {about.story.p1Highlight}
                   </span>
-                  這條路我自己從頭走過一遍，也帶著上百位教練走過，我知道卡在哪、也知道怎麼過。
+                  {about.story.p1After}
+                </p>
+                <p>{about.story.p2}</p>
+                <p>
+                  {about.story.p3Before}
+                  <span className="text-gold">{about.story.p3Highlight}</span>
+                  {about.story.p3After}
                 </p>
               </div>
             </div>
@@ -316,23 +261,21 @@ const About: React.FC = () => {
           <section className="text-center" data-aos="fade-up">
             <div className="page-cta-box bg-surface/60 backdrop-blur-sm border border-gold/20 rounded-2xl p-8 sm:p-12 max-w-2xl mx-auto">
               <h2 className="text-2xl sm:text-3xl font-bold text-white/90 mb-3">
-                準備把專業變成穩定收入？
+                {about.cta.title}
               </h2>
-              <p className="text-muted mb-8">
-                不論你想先看變現方案，還是直接一對一聊聊你的卡點，我都在。
-              </p>
+              <p className="text-muted mb-8">{about.cta.subtitle}</p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                 <Link
                   to="/courses"
                   className="inline-flex items-center justify-center rounded-full bg-gold text-studio-bg font-medium px-7 py-3 text-sm sm:text-base hover:bg-gold-dim transition-colors"
                 >
-                  看變現方案
+                  {about.cta.primary}
                 </Link>
                 <Link
                   to="/booking"
                   className="inline-flex items-center justify-center rounded-full border border-gold/50 text-gold font-medium px-7 py-3 text-sm sm:text-base hover:bg-gold/10 transition-colors"
                 >
-                  預約 1 對 1 諮詢
+                  {about.cta.secondary}
                 </Link>
               </div>
             </div>

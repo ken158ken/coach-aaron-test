@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import type { Course } from "@/types";
 import { formatCurrency } from "@/lib/ui";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface CourseCardProps {
   course: Course;
@@ -16,6 +17,7 @@ interface CourseCardProps {
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ course, className = "" }) => {
+  const { t } = useLanguage();
   const imageUrl = course.course_thumbnail_url || "";
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -100,10 +102,14 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, className = "" }) => {
             {/* Footer */}
             <div style={{ paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>
-                {course.price != null ? formatCurrency(course.price) : "免費"}
+                {course.price != null
+                  ? formatCurrency(course.price)
+                  : t.course.free}
               </span>
               {course.lessons_count != null && (
-                <span style={{ color: "#888", fontSize: "0.8rem" }}>{course.lessons_count} 堂課</span>
+                <span style={{ color: "#888", fontSize: "0.8rem" }}>
+                  {course.lessons_count} {t.course.lessons}
+                </span>
               )}
             </div>
           </div>

@@ -5,6 +5,7 @@
 
 import React from "react";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -36,10 +37,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   message,
   onConfirm,
   onCancel,
-  confirmText = "確認",
-  cancelText = "取消",
+  confirmText,
+  cancelText,
   danger = false,
 }) => {
+  const { t } = useLanguage();
   useScrollLock(isOpen);
 
   if (!isOpen) return null;
@@ -62,7 +64,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text transition-colors"
             onClick={onCancel}
           >
-            {cancelText}
+            {cancelText ?? t.common.cancel}
           </button>
           <button
             className={`
@@ -75,7 +77,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             `}
             onClick={onConfirm}
           >
-            {confirmText}
+            {confirmText ?? t.common.confirm}
           </button>
         </div>
       </div>

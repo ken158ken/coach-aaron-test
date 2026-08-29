@@ -16,10 +16,8 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { PillButton, Input, useDialog } from "@/components/ui";
-import {
-  landingService,
-  PAGE_KIND_LABELS,
-} from "@/services/site/landing.service";
+import { useLanguage } from "@/context/LanguageContext";
+import { landingService } from "@/services/site/landing.service";
 import type { LpTemplate, PageKind } from "@/services/site/landing.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
 // 獨立全頁路由（不在 AdminLayout 之下），所以「?」導覽鈕要自己掛一顆
@@ -29,9 +27,14 @@ import { HelpTourButton } from "@/tours";
 // Constants
 // ─────────────────────────────────────────────────────────
 
-const PAGE_KIND_OPTIONS: { value: string; label: string }[] = [
-  { value: "all", label: "全部類型" },
-  ...Object.entries(PAGE_KIND_LABELS).map(([value, label]) => ({ value, label })),
+/** 類型篩選的顯示順序（文案改由 `adminLandingPageNewPage.pageKind` 查表） */
+const PAGE_KIND_ORDER: PageKind[] = [
+  "brand_narrative",
+  "product_shop",
+  "pricing",
+  "lead_gen",
+  "saas",
+  "portfolio",
 ];
 
 const SELECT_CLS =
@@ -56,7 +59,16 @@ const LIMIT = 24;
 const LandingPageNew: React.FC = () => {
   const navigate = useNavigate();
   const dialog = useDialog();
+  const { t } = useLanguage();
+  const lpn = t.adminLandingPageNewPage;
   useScrollLock(true); // 全屏路由，永遠鎖定 body scroll
+
+  /** 模板類型標籤：以 key 查字典，找不到就退回原始 key */
+  const kindLabel = useCallback(
+    (kind: string) =>
+      lpn.pageKind[kind as PageKind] ?? kind,
+    [lpn],
+  );
 
   // Template list state
   const [templates, setTemplates] = useState<LpTemplate[]>([]);
@@ -98,14 +110,14 @@ const LandingPageNew: React.FC = () => {
         setTotal(res.total);
       })
       .catch(() => {
-        if (!cancelled) setError("無法載入模板列表");
+        if (!cancelled) setError(lpn.loadFailed);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [page, pageKind]);
+  }, [page, pageKind, lpn]);
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [pageKind]);
@@ -144,11 +156,14 @@ const LandingPageNew: React.FC = () => {
       });
       navigate(`/admin/landing-pages/${newProject.id}/edit`);
     } catch {
-      dialog.alert({ title: "建立失敗", message: "無法建立專案，請稍後再試。" });
+      dialog.alert({
+        title: lpn.createFailedTitle,
+        message: lpn.createFailedMessage,
+      });
     } finally {
       setCreating(false);
     }
-  }, [selected, projectName, navigate, dialog]);
+  }, [selected, projectName, navigate, dialog, lpn]);
 
   // ─────────────────────────────────────────────────────────
   // Render
@@ -163,18 +178,18 @@ const LandingPageNew: React.FC = () => {
           onClick={() => navigate("/admin/landing-pages")}
           data-tour="lpnew-back"
           className="flex items-center gap-1.5 text-sm text-luxe-muted hover:text-luxe-text transition-colors"
-          aria-label="返回"
+          aria-label={t.common.back}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          返回
+          {t.common.back}
         </button>
         <div className="w-px h-4 bg-luxe-gold/10" />
         <div>
-          <h2 className="text-lg font-light text-luxe-text">選擇模板</h2>
+          <h2 className="text-lg font-light text-luxe-text">{lpn.heading}</h2>
           <p className="text-xs text-luxe-muted">
-            共 {total} 份模板 · 選擇一個作為新專案的基礎
+            {lpn.subheading.replace("{n}", String(total))}
           </p>
         </div>
       </div>
@@ -187,7 +202,7 @@ const LandingPageNew: React.FC = () => {
           {/* Filters */}
           <div className="flex flex-wrap gap-3 px-6 py-3 border-b border-luxe-gold/10 shrink-0">
             <Input
-              placeholder="搜尋模板名稱..."
+              placeholder={lpn.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               theme="luxe"
@@ -201,12 +216,13 @@ const LandingPageNew: React.FC = () => {
               className={SELECT_CLS}
               style={SELECT_BG}
             >
-              {PAGE_KIND_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+              <option value="all">{lpn.allKinds}</option>
+              {PAGE_KIND_ORDER.map((k) => (
+                <option key={k} value={k}>{lpn.pageKind[k]}</option>
               ))}
             </select>
             <span className="ml-auto text-xs text-luxe-muted self-center">
-              顯示 {filtered.length} 筆
+              {lpn.showingCount.replace("{n}", String(filtered.length))}
             </span>
           </div>
 
@@ -214,7 +230,7 @@ const LandingPageNew: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-6">
             {loading ? (
               <div className="flex items-center justify-center h-64 text-luxe-muted text-sm">
-                載入中...
+                {t.common.loading}
               </div>
             ) : error ? (
               <div className="flex items-center justify-center h-64 text-red-400 text-sm">
@@ -222,7 +238,7 @@ const LandingPageNew: React.FC = () => {
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex items-center justify-center h-64 text-luxe-muted text-sm">
-                找不到符合條件的模板
+                {lpn.noResults}
               </div>
             ) : (
               <div
@@ -263,7 +279,7 @@ const LandingPageNew: React.FC = () => {
                         </div>
                       )}
                       <span className="absolute top-1 right-1 bg-luxe-bg/80 text-luxe-gold text-[9px] px-1.5 py-0.5 rounded backdrop-blur-sm">
-                        {PAGE_KIND_LABELS[tpl.page_kind] ?? tpl.page_kind}
+                        {kindLabel(tpl.page_kind)}
                       </span>
                       {selected?.id === tpl.id && (
                         <div className="absolute inset-0 bg-luxe-gold/10 flex items-center justify-center">
@@ -294,7 +310,7 @@ const LandingPageNew: React.FC = () => {
                 disabled={page === 1}
                 className="px-3 py-1 rounded text-xs text-luxe-muted hover:text-luxe-text disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                ‹ 上一頁
+                ‹ {t.common.prev}
               </button>
               <span className="text-xs text-luxe-muted">{page} / {totalPages}</span>
               <button
@@ -302,7 +318,7 @@ const LandingPageNew: React.FC = () => {
                 disabled={page === totalPages}
                 className="px-3 py-1 rounded text-xs text-luxe-muted hover:text-luxe-text disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                下一頁 ›
+                {t.common.next} ›
               </button>
             </div>
           )}
@@ -316,12 +332,12 @@ const LandingPageNew: React.FC = () => {
           {selected ? (
             <div className="flex flex-col h-full p-5 gap-4">
               <div>
-                <p className="text-xs text-luxe-muted mb-1">已選模板</p>
+                <p className="text-xs text-luxe-muted mb-1">{lpn.selectedTemplate}</p>
                 <p className="text-sm text-luxe-text font-medium">
                   {selected.brand_name ?? selected.template_slug}
                 </p>
                 <p className="text-[10px] text-luxe-muted mt-0.5">
-                  {selected.template_code} ・{PAGE_KIND_LABELS[selected.page_kind] ?? selected.page_kind}
+                  {selected.template_code} ・{kindLabel(selected.page_kind)}
                 </p>
               </div>
 
@@ -337,17 +353,17 @@ const LandingPageNew: React.FC = () => {
 
               <div className="flex-1">
                 <label className="text-xs text-luxe-muted block mb-1.5">
-                  專案名稱 <span className="text-red-400">*</span>
+                  {lpn.projectNameLabel} <span className="text-red-400">*</span>
                 </label>
                 <Input
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="例：2026 春季特訓班"
+                  placeholder={lpn.projectNamePlaceholder}
                   theme="luxe"
                   data-tour="lpnew-name"
                   onKeyDown={(e) => { if (e.key === "Enter") handleConfirm(); }}
                 />
-                <p className="text-[10px] text-luxe-muted mt-1">可在建立後修改</p>
+                <p className="text-[10px] text-luxe-muted mt-1">{lpn.projectNameHint}</p>
               </div>
 
               <PillButton
@@ -358,21 +374,21 @@ const LandingPageNew: React.FC = () => {
                 disabled={!projectName.trim() || creating}
                 className="w-full"
               >
-                {creating ? "建立中..." : "建立專案並開始編輯 →"}
+                {creating ? lpn.creating : lpn.confirmBtn}
               </PillButton>
 
               <button
                 onClick={() => setSelected(null)}
                 className="text-xs text-luxe-muted hover:text-luxe-text text-center"
               >
-                重新選擇
+                {lpn.reselectBtn}
               </button>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-luxe-muted/40 p-8 text-center">
               <span className="text-4xl">👆</span>
-              <p className="text-sm">點擊左側模板卡片以選取</p>
-              <p className="text-xs mt-4">或按 Esc 返回列表</p>
+              <p className="text-sm">{lpn.emptyPanelTitle}</p>
+              <p className="text-xs mt-4">{lpn.emptyPanelHint}</p>
             </div>
           )}
         </div>

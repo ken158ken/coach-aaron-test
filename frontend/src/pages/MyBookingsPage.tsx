@@ -6,14 +6,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { zhTW } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
 import {
   bookingService,
-  BOOKING_STATUS_LABEL,
   type MyBooking,
   type BookingStatus,
 } from "@/services/booking/booking.service";
 import { PillButton, useDialog } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 
 const STATUS_STYLE: Record<BookingStatus, string> = {
   pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
@@ -25,6 +25,8 @@ const STATUS_STYLE: Record<BookingStatus, string> = {
 
 const MyBookingsPage: React.FC = () => {
   const dialog = useDialog();
+  const { t, isZhTW } = useLanguage();
+  const dfLocale = isZhTW ? zhTW : enUS;
   const [bookings, setBookings] = useState<MyBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,11 +39,11 @@ const MyBookingsPage: React.FC = () => {
       setBookings(data);
     } catch (err) {
       console.error(err);
-      setError("載入預約失敗");
+      setError(t.myBookings.loadFailed);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchBookings();
@@ -49,12 +51,13 @@ const MyBookingsPage: React.FC = () => {
 
   const handleCancel = async (b: MyBooking) => {
     const confirmed = await dialog.confirm({
-      title: "取消預約",
-      message: `確定要取消 ${format(new Date(b.start_at), "yyyy/MM/dd HH:mm", {
-        locale: zhTW,
-      })} 的預約嗎？`,
+      title: t.myBookings.cancelTitle,
+      message: t.myBookings.cancelMessage.replace(
+        "{time}",
+        format(new Date(b.start_at), "yyyy/MM/dd HH:mm", { locale: dfLocale }),
+      ),
       variant: "danger",
-      confirmText: "取消預約",
+      confirmText: t.myBookings.cancelTitle,
     });
     if (!confirmed) return;
     try {
@@ -63,7 +66,7 @@ const MyBookingsPage: React.FC = () => {
     } catch (err) {
       console.error(err);
       const msg =
-        err instanceof Error ? err.message : "取消失敗，請聯絡教練";
+        err instanceof Error ? err.message : t.myBookings.cancelFailed;
       setError(msg);
     }
   };
@@ -73,15 +76,13 @@ const MyBookingsPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-light text-inherit">
-            我的預約
+            {t.myBookings.heading}
           </h1>
-          <p className="text-sm text-muted mt-1">
-            查看所有已送出的諮詢申請
-          </p>
+          <p className="text-sm text-muted mt-1">{t.myBookings.subtitle}</p>
         </div>
         <Link to="/booking">
           <PillButton theme="luxe" variant="outline" data-tour="mybookings-new">
-            + 新增預約
+            {t.myBookings.newBooking}
           </PillButton>
         </Link>
       </div>
@@ -94,12 +95,12 @@ const MyBookingsPage: React.FC = () => {
 
       <div data-tour="mybookings-list">
       {loading ? (
-        <div className="text-center py-12 text-muted">載入中...</div>
+        <div className="text-center py-12 text-muted">{t.common.loading}</div>
       ) : bookings.length === 0 ? (
         <div className="text-center py-12 text-muted">
-          尚無預約紀錄，
+          {t.myBookings.empty}
           <Link to="/booking" className="text-gold hover:underline">
-            立即預約諮詢
+            {t.myBookings.emptyCta}
           </Link>
         </div>
       ) : (
@@ -115,11 +116,14 @@ const MyBookingsPage: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="text-inherit font-medium">
                       {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
-                        locale: zhTW,
+                        locale: dfLocale,
                       })}
                     </span>
                     <span className="text-muted text-sm">
-                      ~ {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
+                      ~{" "}
+                      {format(new Date(b.end_at), "HH:mm", {
+                        locale: dfLocale,
+                      })}
                     </span>
                     <span
                       data-tour="mybookings-status"
@@ -127,12 +131,12 @@ const MyBookingsPage: React.FC = () => {
                         STATUS_STYLE[b.status] || ""
                       }`}
                     >
-                      {BOOKING_STATUS_LABEL[b.status]}
+                      {t.bookingStatus[b.status]}
                     </span>
                   </div>
                   {b.course && (
                     <p className="text-xs text-muted mb-1">
-                      📚 關聯課程：
+                      {t.myBookings.relatedCourse}
                       {/* 路由只支援數字 id（App.tsx: courses/:id），slug 會 404 */}
                       <Link
                         to={`/courses/${b.course.course_id}`}
@@ -149,13 +153,14 @@ const MyBookingsPage: React.FC = () => {
                   )}
                   {b.coach_note && (
                     <p className="text-sm text-gold/80 mt-2">
-                      教練備註：{b.coach_note}
+                      {t.myBookings.coachNote}
+                      {b.coach_note}
                     </p>
                   )}
                   <p className="text-xs text-muted mt-2">
-                    送出於{" "}
+                    {t.myBookings.submittedAt}{" "}
                     {format(new Date(b.created_at), "yyyy/MM/dd HH:mm", {
-                      locale: zhTW,
+                      locale: dfLocale,
                     })}
                   </p>
                 </div>
@@ -167,7 +172,7 @@ const MyBookingsPage: React.FC = () => {
                     data-tour="mybookings-cancel"
                     onClick={() => handleCancel(b)}
                   >
-                    取消
+                    {t.common.cancel}
                   </PillButton>
                 )}
               </div>

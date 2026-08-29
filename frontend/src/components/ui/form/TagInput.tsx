@@ -5,6 +5,7 @@
  */
 
 import React, { useState, KeyboardEvent, useRef } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** 主題類型 */
 type Theme = "abyss" | "prism" | "luxe";
@@ -103,7 +104,7 @@ const themeStyles: Record<
 const TagInput: React.FC<TagInputProps> = ({
   tags,
   onChange,
-  placeholder = "輸入後按 Enter 新增",
+  placeholder,
   theme = "luxe",
   maxTags = 10,
   validate,
@@ -113,6 +114,7 @@ const TagInput: React.FC<TagInputProps> = ({
   hint,
   "data-tour": dataTour,
 }) => {
+  const { t } = useLanguage();
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -143,13 +145,13 @@ const TagInput: React.FC<TagInputProps> = ({
 
     // 檢查重複
     if (tags.includes(trimmedValue)) {
-      setError("標籤已存在");
+      setError(t.formUi.tagExists);
       return;
     }
 
     // 檢查數量上限
     if (tags.length >= maxTags) {
-      setError(`最多只能新增 ${maxTags} 個標籤`);
+      setError(t.formUi.tagMax.replace("{max}", String(maxTags)));
       return;
     }
 
@@ -160,7 +162,7 @@ const TagInput: React.FC<TagInputProps> = ({
         setError(
           typeof validationResult === "string"
             ? validationResult
-            : "標籤格式不正確",
+            : t.formUi.tagInvalid,
         );
         return;
       }
@@ -253,7 +255,7 @@ const TagInput: React.FC<TagInputProps> = ({
                     duration-200
                     ${styles.removeButton}
                   `}
-                  aria-label={`移除 ${tag}`}
+                  aria-label={t.formUi.removeTag.replace("{tag}", tag)}
                 >
                   <svg
                     className="w-3 h-3"
@@ -285,7 +287,11 @@ const TagInput: React.FC<TagInputProps> = ({
               }}
               onKeyDown={handleKeyDown}
               onBlur={addTag}
-              placeholder={tags.length === 0 ? placeholder : ""}
+              placeholder={
+                tags.length === 0
+                  ? (placeholder ?? t.formUi.tagInputPlaceholder)
+                  : ""
+              }
               disabled={disabled}
               className={`
                 flex-1
@@ -312,7 +318,9 @@ const TagInput: React.FC<TagInputProps> = ({
       {/* 標籤數量提示 */}
       {tags.length > 0 && (
         <p className={`mt-1 text-xs ${styles.hint}`}>
-          已新增 {tags.length} / {maxTags} 個標籤
+          {t.formUi.tagCount
+            .replace("{count}", String(tags.length))
+            .replace("{max}", String(maxTags))}
         </p>
       )}
     </div>

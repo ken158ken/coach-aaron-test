@@ -5,9 +5,11 @@
  * @theme luxe (LUXE 高端主題)
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 import { GlowButton, PillButton, Loading, Modal } from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { SEOHead } from "@/components/seo";
@@ -39,79 +41,81 @@ interface CoachingPlan {
   description: string;
 }
 
-/** 可用的支付方式 */
-const PAYMENT_OPTIONS: PaymentOption[] = [
+/** 可用的支付方式（名稱／說明走翻譯字典） */
+const buildPaymentOptions = (t: AllTranslations): PaymentOption[] => [
   {
     id: "linepay",
     name: "LINE Pay",
     icon: "💚",
-    description: "使用 LINE Pay 快速付款",
+    description: t.checkoutPage.payLinePayDesc,
     available: true,
   },
   {
     id: "newebpay",
-    name: "藍新金流",
+    name: t.checkoutPage.payNewebPayName,
     icon: "💳",
-    description: "信用卡、ATM 轉帳、超商代碼",
+    description: t.checkoutPage.payNewebPayDesc,
     available: true,
   },
   {
     id: "ecpay",
-    name: "綠界科技",
+    name: t.checkoutPage.payEcPayName,
     icon: "🌿",
-    description: "信用卡、ATM、超商付款",
+    description: t.checkoutPage.payEcPayDesc,
     available: true,
   },
   {
     id: "jkopay",
-    name: "街口支付",
+    name: t.checkoutPage.payJkoPayName,
     icon: "🟠",
-    description: "使用街口支付掃碼付款",
+    description: t.checkoutPage.payJkoPayDesc,
     available: true,
   },
   {
     id: "apple_pay",
     name: "Apple Pay",
     icon: "🍎",
-    description: "使用 Apple Pay 快速結帳",
+    description: t.checkoutPage.payApplePayDesc,
     available: true,
   },
   {
     id: "google_pay",
     name: "Google Pay",
     icon: "🔵",
-    description: "使用 Google Pay 快速結帳",
+    description: t.checkoutPage.payGooglePayDesc,
     available: true,
   },
 ];
 
-/** 陪跑方案資料 */
-const COACHING_PLANS: Record<string, CoachingPlan> = {
+/** 陪跑方案資料（標題／時長／說明走翻譯字典） */
+const buildCoachingPlans = (
+  t: AllTranslations,
+): Record<string, CoachingPlan> => ({
   "3-months": {
     id: "3-months",
-    title: "三個月陪跑方案",
-    duration: "三個月",
+    title: t.checkoutPage.plan3mTitle,
+    duration: t.checkoutPage.plan3mDuration,
     price: 32800,
     sessions: 12,
-    description: "1對1培訓 12次",
+    description: t.checkoutPage.plan3mDesc,
   },
   "6-months": {
     id: "6-months",
-    title: "六個月陪跑方案",
-    duration: "六個月",
+    title: t.checkoutPage.plan6mTitle,
+    duration: t.checkoutPage.plan6mDuration,
     price: 59800,
     sessions: 24,
-    description: "1對1培訓 24次",
+    description: t.checkoutPage.plan6mDesc,
   },
   "1-year": {
     id: "1-year",
-    title: "一年陪跑方案",
-    duration: "一年",
+    title: t.checkoutPage.plan1yTitle,
+    duration: t.checkoutPage.plan1yDuration,
     price: 118000,
     sessions: 48,
-    description: "1對1培訓 48次",
+    description: t.checkoutPage.plan1yDesc,
   },
-};
+});
 
 /**
  * Checkout - 結帳頁面
@@ -123,6 +127,10 @@ const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dialog = useDialog();
+  const { t } = useLanguage();
+
+  const PAYMENT_OPTIONS = useMemo(() => buildPaymentOptions(t), [t]);
+  const COACHING_PLANS = useMemo(() => buildCoachingPlans(t), [t]);
 
   // 狀態
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | null>(
@@ -164,7 +172,7 @@ const Checkout: React.FC = () => {
     }
 
     if (!selectedPayment) {
-      setError("請選擇支付方式");
+      setError(t.checkoutPage.selectPaymentError);
       return;
     }
 
@@ -192,37 +200,52 @@ const Checkout: React.FC = () => {
         case "linepay":
           // 導向 LINE Pay
           await dialog.alert({
-            title: "付款導向",
-            message: "將導向 LINE Pay 付款頁面（模擬）",
+            title: t.checkoutPage.redirectTitle,
+            message: t.checkoutPage.redirectMessage.replace(
+              "{provider}",
+              "LINE Pay",
+            ),
           });
           break;
         case "newebpay":
           // 導向藍新金流
           await dialog.alert({
-            title: "付款導向",
-            message: "將導向藍新金流付款頁面（模擬）",
+            title: t.checkoutPage.redirectTitle,
+            message: t.checkoutPage.redirectMessage.replace(
+              "{provider}",
+              t.checkoutPage.payNewebPayName,
+            ),
           });
           break;
         case "ecpay":
           // 導向綠界
           await dialog.alert({
-            title: "付款導向",
-            message: "將導向綠界付款頁面（模擬）",
+            title: t.checkoutPage.redirectTitle,
+            message: t.checkoutPage.redirectMessage.replace(
+              "{provider}",
+              t.checkoutPage.payEcPayName,
+            ),
           });
           break;
         case "jkopay":
           // 導向街口支付
           await dialog.alert({
-            title: "付款導向",
-            message: "將導向街口支付頁面（模擬）",
+            title: t.checkoutPage.redirectTitle,
+            message: t.checkoutPage.redirectMessage.replace(
+              "{provider}",
+              t.checkoutPage.payJkoPayName,
+            ),
           });
           break;
         case "apple_pay":
         case "google_pay":
           // Apple Pay / Google Pay 直接在頁面處理
           await dialog.alert({
-            title: "行動支付",
-            message: `將啟動 ${selectedPayment === "apple_pay" ? "Apple Pay" : "Google Pay"}（模擬）`,
+            title: t.checkoutPage.mobilePayTitle,
+            message: t.checkoutPage.mobilePayMessage.replace(
+              "{provider}",
+              selectedPayment === "apple_pay" ? "Apple Pay" : "Google Pay",
+            ),
           });
           break;
       }
@@ -231,7 +254,7 @@ const Checkout: React.FC = () => {
       navigate("/checkout/success?order=ORD" + Date.now());
     } catch (err) {
       console.error("結帳失敗:", err);
-      setError("結帳失敗，請稍後再試");
+      setError(t.checkoutPage.checkoutFailed);
     } finally {
       setIsProcessing(false);
     }
@@ -250,7 +273,7 @@ const Checkout: React.FC = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <Loading theme="studio" text="載入中..." />
+        <Loading theme="studio" text={t.common.loading} />
       </div>
     );
   }
@@ -259,8 +282,8 @@ const Checkout: React.FC = () => {
     <div className="min-h-screen bg-transparent pt-20 pb-12 px-4 relative">
       {/* SEO Meta 標籤 */}
       <SEOHead
-        title={`結帳 - ${selectedPlan.title}`}
-        description="安全快速的結帳流程，支援多種支付方式"
+        title={t.checkoutPage.seoTitle.replace("{plan}", selectedPlan.title)}
+        description={t.checkoutPage.seoDescription}
         url="/checkout"
       />
 
@@ -268,9 +291,9 @@ const Checkout: React.FC = () => {
         {/* 頁面標題 */}
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-light text-white/90 mb-2">
-            確認訂單
+            {t.checkoutPage.heading}
           </h1>
-          <p className="text-[#888]">請確認您的訂單資訊並選擇支付方式</p>
+          <p className="text-[#888]">{t.checkoutPage.subtitle}</p>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-8">
@@ -282,28 +305,28 @@ const Checkout: React.FC = () => {
                 <span className="w-8 h-8 rounded-full bg-[#c5a059] text-[#0a0a0a] flex items-center justify-center text-sm font-medium">
                   1
                 </span>
-                <span className="text-white/90 text-sm">選擇方案</span>
+                <span className="text-white/90 text-sm">{t.checkoutPage.step1}</span>
               </div>
               <div className="w-12 h-px bg-[#c5a059]/50" />
               <div className="flex items-center gap-2">
                 <span className="w-8 h-8 rounded-full bg-[#c5a059] text-[#0a0a0a] flex items-center justify-center text-sm font-medium">
                   2
                 </span>
-                <span className="text-white/90 text-sm">選擇支付</span>
+                <span className="text-white/90 text-sm">{t.checkoutPage.step2}</span>
               </div>
               <div className="w-12 h-px bg-luxe-muted/30" />
               <div className="flex items-center gap-2">
                 <span className="w-8 h-8 rounded-full bg-luxe-muted/30 text-[#888] flex items-center justify-center text-sm font-medium">
                   3
                 </span>
-                <span className="text-[#888] text-sm">完成付款</span>
+                <span className="text-[#888] text-sm">{t.checkoutPage.step3}</span>
               </div>
             </div>
 
             {/* 支付方式列表 */}
             <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6">
               <h2 className="text-lg font-medium text-white/90 mb-4">
-                選擇支付方式
+                {t.checkoutPage.choosePayment}
               </h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {PAYMENT_OPTIONS.map((option) => (
@@ -349,7 +372,7 @@ const Checkout: React.FC = () => {
                     </div>
                     {!option.available && (
                       <span className="absolute top-2 right-2 text-xs text-[#888]">
-                        即將推出
+                        {t.checkoutPage.comingSoon}
                       </span>
                     )}
                   </button>
@@ -360,12 +383,12 @@ const Checkout: React.FC = () => {
             {/* 備註 */}
             <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6">
               <h2 className="text-lg font-medium text-white/90 mb-4">
-                訂單備註（選填）
+                {t.checkoutPage.orderNoteLabel}
               </h2>
               <textarea
                 value={orderNote}
                 onChange={(e) => setOrderNote(e.target.value)}
-                placeholder="如有特殊需求請在此說明..."
+                placeholder={t.checkoutPage.orderNotePlaceholder}
                 className="w-full h-24 px-4 py-3 bg-transparent border border-[#c5a059]/20 rounded-lg text-white/90 placeholder-[#888]/50 resize-none focus:outline-none focus:border-[#c5a059]/50"
               />
             </div>
@@ -382,7 +405,7 @@ const Checkout: React.FC = () => {
           <div className="lg:col-span-2">
             <div className="bg-[#0a0a0a]/50 border border-[#c5a059]/20 rounded-xl p-6 sticky top-24">
               <h2 className="text-lg font-medium text-white/90 mb-4">
-                訂單摘要
+                {t.checkout.orderSummary}
               </h2>
 
               {/* 方案資訊 */}
@@ -407,26 +430,35 @@ const Checkout: React.FC = () => {
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
                   </svg>
-                  <span>方案時長：{selectedPlan.duration}</span>
+                  <span>
+                    {t.checkoutPage.planDuration.replace(
+                      "{duration}",
+                      selectedPlan.duration,
+                    )}
+                  </span>
                 </div>
               </div>
 
               {/* 價格明細 */}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-[#888]">
-                  <span>方案費用</span>
+                  <span>{t.checkoutPage.planFee}</span>
                   <span>NT$ {selectedPlan.price.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-[#888]">
-                  <span>附贈課程</span>
-                  <span className="text-green-400">含在方案內</span>
+                  <span>{t.checkoutPage.bonusCourses}</span>
+                  <span className="text-green-400">
+                    {t.checkoutPage.includedInPlan}
+                  </span>
                 </div>
               </div>
 
               {/* 總計 */}
               <div className="border-t border-[#c5a059]/10 pt-4 mb-6">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-white/90 font-medium">應付金額</span>
+                  <span className="text-white/90 font-medium">
+                    {t.checkoutPage.amountDue}
+                  </span>
                   <span className="text-2xl font-bold text-[#c5a059]">
                     NT$ {selectedPlan.price.toLocaleString()}
                   </span>
@@ -459,19 +491,19 @@ const Checkout: React.FC = () => {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      處理中...
+                      {t.checkoutPage.processing}
                     </span>
                   ) : (
-                    "確認付款"
+                    t.checkoutPage.confirmPayment
                   )}
                 </GlowButton>
               ) : (
                 <div className="space-y-3">
                   <p className="text-center text-[#888] text-sm">
-                    請先登入以完成購買
+                    {t.checkoutPage.loginToPurchase}
                   </p>
                   <GlowButton onClick={handleGoToLogin} className="w-full">
-                    登入
+                    {t.nav.login}
                   </GlowButton>
                   <PillButton
                     theme="studio"
@@ -479,7 +511,7 @@ const Checkout: React.FC = () => {
                     onClick={handleGoToRegister}
                     className="w-full"
                   >
-                    註冊新帳號
+                    {t.checkoutPage.registerNewAccount}
                   </PillButton>
                 </div>
               )}
@@ -499,7 +531,7 @@ const Checkout: React.FC = () => {
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
-                <span>SSL 加密安全交易</span>
+                <span>{t.checkoutPage.sslNotice}</span>
               </div>
             </div>
           </div>
@@ -511,7 +543,7 @@ const Checkout: React.FC = () => {
             to="/courses"
             className="text-[#c5a059] hover:underline text-sm"
           >
-            ← 返回課程頁面
+            {t.checkoutPage.backToCourses}
           </Link>
         </div>
       </div>
@@ -520,24 +552,26 @@ const Checkout: React.FC = () => {
       <Modal
         isOpen={showLoginModal && !isAuthenticated}
         onClose={() => setShowLoginModal(false)}
-        title="請先登入"
+        title={t.checkoutPage.loginRequiredTitle}
       >
         <div className="text-center py-4">
           <div className="text-6xl mb-4">🔐</div>
           <h3 className="text-lg font-medium text-white/90 mb-2">
-            如要購買課程，請先註冊或登入
+            {t.checkoutPage.loginModalHeading}
           </h3>
           <p className="text-[#888] text-sm mb-6">
-            登入後即可選擇支付方式並完成購買
+            {t.checkoutPage.loginModalBody}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <GlowButton onClick={handleGoToLogin}>立即登入</GlowButton>
+            <GlowButton onClick={handleGoToLogin}>
+              {t.checkoutPage.loginNow}
+            </GlowButton>
             <PillButton
               theme="studio"
               variant="default"
               onClick={handleGoToRegister}
             >
-              註冊新帳號
+              {t.checkoutPage.registerNewAccount}
             </PillButton>
           </div>
         </div>

@@ -23,6 +23,7 @@
 
 import React from "react";
 import { Helmet } from "react-helmet-async";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface SEOHeadProps {
   /** 頁面標題 */
@@ -57,12 +58,18 @@ interface SEOHeadProps {
   breadcrumbs?: Array<{ name: string; url: string }>;
 }
 
-/** 預設網站資訊 */
-const DEFAULT_SITE_NAME = "阿倫教官 | Coach Aaron";
+/** 預設網站資訊（依語言切換） */
+const SITE_NAME_ZH = "阿倫教官 | Coach Aaron";
+const SITE_NAME_EN = "Coach Aaron";
+/** 品牌名（JSON-LD provider / author fallback 用） */
+const BRAND_NAME_ZH = "阿倫教官";
+const BRAND_NAME_EN = "Coach Aaron";
 // ⚠️ 本站為純 B2B（服務對象是健身教練同業，非一般健身會員），
 //    預設描述不得再出現「一對一訓練」等 B2C 服務字眼。
-const DEFAULT_DESCRIPTION =
+const DESCRIPTION_ZH =
   "阿倫教官｜私教變現顧問、教練職涯培訓講師。給私人教練的商業實戰培訓：銷售心理學、體驗課成交、續約經營與個人品牌，把專業變成穩定收入。";
+const DESCRIPTION_EN =
+  "Coach Aaron — business coach and career educator for personal trainers. Practical training in sales psychology, converting trial sessions, client retention and personal branding, so you can turn your coaching expertise into reliable income.";
 const DEFAULT_IMAGE = "/images/og-default.jpg";
 
 /**
@@ -95,7 +102,7 @@ const DEFAULT_URL: string = (() => {
  */
 const SEOHead: React.FC<SEOHeadProps> = ({
   title,
-  description = DEFAULT_DESCRIPTION,
+  description: descriptionProp,
   keywords = [],
   image = DEFAULT_IMAGE,
   url,
@@ -110,6 +117,16 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   showPrice = true,
   breadcrumbs,
 }) => {
+  // 依語言切換站台預設值（頁面未傳 description 時的 fallback、品牌名、og:locale）
+  const { language } = useLanguage();
+  const isEn = language === "en";
+  const DEFAULT_SITE_NAME = isEn ? SITE_NAME_EN : SITE_NAME_ZH;
+  const BRAND_NAME = isEn ? BRAND_NAME_EN : BRAND_NAME_ZH;
+  const description = descriptionProp ?? (isEn ? DESCRIPTION_EN : DESCRIPTION_ZH);
+  const ogLocale = isEn ? "en_US" : "zh_TW";
+  const htmlLang = isEn ? "en" : "zh-TW";
+  const homeCrumb = isEn ? "Home" : "首頁";
+
   // 組合完整標題
   const fullTitle = title
     ? `${title} | ${DEFAULT_SITE_NAME}`
@@ -137,8 +154,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     if (url === "/" || url === DEFAULT_URL || url === `${DEFAULT_URL}/`) {
       graph.push({
         "@type": "Organization",
-        name: "阿倫教官",
-        alternateName: "Coach Aaron",
+        name: BRAND_NAME,
+        alternateName: isEn ? BRAND_NAME_ZH : BRAND_NAME_EN,
         url: DEFAULT_URL,
         logo: {
           "@type": "ImageObject",
@@ -146,7 +163,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
           width: BRAND_LOGO_SIZE,
           height: BRAND_LOGO_SIZE,
         },
-        description: DEFAULT_DESCRIPTION,
+        description,
         sameAs: ["https://www.instagram.com/coach.luen/"],
       });
     }
@@ -159,7 +176,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         image: fullImage,
         datePublished: publishedTime,
         dateModified: modifiedTime || publishedTime,
-        author: { "@type": "Person", name: author || "阿倫教官" },
+        author: { "@type": "Person", name: author || BRAND_NAME },
         publisher: {
           "@type": "Organization",
           name: DEFAULT_SITE_NAME,
@@ -181,7 +198,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         url: fullUrl,
         provider: {
           "@type": "Person",
-          name: "阿倫教官",
+          name: BRAND_NAME,
           sameAs: "https://www.instagram.com/coach.luen/",
         },
       };
@@ -200,7 +217,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
     // BreadcrumbList
     if (breadcrumbs && breadcrumbs.length > 0) {
-      const items = [{ name: "首頁", url: "/" }, ...breadcrumbs];
+      const items = [{ name: homeCrumb, url: "/" }, ...breadcrumbs];
       graph.push({
         "@type": "BreadcrumbList",
         itemListElement: items.map((item, idx) => ({
@@ -223,6 +240,9 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
   return (
     <Helmet>
+      {/* 語言（a11y + 搜尋引擎判讀頁面語言） */}
+      <html lang={htmlLang} />
+
       {/* 基本 Meta 標籤 */}
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
@@ -245,7 +265,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       <meta property="og:url" content={fullUrl} />
       <meta property="og:type" content={isArticle ? "article" : type} />
       <meta property="og:site_name" content={DEFAULT_SITE_NAME} />
-      <meta property="og:locale" content="zh_TW" />
+      <meta property="og:locale" content={ogLocale} />
 
       {/* 文章專用 OG 標籤 */}
       {isArticle && publishedTime && (

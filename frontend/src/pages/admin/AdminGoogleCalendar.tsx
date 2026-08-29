@@ -11,19 +11,13 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useDialog } from "@/components/ui/Dialog";
+import { useLanguage } from "@/context/LanguageContext";
 import { coachService, type GoogleStatus } from "@/services/booking/coach.service";
-
-// ===== 已啟用功能清單（純文字條列） =====
-const ENABLED_FEATURES: readonly string[] = [
-  "核准預約時，自動在此 Google 日曆建立諮詢事件",
-  "自動寄「日曆邀請」給會員 → 事件出現在會員自己的 Google 日曆",
-  "自動提醒（提前 1 天 email、提前 30 分鐘彈窗）",
-  "自動附上 Google Meet 視訊連結",
-  "計算可預約時段時，自動避開此日曆上的忙碌時段（freebusy）",
-];
 
 const AdminGoogleCalendar: React.FC = () => {
   const { confirm, alert } = useDialog();
+  const { t } = useLanguage();
+  const g = t.adminGoogleCalendarPage;
 
   const [status, setStatus] = useState<GoogleStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -37,12 +31,12 @@ const AdminGoogleCalendar: React.FC = () => {
       const data = await coachService.getGoogleStatus();
       setStatus(data);
     } catch (err) {
-      setError((err as Error).message || "無法讀取連結狀態");
+      setError((err as Error).message || t.adminGoogleCalendarPage.statusLoadFailed);
       setStatus(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadStatus();
@@ -85,11 +79,10 @@ const AdminGoogleCalendar: React.FC = () => {
 
   const handleDisconnect = async () => {
     const ok = await confirm({
-      title: "解除 Google 連結",
-      message:
-        "確定要登出目前連結的 Google 帳號嗎？解除後，核准預約將無法自動建立日曆事件，直到重新連結。",
-      confirmText: "登出 / 解除連結",
-      cancelText: "取消",
+      title: g.disconnectTitle,
+      message: g.disconnectMessage,
+      confirmText: g.disconnectBtn,
+      cancelText: t.common.cancel,
       variant: "danger",
     });
     if (!ok) return;
@@ -97,17 +90,17 @@ const AdminGoogleCalendar: React.FC = () => {
     setDisconnecting(true);
     try {
       const res = await coachService.disconnectGoogle();
-      if (!res.success) throw new Error("解除連結失敗");
+      if (!res.success) throw new Error(g.disconnectFailed);
       await loadStatus();
       await alert({
-        title: "已解除連結",
-        message: "已登出 Google 帳號，現在可請對方重新連結自己的 Google。",
+        title: g.disconnectedTitle,
+        message: g.disconnectedMessage,
         type: "success",
       });
     } catch (err) {
       await alert({
-        title: "操作失敗",
-        message: (err as Error).message || "解除連結時發生錯誤，請稍後再試。",
+        title: g.actionFailedTitle,
+        message: (err as Error).message || g.disconnectErrorMessage,
         type: "error",
       });
     } finally {
@@ -121,7 +114,7 @@ const AdminGoogleCalendar: React.FC = () => {
       return (
         <div className="flex items-center gap-3 text-luxe-muted text-sm">
           <span className="w-4 h-4 border border-t-transparent border-luxe-gold rounded-full animate-spin" />
-          讀取連結狀態中…
+          {g.statusLoading}
         </div>
       );
     }
@@ -131,7 +124,7 @@ const AdminGoogleCalendar: React.FC = () => {
         <div className="flex items-start gap-3">
           <span className="text-xl">❌</span>
           <div>
-            <p className="text-sm font-medium text-red-400">無法讀取連結狀態</p>
+            <p className="text-sm font-medium text-red-400">{g.statusLoadFailed}</p>
             <p className="text-xs text-luxe-muted mt-1">{error}</p>
           </div>
         </div>
@@ -143,9 +136,9 @@ const AdminGoogleCalendar: React.FC = () => {
         <div className="flex items-start gap-3">
           <span className="text-xl">✅</span>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-green-400">已連結</p>
+            <p className="text-sm font-medium text-green-400">{g.statusConnected}</p>
             <p className="text-xs text-luxe-muted mt-1 break-all">
-              日曆 ID：
+              {g.calendarIdLabel}
               <span className="text-luxe-text ml-1">
                 {status?.calendarId || "primary"}
               </span>
@@ -161,10 +154,10 @@ const AdminGoogleCalendar: React.FC = () => {
           <span className="text-xl">⚠️</span>
           <div>
             <p className="text-sm font-medium text-amber-400">
-              連結已失效，請重新連結
+              {g.statusExpired}
             </p>
             <p className="text-xs text-luxe-muted mt-1">
-              授權可能已過期或被撤銷，請按下方「連結 / 切換 Google 帳號」重新登入。
+              {g.statusExpiredHint}
             </p>
           </div>
         </div>
@@ -176,10 +169,10 @@ const AdminGoogleCalendar: React.FC = () => {
         <span className="text-xl">⚪</span>
         <div>
           <p className="text-sm font-medium text-luxe-text">
-            尚未連結任何 Google 帳號
+            {g.statusNone}
           </p>
           <p className="text-xs text-luxe-muted mt-1">
-            連結後，核准的預約會自動同步到 Google 日曆。
+            {g.statusNoneHint}
           </p>
         </div>
       </div>
@@ -193,9 +186,9 @@ const AdminGoogleCalendar: React.FC = () => {
         <span className="text-xs text-luxe-muted uppercase tracking-widest">
           Admin
         </span>
-        <h1 className="text-2xl font-light text-luxe-text mt-1">Google 日曆管理</h1>
+        <h1 className="text-2xl font-light text-luxe-text mt-1">{g.pageTitle}</h1>
         <p className="text-sm text-luxe-muted mt-1">
-          連結 Google 帳號，讓預約系統自動同步諮詢事件與可預約時段。
+          {g.pageSubtitle}
         </p>
       </div>
 
@@ -204,7 +197,7 @@ const AdminGoogleCalendar: React.FC = () => {
         data-tour="gcal-status"
         className="bg-luxe-surface border border-luxe-gold/10 rounded-xl p-5 sm:p-6"
       >
-        <h2 className="text-sm font-medium text-luxe-text mb-4">連結狀態</h2>
+        <h2 className="text-sm font-medium text-luxe-text mb-4">{g.statusHeading}</h2>
         {renderStatusCard()}
 
         {/* 按鈕 */}
@@ -228,7 +221,7 @@ const AdminGoogleCalendar: React.FC = () => {
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            {isLinked ? "切換 Google 帳號" : "連結 Google 帳號"}
+            {isLinked ? g.switchBtn : g.connectBtn}
           </button>
 
           <button
@@ -240,7 +233,7 @@ const AdminGoogleCalendar: React.FC = () => {
             {disconnecting ? (
               <>
                 <span className="w-4 h-4 border border-t-transparent border-red-400 rounded-full animate-spin" />
-                處理中…
+                {t.adminCommon.processing}
               </>
             ) : (
               <>
@@ -257,7 +250,7 @@ const AdminGoogleCalendar: React.FC = () => {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                登出 / 解除連結
+                {g.disconnectBtn}
               </>
             )}
           </button>
@@ -271,12 +264,10 @@ const AdminGoogleCalendar: React.FC = () => {
       >
         <h2 className="text-base font-medium text-luxe-text flex items-center gap-2 mb-3">
           <span>👥</span>
-          共用帳號說明
+          {g.sharedHeading}
         </h2>
         <p className="text-sm text-luxe-muted leading-relaxed">
-          目前站長與教練共用同一個 Google
-          帳號。要換人使用時，先按「登出 / 解除連結」把目前的帳號登出，再請對方按「連結
-          Google 帳號」登入自己的 Google 即可，系統會自動接手新的帳號。
+          {g.sharedBody}
         </p>
       </div>
 
@@ -287,13 +278,13 @@ const AdminGoogleCalendar: React.FC = () => {
       >
         <h2 className="text-base font-medium text-luxe-text flex items-center gap-2 mb-1">
           <span>✨</span>
-          連結後會自動啟用的功能
+          {g.featuresHeading}
         </h2>
         <p className="text-xs text-luxe-muted mb-4">
-          完成連結後，以下預約日曆功能會自動運作，無需額外設定。
+          {g.featuresHint}
         </p>
         <ul className="space-y-2.5">
-          {ENABLED_FEATURES.map((feature) => (
+          {g.features.map((feature) => (
             <li
               key={feature}
               className="flex items-start gap-2.5 text-sm text-luxe-muted"

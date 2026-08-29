@@ -17,6 +17,9 @@ import { Modal, Input, PillButton } from "@/components/ui";
 import { chatService, type ChatUser } from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
 import UserAvatar from "./UserAvatar";
+import { localizedUserName } from "./chatNames";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 
 interface NewChatModalProps {
   isOpen: boolean;
@@ -25,8 +28,8 @@ interface NewChatModalProps {
 
 type Tab = "dm" | "group";
 
-function userLabel(u: ChatUser): string {
-  return u.admin_display_name || u.display_name || u.name || u.email || "用戶";
+function userLabel(u: ChatUser, t: AllTranslations): string {
+  return localizedUserName(u, t);
 }
 
 // ────────────────────────────────────────────────────────
@@ -39,14 +42,17 @@ const AdminCardGrid: React.FC<{
   onPick: (u: ChatUser) => void;
   disabled?: boolean;
 }> = ({ admins, selectedIds, multi, onPick, disabled }) => {
+  const { t } = useLanguage();
   if (admins.length === 0) return null;
   return (
     <section data-tour="chat-new-admins">
       <p className="text-xs text-muted mb-2 flex items-center gap-1.5">
         <span className="text-gold">🏅</span>
-        網站管理員 / 教練
+        {t.chatUi.adminsAndCoaches}
         {multi && (
-          <span className="text-[10px] text-muted">（點擊切換選取）</span>
+          <span className="text-[10px] text-muted">
+            {t.chatUi.tapToToggle}
+          </span>
         )}
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -65,7 +71,9 @@ const AdminCardGrid: React.FC<{
             >
               <UserAvatar user={u} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{userLabel(u)}</p>
+                <p className="text-sm font-medium truncate">
+                  {userLabel(u, t)}
+                </p>
                 {u.admin_note && (
                   <p className="text-[10px] text-muted truncate">
                     {u.admin_note}
@@ -90,6 +98,7 @@ const MemberCombobox: React.FC<{
   onPick: (u: ChatUser) => void;
   placeholder?: string;
 }> = ({ excludeIds, selectedIds, onPick, placeholder }) => {
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<ChatUser[]>([]);
@@ -131,7 +140,7 @@ const MemberCombobox: React.FC<{
 
   return (
     <section data-tour="chat-new-search">
-      <p className="text-xs text-muted mb-2">👥 其他會員</p>
+      <p className="text-xs text-muted mb-2">{t.chatUi.otherMembers}</p>
       <div className="relative" ref={wrapRef}>
         <Input
           value={q}
@@ -140,7 +149,7 @@ const MemberCombobox: React.FC<{
             setQ(e.target.value);
             setOpen(true);
           }}
-          placeholder={placeholder || "點擊展開或輸入名稱搜尋..."}
+          placeholder={placeholder || t.chatUi.comboboxPlaceholder}
         />
         {open && (
           <div
@@ -148,12 +157,12 @@ const MemberCombobox: React.FC<{
           >
             {loading && (
               <div className="px-3 py-4 text-center text-xs text-muted">
-                搜尋中...
+                {t.chatUi.searching}
               </div>
             )}
             {!loading && results.length === 0 && (
               <div className="px-3 py-6 text-center text-xs text-muted">
-                {q ? "找不到符合的會員" : "尚無其他會員"}
+                {q ? t.chatUi.noMemberFound : t.chatUi.noOtherMembers}
               </div>
             )}
             {results.map((u) => {
@@ -172,7 +181,7 @@ const MemberCombobox: React.FC<{
                 >
                   <UserAvatar user={u} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{userLabel(u)}</p>
+                    <p className="text-sm truncate">{userLabel(u, t)}</p>
                     <p className="text-[10px] text-muted truncate">{u.email}</p>
                   </div>
                   {selected && <span className="text-gold text-xs">✓</span>}
@@ -191,6 +200,7 @@ const MemberCombobox: React.FC<{
 // ────────────────────────────────────────────────────────
 const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
   const { isAdmin } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("dm");
   const [admins, setAdmins] = useState<ChatUser[]>([]);
@@ -220,7 +230,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
       onClose();
       navigate(`/chat/${conv.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "開啟對話失敗");
+      setError(err instanceof Error ? err.message : t.chatUi.openChatFailed);
     } finally {
       setCreating(false);
     }
@@ -236,11 +246,11 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
 
   const createGroup = async () => {
     if (!groupTitle.trim()) {
-      setError("請輸入群組名稱");
+      setError(t.chatUi.groupNameRequired);
       return;
     }
     if (groupSelected.length === 0) {
-      setError("請至少選擇一位成員");
+      setError(t.chatUi.pickAtLeastOne);
       return;
     }
     try {
@@ -253,7 +263,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
       onClose();
       navigate(`/chat/${conv.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "建立群組失敗");
+      setError(err instanceof Error ? err.message : t.chatUi.createGroupFailed);
     } finally {
       setCreating(false);
     }
@@ -268,7 +278,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="開啟新對話"
+      title={t.chatUi.newChatTitle}
       size="lg"
       tourId="chat-new"
     >
@@ -283,7 +293,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
                   : "text-muted hover:text-inherit"
               }`}
             >
-              💬 1 對 1 私訊
+              {t.chatUi.tabDm}
             </button>
             <button
               onClick={() => setTab("group")}
@@ -293,7 +303,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
                   : "text-muted hover:text-inherit"
               }`}
             >
-              👥 建立群組
+              {t.chatUi.tabGroup}
             </button>
           </div>
         )}
@@ -313,7 +323,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
               excludeIds={adminIds}
               selectedIds={new Set()}
               onPick={startDM}
-              placeholder="搜尋其他會員..."
+              placeholder={t.chatUi.searchOtherMembers}
             />
           </>
         )}
@@ -321,17 +331,20 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
         {tab === "group" && isAdmin && (
           <>
             <Input
-              label="群組名稱"
+              label={t.chatUi.groupNameLabel}
               value={groupTitle}
               onChange={(e) => setGroupTitle(e.target.value)}
-              placeholder="例：教練團隊 ・ 學員 A 互動群"
+              placeholder={t.chatUi.groupNamePlaceholder}
             />
 
             {/* 已選成員 pill */}
             {groupSelected.length > 0 && (
               <div className="flex flex-wrap gap-1.5 p-2 rounded-lg bg-gold/5 border border-gold/15">
                 <span className="text-xs text-muted self-center">
-                  已選 {groupSelected.length} 位：
+                  {t.chatUi.selectedCount.replace(
+                    "{count}",
+                    String(groupSelected.length),
+                  )}
                 </span>
                 {groupSelected.map((u) => (
                   <span
@@ -339,7 +352,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-gold/15 text-gold border border-gold/30"
                   >
                     <UserAvatar user={u} size="sm" className="w-5! h-5! text-[10px]!" />
-                    {userLabel(u)}
+                    {userLabel(u, t)}
                     <button
                       onClick={() => toggleGroupMember(u)}
                       className="hover:text-red-400"
@@ -363,12 +376,12 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
               excludeIds={adminIds}
               selectedIds={groupSelectedIds}
               onPick={toggleGroupMember}
-              placeholder="輸入會員名稱搜尋並加入..."
+              placeholder={t.chatUi.searchAndAddPlaceholder}
             />
 
             <div className="flex justify-end gap-3 pt-3 border-t border-gold/10">
               <PillButton theme="luxe" variant="outline" onClick={onClose}>
-                取消
+                {t.common.cancel}
               </PillButton>
               <PillButton
                 theme="luxe"
@@ -376,7 +389,12 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose }) => {
                 onClick={createGroup}
                 disabled={creating}
               >
-                {creating ? "建立中..." : `建立群組（${groupSelected.length} 人）`}
+                {creating
+                  ? t.chatUi.creating
+                  : t.chatUi.createGroupBtn.replace(
+                      "{count}",
+                      String(groupSelected.length),
+                    )}
               </PillButton>
             </div>
           </>

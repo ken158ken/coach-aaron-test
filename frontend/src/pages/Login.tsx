@@ -29,6 +29,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const auth = t.authExtra;
 
   // location.state 由 AuthContext 的 auth:unauthorized handler 傳入
   const locationState = location.state as { expired?: boolean; from?: string } | null;
@@ -44,9 +45,9 @@ const Login: React.FC = () => {
   // 顯示 token 過期提示（支援 state 和 query params 兩種來源）
   useEffect(() => {
     if (locationState?.expired || searchParams.get("expired") === "1") {
-      setError("登入已過期，請重新登入");
+      setError(auth.login.sessionExpired);
     }
-  }, [locationState?.expired, searchParams]);
+  }, [locationState?.expired, searchParams, auth.login.sessionExpired]);
 
   // 處理 OAuth 回呼：後端 redirect 帶 auth_code → 前端用 XHR 交換 cookie
   useEffect(() => {
@@ -61,7 +62,7 @@ const Login: React.FC = () => {
           loginFromOAuth(response);
         })
         .catch(() => {
-          setError("登入驗證失敗，請重試");
+          setError(auth.login.oauth.verifyFailed);
         })
         .finally(() => {
           setLoading(false);
@@ -70,16 +71,16 @@ const Login: React.FC = () => {
         });
     } else if (oauthError) {
       const errorMessages: Record<string, string> = {
-        access_denied: "您已取消授權登入",
-        invalid_state: "登入驗證失敗，請重試",
-        no_code: "登入授權失敗，請重試",
-        invalid_profile: "無法取得帳號資訊",
-        create_failed: "建立帳號失敗，請稍後再試",
-        server_error: "伺服器錯誤，請稍後再試",
+        access_denied: auth.login.oauth.denied,
+        invalid_state: auth.login.oauth.verifyFailed,
+        no_code: auth.login.oauth.noCode,
+        invalid_profile: auth.login.oauth.invalidProfile,
+        create_failed: auth.login.oauth.createFailed,
+        server_error: auth.login.oauth.serverError,
       };
-      setError(errorMessages[oauthError] || "登入失敗，請重試");
+      setError(errorMessages[oauthError] || auth.login.oauth.generic);
     }
-  }, [searchParams, loginFromOAuth]);
+  }, [searchParams, loginFromOAuth, auth.login.oauth]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -111,7 +112,7 @@ const Login: React.FC = () => {
         axiosErr?.response?.data?.message ||
         axiosErr?.response?.data?.error ||
         (err instanceof Error ? err.message : null) ||
-        "登入失敗，請檢查帳號密碼";
+        auth.login.loginFailed;
       setError(msg);
     } finally {
       setLoading(false);
@@ -120,7 +121,7 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center px-4 pt-24 pb-8 sm:pt-28 sm:pb-12 relative">
-      <SEOHead title="登入 | 阿倫教官" noIndex={true} />
+      <SEOHead title={auth.login.seoTitle} noIndex={true} />
       <div className="w-full max-w-md relative z-10">
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
@@ -129,7 +130,7 @@ const Login: React.FC = () => {
                 文字為 currentColor，沿用原本的 text-gold */}
             <h1 className="text-gold m-0">
               <LogoVertical
-                title="阿倫教官 Coach Aaron"
+                title={auth.brandLogoTitle}
                 className="h-32 sm:h-40 w-auto mx-auto"
               />
             </h1>

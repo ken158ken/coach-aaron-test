@@ -18,6 +18,7 @@ import { get, post, put } from "@/services/api";
 import { videoService } from "@/services/content/video.service";
 import type { AdminVideo } from "@/types";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** 日誌工具 */
 const logger = {
@@ -58,6 +59,7 @@ const getPlatformIcon = (type: string): string => {
  */
 const AdminVideos: React.FC = () => {
   const dialog = useDialog();
+  const { t } = useLanguage();
 
   const [videos, setVideos] = useState<AdminVideo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,16 +107,16 @@ const AdminVideos: React.FC = () => {
         setHasUnsavedChanges(false);
       } else {
         setVideos([]);
-        setError("載入影片失敗：數據格式錯誤");
+        setError(t.adminVideosPage.error.loadFormat);
       }
     } catch (err) {
       logger.error("載入影片失敗", err);
       setVideos([]);
-      setError("載入影片失敗");
+      setError(t.adminVideosPage.error.loadFailed);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchVideos();
@@ -243,13 +245,13 @@ const AdminVideos: React.FC = () => {
       logger.info("影片排序已儲存", { count: orders.length });
       setHasUnsavedChanges(false);
       await dialog.confirm({
-        title: "儲存成功",
-        message: "影片排序已更新，前台將顯示新的順序。",
-        confirmText: "確定",
+        title: t.adminVideosPage.dialog.orderSavedTitle,
+        message: t.adminVideosPage.dialog.orderSavedMessage,
+        confirmText: t.adminVideosPage.dialog.ok,
       });
     } catch (err) {
       logger.error("儲存排序失敗", err);
-      setError("儲存排序失敗");
+      setError(t.adminVideosPage.error.saveOrderFailed);
     } finally {
       setSaving(false);
     }
@@ -271,7 +273,7 @@ const AdminVideos: React.FC = () => {
       });
     } catch (err) {
       logger.error("切換影片可見性失敗", err);
-      setError("切換影片可見性失敗");
+      setError(t.adminVideosPage.error.toggleVisibleFailed);
     }
   };
 
@@ -314,7 +316,7 @@ const AdminVideos: React.FC = () => {
       const reader = new FileReader();
       reader.onerror = () => {
         updateRow(rowId, { uploading: false });
-        reject(new Error("讀取檔案失敗，請重新選擇。"));
+        reject(new Error(t.adminVideosPage.error.readFileFailed));
       };
       reader.onload = async (ev) => {
         const dataUrl = (ev.target?.result as string) ?? "";
@@ -328,7 +330,7 @@ const AdminVideos: React.FC = () => {
         } catch (err) {
           logger.error("上傳縮圖失敗", err);
           updateRow(rowId, { uploading: false });
-          reject(new Error("上傳失敗，請重試。"));
+          reject(new Error(t.adminVideosPage.error.uploadFailed));
         }
       };
       reader.readAsDataURL(file);
@@ -348,7 +350,10 @@ const AdminVideos: React.FC = () => {
 
     // 若有縮圖仍在上傳，提示使用者等待
     if (valid.some((r) => r.uploading)) {
-      dialog.alert({ title: "請稍候", message: "有縮圖仍在上傳中，請等候上傳完成。" });
+      dialog.alert({
+        title: t.adminVideosPage.dialog.waitTitle,
+        message: t.adminVideosPage.dialog.waitMessage,
+      });
       return;
     }
 
@@ -365,7 +370,10 @@ const AdminVideos: React.FC = () => {
       setVideos((prev) => [...prev, ...res.data]);
       closeAddModal();
     } catch {
-      dialog.alert({ title: "新增失敗", message: "批量新增失敗，請稍後再試。" });
+      dialog.alert({
+        title: t.adminVideosPage.dialog.addFailedTitle,
+        message: t.adminVideosPage.dialog.addFailedMessage,
+      });
     } finally {
       setAddSubmitting(false);
     }
@@ -373,10 +381,10 @@ const AdminVideos: React.FC = () => {
 
   // ===== 檢視模式選項 =====
   const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
-    { mode: "list", icon: "☰", label: "清單" },
-    { mode: "card-sm", icon: "▪▪▪", label: "小圖" },
-    { mode: "card-md", icon: "◻◻", label: "中圖" },
-    { mode: "card-lg", icon: "⬜", label: "大圖" },
+    { mode: "list", icon: "☰", label: t.adminVideosPage.view.list },
+    { mode: "card-sm", icon: "▪▪▪", label: t.adminVideosPage.view.small },
+    { mode: "card-md", icon: "◻◻", label: t.adminVideosPage.view.medium },
+    { mode: "card-lg", icon: "⬜", label: t.adminVideosPage.view.large },
   ];
 
   // ===== 列表檢視 =====
@@ -385,11 +393,11 @@ const AdminVideos: React.FC = () => {
       {/* 表頭 */}
       <div className="grid grid-cols-[40px_40px_1fr_100px_80px_100px] gap-2 px-4 py-2 text-xs text-luxe-muted border-b border-luxe-gold/10 min-w-130">
         <span></span>
-        <span>順序</span>
-        <span>影片標題</span>
-        <span>分類</span>
-        <span>可見</span>
-        <span>操作</span>
+        <span>{t.adminVideosPage.table.colOrder}</span>
+        <span>{t.adminVideosPage.table.colTitle}</span>
+        <span>{t.adminVideosPage.table.colType}</span>
+        <span>{t.adminVideosPage.table.colVisible}</span>
+        <span>{t.adminCommon.colActions}</span>
       </div>
 
       {filteredVideos.map((video, index) => (
@@ -448,7 +456,9 @@ const AdminVideos: React.FC = () => {
                 : "bg-red-900/30 text-red-400 hover:bg-red-900/50"
             }`}
           >
-            {video.is_visible ? "👁 顯示" : "🚫 隱藏"}
+            {video.is_visible
+              ? `👁 ${t.adminVideosPage.shown}`
+              : `🚫 ${t.adminVideosPage.hidden}`}
           </button>
 
           {/* 操作 */}
@@ -457,7 +467,7 @@ const AdminVideos: React.FC = () => {
               onClick={() => handleMoveUp(index)}
               disabled={index === 0}
               className="text-luxe-muted hover:text-luxe-gold disabled:opacity-20 text-sm px-1"
-              title="上移"
+              title={t.adminVideosPage.moveUp}
             >
               ▲
             </button>
@@ -465,7 +475,7 @@ const AdminVideos: React.FC = () => {
               onClick={() => handleMoveDown(index)}
               disabled={index >= videos.length - 1}
               className="text-luxe-muted hover:text-luxe-gold disabled:opacity-20 text-sm px-1"
-              title="下移"
+              title={t.adminVideosPage.moveDown}
             >
               ▼
             </button>
@@ -527,7 +537,7 @@ const AdminVideos: React.FC = () => {
                 {/* 可見性浮標 */}
                 {!video.is_visible && (
                   <span className="absolute top-1 right-1 bg-red-500/80 text-white text-xs px-1.5 py-0.5 rounded">
-                    隱藏
+                    {t.adminVideosPage.hidden}
                   </span>
                 )}
               </div>
@@ -585,10 +595,10 @@ const AdminVideos: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
-            影片管理
+            {t.adminVideosPage.pageTitle}
           </h1>
           <p className="text-sm sm:text-base text-luxe-muted">
-            拖曳調整影片在前台的顯示順序
+            {t.adminVideosPage.pageSubtitle}
           </p>
         </div>
 
@@ -600,7 +610,7 @@ const AdminVideos: React.FC = () => {
             data-tour="videos-add"
             onClick={() => setShowAddModal(true)}
           >
-            ＋ 新增影片
+            ＋ {t.adminVideosPage.addVideos}
           </PillButton>
           {hasUnsavedChanges && (
             <PillButton
@@ -611,7 +621,9 @@ const AdminVideos: React.FC = () => {
               disabled={saving}
               className="animate-pulse"
             >
-              {saving ? "儲存中..." : "💾 儲存排序"}
+              {saving
+                ? t.adminCommon.saving
+                : `💾 ${t.adminVideosPage.saveOrder}`}
             </PillButton>
           )}
         </div>
@@ -620,7 +632,7 @@ const AdminVideos: React.FC = () => {
       {/* 搜尋 + 檢視切換 */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
-          placeholder="搜尋影片..."
+          placeholder={t.adminVideosPage.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
@@ -668,7 +680,7 @@ const AdminVideos: React.FC = () => {
       {/* 未儲存提示 */}
       {hasUnsavedChanges && (
         <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm flex items-center gap-2">
-          ⚠️ 排序已變更，請記得點擊「儲存排序」按鈕
+          ⚠️ {t.adminVideosPage.unsavedOrder}
         </div>
       )}
 
@@ -687,17 +699,25 @@ const AdminVideos: React.FC = () => {
 
       {/* 載入中 */}
       {loading ? (
-        <div className="text-center py-12 text-luxe-muted">載入中...</div>
+        <div className="text-center py-12 text-luxe-muted">
+          {t.common.loading}
+        </div>
       ) : filteredVideos.length === 0 ? (
         <div className="text-center py-12 text-luxe-muted">
-          {searchTerm ? "沒有符合的影片" : "尚無影片"}
+          {searchTerm
+            ? t.adminVideosPage.emptyNoMatch
+            : t.adminVideosPage.emptyNone}
         </div>
       ) : (
         <>
           {/* 統計 */}
           <div className="mb-3 text-xs text-luxe-muted">
-            共 {videos.length} 部影片
-            {searchTerm && `（篩選結果：${filteredVideos.length} 部）`}
+            {t.adminVideosPage.countTotal.replace("{n}", String(videos.length))}
+            {searchTerm &&
+              t.adminVideosPage.countFiltered.replace(
+                "{n}",
+                String(filteredVideos.length),
+              )}
           </div>
 
           {/* 內容 */}
@@ -710,7 +730,7 @@ const AdminVideos: React.FC = () => {
       ═══════════════════════════════════════════════════════ */}
       {showAddModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 modal-layer modal-scroll flex items-center justify-center overflow-y-auto p-4"
           onClick={(e) => { if (e.target === e.currentTarget) closeAddModal(); }}
         >
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
@@ -723,13 +743,17 @@ const AdminVideos: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-luxe-gold/10 shrink-0">
               <div>
-                <h2 className="text-base font-medium text-luxe-text">批量新增影片</h2>
-                <p className="text-xs text-luxe-muted mt-0.5">可一次新增多部影片，依序填入後批量送出</p>
+                <h2 className="text-base font-medium text-luxe-text">
+                  {t.adminVideosPage.add.title}
+                </h2>
+                <p className="text-xs text-luxe-muted mt-0.5">
+                  {t.adminVideosPage.add.subtitle}
+                </p>
               </div>
               <button
                 onClick={closeAddModal}
                 data-tour-modal-close=""
-                aria-label="關閉"
+                aria-label={t.adminCommon.close}
                 className="text-luxe-muted hover:text-luxe-text text-lg leading-none"
               >
                 ✕
@@ -742,9 +766,16 @@ const AdminVideos: React.FC = () => {
                 <div key={row.id} className="bg-luxe-bg/50 border border-luxe-gold/10 rounded-xl p-4">
                   {/* 列標題 */}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-luxe-muted font-medium">影片 {idx + 1}</span>
+                    <span className="text-xs text-luxe-muted font-medium">
+                      {t.adminVideosPage.add.rowLabel.replace(
+                        "{n}",
+                        String(idx + 1),
+                      )}
+                    </span>
                     {addRows.length > 1 && (
-                      <button onClick={() => removeRow(row.id)} className="text-xs text-red-400/70 hover:text-red-400">✕ 移除</button>
+                      <button onClick={() => removeRow(row.id)} className="text-xs text-red-400/70 hover:text-red-400">
+                        ✕ {t.adminVideosPage.add.removeRow}
+                      </button>
                     )}
                   </div>
 
@@ -753,7 +784,9 @@ const AdminVideos: React.FC = () => {
                     <div className="space-y-2.5">
                       {/* URL */}
                       <div>
-                        <label className="text-[10px] text-luxe-muted block mb-1">連結 *</label>
+                        <label className="text-[10px] text-luxe-muted block mb-1">
+                          {t.adminVideosPage.add.url}
+                        </label>
                         <Input
                           value={row.url}
                           onChange={(e) => handleRowUrlChange(row.id, e.target.value)}
@@ -768,18 +801,20 @@ const AdminVideos: React.FC = () => {
                               : row.type === "youtube" ? "🎬 YouTube"
                               : row.type === "facebook" ? "📘 Facebook"
                               : row.type === "tiktok" ? "🎵 TikTok"
-                              : "🎞️ 其他"}
+                              : `🎞️ ${t.adminVideosPage.add.platformOther}`}
                           </p>
                         )}
                       </div>
 
                       {/* 標題 */}
                       <div>
-                        <label className="text-[10px] text-luxe-muted block mb-1">標題 *</label>
+                        <label className="text-[10px] text-luxe-muted block mb-1">
+                          {t.adminVideosPage.add.titleField}
+                        </label>
                         <Input
                           value={row.title}
                           onChange={(e) => updateRow(row.id, { title: e.target.value })}
-                          placeholder="影片標題"
+                          placeholder={t.adminVideosPage.add.titlePlaceholder}
                           theme="luxe"
                           data-tour="videos-row-title"
                           className="w-full text-sm"
@@ -788,11 +823,15 @@ const AdminVideos: React.FC = () => {
 
                       {/* 說明 */}
                       <div>
-                        <label className="text-[10px] text-luxe-muted block mb-1">說明（選填）</label>
+                        <label className="text-[10px] text-luxe-muted block mb-1">
+                          {t.adminVideosPage.add.description}
+                        </label>
                         <textarea
                           value={row.description}
                           onChange={(e) => updateRow(row.id, { description: e.target.value })}
-                          placeholder="影片說明"
+                          placeholder={
+                            t.adminVideosPage.add.descriptionPlaceholder
+                          }
                           rows={2}
                           className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-3 py-2 text-xs text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:border-luxe-gold/50 resize-none"
                         />
@@ -801,7 +840,7 @@ const AdminVideos: React.FC = () => {
 
                     {/* 右欄：截圖 */}
                     <ImageInput
-                      label="截圖（選填）"
+                      label={t.adminVideosPage.add.thumbnail}
                       value={row.thumbnailUrl}
                       onChange={(url) => updateRow(row.id, { thumbnailUrl: url })}
                       aspectHint="16 / 9"
@@ -819,21 +858,29 @@ const AdminVideos: React.FC = () => {
                 data-tour="videos-add-row"
                 className="w-full py-3 border border-dashed border-luxe-gold/20 rounded-xl text-xs text-luxe-muted/60 hover:border-luxe-gold/40 hover:text-luxe-muted transition-all"
               >
-                ＋ 再加一部影片
+                ＋ {t.adminVideosPage.add.addRow}
               </button>
             </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-luxe-gold/10 shrink-0">
               <p className="text-xs text-luxe-muted">
-                {addRows.filter((r) => r.url.trim() && r.title.trim()).length} / {addRows.length} 筆可送出
+                {t.adminVideosPage.add.readyCount
+                  .replace(
+                    "{n}",
+                    String(
+                      addRows.filter((r) => r.url.trim() && r.title.trim())
+                        .length,
+                    ),
+                  )
+                  .replace("{total}", String(addRows.length))}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={closeAddModal}
                   className="py-2 px-5 text-sm text-luxe-muted hover:text-luxe-text border border-luxe-gold/15 rounded-lg transition-colors"
                 >
-                  取消
+                  {t.common.cancel}
                 </button>
                 <PillButton
                   theme="luxe"
@@ -842,7 +889,15 @@ const AdminVideos: React.FC = () => {
                   onClick={handleBatchSubmit}
                   disabled={addRows.every((r) => !r.url.trim() || !r.title.trim()) || addSubmitting}
                 >
-                  {addSubmitting ? "新增中..." : `新增 ${addRows.filter((r) => r.url.trim() && r.title.trim()).length} 部影片`}
+                  {addSubmitting
+                    ? t.adminVideosPage.add.submitting
+                    : t.adminVideosPage.add.submit.replace(
+                        "{n}",
+                        String(
+                          addRows.filter((r) => r.url.trim() && r.title.trim())
+                            .length,
+                        ),
+                      )}
                 </PillButton>
               </div>
             </div>

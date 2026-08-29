@@ -107,16 +107,16 @@ const ArticleDetail: React.FC = () => {
           if (userRatingData) setUserRating(userRatingData.rating);
         }
       } else {
-        setError("找不到文章");
+        setError(t.articleDetailExtra.notFound);
       }
     } catch (err) {
       console.error("Failed to fetch article:", err);
-      setError("載入文章失敗");
+      setError(t.articleDetailExtra.loadFailed);
     } finally {
       setLoading(false);
       skipFirstLoadingRef.current = false;
     }
-  }, [slug, user]);
+  }, [slug, user, t]);
 
   useEffect(() => { fetchArticle(); }, [fetchArticle]);
 
@@ -186,7 +186,9 @@ const ArticleDetail: React.FC = () => {
   };
 
   const getAuthorName = (comment: ArticleComment) =>
-    comment.author?.display_name || comment.users?.display_name || "使用者";
+    comment.author?.display_name ||
+    comment.users?.display_name ||
+    t.articleDetailExtra.defaultUser;
 
   const renderComment = (
     comment: ArticleComment & { replies?: ArticleComment[] },
@@ -250,6 +252,12 @@ const ArticleDetail: React.FC = () => {
   const authorName =
     article?.author?.display_name || article?.users?.display_name || "Coach Aaron";
 
+  /** 關鍵字：英文模式讀 article_keywords_en（逗號分隔字串），空值 fallback 中文 */
+  const keywordList = loc(articleObj, "article_keywords")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
   // ── SEO ──
   // 必須在任何 early return 之前建立，否則 loading / error 狀態下
   // Helmet 收不到任何標籤，伺服器端就會輸出空 title（原本的 bug）。
@@ -262,7 +270,7 @@ const ArticleDetail: React.FC = () => {
       description={
         loc(articleObj, "article_description") || seoTitle
       }
-      keywords={article?.article_keywords ? article.article_keywords.split(",").map((k) => k.trim()) : []}
+      keywords={keywordList}
       image={article?.article_thumbnail_url}
       url={`/articles/${article?.article_slug || article?.article_id || slug || ""}`}
       type="article"
@@ -411,11 +419,11 @@ const ArticleDetail: React.FC = () => {
               />
 
               {/* Keywords */}
-              {article.article_keywords?.trim() && (
+              {keywordList.length > 0 && (
                 <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap gap-2">
-                  {article.article_keywords.split(",").map((kw, idx) => (
+                  {keywordList.map((kw, idx) => (
                     <span key={idx} className="px-3 py-1 bg-white/5 text-white/50 text-xs rounded-full">
-                      #{kw.trim()}
+                      #{kw}
                     </span>
                   ))}
                 </div>

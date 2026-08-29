@@ -229,7 +229,7 @@ key={glareKey}
           {/* Logo：品牌 mark + 銀刃文字（手機版只留 mark，避免擠壓導覽） */}
           <Link
             to="/"
-            aria-label="阿倫教官 Coach Aaron 首頁"
+            aria-label={t.layoutExtra.logoHomeAria}
             className="shrink-0 flex items-center gap-2 sm:gap-2.5"
           >
             <LogoMark className="h-8 w-8 sm:h-9 sm:w-9 shrink-0" />
@@ -269,7 +269,7 @@ key={glareKey}
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="relative flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 transition-all duration-300"
                 style={{ background: "rgba(255,255,255,0.05)" }}
-                aria-label="使用者選單"
+                aria-label={t.layoutExtra.userMenuAria}
               >
                 {mounted && user ? (
                   <span className="text-xs font-medium text-white/80">
@@ -303,7 +303,7 @@ key={glareKey}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                   >
                     {isDark ? <SunIcon /> : <MoonIcon />}
-                    <span>{isDark ? "切換亮色模式" : "切換深色模式"}</span>
+                    <span>{isDark ? t.layoutExtra.switchToLight : t.layoutExtra.switchToDark}</span>
                   </button>
 
                   {/* 語言切換 */}
@@ -338,7 +338,7 @@ key={glareKey}
                         className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                       >
                         <UserIcon className="w-4 h-4" />
-                        <span>會員中心</span>
+                        <span>{t.nav.memberCenter}</span>
                       </Link>
 
                       <Link
@@ -347,7 +347,7 @@ key={glareKey}
                         className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                       >
                         <CalendarIcon />
-                        <span>預約諮詢</span>
+                        <span>{t.layoutExtra.bookConsult}</span>
                       </Link>
 
                       <Link
@@ -358,7 +358,7 @@ key={glareKey}
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                         </svg>
-                        <span>我的預約</span>
+                        <span>{t.layoutExtra.myBookings}</span>
                       </Link>
 
                       <Link
@@ -370,7 +370,7 @@ key={glareKey}
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          <span>訊息</span>
+                          <span>{t.layoutExtra.messages}</span>
                         </span>
                         <UnreadBadge count={unreadTotal} />
                       </Link>
@@ -383,7 +383,7 @@ key={glareKey}
                             className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                           >
                             <CalendarIcon />
-                            <span>教練儀表板</span>
+                            <span>{t.layoutExtra.coachDashboard}</span>
                           </Link>
                           <Link
                             to="/admin"
@@ -391,7 +391,7 @@ key={glareKey}
                             className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                           >
                             <AdminIcon />
-                            <span>後台管理</span>
+                            <span>{t.nav.admin}</span>
                           </Link>
                           <Link
                             to="/pages"
@@ -401,7 +401,7 @@ key={glareKey}
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z" />
                             </svg>
-                            <span>自訂頁面</span>
+                            <span>{t.nav.landingPages}</span>
                           </Link>
                         </>
                       )}
@@ -413,7 +413,7 @@ key={glareKey}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                       >
                         <LogoutIcon />
-                        <span>登出</span>
+                        <span>{t.nav.logout}</span>
                       </button>
                     </>
                   ) : (
@@ -423,7 +423,7 @@ key={glareKey}
                       className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
                     >
                       <UserIcon className="w-4 h-4" />
-                      <span>登入 / 註冊</span>
+                      <span>{t.layoutExtra.loginRegister}</span>
                     </Link>
                   )}
                 </div>
@@ -435,7 +435,7 @@ key={glareKey}
               className="lg:hidden flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 text-white/70 hover:text-white transition-all duration-200"
               style={{ background: "rgba(255,255,255,0.05)" }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="選單"
+              aria-label={t.layoutExtra.menuAria}
             >
               {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
@@ -489,14 +489,14 @@ key={glareKey}
                 className="btn-metal py-2 px-6 text-sm"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                登入
+                {t.nav.login}
               </Link>
             ) : (
               <button
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
                 className="btn-metal py-2 px-6 text-sm"
               >
-                登出
+                {t.nav.logout}
               </button>
             )}
           </div>

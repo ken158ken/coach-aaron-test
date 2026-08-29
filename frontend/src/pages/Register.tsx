@@ -22,6 +22,7 @@ const Register: React.FC = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const auth = t.authExtra;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -77,7 +78,7 @@ const Register: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center px-4 pt-24 pb-8 sm:pt-28 sm:pb-12 relative">
-      <SEOHead title="註冊 | 阿倫教官" noIndex={true} />
+      <SEOHead title={auth.register.seoTitle} noIndex={true} />
       <div className="w-full max-w-md relative z-10">
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
@@ -86,7 +87,7 @@ const Register: React.FC = () => {
                 文字為 currentColor，沿用原本的 text-gold */}
             <h1 className="text-gold m-0">
               <LogoVertical
-                title="阿倫教官 Coach Aaron"
+                title={auth.brandLogoTitle}
                 className="h-32 sm:h-40 w-auto mx-auto"
               />
             </h1>

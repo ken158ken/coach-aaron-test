@@ -10,6 +10,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import type { TextBlock } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface TextBlockComponentProps {
   block: TextBlock;
@@ -28,6 +29,7 @@ const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
   onDoubleClick,
   onBlur,
 }) => {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [localContent, setLocalContent] = useState(block.content);
 
@@ -227,7 +229,7 @@ const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
       {/* 雙擊提示 */}
       {isSelected && !isEditing && (
         <div className="absolute bottom-2 left-2 text-xs text-luxe-gold/50">
-          雙擊編輯文字
+          {t.blockEditor.doubleClickToEdit}
         </div>
       )}
     </div>

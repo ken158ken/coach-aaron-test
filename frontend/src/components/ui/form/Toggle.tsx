@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ToggleProps {
   checked: boolean;
@@ -26,6 +27,7 @@ export const Toggle: React.FC<ToggleProps> = ({
   disabled = false,
   className = "",
 }) => {
+  const { t } = useLanguage();
   return (
     <label
       className={`inline-flex items-center gap-3 ${
@@ -50,7 +52,7 @@ export const Toggle: React.FC<ToggleProps> = ({
               : "bg-transparent text-white/25"
           }`}
         >
-          關
+          {t.formUi.toggleOff}
         </span>
         {/* 開 side */}
         <span
@@ -60,7 +62,7 @@ export const Toggle: React.FC<ToggleProps> = ({
               : "bg-transparent text-white/25"
           }`}
         >
-          開
+          {t.formUi.toggleOn}
         </span>
       </button>
       {label && <span className="text-sm text-luxe-text">{label}</span>}

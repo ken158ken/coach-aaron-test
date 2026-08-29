@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, useTheme, useLanguage } from "@/context";
 import { HelpTourButton } from "@/tours";
 import AdminSidebar from "./AdminSidebar";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
 
 /** 行動版斷點 (px) */
 const MOBILE_BREAKPOINT = 1024;
@@ -34,6 +35,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  /* 手機側欄是遮罩式抽屜：開著時鎖背景捲動，並支援 Escape 收起 */
+  useModalBehavior(sidebarOpen && isMobile, () => setSidebarOpen(false));
 
   /**
    * 偵測螢幕尺寸，決定 sidebar 預設狀態
@@ -122,7 +126,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
                 onClick={toggleSidebar}
                 data-tour="admin-sidebar-toggle"
                 className="p-1.5 sm:p-2 text-luxe-muted hover:text-luxe-gold transition-colors shrink-0"
-                aria-label="Toggle sidebar"
+                aria-label={t.adminLayout.toggleSidebar}
               >
                 <svg
                   className="w-5 h-5 sm:w-6 sm:h-6"
@@ -157,7 +161,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
                   />
                 </svg>
-                <span className="hidden sm:inline">前台</span>
+                <span className="hidden sm:inline">{t.adminLayout.viewSite}</span>
               </Link>
             </div>
 

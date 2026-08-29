@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import { get } from "@/services/api";
 
 interface Whisper {
@@ -18,6 +19,9 @@ interface Whisper {
 }
 
 const AdminWhispers: React.FC = () => {
+  const { t, isZhTW } = useLanguage();
+  const wp = t.adminWhispersPage;
+
   const [whispers, setWhispers] = useState<Whisper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,16 +34,16 @@ const AdminWhispers: React.FC = () => {
         setWhispers(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
-        setError("載入悄悄話失敗");
+        setError(t.adminWhispersPage.loadFailed);
       } finally {
         setLoading(false);
       }
     };
     void fetch();
-  }, []);
+  }, [t]);
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleString("zh-TW", {
+    new Date(iso).toLocaleString(isZhTW ? "zh-TW" : "en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -55,9 +59,9 @@ const AdminWhispers: React.FC = () => {
   return (
     <div>
       <div className="mb-6" data-tour="whispers-header">
-        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">悄悄話</h1>
+        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">{wp.pageTitle}</h1>
         <p className="text-sm text-luxe-muted">
-          訪客留下的私訊（唯讀）— 共 {whispers.length} 則，過期自動刪除
+          {wp.pageSubtitle.replace("{n}", String(whispers.length))}
         </p>
       </div>
 
@@ -73,11 +77,11 @@ const AdminWhispers: React.FC = () => {
       */}
       <div data-tour="whispers-list">
       {loading ? (
-        <p className="text-luxe-muted py-12 text-center text-sm">載入中...</p>
+        <p className="text-luxe-muted py-12 text-center text-sm">{t.common.loading}</p>
       ) : whispers.length === 0 ? (
         <div className="text-center py-16" data-tour="whispers-empty">
           <p className="text-4xl mb-3">🤫</p>
-          <p className="text-luxe-muted text-sm">目前沒有悄悄話</p>
+          <p className="text-luxe-muted text-sm">{wp.emptyState}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -108,7 +112,7 @@ const AdminWhispers: React.FC = () => {
                           : "bg-luxe-gold/10 text-luxe-muted"
                       }`}
                     >
-                      剩 {remaining} 天
+                      {wp.daysLeft.replace("{n}", String(remaining))}
                     </span>
                   </div>
                 </div>
@@ -129,7 +133,7 @@ const AdminWhispers: React.FC = () => {
         data-tour="whispers-note"
         className="mt-6 text-xs text-luxe-muted/50 text-center"
       >
-        此頁唯讀，訊息依據過期日期由 cron 自動清除
+        {wp.footerNote}
       </p>
     </div>
   );

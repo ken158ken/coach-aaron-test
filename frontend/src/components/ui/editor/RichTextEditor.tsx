@@ -22,6 +22,9 @@ import Underline from "@tiptap/extension-underline";
 import { Tooltip } from "@/components/ui";
 import ImageInput, { useImageUploadTarget } from "@/components/ui/ImageInput";
 import { isAllowedImageUrl } from "@/lib/imageUrl";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 
 /** 主題類型 */
 type Theme = "abyss" | "prism" | "luxe";
@@ -47,19 +50,35 @@ interface RichTextEditorProps {
 const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i;
 
 /** 預設圖片尺寸選項 */
-const IMAGE_SIZE_PRESETS = [
-  { label: "小 (25%)", value: 25 },
-  { label: "中 (50%)", value: 50 },
-  { label: "大 (75%)", value: 75 },
-  { label: "全寬 (100%)", value: 100 },
+const imageSizePresets = (t: AllTranslations) => [
+  { label: t.richEditor.sizeSmall.replace("{v}", "25%"), value: 25 },
+  { label: t.richEditor.sizeMedium.replace("{v}", "50%"), value: 50 },
+  { label: t.richEditor.sizeLarge.replace("{v}", "75%"), value: 75 },
+  { label: t.richEditor.sizeFull.replace("{v}", "100%"), value: 100 },
 ];
 
 /** 預設影片尺寸選項 */
-const VIDEO_SIZE_PRESETS = [
-  { label: "小 (360p)", width: 480, height: 270 },
-  { label: "中 (480p)", width: 640, height: 360 },
-  { label: "大 (720p)", width: 854, height: 480 },
-  { label: "超大 (1080p)", width: 1280, height: 720 },
+const videoSizePresets = (t: AllTranslations) => [
+  {
+    label: t.richEditor.sizeSmall.replace("{v}", "360p"),
+    width: 480,
+    height: 270,
+  },
+  {
+    label: t.richEditor.sizeMedium.replace("{v}", "480p"),
+    width: 640,
+    height: 360,
+  },
+  {
+    label: t.richEditor.sizeLarge.replace("{v}", "720p"),
+    width: 854,
+    height: 480,
+  },
+  {
+    label: t.richEditor.sizeXLarge.replace("{v}", "1080p"),
+    width: 1280,
+    height: 720,
+  },
 ];
 
 /** 主題樣式配置 */
@@ -163,18 +182,30 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   content = "",
   onChange,
-  placeholder = "開始撰寫內容...",
+  placeholder,
   theme = "luxe",
   readonly = false,
   minHeight = "300px",
   className = "",
 }) => {
+  const { t } = useLanguage();
   const styles = themeStyles[theme];
+  const IMAGE_SIZE_PRESETS = imageSizePresets(t);
+  const VIDEO_SIZE_PRESETS = videoSizePresets(t);
 
   // Modal 狀態
   const [showImageModal, setShowImageModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+
+  /*
+   * 這三個是編輯器內建的手寫彈窗（插圖／影片／連結）。
+   * 它們原本既沒鎖 body 捲動也不吃 Escape —— 彈窗開著時滑鼠滾輪會直接
+   * 捲到背後的頁面。統一交給 useModalBehavior 處理（計數器會處理疊層）。
+   */
+  useModalBehavior(showImageModal, () => setShowImageModal(false));
+  useModalBehavior(showVideoModal, () => setShowVideoModal(false));
+  useModalBehavior(showLinkModal, () => setShowLinkModal(false));
 
   // 圖片表單
   // 上傳目標由外層的 ImageUploadTargetProvider 決定（沒包就退回 article/temp）
@@ -239,7 +270,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         },
         nocookie: true,
       }),
-      Placeholder.configure({ placeholder }),
+      Placeholder.configure({
+        placeholder: placeholder ?? t.richEditor.placeholder,
+      }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
@@ -253,7 +286,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     editorProps: {
       handleDrop: () => {
         logger.warn("拖放功能已停用");
-        setError("不支援拖放上傳，請使用 Cloudinary 連結");
+        setError(t.richEditor.errNoDrop);
         setTimeout(() => setError(""), 3000);
         return true;
       },
@@ -263,7 +296,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           for (let i = 0; i < items.length; i++) {
             if (items[i].type.startsWith("image/")) {
               logger.warn("已阻止圖片貼上");
-              setError("請使用 Cloudinary 連結插入圖片，不支援直接貼上圖片");
+              setError(t.richEditor.errNoPaste);
               setTimeout(() => setError(""), 3000);
               return true;
             }
@@ -284,7 +317,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       if (target.tagName === "IMG") {
         const img = target as HTMLImageElement;
         if (!isAllowedImageUrl(img.src)) {
-          setError("此圖片來源不在允許清單（可能是舊資料），建議重新上傳");
+          setError(t.richEditor.errImageSourceLegacy);
         }
 
         setSelectedElement(img);
@@ -362,12 +395,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     setError("");
 
     if (!imageUrl.trim()) {
-      setError("請先上傳圖片或貼上圖片網址");
+      setError(t.richEditor.errNeedImage);
       return;
     }
 
     if (!isAllowedImageUrl(imageUrl)) {
-      setError("圖片來源不合法，請改用上傳，或貼上本站 Cloudinary 帳號的網址。");
+      setError(t.richEditor.errImageSourceInvalid);
       logger.warn("不允許的圖片來源被拒絕", imageUrl);
       return;
     }
@@ -386,7 +419,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       .focus()
       .setImage({
         src: imageUrl,
-        alt: imageAlt || "圖片",
+        alt: imageAlt || t.richEditor.defaultAlt,
       })
       .run();
 
@@ -406,12 +439,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     setError("");
 
     if (!videoUrl.trim()) {
-      setError("請輸入影片網址");
+      setError(t.richEditor.errNeedVideoUrl);
       return;
     }
 
     if (!YOUTUBE_REGEX.test(videoUrl)) {
-      setError("⚠️ 只支援 YouTube 影片！\n請貼上 YouTube 影片連結");
+      setError(t.richEditor.errYoutubeOnly);
       logger.warn("非 YouTube 影片被拒絕", videoUrl);
       return;
     }
@@ -443,7 +476,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     setError("");
 
     if (!linkUrl.trim()) {
-      setError("請輸入連結網址");
+      setError(t.richEditor.errNeedLinkUrl);
       return;
     }
 
@@ -527,7 +560,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBold().run()}
               isActive={editor.isActive("bold")}
-              title="粗體 (Ctrl+B)"
+              title={t.richEditor.toolBold}
               className={
                 editor.isActive("bold")
                   ? styles.toolbarButtonActive
@@ -539,7 +572,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleItalic().run()}
               isActive={editor.isActive("italic")}
-              title="斜體 (Ctrl+I)"
+              title={t.richEditor.toolItalic}
               className={
                 editor.isActive("italic")
                   ? styles.toolbarButtonActive
@@ -551,7 +584,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               isActive={editor.isActive("underline")}
-              title="底線 (Ctrl+U)"
+              title={t.richEditor.toolUnderline}
               className={
                 editor.isActive("underline")
                   ? styles.toolbarButtonActive
@@ -563,7 +596,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleStrike().run()}
               isActive={editor.isActive("strike")}
-              title="刪除線"
+              title={t.richEditor.toolStrike}
               className={
                 editor.isActive("strike")
                   ? styles.toolbarButtonActive
@@ -581,7 +614,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 editor.chain().focus().toggleHeading({ level: 1 }).run()
               }
               isActive={editor.isActive("heading", { level: 1 })}
-              title="標題 1"
+              title={t.richEditor.toolH1}
               className={
                 editor.isActive("heading", { level: 1 })
                   ? styles.toolbarButtonActive
@@ -595,7 +628,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 editor.chain().focus().toggleHeading({ level: 2 }).run()
               }
               isActive={editor.isActive("heading", { level: 2 })}
-              title="標題 2"
+              title={t.richEditor.toolH2}
               className={
                 editor.isActive("heading", { level: 2 })
                   ? styles.toolbarButtonActive
@@ -609,7 +642,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 editor.chain().focus().toggleHeading({ level: 3 }).run()
               }
               isActive={editor.isActive("heading", { level: 3 })}
-              title="標題 3"
+              title={t.richEditor.toolH3}
               className={
                 editor.isActive("heading", { level: 3 })
                   ? styles.toolbarButtonActive
@@ -625,7 +658,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               isActive={editor.isActive("bulletList")}
-              title="項目符號"
+              title={t.richEditor.toolBullet}
               className={
                 editor.isActive("bulletList")
                   ? styles.toolbarButtonActive
@@ -649,7 +682,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
               isActive={editor.isActive("orderedList")}
-              title="編號列表"
+              title={t.richEditor.toolOrdered}
               className={
                 editor.isActive("orderedList")
                   ? styles.toolbarButtonActive
@@ -677,7 +710,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().setTextAlign("left").run()}
               isActive={editor.isActive({ textAlign: "left" })}
-              title="靠左對齊"
+              title={t.richEditor.toolAlignLeft}
               className={
                 editor.isActive({ textAlign: "left" })
                   ? styles.toolbarButtonActive
@@ -703,7 +736,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 editor.chain().focus().setTextAlign("center").run()
               }
               isActive={editor.isActive({ textAlign: "center" })}
-              title="置中對齊"
+              title={t.richEditor.toolAlignCenter}
               className={
                 editor.isActive({ textAlign: "center" })
                   ? styles.toolbarButtonActive
@@ -727,7 +760,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().setTextAlign("right").run()}
               isActive={editor.isActive({ textAlign: "right" })}
-              title="靠右對齊"
+              title={t.richEditor.toolAlignRight}
               className={
                 editor.isActive({ textAlign: "right" })
                   ? styles.toolbarButtonActive
@@ -754,7 +787,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div className="flex gap-1 pr-2 border-r border-current/10">
             <ToolbarButton
               onClick={() => setShowImageModal(true)}
-              title="插入 Cloudinary 圖片"
+              title={t.richEditor.toolInsertImage}
               className={styles.toolbarButton}
             >
               <svg
@@ -773,7 +806,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             </ToolbarButton>
             <ToolbarButton
               onClick={() => setShowVideoModal(true)}
-              title="插入 YouTube 影片"
+              title={t.richEditor.toolInsertVideo}
               className={styles.toolbarButton}
             >
               <svg
@@ -798,7 +831,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             </ToolbarButton>
             <ToolbarButton
               onClick={() => setShowLinkModal(true)}
-              title="插入連結"
+              title={t.richEditor.toolInsertLink}
               className={styles.toolbarButton}
             >
               <svg
@@ -822,7 +855,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
               isActive={editor.isActive("blockquote")}
-              title="引用"
+              title={t.richEditor.toolQuote}
               className={
                 editor.isActive("blockquote")
                   ? styles.toolbarButtonActive
@@ -846,7 +879,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleCodeBlock().run()}
               isActive={editor.isActive("codeBlock")}
-              title="程式碼區塊"
+              title={t.richEditor.toolCode}
               className={
                 editor.isActive("codeBlock")
                   ? styles.toolbarButtonActive
@@ -874,8 +907,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* 使用說明 */}
       {!readonly && (
         <div className="px-4 py-2 bg-blue-500/5 border-b border-blue-500/10 text-xs text-blue-300/70">
-          💡 提示：點擊已插入的圖片或影片可調整尺寸。只支援 Cloudinary 圖片和
-          YouTube 影片。
+          {t.richEditor.usageHint}
         </div>
       )}
 
@@ -910,7 +942,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         >
           {editPanelType === "image" && (
             <div className="space-y-3 min-w-[200px]">
-              <h4 className="text-sm font-medium">調整圖片尺寸</h4>
+              <h4 className="text-sm font-medium">{t.richEditor.adjustImageSize}</h4>
               <div className="flex flex-wrap gap-2">
                 {IMAGE_SIZE_PRESETS.map((preset) => (
                   <button
@@ -933,14 +965,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   onClick={handleDeleteSelected}
                   className="flex-1 px-3 py-1.5 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
                 >
-                  刪除
+                  {t.common.delete}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowEditPanel(false)}
                   className="px-3 py-1.5 text-xs bg-white/10 rounded hover:bg-white/20"
                 >
-                  完成
+                  {t.chatUi.done}
                 </button>
               </div>
             </div>
@@ -948,9 +980,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           {editPanelType === "video" && (
             <div className="space-y-3 min-w-[200px]">
-              <h4 className="text-sm font-medium">調整影片尺寸</h4>
+              <h4 className="text-sm font-medium">{t.richEditor.adjustVideoSize}</h4>
               <p className="text-xs opacity-50">
-                目前：{editVideoWidth} x {editVideoHeight}
+                {t.richEditor.current} {editVideoWidth} x {editVideoHeight}
               </p>
               <div className="flex flex-wrap gap-2">
                 {VIDEO_SIZE_PRESETS.map((preset) => (
@@ -976,14 +1008,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   onClick={handleDeleteSelected}
                   className="flex-1 px-3 py-1.5 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
                 >
-                  刪除
+                  {t.common.delete}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowEditPanel(false)}
                   className="px-3 py-1.5 text-xs bg-white/10 rounded hover:bg-white/20"
                 >
-                  完成
+                  {t.chatUi.done}
                 </button>
               </div>
             </div>
@@ -994,16 +1026,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* 圖片插入 Modal */}
       {showImageModal && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${styles.modalBg}`}
+          className={`fixed inset-0 modal-layer modal-scroll flex items-center justify-center overflow-y-auto p-4 ${styles.modalBg}`}
         >
           <div
             className={`w-full max-w-md p-6 rounded-xl border ${styles.modalContent}`}
           >
-            <h3 className="text-lg font-medium mb-4">插入圖片</h3>
+            <h3 className="text-lg font-medium mb-4">{t.richEditor.insertImageTitle}</h3>
 
             <div className="space-y-4">
               <ImageInput
-                label="圖片"
+                label={t.richEditor.imageLabel}
                 value={imageUrl}
                 onChange={(url) => {
                   setImageUrl(url);
@@ -1016,18 +1048,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 required
               />
               <div>
-                <label className="block text-sm mb-1">替代文字（SEO 用）</label>
+                <label className="block text-sm mb-1">{t.richEditor.altTextLabel}</label>
                 <input
                   type="text"
                   value={imageAlt}
                   onChange={(e) => setImageAlt(e.target.value)}
-                  placeholder="描述這張圖片的內容"
+                  placeholder={t.richEditor.altTextPlaceholder}
                   className={`w-full px-3 py-2 rounded-lg border ${styles.input}`}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-1">尺寸</label>
+                  <label className="block text-sm mb-1">{t.richEditor.sizeLabel}</label>
                   <select
                     value={imageWidth}
                     onChange={(e) => setImageWidth(Number(e.target.value))}
@@ -1041,7 +1073,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm mb-1">對齊</label>
+                  <label className="block text-sm mb-1">{t.richEditor.alignLabel}</label>
                   <select
                     value={imageAlign}
                     onChange={(e) =>
@@ -1051,9 +1083,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     }
                     className={`w-full px-3 py-2 rounded-lg border ${styles.input}`}
                   >
-                    <option value="left">靠左（文繞圖）</option>
-                    <option value="center">置中</option>
-                    <option value="right">靠右（文繞圖）</option>
+                    <option value="left">{t.richEditor.alignLeftWrap}</option>
+                    <option value="center">{t.richEditor.alignCenter}</option>
+                    <option value="right">{t.richEditor.alignRightWrap}</option>
                   </select>
                 </div>
               </div>
@@ -1073,14 +1105,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   }}
                   className="px-4 py-2 text-sm rounded-lg hover:bg-gray-500/20"
                 >
-                  取消
+                  {t.common.cancel}
                 </button>
                 <button
                   type="button"
                   onClick={handleInsertImage}
                   className="px-4 py-2 text-sm bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90"
                 >
-                  插入圖片
+                  {t.richEditor.insertImageTitle}
                 </button>
               </div>
             </div>
@@ -1091,25 +1123,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* 影片插入 Modal */}
       {showVideoModal && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${styles.modalBg}`}
+          className={`fixed inset-0 modal-layer modal-scroll flex items-center justify-center overflow-y-auto p-4 ${styles.modalBg}`}
         >
           <div
             className={`w-full max-w-md p-6 rounded-xl border ${styles.modalContent}`}
           >
-            <h3 className="text-lg font-medium mb-4">插入 YouTube 影片</h3>
+            <h3 className="text-lg font-medium mb-4">{t.richEditor.insertVideoTitle}</h3>
 
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="font-medium text-red-400 text-sm mb-2">
-                ⚠️ 重要提示
+                {t.richEditor.importantNotice}
               </p>
               <p className="text-xs text-gray-300">
-                只支援 YouTube 影片！請貼上 YouTube 網址。
+                {t.richEditor.youtubeOnlyNotice}
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm mb-1">YouTube 網址 *</label>
+                <label className="block text-sm mb-1">{t.richEditor.youtubeUrlLabel}</label>
                 <input
                   type="url"
                   value={videoUrl}
@@ -1119,7 +1151,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1">影片尺寸</label>
+                <label className="block text-sm mb-1">{t.richEditor.videoSizeLabel}</label>
                 <div className="flex flex-wrap gap-2">
                   {VIDEO_SIZE_PRESETS.map((preset) => (
                     <button
@@ -1140,7 +1172,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   ))}
                 </div>
                 <p className="text-xs opacity-50 mt-1">
-                  目前尺寸：{videoWidth} x {videoHeight}
+                  {t.richEditor.currentSize} {videoWidth} x {videoHeight}
                 </p>
               </div>
 
@@ -1159,14 +1191,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   }}
                   className="px-4 py-2 text-sm rounded-lg hover:bg-gray-500/20"
                 >
-                  取消
+                  {t.common.cancel}
                 </button>
                 <button
                   type="button"
                   onClick={handleInsertVideo}
                   className="px-4 py-2 text-sm bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90"
                 >
-                  插入影片
+                  {t.richEditor.insertVideoBtn}
                 </button>
               </div>
             </div>
@@ -1177,16 +1209,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* 連結插入 Modal */}
       {showLinkModal && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${styles.modalBg}`}
+          className={`fixed inset-0 modal-layer modal-scroll flex items-center justify-center overflow-y-auto p-4 ${styles.modalBg}`}
         >
           <div
             className={`w-full max-w-md p-6 rounded-xl border ${styles.modalContent}`}
           >
-            <h3 className="text-lg font-medium mb-4">插入連結</h3>
+            <h3 className="text-lg font-medium mb-4">{t.richEditor.insertLinkTitle}</h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm mb-1">連結網址 *</label>
+                <label className="block text-sm mb-1">{t.richEditor.linkUrlLabel}</label>
                 <input
                   type="url"
                   value={linkUrl}
@@ -1196,12 +1228,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1">顯示文字（選填）</label>
+                <label className="block text-sm mb-1">{t.richEditor.linkTextLabel}</label>
                 <input
                   type="text"
                   value={linkText}
                   onChange={(e) => setLinkText(e.target.value)}
-                  placeholder="點擊這裡"
+                  placeholder={t.richEditor.linkTextPlaceholder}
                   className={`w-full px-3 py-2 rounded-lg border ${styles.input}`}
                 />
               </div>
@@ -1217,14 +1249,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                   }}
                   className="px-4 py-2 text-sm rounded-lg hover:bg-gray-500/20"
                 >
-                  取消
+                  {t.common.cancel}
                 </button>
                 <button
                   type="button"
                   onClick={handleInsertLink}
                   className="px-4 py-2 text-sm bg-luxe-gold text-black rounded-lg hover:bg-luxe-gold/90"
                 >
-                  插入連結
+                  {t.richEditor.insertLinkTitle}
                 </button>
               </div>
             </div>

@@ -18,14 +18,16 @@
  * 每筆 quote 由共用元件保留在隱藏 DOM，避免職稱／簡述對 SEO 消失。
  *
  * ─── 文案／照片替換說明 ────────────────────────────────────────
- *   - `CAREER_COPY`        區塊標題／副標（可再被 site_content 覆寫）
- *   - `CAREER_EXPERIENCES` 各段經歷內容與照片路徑
- * 未來若要改為後台可編輯，把 `CAREER_EXPERIENCES` 換成 API 回傳的
+ *   - 區塊標題／副標與各段經歷文案：i18n 字典 `t.careerCarousel`
+ *     （中文模式仍可被 site_content 的 career_* 覆寫）
+ *   - 照片路徑：本檔的 `CAREER_IMAGES`
+ * 未來若要改為後台可編輯，改由 `experiences` prop 傳入 API 回傳的
  * 同型別陣列即可（型別為 `CareerExperience[]`），其餘程式碼不動。
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   AnimatedTestimonials,
   type AnimatedTestimonialItem,
@@ -59,84 +61,36 @@ export interface CareerExperience {
   };
 }
 
-// ─── 文案（定稿版，來源 REPORTS/INDEX_B2B文案_定稿草案.md 第 6 節）──
-
-const CAREER_COPY = {
-  tagline: 'Career Path',
-  title: '我憑什麼教你做業績',
-  subtitle:
-    '教練變現這件事，我不是讀來的。賣過最難賣的東西、自己在第一線賣過課、也帶過一整團教練衝業績——這三段加起來，才是我現在能教你的原因。',
-} as const;
+// ─── 照片（純資料；文案全部在 i18n 字典 t.careerCarousel）────────
 
 /**
- * 各段經歷（定稿文案）。
+ * 各段經歷的照片。
  *
- * ⚠️ 陣列以「時間正序」保存（realtor → personal-trainer → head-coach），
- * 供其他程式／未來後台沿用；顯示時在元件內反轉成倒敘法。
+ * ⚠️ 以「時間正序」保存（realtor → personal-trainer → head-coach）；
+ * 顯示時在元件內反轉成倒敘法。
  *
- * 照片：先留空 → 顯示帶編號的佔位面板。要放真實照片時，
- * 把圖片放到 frontend/public/images/ 下，並在此填 image: '/images/xxx.jpg'。
+ * 要換照片時，把圖片放到 frontend/public/images/ 下，
+ * 在此填 '/images/xxx.jpg' 即可（文案不必動）。
+ *
+ * ⚠️ 履歷載有 realtor「單月業績約 200 萬」、personal-trainer「私教月入約 8 萬」，
+ * 人設提案標為待佐證，客戶提供佐證後才可加上 highlight。
  */
-export const CAREER_EXPERIENCES: CareerExperience[] = [
-  {
-    id: 'realtor',
-    period: '早期・業務時期',
-    role: '房仲業務經紀人',
-    org: '房仲不動產業',
-    summary:
-      '我的職涯不是從健身房開始的，是從房仲開始的。這段時間讓我學會的不是話術，是讀人。',
-    bullets: [
-      '開發、帶看、探詢需求、議價、促成，完整銷售流程跑過無數遍',
-      '在被拒絕是日常的環境裡練出韌性',
-      '看懂客戶說「我再考慮」時，真正在意的到底是什麼',
-    ],
-    images: [
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556095/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_17_qsdcqo.jpg',
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556029/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_7_l7vuqk.jpg',
-    ],
-    // ⚠️ 履歷載有「單月業績約 200 萬」，人設提案標為低信心，客戶提供佐證後可解除：
-    // highlight: { value: '200 萬', label: '單月業績' },
-  },
-  {
-    id: 'personal-trainer',
-    period: '轉職・入行',
-    role: '私人教練',
-    org: '成吉思汗健身（連鎖健身品牌）',
-    summary:
-      '我把業務時期的銷售能力直接搬進健身房，很快建立起穩定的私教客群。專業和銷售不是二選一，雙軌並進才走得遠。',
-    bullets: [
-      '做體能評估、身體組成分析與個人化課表',
-      '同時負責諮詢、成交與續課，走完第一線私教的收入循環',
-      '我教的每一套成交流程，都是自己親手跑過、被拒絕過、再修正出來的',
-    ],
-    images: [
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_6_rhqnrz.jpg',
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_4_nwwdvd.jpg',
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556004/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_5_fwm8am.jpg',
-    ],
-    // ⚠️ 履歷載有「私教月入約 8 萬」，標為待佐證，客戶確認後可解除：
-    // highlight: { value: '8 萬', label: '私教月收入' },
-  },
-  {
-    id: 'head-coach',
-    period: '現職・教練經理／總教官',
-    role: '總教官',
-    org: '威豪健身 Pro Fitness（台東）・現任',
-    summary:
-      '帶團隊之後我才真正看懂——一個人業績好是天賦，一整團業績都好，那是系統。',
-    bullets: [
-      '統籌約 50 人教練團隊：排班調度、教學品質管控、招募面試與客訴處理',
-      '設定並追蹤業績與續約 KPI，建立教練育成與考核制度',
-      '把「怎麼成交」「怎麼續約」拆成可以教、可以複製、可以考核的標準',
-    ],
-    images: [
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556128/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_9_tp7sdh.jpg',
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556119/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_16_knkkoy.jpg',
-      'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471265/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_12_hmvfuj.jpg',
-    ],
-    highlight: { value: '50 人', label: '教練團隊' },
-  },
-];
+const CAREER_IMAGES: Record<string, string[]> = {
+  realtor: [
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556095/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_17_qsdcqo.jpg',
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556029/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_7_l7vuqk.jpg',
+  ],
+  personalTrainer: [
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_6_rhqnrz.jpg',
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_4_nwwdvd.jpg',
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556004/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_5_fwm8am.jpg',
+  ],
+  headCoach: [
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556128/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_9_tp7sdh.jpg',
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1784556119/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_16_knkkoy.jpg',
+    'https://res.cloudinary.com/daejq0zo9/image/upload/v1773471265/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260314_12_hmvfuj.jpg',
+  ],
+};
 
 /** 自動輪播間隔（ms） */
 const AUTOPLAY_MS = 5000;
@@ -157,14 +111,51 @@ const toTestimonial = (exp: CareerExperience): AnimatedTestimonialItem => ({
 // ─── Component ────────────────────────────────────────────────
 
 interface CareerCarouselProps {
-  /** 覆寫經歷資料（預設用內建常數；未來接 DB 時由此傳入） */
+  /** 覆寫經歷資料（預設用字典文案；未來接 DB 時由此傳入） */
   experiences?: CareerExperience[];
 }
 
 const CareerCarousel: React.FC<CareerCarouselProps> = ({
-  experiences = CAREER_EXPERIENCES,
+  experiences: experiencesProp,
 }) => {
   const { get } = useSiteContent();
+  const { t, isZhTW } = useLanguage();
+  const copy = t.careerCarousel;
+
+  /**
+   * site_content 只存中文（`GET /api/content` 未回傳 content_value_en）：
+   * 中文模式 DB 值優先，英文模式一律用字典。
+   */
+  const pick = (key: string, dict: string): string =>
+    isZhTW ? get(key, dict) : dict;
+
+  /** 由字典組出經歷（時間正序）；照片來自 CAREER_IMAGES */
+  const experiencesFromCopy = useMemo<CareerExperience[]>(() => {
+    const c = copy.experiences;
+    return [
+      { id: 'realtor', ...c.realtor, images: CAREER_IMAGES.realtor },
+      {
+        id: 'personal-trainer',
+        ...c.personalTrainer,
+        images: CAREER_IMAGES.personalTrainer,
+      },
+      {
+        id: 'head-coach',
+        period: c.headCoach.period,
+        role: c.headCoach.role,
+        org: c.headCoach.org,
+        summary: c.headCoach.summary,
+        bullets: c.headCoach.bullets,
+        images: CAREER_IMAGES.headCoach,
+        highlight: {
+          value: c.headCoach.highlightValue,
+          label: c.headCoach.highlightLabel,
+        },
+      },
+    ];
+  }, [copy]);
+
+  const experiences = experiencesProp ?? experiencesFromCopy;
 
   if (!experiences.length) return null;
 
@@ -178,13 +169,13 @@ const CareerCarousel: React.FC<CareerCarouselProps> = ({
         {/* Header */}
         <div className="text-center mb-10 sm:mb-14">
           <span className="text-gold text-xs uppercase tracking-widest">
-            {get('career_tagline', CAREER_COPY.tagline)}
+            {pick('career_tagline', copy.tagline)}
           </span>
           <h2 className="mt-2 text-2xl sm:text-3xl font-light text-white/90">
-            {get('career_title', CAREER_COPY.title)}
+            {pick('career_title', copy.title)}
           </h2>
           <p className="mt-2 text-sm text-white/40 max-w-2xl mx-auto">
-            {get('career_subtitle', CAREER_COPY.subtitle)}
+            {pick('career_subtitle', copy.subtitle)}
           </p>
         </div>
 
@@ -197,7 +188,7 @@ const CareerCarousel: React.FC<CareerCarouselProps> = ({
           pauseOnHover
           advanceOnClick
           showClickHint
-          clickHintText="點擊看下一段"
+          clickHintText={copy.clickHint}
           hoverScale
         />
 

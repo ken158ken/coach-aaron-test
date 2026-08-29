@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from "react";
 import { get } from "@/services/api";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** OAuth 提供者狀態介面 */
 interface OAuthProviders {
@@ -67,6 +68,7 @@ const LineIcon: React.FC<{ className?: string }> = ({ className }) => (
  * 點擊後直接導向後端 OAuth 授權端點（瀏覽器跳轉）。
  */
 export const SocialLoginButtons: React.FC = () => {
+  const { t } = useLanguage();
   const [providers, setProviders] = useState<OAuthProviders | null>(null);
   const baseUrl = getApiBaseUrl();
 
@@ -102,7 +104,7 @@ export const SocialLoginButtons: React.FC = () => {
         <button
           type="button"
           onClick={() => handleOAuthLogin("google")}
-          aria-label="使用 Google 帳號登入"
+          aria-label={t.authUi.googleAria}
           className="w-12 h-12 flex items-center justify-center
                      bg-white hover:bg-gray-50
                      rounded-full border border-gray-300
@@ -117,7 +119,7 @@ export const SocialLoginButtons: React.FC = () => {
         <button
           type="button"
           onClick={() => handleOAuthLogin("line")}
-          aria-label="使用 LINE 帳號登入"
+          aria-label={t.authUi.lineAria}
           className="w-12 h-12 flex items-center justify-center
                      bg-[#06C755] hover:bg-[#05b34d]
                      text-white rounded-full

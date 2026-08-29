@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 // 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
 import { RichTextEditor } from "@/components/ui/editor";
+import { useLanguage } from "@/context/LanguageContext";
 import { get, post, put, del } from "@/services/api";
 import type { Course } from "@/types";
 
@@ -62,11 +63,12 @@ interface CourseFormData {
 
 type ViewMode = "list" | "card-sm" | "card-md" | "card-lg";
 
-const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
-  { mode: "list", icon: "☰", label: "清單" },
-  { mode: "card-sm", icon: "▪▪▪", label: "小圖" },
-  { mode: "card-md", icon: "◻◻", label: "中圖" },
-  { mode: "card-lg", icon: "⬜", label: "大圖" },
+/** 檢視模式的圖示（文案在字典裡，見元件內的 viewOptions） */
+const viewIcons: { mode: ViewMode; icon: string }[] = [
+  { mode: "list", icon: "☰" },
+  { mode: "card-sm", icon: "▪▪▪" },
+  { mode: "card-md", icon: "◻◻" },
+  { mode: "card-lg", icon: "⬜" },
 ];
 
 /**
@@ -76,6 +78,8 @@ const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
  */
 const AdminCourses: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const tp = t.adminCoursesPage;
   const dialog = useDialog();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +107,22 @@ const AdminCourses: React.FC = () => {
   };
 
   const [formData, setFormData] = useState<CourseFormData>(initialFormData);
+
+  /** 檢視模式選項（label 需要字典，所以放在元件內） */
+  const viewOptions = useMemo(
+    () =>
+      viewIcons.map(({ mode, icon }) => ({
+        mode,
+        icon,
+        label: {
+          list: tp.view.list,
+          "card-sm": tp.view.cardSm,
+          "card-md": tp.view.cardMd,
+          "card-lg": tp.view.cardLg,
+        }[mode],
+      })),
+    [tp],
+  );
 
   /** 更新內容回調 */
   const handleContentChange = useCallback((html: string) => {
@@ -155,12 +175,12 @@ const AdminCourses: React.FC = () => {
       } else {
         logger.error("Failed to fetch courses", res);
         setCourses([]);
-        setError("載入課程失敗：數據格式錯誤");
+        setError(tp.toast.loadFailedFormat);
       }
     } catch (err) {
       logger.error("Failed to fetch courses", err);
       setCourses([]);
-      setError("載入課程失敗");
+      setError(tp.toast.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -244,11 +264,11 @@ const AdminCourses: React.FC = () => {
     try {
       setError("");
       if (!formData.title.trim()) {
-        setError("課程名稱為必填");
+        setError(tp.toast.titleRequired);
         return;
       }
       if (!formData.price || isNaN(Number(formData.price))) {
-        setError("請輸入有效價格");
+        setError(tp.toast.priceInvalid);
         return;
       }
 
@@ -271,7 +291,7 @@ const AdminCourses: React.FC = () => {
       fetchCourses();
     } catch (err) {
       logger.error("Failed to create course", err);
-      setError("建立課程失敗");
+      setError(tp.toast.createFailed);
     }
   };
 
@@ -300,17 +320,20 @@ const AdminCourses: React.FC = () => {
       fetchCourses();
     } catch (err) {
       logger.error("Failed to update course", err);
-      setError("更新課程失敗");
+      setError(tp.toast.updateFailed);
     }
   };
 
   /** 刪除課程 */
   const handleDelete = async (course: Course) => {
     const confirmed = await dialog.confirm({
-      title: "刪除課程",
-      message: `確定要刪除「${course.course_title || course.title}」嗎？此操作無法復原。`,
+      title: tp.confirm.deleteTitle,
+      message: tp.confirm.deleteMessage.replace(
+        "{title}",
+        course.course_title || course.title || "",
+      ),
       variant: "danger",
-      confirmText: "刪除",
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
 
@@ -321,26 +344,26 @@ const AdminCourses: React.FC = () => {
       fetchCourses();
     } catch (err) {
       logger.error("Failed to delete course", err);
-      setError("刪除課程失敗");
+      setError(tp.toast.deleteFailed);
     }
   };
 
   const levelLabels: Record<string, string> = {
-    beginner: "初學者",
-    intermediate: "進階",
-    advanced: "專家",
+    beginner: tp.level.beginner,
+    intermediate: tp.level.intermediate,
+    advanced: tp.level.advanced,
   };
 
   const statusLabels: Record<string, string> = {
-    draft: "草稿",
-    published: "已發布",
-    archived: "已封存",
+    draft: t.common.draft,
+    published: t.common.published,
+    archived: tp.statusArchived,
   };
 
   const columns = [
     {
       key: "title" as const,
-      header: "課程名稱",
+      header: tp.col.title,
       isPrimary: true,
       sortValue: (course: Course) =>
         (course.course_title || course.title || "").toLowerCase(),
@@ -352,7 +375,7 @@ const AdminCourses: React.FC = () => {
     },
     {
       key: "level" as const,
-      header: "難度",
+      header: tp.col.level,
       render: (course: Course) => (
         <span className="text-luxe-muted">
           {course.level ? levelLabels[course.level] || course.level : "-"}
@@ -361,7 +384,7 @@ const AdminCourses: React.FC = () => {
     },
     {
       key: "price" as const,
-      header: "價格",
+      header: tp.col.price,
       sortValue: (course: Course) => course.price || 0,
       render: (course: Course) => (
         <span className="text-luxe-gold">
@@ -371,7 +394,7 @@ const AdminCourses: React.FC = () => {
     },
     {
       key: "status" as const,
-      header: "狀態",
+      header: t.adminCommon.colStatus,
       render: (course: Course) => {
         const config: Record<
           string,
@@ -406,14 +429,15 @@ const AdminCourses: React.FC = () => {
     },
     {
       key: "lessonsCount" as const,
-      header: "課堂數",
+      header: tp.col.lessons,
       hideOnMobile: true,
       sortValue: (course: Course) => course.lessonsCount || 0,
-      render: (course: Course) => `${course.lessonsCount || 0} 堂`,
+      render: (course: Course) =>
+        tp.lessonsUnit.replace("{n}", String(course.lessonsCount || 0)),
     },
     {
       key: "actions" as const,
-      header: "操作",
+      header: t.adminCommon.colActions,
       sortable: false,
       render: (course: Course) => (
         <div className="flex gap-2">
@@ -421,19 +445,19 @@ const AdminCourses: React.FC = () => {
             onClick={() => navigate(`/admin/courses/${course.course_id}/edit`)}
             className="text-luxe-gold hover:underline text-sm"
           >
-            編輯
+            {t.common.edit}
           </button>
           <button
             onClick={() => openEditModal(course)}
             className="text-blue-400 hover:underline text-sm"
           >
-            快速編輯
+            {tp.quickEdit}
           </button>
           <button
             onClick={() => handleDelete(course)}
             className="text-red-400 hover:underline text-sm"
           >
-            刪除
+            {t.common.delete}
           </button>
         </div>
       ),
@@ -446,10 +470,10 @@ const AdminCourses: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
-            課程管理
+            {t.admin.courses}
           </h1>
           <p className="text-sm sm:text-base text-luxe-muted">
-            管理所有單堂課程
+            {tp.pageSubtitle}
           </p>
         </div>
         <div className="flex gap-3">
@@ -462,7 +486,7 @@ const AdminCourses: React.FC = () => {
               setShowCreateModal(true);
             }}
           >
-            快速新增
+            {tp.quickAdd}
           </PillButton>
           <PillButton
             theme="luxe"
@@ -470,7 +494,7 @@ const AdminCourses: React.FC = () => {
             data-tour="courses-full-editor"
             onClick={() => navigate("/admin/courses/new")}
           >
-            新增課程 →
+            {tp.newCourse}
           </PillButton>
         </div>
       </div>
@@ -478,7 +502,7 @@ const AdminCourses: React.FC = () => {
       {/* Search + View Toggle */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
-          placeholder="搜尋課程..."
+          placeholder={tp.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
@@ -515,10 +539,10 @@ const AdminCourses: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部狀態</option>
-          <option value="draft">草稿</option>
-          <option value="published">已發布</option>
-          <option value="archived">已封存</option>
+          <option value="all">{tp.filter.allStatus}</option>
+          <option value="draft">{t.common.draft}</option>
+          <option value="published">{t.common.published}</option>
+          <option value="archived">{tp.statusArchived}</option>
         </select>
         <select
           value={categoryFilter}
@@ -535,7 +559,7 @@ const AdminCourses: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部分類</option>
+          <option value="all">{tp.filter.allCategories}</option>
           {uniqueCategories.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
@@ -582,7 +606,7 @@ const AdminCourses: React.FC = () => {
             keyExtractor={(course) => course.course_id}
             loading={loading}
             theme="luxe"
-            emptyMessage="沒有找到課程"
+            emptyMessage={tp.emptyState}
             sortable
           />
           <div className="mt-6">
@@ -597,10 +621,12 @@ const AdminCourses: React.FC = () => {
       ) : (
         <>
           {loading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : filteredCourses.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              沒有找到課程
+              {tp.emptyState}
             </div>
           ) : (
             <div
@@ -679,7 +705,7 @@ const AdminCourses: React.FC = () => {
                         <p className="text-xs text-luxe-muted line-clamp-2 mb-2">
                           {course.course_description ||
                             course.description ||
-                            "無描述"}
+                            tp.noDescription}
                         </p>
                       )}
                       <div className="flex items-center justify-between text-[10px] text-luxe-muted">
@@ -688,7 +714,12 @@ const AdminCourses: React.FC = () => {
                             ? levelLabels[course.level] || course.level
                             : "-"}
                         </span>
-                        <span>{course.lessonsCount || 0} 堂</span>
+                        <span>
+                          {tp.lessonsUnit.replace(
+                            "{n}",
+                            String(course.lessonsCount || 0),
+                          )}
+                        </span>
                       </div>
 
                       {/* 操作按鈕（觸控裝置始終顯示，桌面 hover 顯示） */}
@@ -699,19 +730,19 @@ const AdminCourses: React.FC = () => {
                           }
                           className="text-luxe-gold hover:underline text-xs flex-1"
                         >
-                          編輯
+                          {t.common.edit}
                         </button>
                         <button
                           onClick={() => openEditModal(course)}
                           className="text-blue-400 hover:underline text-xs"
                         >
-                          快速編輯
+                          {tp.quickEdit}
                         </button>
                         <button
                           onClick={() => handleDelete(course)}
                           className="text-red-400 hover:underline text-xs"
                         >
-                          刪除
+                          {t.common.delete}
                         </button>
                       </div>
                     </div>
@@ -739,7 +770,7 @@ const AdminCourses: React.FC = () => {
           setEditingCourse(null);
           resetForm();
         }}
-        title={editingCourse ? "編輯課程" : "新增單堂課程"}
+        title={editingCourse ? tp.form.editTitle : tp.form.createTitle}
         size="xl"
         theme="luxe"
         tourId="course-quick"
@@ -748,7 +779,7 @@ const AdminCourses: React.FC = () => {
           {/* 基本資訊 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="課程名稱 *"
+              label={tp.form.title}
               data-tour="course-form-title"
               value={formData.title}
               onChange={(e) =>
@@ -757,21 +788,21 @@ const AdminCourses: React.FC = () => {
               theme="luxe"
             />
             <Input
-              label="Slug (網址識別碼)"
+              label={tp.form.slug}
               data-tour="course-form-slug"
               value={formData.slug}
               onChange={(e) =>
                 setFormData({ ...formData, slug: e.target.value })
               }
               theme="luxe"
-              placeholder="自動生成如留空"
+              placeholder={tp.form.slugPlaceholder}
             />
           </div>
 
           {/* 價格與難度 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="價格 (NT$) *"
+              label={tp.form.price}
               data-tour="course-form-price"
               type="number"
               value={formData.price}
@@ -782,7 +813,9 @@ const AdminCourses: React.FC = () => {
               placeholder="0"
             />
             <div>
-              <label className="block text-luxe-muted text-sm mb-2">難度</label>
+              <label className="block text-luxe-muted text-sm mb-2">
+                {tp.form.level}
+              </label>
               <select
                 value={formData.level}
                 onChange={(e) =>
@@ -790,9 +823,9 @@ const AdminCourses: React.FC = () => {
                 }
                 className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-2 text-luxe-text [&>option]:bg-luxe-bg [&>option]:text-luxe-text"
               >
-                <option value="beginner">初學者</option>
-                <option value="intermediate">進階</option>
-                <option value="advanced">專家</option>
+                <option value="beginner">{tp.level.beginner}</option>
+                <option value="intermediate">{tp.level.intermediate}</option>
+                <option value="advanced">{tp.level.advanced}</option>
               </select>
             </div>
           </div>
@@ -800,30 +833,30 @@ const AdminCourses: React.FC = () => {
           {/* 分類與關鍵字 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TagInput
-              label="分類"
+              label={t.adminCommon.colCategory}
               data-tour="course-form-category"
               tags={formData.category}
               onChange={handleCategoryChange}
               theme="luxe"
-              placeholder="輸入後按 Enter 新增"
-              hint="可新增多個分類"
+              placeholder={tp.form.tagPlaceholder}
+              hint={tp.form.categoryHint}
               maxTags={5}
             />
             <TagInput
-              label="關鍵字 (SEO)"
+              label={tp.form.keywords}
               data-tour="course-form-keywords"
               tags={formData.keywords}
               onChange={handleKeywordsChange}
               theme="luxe"
-              placeholder="輸入後按 Enter 新增"
-              hint="用於搜尋引擎優化"
+              placeholder={tp.form.tagPlaceholder}
+              hint={tp.form.keywordsHint}
               maxTags={10}
             />
           </div>
 
           {/* 簡介 */}
           <Textarea
-            label="課程簡介"
+            label={tp.form.description}
             value={formData.description}
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
@@ -835,7 +868,7 @@ const AdminCourses: React.FC = () => {
           {/* 詳細內容編輯器 */}
           <div data-tour="course-form-content">
             <label className="block text-luxe-muted text-sm mb-2">
-              課程詳細內容
+              {tp.form.content}
             </label>
             <ImageUploadTargetProvider
               value={{ entity: "course", entityKey: editingCourse?.course_id ?? null }}
@@ -844,7 +877,7 @@ const AdminCourses: React.FC = () => {
                 content={formData.content}
                 onChange={handleContentChange}
                 theme="luxe"
-                placeholder="輸入課程詳細內容..."
+                placeholder={tp.form.contentPlaceholder}
                 minHeight="300px"
               />
             </ImageUploadTargetProvider>
@@ -852,7 +885,9 @@ const AdminCourses: React.FC = () => {
 
           {/* 狀態 */}
           <div data-tour="course-form-status">
-            <label className="block text-luxe-muted text-sm mb-2">狀態</label>
+            <label className="block text-luxe-muted text-sm mb-2">
+              {t.adminCommon.colStatus}
+            </label>
             <select
               value={formData.status}
               onChange={(e) =>
@@ -863,9 +898,9 @@ const AdminCourses: React.FC = () => {
               }
               className="w-full sm:w-auto bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-2 text-luxe-text [&>option]:bg-luxe-bg [&>option]:text-luxe-text"
             >
-              <option value="draft">草稿</option>
-              <option value="published">發布</option>
-              <option value="archived">封存</option>
+              <option value="draft">{t.common.draft}</option>
+              <option value="published">{t.admin.publish}</option>
+              <option value="archived">{tp.statusArchive}</option>
             </select>
           </div>
         </div>
@@ -879,7 +914,7 @@ const AdminCourses: React.FC = () => {
               resetForm();
             }}
           >
-            取消
+            {t.common.cancel}
           </PillButton>
           <PillButton
             theme="luxe"
@@ -887,7 +922,7 @@ const AdminCourses: React.FC = () => {
             data-tour="course-form-submit"
             onClick={editingCourse ? handleUpdate : handleCreate}
           >
-            {editingCourse ? "更新" : "建立"}
+            {editingCourse ? tp.updateBtn : tp.createBtn}
           </PillButton>
         </div>
       </Modal>

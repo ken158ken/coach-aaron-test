@@ -4,10 +4,11 @@
  * @description Aceternity Expandable Card 風格：點擊卡片展開詳細內容
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   podcastService,
   type PodcastEpisode as DbEpisode,
@@ -23,45 +24,46 @@ interface PodcastEpisode {
   category: string;
 }
 
+/** 單集文案（由 i18n 字典提供） */
+interface EpisodeCopy {
+  title: string;
+  description: string;
+  fullDescription: string;
+}
+
 /**
- * DB（podcast_episodes 表）讀不到時的 fallback 單集。
+ * DB（podcast_episodes 表）讀不到時的 fallback 單集 — 非文案欄位。
  *
  * 原本的三筆是 B2C 模板假資料（健身入門迷思／飲食控制／訓練動力），
  * 與純 B2B 定位衝突，已改為節目中的 B2B 向集數。
  * ⚠️ 時長為概值、日期為節目實際年份區間；正式資料請由後台維護。
+ * 文案（title / description / fullDescription）在 `t.podcast.episodes`。
  */
-const DEMO_EPISODES: PodcastEpisode[] = [
-  {
-    id: '1',
-    title: 'EP20 續課八法',
-    description: '把續約從「開口很尷尬」變成一套可執行的流程...',
-    fullDescription:
-      '開發一個新會員的成本，是維護一個舊會員的好幾倍。這集拆解續課的八個切入點：從課程中的成效回顧、時機判讀，到怎麼把續約談成「下一階段的規劃」而不是推銷。教練最該先補的一塊，通常就在這裡。',
-    duration: '32:10',
-    date: '2021',
-    category: 'training',
-  },
-  {
-    id: '2',
-    title: 'EP22 SMARTER 目標設定',
-    description: '會員做不到的目標，多半是一開始就設錯了...',
-    fullDescription:
-      '目標設定不是喊口號。這集用 SMARTER 架構逐項拆解：具體、可衡量、可達成、相關性、時限，再加上評估與調整兩步。學會之後，你不只能幫會員設目標，也能把自己的業績目標拆成每週做得完的動作。',
-    duration: '28:45',
-    date: '2021',
-    category: 'mindset',
-  },
-  {
-    id: '3',
-    title: 'EP2 人類三大本能',
-    description: '讀懂本能，才讀得懂會員為什麼說「我再想想」...',
-    fullDescription:
-      '所有溝通與成交的底層，都是人的本能反應。這集談趨吉避凶、追求認同與歸屬感三大本能如何影響決策，以及教練該怎麼在對話裡對準這些動機——這是我後來整套銷售心理學的起點。',
-    duration: '25:30',
-    date: '2021',
-    category: 'mindset',
-  },
+const DEMO_EPISODE_META: {
+  id: string;
+  copyKey: 'ep1' | 'ep2' | 'ep3';
+  duration: string;
+  date: string;
+  category: string;
+}[] = [
+  { id: '1', copyKey: 'ep1', duration: '32:10', date: '2021', category: 'training' },
+  { id: '2', copyKey: 'ep2', duration: '28:45', date: '2021', category: 'mindset' },
+  { id: '3', copyKey: 'ep3', duration: '25:30', date: '2021', category: 'mindset' },
 ];
+
+/** 把 meta + 字典文案組成 fallback 單集清單 */
+const buildDemoEpisodes = (
+  episodes: Record<string, EpisodeCopy>
+): PodcastEpisode[] =>
+  DEMO_EPISODE_META.map((meta) => ({
+    id: meta.id,
+    title: episodes[meta.copyKey]?.title ?? '',
+    description: episodes[meta.copyKey]?.description ?? '',
+    fullDescription: episodes[meta.copyKey]?.fullDescription ?? '',
+    duration: meta.duration,
+    date: meta.date,
+    category: meta.category,
+  }));
 
 /** 把 DB 型別轉成元件本地型別 */
 const fromDb = (ep: DbEpisode): PodcastEpisode => ({
@@ -80,31 +82,44 @@ const CATEGORY_STYLE: Record<string, string> = {
   mindset: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
-  training: '訓練',
-  nutrition: '營養',
-  mindset: '心態',
-};
-
 const PodcastExpandable: React.FC = () => {
+  const { t, isZhTW } = useLanguage();
+  const copy = t.podcast;
+
   const [active, setActive] = useState<PodcastEpisode | null>(null);
-  const [episodes, setEpisodes] = useState<PodcastEpisode[]>(DEMO_EPISODES);
+  // null = 尚未從 DB 取得資料 → 渲染時改用字典 fallback（見 displayEpisodes）
+  const [episodes, setEpisodes] = useState<PodcastEpisode[] | null>(null);
 
   useScrollLock(!!active);
 
   const { get } = useSiteContent();
+
+  /** 分類標籤（DB 只存 category 代碼，標籤全由字典提供） */
+  const categoryLabel = (category: string): string =>
+    (copy.categories as Record<string, string>)[category] ?? category;
+
+  const demoEpisodes = useMemo(
+    () => buildDemoEpisodes(copy.episodes),
+    [copy.episodes]
+  );
+  const displayEpisodes = episodes ?? demoEpisodes;
+
+  /**
+   * site_content 只存中文（`GET /api/content` 未回傳 content_value_en）：
+   * 中文模式 DB 值優先，英文模式一律用字典。
+   */
+  const pick = (key: string, dict: string): string =>
+    isZhTW ? get(key, dict) : dict;
+
   // ⚠️ 節目 2022 年已停更，文案不得出現「每週更新」「持續更新」等時效性字眼。
   // 主標備選：'我的方法論，從這裡開始' ／ '58 集，一套方法的原點'
   // 說明備選：
   //   B 案：'58 集《陪你健身》，完整記錄了我方法論成形的過程。有空可以聽聽，它們現在還是有效的。'
   //   C 案：'在很多人還沒開始做 Podcast 的時候，我已經一集一集講完了 58 集。內容沒有過期——講的是原理，不是趨勢。'
   const pHeader = {
-    tagline: get('podcast_tagline', 'Podcast'),
-    title: get('podcast_title', 'Podcast《陪你健身》'),
-    subtitle: get(
-      'podcast_subtitle',
-      '58 集完整節目，我方法論成形的過程'
-    ),
+    tagline: pick('podcast_tagline', copy.tagline),
+    title: pick('podcast_title', copy.title),
+    subtitle: pick('podcast_subtitle', copy.subtitle),
   };
 
   // 從 DB 讀取單集清單（獨立 podcast_episodes 表）；失敗則保留 DEMO fallback
@@ -137,7 +152,7 @@ const PodcastExpandable: React.FC = () => {
 
         {/* Cards Grid */}
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-          {episodes.map((ep) => (
+          {displayEpisodes.map((ep) => (
             <motion.div
               key={ep.id}
               layoutId={`podcast-card-${ep.id}`}
@@ -172,7 +187,7 @@ const PodcastExpandable: React.FC = () => {
                   'text-gold bg-gold/10 border-gold/20'
                 }`}
               >
-                {CATEGORY_LABEL[ep.category] ?? ep.category}
+                {categoryLabel(ep.category)}
               </motion.span>
 
               {/* Title */}
@@ -220,6 +235,7 @@ const PodcastExpandable: React.FC = () => {
                 {/* Close button */}
                 <button
                   onClick={() => setActive(null)}
+                  aria-label={copy.close}
                   className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/15 transition-colors text-sm"
                 >
                   ✕
@@ -247,7 +263,7 @@ const PodcastExpandable: React.FC = () => {
                     'text-gold bg-gold/10 border-gold/20'
                   }`}
                 >
-                  {CATEGORY_LABEL[active.category] ?? active.category}
+                  {categoryLabel(active.category)}
                 </motion.span>
 
                 {/* Title */}
@@ -288,7 +304,7 @@ const PodcastExpandable: React.FC = () => {
                   >
                     <path d="M8 5v14l11-7z" />
                   </svg>
-                  播放本集
+                  {copy.playEpisode}
                 </motion.button>
               </motion.div>
             </div>

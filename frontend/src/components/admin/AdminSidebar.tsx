@@ -35,9 +35,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isMobile = false,
 }) => {
   const location = useLocation();
-  const { t, isZhTW } = useLanguage();
+  const { t } = useLanguage();
 
-  // 定義標籤映射
+  // 定義標籤映射：核心字典沒有的幾條走 adminLayout.nav*
   const labels: Record<string, string> = {
     dashboard: t.admin.dashboard,
     users: t.admin.users,
@@ -47,10 +47,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     articles: t.admin.articles,
     landingPages: t.admin.landingPages,
     whitelist: t.admin.whitelist,
-    whispers: isZhTW ? "悄悄話" : "Whispers",
-    content: isZhTW ? "內容管理" : "Content",
+    whispers: t.adminLayout.navWhispers,
+    content: t.adminLayout.navContent,
     export: t.admin.export,
-    googleCalendar: isZhTW ? "Google 日曆" : "Google Calendar",
+    googleCalendar: t.adminLayout.navGoogleCalendar,
   };
 
   const navItems: { path: string; labelKey: string; icon: React.ReactNode }[] =
@@ -306,7 +306,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <Link
           to="/"
           onClick={onNavigate}
-          aria-label="阿倫教官 後台"
+          aria-label={t.adminLayout.brandAria}
           className={`flex items-center gap-2 sm:gap-3 ${
             isOpen ? "" : "w-full justify-center"
           }`}
@@ -331,7 +331,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <button
             onClick={onToggle}
             className="p-1.5 text-luxe-muted hover:text-luxe-gold transition-colors"
-            aria-label="Close sidebar"
+            aria-label={t.adminLayout.closeSidebar}
           >
             <svg
               className="w-5 h-5"

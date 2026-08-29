@@ -6,6 +6,7 @@
 import React from "react";
 import type { VideoBlock } from "../types";
 import { parseYouTubeUrl } from "../utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface VideoBlockComponentProps {
   block: VideoBlock;
@@ -16,6 +17,7 @@ const VideoBlockComponent: React.FC<VideoBlockComponentProps> = ({
   block,
   isSelected,
 }) => {
+  const { t } = useLanguage();
   const ytInfo = parseYouTubeUrl(block.src);
 
   if (!ytInfo) {
@@ -34,7 +36,7 @@ const VideoBlockComponent: React.FC<VideoBlockComponentProps> = ({
             d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
           />
         </svg>
-        <span className="text-sm">無效的 YouTube 網址</span>
+        <span className="text-sm">{t.blockEditor.invalidYoutubeUrl}</span>
       </div>
     );
   }
@@ -47,7 +49,7 @@ const VideoBlockComponent: React.FC<VideoBlockComponentProps> = ({
         style={{ borderRadius: block.borderRadius }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
-        title="YouTube 影片"
+        title={t.blockEditor.blockVideo}
       />
 
       {/* 遮罩層：防止拖曳時觸發 iframe 互動 */}

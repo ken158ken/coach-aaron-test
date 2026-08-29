@@ -26,7 +26,7 @@ import type { Lesson } from "@/types";
 const LessonDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { loc } = useLocalize();
 
   // ── SSR 預抓資料（key 帶 :id） ──
@@ -124,7 +124,7 @@ const LessonDetail: React.FC = () => {
   // ── SEO ──
   // 必須在 early return 之前建立，否則 loading 狀態下伺服器端輸出空 title
   const lessonObj = (lesson ?? {}) as unknown as Record<string, unknown>;
-  const lessonsLabel = language === "en" ? "Lessons" : "教學影片";
+  const lessonsLabel = t.lessonsPage.title;
   const seoTitle =
     loc(lessonObj, "title") || (id ? `${lessonsLabel} #${id}` : lessonsLabel);
   const lessonUrl = `/lessons/${lesson?.id ?? id ?? ""}`;
@@ -132,7 +132,11 @@ const LessonDetail: React.FC = () => {
     <SEOHead
       title={seoTitle}
       description={loc(lessonObj, "description") || undefined}
-      keywords={lesson?.keywords ? lesson.keywords.split(",").map((k) => k.trim()) : ["教學影片", "健身教學", "阿倫教官"]}
+      keywords={
+        lesson?.keywords
+          ? lesson.keywords.split(",").map((k) => k.trim())
+          : t.lessonDetail.fallbackKeywords
+      }
       image={lesson?.thumbnail_url || undefined}
       url={lessonUrl}
       type="article"
@@ -140,7 +144,7 @@ const LessonDetail: React.FC = () => {
       noIndex={Boolean(error) || (!loading && !lesson)}
       publishedTime={lesson?.created_at}
       modifiedTime={lesson?.updated_at}
-      author="阿倫教官"
+      author={t.lessonDetail.author}
       breadcrumbs={[
         { name: lessonsLabel, url: "/lessons" },
         { name: seoTitle, url: lessonUrl },
@@ -164,12 +168,14 @@ const LessonDetail: React.FC = () => {
         {seoHead}
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <p className="text-white/60 mb-4">{error || "影片不存在"}</p>
+            <p className="text-white/60 mb-4">
+              {error || t.lessonDetail.notFound}
+            </p>
             <button
               onClick={() => navigate("/lessons")}
               className="text-gold hover:underline"
             >
-              ← {language === "en" ? "Back to lessons" : "回到教學影片"}
+              ← {t.lessonDetail.backToLessons}
             </button>
           </div>
         </div>
@@ -196,7 +202,7 @@ const LessonDetail: React.FC = () => {
               to="/lessons"
               className="inline-flex items-center gap-1 text-white/50 hover:text-gold text-sm transition-colors"
             >
-              ← {language === "en" ? "Back" : "回到教學影片列表"}
+              ← {t.lessonDetail.backToLessons}
             </Link>
           </div>
 
@@ -242,7 +248,7 @@ const LessonDetail: React.FC = () => {
                 <iframe
                   ref={iframeRef}
                   src={embedUrl}
-                  title={lesson.title}
+                  title={loc(lesson as unknown as Record<string, unknown>, "title")}
                   loading="lazy"
                   allowFullScreen
                   allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
@@ -251,9 +257,7 @@ const LessonDetail: React.FC = () => {
               </div>
               {/* 補充說明（手機版 fallback：transcript 在影片下方） */}
               <p className="text-xs text-white/40 lg:hidden">
-                {language === "en"
-                  ? "Transcript appears below — scrolls along with playback when supported"
-                  : "下方為逐字稿；播放時可能會自動高亮（依 Loom 版本而定）"}
+                {t.lessonDetail.transcriptHint}
               </p>
             </div>
 
@@ -264,11 +268,11 @@ const LessonDetail: React.FC = () => {
             >
               <header className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
                 <h2 className="text-sm font-medium text-white/85 tracking-widest uppercase">
-                  {language === "en" ? "Transcript" : "逐字稿"}
+                  {t.lessonDetail.transcript}
                 </h2>
                 {transcript.length > 0 && (
                   <span className="text-[10px] text-white/40">
-                    {transcript.length} {language === "en" ? "lines" : "句"}
+                    {transcript.length} {t.lessonDetail.lines}
                   </span>
                 )}
               </header>
@@ -279,9 +283,7 @@ const LessonDetail: React.FC = () => {
               >
                 {transcript.length === 0 ? (
                   <div className="p-6 text-center text-white/40 text-sm">
-                    {language === "en"
-                      ? "No transcript available yet"
-                      : "這部影片還沒有逐字稿"}
+                    {t.lessonDetail.noTranscript}
                   </div>
                 ) : (
                   transcript.map((entry, idx) => {
@@ -320,9 +322,7 @@ const LessonDetail: React.FC = () => {
               </div>
 
               <div className="px-4 py-2 border-t border-white/8 text-[10px] text-white/35 text-center">
-                {language === "en"
-                  ? "Tap a line to skip (when supported)"
-                  : "點任何一句可嘗試跳轉（部分 Loom 版本支援）"}
+                {t.lessonDetail.seekHint}
               </div>
             </aside>
           </div>

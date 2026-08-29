@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
+import { useLanguage } from "@/context/LanguageContext";
 
 // 搜尋結果類型
 interface SearchResult {
@@ -32,6 +33,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -154,13 +156,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   const getTypeLabel = (type: SearchResult["type"]) => {
     switch (type) {
       case "course":
-        return "課程";
+        return t.course.title;
       case "article":
-        return "文章";
+        return t.article.title;
       case "comment":
-        return "留言";
+        return t.globalSearch.typeComment;
       case "review":
-        return "評價";
+        return t.globalSearch.typeReview;
       default:
         return "";
     }
@@ -199,7 +201,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="搜尋課程、文章、評論..."
+            placeholder={t.globalSearch.placeholder}
             className="flex-1 bg-transparent border-none outline-none text-lg text-luxe-text placeholder:text-gray-500"
           />
           {loading && (
@@ -221,21 +223,21 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
           {query.trim() === "" ? (
             // 提示文字
             <div className="px-6 py-12 text-center text-gray-500">
-              <p className="text-lg mb-2">輸入關鍵字開始搜尋</p>
-              <p className="text-sm">可搜尋課程名稱、文章標題、評論內容等</p>
+              <p className="text-lg mb-2">{t.globalSearch.promptTitle}</p>
+              <p className="text-sm">{t.globalSearch.promptHint}</p>
             </div>
           ) : loading ? (
             // 載入中
             <div className="px-6 py-12 text-center text-gray-500">
               <div className="w-8 h-8 mx-auto border-2 border-luxe-gold/30 border-t-luxe-gold rounded-full animate-spin mb-4" />
-              <p>搜尋中...</p>
+              <p>{t.chatUi.searching}</p>
             </div>
           ) : results.length === 0 ? (
             // 無結果
             <div className="px-6 py-12 text-center text-gray-500">
               <p className="text-4xl mb-4">🔍</p>
-              <p className="text-lg mb-2">找不到相關結果</p>
-              <p className="text-sm">嘗試使用其他關鍵字</p>
+              <p className="text-lg mb-2">{t.globalSearch.noResults}</p>
+              <p className="text-sm">{t.globalSearch.noResultsHint}</p>
             </div>
           ) : (
             // 結果列表
@@ -321,19 +323,19 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
             <kbd className="px-1.5 py-0.5 bg-luxe-bg rounded border border-luxe-gold/20">
               ↓
             </kbd>
-            <span>導航</span>
+            <span>{t.globalSearch.hintNavigate}</span>
           </span>
           <span className="flex items-center gap-2">
             <kbd className="px-1.5 py-0.5 bg-luxe-bg rounded border border-luxe-gold/20">
               Enter
             </kbd>
-            <span>選擇</span>
+            <span>{t.globalSearch.hintSelect}</span>
           </span>
           <span className="flex items-center gap-2">
             <kbd className="px-1.5 py-0.5 bg-luxe-bg rounded border border-luxe-gold/20">
               ESC
             </kbd>
-            <span>關閉</span>
+            <span>{t.chatUi.close}</span>
           </span>
         </div>
       </div>
@@ -348,12 +350,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
 export const SearchButton: React.FC<{ onClick: () => void }> = ({
   onClick,
 }) => {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       onClick={onClick}
       className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-luxe-gold border border-white/20 hover:border-luxe-gold/50 rounded-lg transition-all"
-      title="搜尋 (Ctrl+K)"
+      title={t.globalSearch.triggerTitle}
     >
       <svg
         className="w-4 h-4"
@@ -368,7 +371,7 @@ export const SearchButton: React.FC<{ onClick: () => void }> = ({
           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
         />
       </svg>
-      <span className="hidden sm:inline">搜尋</span>
+      <span className="hidden sm:inline">{t.common.search}</span>
       <kbd className="hidden md:inline px-1.5 py-0.5 text-xs bg-luxe-bg/50 rounded border border-white/10">
         ⌘K
       </kbd>

@@ -8,6 +8,7 @@ import React, { useState, useCallback } from 'react';
 import type { Video } from '@/types';
 import { formatDate } from '@/lib/ui';
 import { useLocalize } from '@/hooks';
+import { useLanguage } from "@/context/LanguageContext";
 
 interface VideoCardProps {
   video: Video;
@@ -48,6 +49,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   className = '',
   onClick,
 }) => {
+  const { language } = useLanguage();
   const { loc } = useLocalize();
   const localizedTitle = loc(
     video as unknown as Record<string, unknown>,
@@ -114,7 +116,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
 
             {video.created_at && (
               <p className="text-white/40 text-[10px]">
-                {formatDate(video.created_at)}
+                {formatDate(video.created_at, language)}
               </p>
             )}
           </div>

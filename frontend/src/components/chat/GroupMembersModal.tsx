@@ -18,7 +18,9 @@ import {
 } from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
 import { usePresenceMany } from "@/hooks/usePresence";
-import { formatLastSeen } from "@/services/social/presence.service";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
+import { localizedLastSeen, localizedUserName } from "./chatNames";
 import UserAvatar from "./UserAvatar";
 import PresenceDot from "./PresenceDot";
 
@@ -32,8 +34,8 @@ interface GroupMembersModalProps {
   onSelfLeft?: () => void;
 }
 
-function userLabel(u: ChatUser): string {
-  return u.admin_display_name || u.display_name || u.name || u.email || "用戶";
+function userLabel(u: ChatUser, t: AllTranslations): string {
+  return localizedUserName(u, t);
 }
 
 const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
@@ -44,6 +46,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
   onSelfLeft,
 }) => {
   const { user, isAdmin } = useAuth();
+  const { t, isZhTW } = useLanguage();
   const dialog = useDialog();
   const me = Number(user?.user_id || 0);
   const [working, setWorking] = useState(false);
@@ -90,14 +93,17 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
 
   const handleRemove = async (target: ChatParticipant) => {
     const isSelf = target.user_id === me;
-    const name = userLabel(target.user);
+    const name = userLabel(target.user, t);
     const ok = await dialog.confirm({
-      title: isSelf ? "離開群組" : "移除成員",
+      title: isSelf ? t.chatUi.leaveGroupTitle : t.chatUi.removeMemberTitle,
       message: isSelf
-        ? `確定要離開「${conversation.title}」嗎？\n離開後仍可看到舊訊息，但無法再發訊息或看到新訊息。`
-        : `確定要把 ${name} 移出群組嗎？對方仍可看到離開前的訊息，但看不到新訊息。`,
+        ? t.chatUi.leaveGroupMessage.replace(
+            "{group}",
+            conversation.title || t.chatUi.groupFallback,
+          )
+        : t.chatUi.removeMemberMessage.replace("{name}", name),
       variant: "danger",
-      confirmText: isSelf ? "離開" : "移除",
+      confirmText: isSelf ? t.chatUi.leave : t.chatUi.remove,
     });
     if (!ok) return;
 
@@ -111,8 +117,8 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
       }
     } catch (err) {
       await dialog.alert({
-        title: "操作失敗",
-        message: err instanceof Error ? err.message : "請稍後再試",
+        title: t.chatUi.actionFailed,
+        message: err instanceof Error ? err.message : t.chatUi.tryAgainLater,
       });
     } finally {
       setWorking(false);
@@ -127,8 +133,8 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
       onChanged?.();
     } catch (err) {
       await dialog.alert({
-        title: "新增失敗",
-        message: err instanceof Error ? err.message : "請稍後再試",
+        title: t.chatUi.addFailed,
+        message: err instanceof Error ? err.message : t.chatUi.tryAgainLater,
       });
     } finally {
       setWorking(false);
@@ -139,7 +145,9 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`👥 ${conversation.title} 成員（${participants.length}）`}
+      title={t.chatUi.membersTitle
+        .replace("{group}", conversation.title || t.chatUi.groupFallback)
+        .replace("{count}", String(participants.length))}
       size="lg"
     >
       <div className="space-y-4">
@@ -153,7 +161,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
               onClick={() => setShowAdd((v) => !v)}
               disabled={working}
             >
-              {showAdd ? "完成" : "+ 新增成員"}
+              {showAdd ? t.chatUi.done : t.chatUi.addMember}
             </PillButton>
           </div>
         )}
@@ -164,12 +172,12 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
             <Input
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="輸入名稱 / Email 搜尋..."
+              placeholder={t.chatUi.searchMemberPlaceholder}
             />
             <div className="max-h-48 overflow-y-auto space-y-1">
               {searchResults.length === 0 && (
                 <p className="text-xs text-muted text-center py-3">
-                  {searchQ ? "找不到符合的會員" : "輸入關鍵字搜尋"}
+                  {searchQ ? t.chatUi.noMemberFound : t.chatUi.searchPrompt}
                 </p>
               )}
               {searchResults.map((u) => (
@@ -181,10 +189,10 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
                 >
                   <UserAvatar user={u} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{userLabel(u)}</p>
+                    <p className="text-sm truncate">{userLabel(u, t)}</p>
                     <p className="text-[10px] text-muted truncate">{u.email}</p>
                   </div>
-                  <span className="text-gold text-xs">+ 加入</span>
+                  <span className="text-gold text-xs">{t.chatUi.addAction}</span>
                 </button>
               ))}
             </div>
@@ -214,29 +222,33 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium truncate">
-                      {userLabel(u)}
+                      {userLabel(u, t)}
                     </span>
                     {isSelf && (
                       <span className="text-[10px] text-muted bg-gold/5 px-1.5 py-0.5 rounded-full">
-                        你
+                        {t.chatUi.you}
                       </span>
                     )}
                     {isAdminMember && (
                       <span className="text-[10px] text-gold bg-gold/10 px-1.5 py-0.5 rounded-full">
-                        管理員
+                        {t.chatUi.adminTag}
                       </span>
                     )}
                     {p.role === "admin" && !isAdminMember && (
                       <span className="text-[10px] text-gold bg-gold/10 px-1.5 py-0.5 rounded-full">
-                        群主
+                        {t.chatUi.ownerTag}
                       </span>
                     )}
                   </div>
                   <p className="text-[11px] text-muted">
                     {isSelf
-                      ? "（你自己）"
+                      ? t.chatUi.yourself
                       : userPresence
-                        ? formatLastSeen(userPresence.last_seen_at)
+                        ? localizedLastSeen(
+                            userPresence.last_seen_at,
+                            t,
+                            isZhTW,
+                          )
                         : "—"}
                   </p>
                 </div>
@@ -248,7 +260,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
                     disabled={working}
                     className="text-red-400 hover:text-red-300 text-xs px-2 py-1 transition-colors disabled:opacity-50"
                   >
-                    {isSelf ? "離開" : "移除"}
+                    {isSelf ? t.chatUi.leave : t.chatUi.remove}
                   </button>
                 )}
               </div>
@@ -258,7 +270,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
 
         <div className="flex justify-end pt-2 border-t border-gold/10">
           <PillButton theme="luxe" variant="outline" onClick={onClose}>
-            關閉
+            {t.chatUi.close}
           </PillButton>
         </div>
       </div>

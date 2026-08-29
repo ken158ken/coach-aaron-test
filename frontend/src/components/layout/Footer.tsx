@@ -7,6 +7,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { SOCIAL_LINKS } from "@/constants";
 import { LogoMark } from "@/components/brand";
+import { useLanguage } from "@/context/LanguageContext";
 
 /**
  * Inline SVG 社群圖示
@@ -64,6 +65,8 @@ interface SocialLink {
 }
 
 const Footer: React.FC = (): JSX.Element => {
+  const { t } = useLanguage();
+
   const socialLinks: SocialLink[] = [
     { icon: IconInstagram, url: SOCIAL_LINKS.INSTAGRAM, label: "Instagram" },
     { icon: IconFacebook, url: SOCIAL_LINKS.FACEBOOK, label: "Facebook" },
@@ -82,20 +85,20 @@ const Footer: React.FC = (): JSX.Element => {
           <div className="flex items-center gap-2.5 sm:gap-3">
             <LogoMark className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
             <span className="font-display font-bold tracking-[4px] silver-text text-base sm:text-lg">
-              阿倫教官
+              {t.layoutExtra.brandName}
             </span>
             <span className="hidden sm:inline text-muted text-xs tracking-wider">
-              心理學 × 健身講師
+              {t.layoutExtra.brandTagline}
             </span>
           </div>
 
           {/* Nav Links */}
           <nav className="flex items-center gap-5 sm:gap-7 overflow-x-auto max-w-full hide-scrollbar">
             {[
-              { to: "/", label: "教練介紹" },
-              { to: "/courses", label: "線上課程" },
-              { to: "/videos", label: "Reels" },
-              { to: "/contact", label: "聯絡我" },
+              { to: "/", label: t.nav.home },
+              { to: "/courses", label: t.nav.courses },
+              { to: "/videos", label: t.nav.videos },
+              { to: "/contact", label: t.nav.contact },
             ].map((l) => (
               <Link
                 key={l.to}
@@ -128,7 +131,7 @@ const Footer: React.FC = (): JSX.Element => {
         {/* Copyright */}
         <div className="footer-copyright mt-4 pt-4 text-center">
           <p className="text-[9px] sm:text-[10px] tracking-widest">
-            © 2026 阿倫教官 - All rights reserved
+            © 2026 {t.layoutExtra.brandName} - {t.layoutExtra.rightsReserved}
           </p>
         </div>
       </div>

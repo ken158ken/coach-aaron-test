@@ -7,7 +7,7 @@ import { Routes, Route } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { LanguageProvider } from "@/context/LanguageContext";
+import { LanguageProvider, useLanguage } from "@/context/LanguageContext";
 import { ChatNotificationProvider } from "@/context/ChatNotificationContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { DialogProvider } from "@/components/ui/Dialog";
@@ -116,16 +116,20 @@ const Heartbeat: React.FC = () => {
  *    正是因為蓋滿全螢幕又綁在 JS 執行完成上，把 FCP 拖到 8.1 秒。這裡不要重蹈覆轍：
  *    不要加 position:fixed + inset:0 + 不透明背景。
  */
-const RouteFallback: React.FC = () => (
+const RouteFallback: React.FC = () => {
+  // 這個 fallback 掛在 <LanguageProvider> 內的 <Suspense>，可安全取用字典
+  const { t } = useLanguage();
+  return (
   <div
     className="flex items-center justify-center py-24"
     role="status"
     aria-live="polite"
-    aria-label="載入中"
+    aria-label={t.common.loading}
   >
     <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
   </div>
-);
+  );
+};
 
 function App(): JSX.Element {
   // 初始化 AOS

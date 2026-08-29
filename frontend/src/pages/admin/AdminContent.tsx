@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   PillButton,
   Input,
@@ -42,13 +43,12 @@ import {
   type PodcastEpisode,
   type EpisodeCategory,
   EPISODE_CATEGORIES,
-  EPISODE_CATEGORY_LABEL,
 } from '@/services/site/podcast.service';
 import { TestimonialCarousel } from '@/components/sections';
 import { GallerySlider } from '@/components/sections';
 import { getTemplates, type ContentTemplate } from '@/utils/contentTemplates';
 import { HOMEPAGE_SECTIONS, KEY_TO_SECTION_ID } from '@/utils/homepageSections';
-import { imageUrlError } from '@/lib/imageUrl';
+import { isAllowedImageUrl } from '@/lib/imageUrl';
 
 /** 用 chip / tag 編輯器呈現的 JSON 字串陣列 keys */
 const STRING_ARRAY_KEYS = new Set<string>([
@@ -89,56 +89,59 @@ const SectionItemRow: React.FC<SectionItemRowProps> = ({
   onToggle,
   onEdit,
   onDelete,
-}) => (
-  <div
-    data-tour="content-item-row"
-    className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
-      item.is_active ? 'border-luxe-gold/10' : 'border-luxe-gold/5 opacity-60'
-    }`}
-  >
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex-grow min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <h3 className="text-luxe-text font-medium text-sm">
-            {item.content_name}
-          </h3>
-          <span className="text-xs px-1.5 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
-            {item.content_type}
-          </span>
-          {!item.is_active && (
-            <span className="text-xs px-1.5 py-0.5 bg-red-900/30 text-red-400 rounded">
-              已停用
+}) => {
+  const { t } = useLanguage();
+  return (
+    <div
+      data-tour="content-item-row"
+      className={`bg-luxe-surface rounded-lg border p-4 transition-all ${
+        item.is_active ? 'border-luxe-gold/10' : 'border-luxe-gold/5 opacity-60'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-grow min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-luxe-text font-medium text-sm">
+              {item.content_name}
+            </h3>
+            <span className="text-xs px-1.5 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
+              {item.content_type}
             </span>
-          )}
+            {!item.is_active && (
+              <span className="text-xs px-1.5 py-0.5 bg-red-900/30 text-red-400 rounded">
+                {t.adminContentPage.status.inactive}
+              </span>
+            )}
+          </div>
+          <p className="text-luxe-text/70 text-xs line-clamp-2 whitespace-pre-wrap">
+            {item.content_value || t.adminContentPage.fallback.noValue}
+          </p>
         </div>
-        <p className="text-luxe-text/70 text-xs line-clamp-2 whitespace-pre-wrap">
-          {item.content_value || '(空白)'}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Toggle
-          theme="luxe"
-          checked={item.is_active}
-          onChange={() => onToggle(item)}
-        />
-        <PillButton
-          theme="luxe"
-          variant="outline"
-          size="sm"
-          onClick={() => onEdit(item)}
-        >
-          編輯
-        </PillButton>
-        <button
-          onClick={() => onDelete(item)}
-          className="text-red-400 hover:text-red-300 text-sm px-1"
-        >
-          刪除
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Toggle
+            theme="luxe"
+            checked={item.is_active}
+            onChange={() => onToggle(item)}
+          />
+          <PillButton
+            theme="luxe"
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(item)}
+          >
+            {t.common.edit}
+          </PillButton>
+          <button
+            onClick={() => onDelete(item)}
+            className="text-red-400 hover:text-red-300 text-sm px-1"
+          >
+            {t.common.delete}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * TemplatePicker - 預設範本選擇器元件
@@ -148,6 +151,7 @@ const TemplatePicker: React.FC<{
   contentKey: string;
   onSelect: (value: string) => void;
 }> = ({ contentKey, onSelect }) => {
+  const { t } = useLanguage();
   const templates: ContentTemplate[] = getTemplates(contentKey);
 
   if (templates.length === 0) return null;
@@ -155,7 +159,7 @@ const TemplatePicker: React.FC<{
   return (
     <div className="space-y-2">
       <label className="block text-sm text-luxe-muted">
-        📋 預設範本（點擊快速套用）
+        {t.adminContentPage.form.templatePicker}
       </label>
       <div className="flex flex-wrap gap-2">
         {templates.map((tpl, idx) => (
@@ -186,6 +190,10 @@ const TemplatePicker: React.FC<{
  */
 const AdminContent: React.FC = () => {
   const dialog = useDialog();
+  const { t, language } = useLanguage();
+  const tp = t.adminContentPage;
+  /** 日期顯示語系（跟著介面語言走） */
+  const dateLocale = language === 'en' ? 'en-US' : 'zh-TW';
 
   // ===== 分頁狀態 =====
   const [activeTab, setActiveTab] = useState<TabType>('content');
@@ -301,11 +309,11 @@ const AdminContent: React.FC = () => {
       setSections(Array.isArray(data) ? data : []);
     } catch (err) {
       logger.error('載入網站內容失敗', err);
-      setError('載入網站內容失敗');
+      setError(t.adminContentPage.error.loadContentFailed);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // ===== 載入彈窗 =====
   const fetchPopups = useCallback(async () => {
@@ -410,9 +418,8 @@ const AdminContent: React.FC = () => {
 
     // image 型：只接受自家 Storage 上傳結果或 Cloudinary 網址
     if (editingSection.content_type === 'image') {
-      const imgError = imageUrlError(editContent, '圖片');
-      if (imgError) {
-        setEditUrlError(imgError);
+      if (!isAllowedImageUrl(editContent)) {
+        setEditUrlError(tp.validation.imageUrlInvalid);
         return;
       }
     }
@@ -421,7 +428,7 @@ const AdminContent: React.FC = () => {
       try {
         JSON.parse(editContent);
       } catch {
-        setError('JSON 格式錯誤，請確認內容是合法 JSON');
+        setError(tp.validation.invalidJsonDetail);
         return;
       }
     }
@@ -436,7 +443,7 @@ const AdminContent: React.FC = () => {
       fetchContent();
     } catch (err) {
       logger.error('更新內容失敗', err);
-      setError('更新內容失敗');
+      setError(tp.error.updateContentFailed);
     } finally {
       setSaving(false);
     }
@@ -444,14 +451,13 @@ const AdminContent: React.FC = () => {
 
   const handleCreateContent = async () => {
     if (!newContentForm.contentKey || !newContentForm.contentName) {
-      setError('Key 和名稱為必填');
+      setError(tp.validation.keyAndNameRequired);
       return;
     }
     // image 型：只接受自家 Storage 上傳結果或 Cloudinary 網址
     if (newContentForm.contentType === 'image') {
-      const imgError = imageUrlError(newContentForm.contentValue, '圖片');
-      if (imgError) {
-        setError(imgError);
+      if (!isAllowedImageUrl(newContentForm.contentValue)) {
+        setError(tp.validation.imageUrlInvalid);
         return;
       }
     }
@@ -463,7 +469,7 @@ const AdminContent: React.FC = () => {
       try {
         JSON.parse(newContentForm.contentValue);
       } catch {
-        setError('JSON 格式錯誤');
+        setError(tp.validation.invalidJson);
         return;
       }
     }
@@ -487,7 +493,7 @@ const AdminContent: React.FC = () => {
       fetchContent();
     } catch (err) {
       logger.error('新增內容失敗', err);
-      setError('新增內容失敗（Key 可能已存在）');
+      setError(tp.error.createContentFailed);
     } finally {
       setSaving(false);
     }
@@ -501,16 +507,19 @@ const AdminContent: React.FC = () => {
       fetchContent();
     } catch (err) {
       logger.error('切換顯示狀態失敗', err);
-      setError('切換顯示狀態失敗');
+      setError(tp.error.toggleActiveFailed);
     }
   };
 
   const handleDeleteContent = async (section: SiteContent) => {
     const confirmed = await dialog.confirm({
-      title: '刪除內容',
-      message: `確定要刪除「${section.content_name}」嗎？此操作無法復原。`,
+      title: tp.confirm.deleteContentTitle,
+      message: tp.confirm.deleteContentMessage.replace(
+        '{name}',
+        section.content_name
+      ),
       variant: 'danger',
-      confirmText: '刪除',
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
 
@@ -520,7 +529,7 @@ const AdminContent: React.FC = () => {
       fetchContent();
     } catch (err) {
       logger.error('刪除內容失敗', err);
-      setError('刪除內容失敗');
+      setError(tp.error.deleteContentFailed);
     }
   };
 
@@ -554,7 +563,7 @@ const AdminContent: React.FC = () => {
 
   const handleSavePopup = async () => {
     if (!popupForm.popupTitle.trim()) {
-      setError('彈窗標題為必填');
+      setError(tp.validation.popupTitleRequired);
       return;
     }
     try {
@@ -579,7 +588,7 @@ const AdminContent: React.FC = () => {
       fetchPopups();
     } catch (err) {
       logger.error('儲存彈窗失敗', err);
-      setError('儲存彈窗失敗');
+      setError(tp.error.savePopupFailed);
     } finally {
       setSaving(false);
     }
@@ -598,16 +607,19 @@ const AdminContent: React.FC = () => {
       fetchPopups();
     } catch (err) {
       logger.error('切換彈窗狀態失敗', err);
-      setError('切換彈窗狀態失敗');
+      setError(tp.error.togglePopupFailed);
     }
   };
 
   const handleDeletePopup = async (popup: SitePopup) => {
     const confirmed = await dialog.confirm({
-      title: '刪除彈窗',
-      message: `確定要刪除「${popup.popup_title || '未命名彈窗'}」嗎？`,
+      title: tp.confirm.deletePopupTitle,
+      message: tp.confirm.deleteMessage.replace(
+        '{name}',
+        popup.popup_title || tp.fallback.untitledPopup
+      ),
       variant: 'danger',
-      confirmText: '刪除',
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
 
@@ -617,7 +629,7 @@ const AdminContent: React.FC = () => {
       fetchPopups();
     } catch (err) {
       logger.error('刪除彈窗失敗', err);
-      setError('刪除彈窗失敗');
+      setError(tp.error.deletePopupFailed);
     }
   };
 
@@ -646,12 +658,11 @@ const AdminContent: React.FC = () => {
 
   const handleSaveTestimonial = async () => {
     if (!testimonialForm.imageUrl.trim()) {
-      setTestimonialUrlError('請上傳照片或貼上圖片網址');
+      setTestimonialUrlError(tp.validation.testimonialPhotoRequired);
       return;
     }
-    const testimonialImgError = imageUrlError(testimonialForm.imageUrl, '照片');
-    if (testimonialImgError) {
-      setTestimonialUrlError(testimonialImgError);
+    if (!isAllowedImageUrl(testimonialForm.imageUrl)) {
+      setTestimonialUrlError(tp.validation.imageUrlInvalid);
       return;
     }
     try {
@@ -676,7 +687,7 @@ const AdminContent: React.FC = () => {
       fetchTestimonials();
     } catch (err) {
       logger.error('儲存學員見證失敗', err);
-      setError('儲存學員見證失敗');
+      setError(tp.error.saveTestimonialFailed);
     } finally {
       setSaving(false);
     }
@@ -695,10 +706,13 @@ const AdminContent: React.FC = () => {
 
   const handleDeleteTestimonial = async (slide: TestimonialSlide) => {
     const confirmed = await dialog.confirm({
-      title: '刪除學員見證',
-      message: `確定要刪除「${slide.name || '此見證'}」嗎？`,
+      title: tp.confirm.deleteTestimonialTitle,
+      message: tp.confirm.deleteMessage.replace(
+        '{name}',
+        slide.name || tp.fallback.thisTestimonial
+      ),
       variant: 'danger',
-      confirmText: '刪除',
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
     try {
@@ -706,14 +720,14 @@ const AdminContent: React.FC = () => {
       fetchTestimonials();
     } catch (err) {
       logger.error('刪除學員見證失敗', err);
-      setError('刪除學員見證失敗');
+      setError(tp.error.deleteTestimonialFailed);
     }
   };
 
   const handleSaveTestimonialConfig = async () => {
     const ms = Number(testimonialIntervalInput);
     if (isNaN(ms) || ms < 1000 || ms > 30000) {
-      setError('輪播間隔需在 1000～30000 毫秒之間');
+      setError(tp.validation.intervalRange);
       return;
     }
     try {
@@ -722,7 +736,7 @@ const AdminContent: React.FC = () => {
       fetchTestimonials();
     } catch (err) {
       logger.error('更新輪播設定失敗', err);
-      setError('更新輪播設定失敗');
+      setError(tp.error.updateConfigFailed);
     } finally {
       setSaving(false);
     }
@@ -766,12 +780,11 @@ const AdminContent: React.FC = () => {
 
   const handleSaveGallery = async () => {
     if (!galleryForm.imageUrl.trim()) {
-      setGalleryUrlError('請上傳相片或貼上圖片網址');
+      setGalleryUrlError(tp.validation.galleryPhotoRequired);
       return;
     }
-    const galleryImgError = imageUrlError(galleryForm.imageUrl, '相片');
-    if (galleryImgError) {
-      setGalleryUrlError(galleryImgError);
+    if (!isAllowedImageUrl(galleryForm.imageUrl)) {
+      setGalleryUrlError(tp.validation.imageUrlInvalid);
       return;
     }
     try {
@@ -792,7 +805,7 @@ const AdminContent: React.FC = () => {
       fetchGallery();
     } catch (err) {
       logger.error('儲存相片失敗', err);
-      setError('儲存相片失敗');
+      setError(tp.error.saveGalleryFailed);
     } finally {
       setSaving(false);
     }
@@ -811,10 +824,13 @@ const AdminContent: React.FC = () => {
 
   const handleDeleteGallery = async (slide: GallerySlide) => {
     const confirmed = await dialog.confirm({
-      title: '刪除相片',
-      message: `確定要刪除「${slide.caption || '此相片'}」嗎？`,
+      title: tp.confirm.deletePhotoTitle,
+      message: tp.confirm.deleteMessage.replace(
+        '{name}',
+        slide.caption || tp.fallback.thisPhoto
+      ),
       variant: 'danger',
-      confirmText: '刪除',
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
     try {
@@ -822,7 +838,7 @@ const AdminContent: React.FC = () => {
       fetchGallery();
     } catch (err) {
       logger.error('刪除相片失敗', err);
-      setError('刪除相片失敗');
+      setError(tp.error.deleteGalleryFailed);
     }
   };
 
@@ -862,7 +878,9 @@ const AdminContent: React.FC = () => {
   const handleSaveMarquee = async () => {
     if (!marqueeForm.label.trim()) {
       setError(
-        marqueeForm.type === 'cert' ? '認證名稱為必填' : '成果數字為必填'
+        marqueeForm.type === 'cert'
+          ? tp.validation.certNameRequired
+          : tp.validation.statValueRequired
       );
       return;
     }
@@ -891,7 +909,7 @@ const AdminContent: React.FC = () => {
       fetchMarquee();
     } catch (err) {
       logger.error('儲存 Marquee 失敗', err);
-      setError('儲存 Marquee 失敗');
+      setError(tp.error.saveMarqueeFailed);
     } finally {
       setSaving(false);
     }
@@ -908,10 +926,10 @@ const AdminContent: React.FC = () => {
 
   const handleDeleteMarquee = async (item: MarqueeItem) => {
     const confirmed = await dialog.confirm({
-      title: '刪除項目',
-      message: `確定要刪除「${item.label}」嗎？`,
+      title: tp.confirm.deleteMarqueeTitle,
+      message: tp.confirm.deleteMessage.replace('{name}', item.label),
       variant: 'danger',
-      confirmText: '刪除',
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
     try {
@@ -919,7 +937,7 @@ const AdminContent: React.FC = () => {
       fetchMarquee();
     } catch (err) {
       logger.error('刪除 Marquee 失敗', err);
-      setError('刪除失敗');
+      setError(t.adminCommon.deleteFailed);
     }
   };
 
@@ -951,7 +969,7 @@ const AdminContent: React.FC = () => {
 
   const handleSavePodcast = async () => {
     if (!podcastForm.title.trim()) {
-      setError('單集標題為必填');
+      setError(tp.validation.episodeTitleRequired);
       return;
     }
     try {
@@ -980,7 +998,7 @@ const AdminContent: React.FC = () => {
       fetchPodcast();
     } catch (err) {
       logger.error('儲存單集失敗', err);
-      setError('儲存單集失敗');
+      setError(tp.error.saveEpisodeFailed);
     } finally {
       setSaving(false);
     }
@@ -997,10 +1015,10 @@ const AdminContent: React.FC = () => {
 
   const handleDeletePodcast = async (ep: PodcastEpisode) => {
     const confirmed = await dialog.confirm({
-      title: '刪除單集',
-      message: `確定要刪除「${ep.title}」嗎？`,
+      title: tp.confirm.deleteEpisodeTitle,
+      message: tp.confirm.deleteMessage.replace('{name}', ep.title),
       variant: 'danger',
-      confirmText: '刪除',
+      confirmText: t.common.delete,
     });
     if (!confirmed) return;
     try {
@@ -1008,7 +1026,7 @@ const AdminContent: React.FC = () => {
       fetchPodcast();
     } catch (err) {
       logger.error('刪除單集失敗', err);
-      setError('刪除單集失敗');
+      setError(tp.error.deleteEpisodeFailed);
     }
   };
 
@@ -1018,10 +1036,10 @@ const AdminContent: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
-            內容管理
+            {tp.pageTitle}
           </h1>
           <p className="text-sm sm:text-base text-luxe-muted">
-            管理網站文案、首頁彈窗與幻燈片
+            {tp.pageSubtitle}
           </p>
         </div>
       </div>
@@ -1037,7 +1055,7 @@ const AdminContent: React.FC = () => {
               : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
-          📝 網站文案
+          {tp.tabs.content}
         </button>
         <button
           onClick={() => setActiveTab('popup')}
@@ -1047,7 +1065,7 @@ const AdminContent: React.FC = () => {
               : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
-          🪟 首頁彈窗
+          {tp.tabs.popup}
         </button>
         <button
           data-tour="content-tab-testimonial"
@@ -1058,7 +1076,7 @@ const AdminContent: React.FC = () => {
               : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
-          🏆 學員見證幻燈片
+          {tp.tabs.testimonial}
         </button>
         <button
           onClick={() => setActiveTab('gallery')}
@@ -1068,7 +1086,7 @@ const AdminContent: React.FC = () => {
               : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
-          🖼️ 相片輪播
+          {tp.tabs.gallery}
         </button>
         <button
           onClick={() => setActiveTab('marquee')}
@@ -1078,7 +1096,7 @@ const AdminContent: React.FC = () => {
               : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
-          🏅 認證 / 成果 Marquee
+          {tp.tabs.marquee}
         </button>
         <button
           onClick={() => setActiveTab('podcast')}
@@ -1088,7 +1106,7 @@ const AdminContent: React.FC = () => {
               : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
           }`}
         >
-          🎙 Podcast 單集
+          {tp.tabs.podcast}
         </button>
       </div>
 
@@ -1098,6 +1116,7 @@ const AdminContent: React.FC = () => {
           {error}
           <button
             className="ml-2 text-red-300 hover:text-red-100"
+            aria-label={tp.actions.dismissError}
             onClick={() => setError('')}
           >
             ✕
@@ -1115,15 +1134,17 @@ const AdminContent: React.FC = () => {
               data-tour="content-add-field"
               onClick={() => setShowCreateModal(true)}
             >
-              + 新增欄位
+              {tp.actions.addField}
             </PillButton>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : sections.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              尚無內容，請執行資料庫 Migration 後重新載入
+              {tp.empty.content}
             </div>
           ) : (
             <div className="space-y-8">
@@ -1132,8 +1153,10 @@ const AdminContent: React.FC = () => {
                 const sectionItems = sections.filter(
                   (s) => KEY_TO_SECTION_ID[s.content_key] === sectionMeta.id
                 );
+                // 區塊文案（標題／副標／說明／提示條）依 id 查字典
+                const sectionText = t.homepageSections[sectionMeta.id];
                 // 沒 item 也沒 hint → 跳過；只要有 hint 就保留一張卡片引導用戶
-                if (sectionItems.length === 0 && !sectionMeta.hint) return null;
+                if (sectionItems.length === 0 && !sectionText.hint) return null;
                 return (
                   <div key={sectionMeta.id}>
                     {/* 區塊大標 */}
@@ -1143,28 +1166,26 @@ const AdminContent: React.FC = () => {
                       </span>
                       <div className="min-w-0">
                         <h2 className="text-luxe-text font-medium">
-                          {sectionMeta.title}
+                          {sectionText.title}
                         </h2>
                         <p className="text-luxe-muted text-xs">
                           <span className="text-luxe-gold/70 mr-2">
-                            {sectionMeta.tagline}
+                            {sectionText.tagline}
                           </span>
-                          {sectionMeta.description}
+                          {sectionText.description}
                         </p>
                       </div>
                     </div>
                     {/* 區塊提示（共用資料 / 跳轉其他 tab） */}
-                    {sectionMeta.hint && (
+                    {sectionText.hint && (
                       <div className="mb-3 p-2 text-xs text-luxe-gold/80 bg-luxe-gold/5 border border-luxe-gold/15 rounded flex items-center gap-2">
-                        <span>{sectionMeta.hint.text}</span>
-                        {sectionMeta.hint.targetTab && (
+                        <span>{sectionText.hint}</span>
+                        {sectionMeta.targetTab && (
                           <button
-                            onClick={() =>
-                              setActiveTab(sectionMeta.hint!.targetTab!)
-                            }
+                            onClick={() => setActiveTab(sectionMeta.targetTab!)}
                             className="underline hover:text-luxe-gold whitespace-nowrap"
                           >
-                            前往 →
+                            {tp.actions.goTo}
                           </button>
                         )}
                       </div>
@@ -1196,10 +1217,10 @@ const AdminContent: React.FC = () => {
                       <span className="text-2xl leading-none pt-0.5">📦</span>
                       <div>
                         <h2 className="text-luxe-text font-medium">
-                          其他（未分類）
+                          {tp.sections.othersTitle}
                         </h2>
                         <p className="text-luxe-muted text-xs">
-                          尚未對應到首頁區塊的自訂欄位
+                          {tp.sections.othersDesc}
                         </p>
                       </div>
                     </div>
@@ -1231,15 +1252,17 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => openPopupModal()}
             >
-              + 新增彈窗
+              {tp.actions.addPopup}
             </PillButton>
           </div>
 
           {popupLoading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : popups.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              尚無彈窗，點擊上方按鈕新增
+              {tp.empty.popups}
             </div>
           ) : (
             <div className="space-y-4">
@@ -1256,16 +1279,16 @@ const AdminContent: React.FC = () => {
                     <div className="flex-grow min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-luxe-text font-medium">
-                          {popup.popup_title || '未命名彈窗'}
+                          {popup.popup_title || tp.fallback.untitledPopup}
                         </h3>
                         {popup.is_active && (
                           <span className="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded animate-pulse">
-                            🟢 啟用中
+                            {tp.status.liveNow}
                           </span>
                         )}
                         {popup.show_once && (
                           <span className="text-xs px-2 py-0.5 bg-luxe-gold/10 text-luxe-gold/60 rounded">
-                            僅顯示一次
+                            {tp.status.showOnce}
                           </span>
                         )}
                       </div>
@@ -1273,19 +1296,24 @@ const AdminContent: React.FC = () => {
                         <p className="text-luxe-muted text-xs mb-2">
                           ⏰{' '}
                           {popup.start_date
-                            ? new Date(popup.start_date).toLocaleString('zh-TW')
-                            : '立即'}
+                            ? new Date(popup.start_date).toLocaleString(
+                                dateLocale
+                              )
+                            : tp.status.immediately}
                           {' → '}
                           {popup.end_date
-                            ? new Date(popup.end_date).toLocaleString('zh-TW')
-                            : '永久'}
+                            ? new Date(popup.end_date).toLocaleString(
+                                dateLocale
+                              )
+                            : tp.status.forever}
                         </p>
                       )}
                       <div
                         className="text-luxe-text/60 text-sm line-clamp-2 [&>*]:m-0"
                         dangerouslySetInnerHTML={{
                           __html:
-                            popup.popup_content.slice(0, 200) || '(空白內容)',
+                            popup.popup_content.slice(0, 200) ||
+                            tp.fallback.noContent,
                         }}
                       />
                     </div>
@@ -1301,13 +1329,13 @@ const AdminContent: React.FC = () => {
                         size="sm"
                         onClick={() => openPopupModal(popup)}
                       >
-                        編輯
+                        {t.common.edit}
                       </PillButton>
                       <button
                         onClick={() => handleDeletePopup(popup)}
                         className="text-red-400 hover:text-red-300 text-sm"
                       >
-                        刪除
+                        {t.common.delete}
                       </button>
                     </div>
                   </div>
@@ -1335,14 +1363,14 @@ const AdminContent: React.FC = () => {
               />
               <span className="text-sm text-luxe-text">
                 {testimonialConfig.is_published
-                  ? '🟢 首頁顯示中'
-                  : '⚫ 已隱藏（草稿）'}
+                  ? tp.status.visibleOnHome
+                  : tp.status.hiddenDraft}
               </span>
             </div>
 
             {/* 版型切換 */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-luxe-muted">版型：</span>
+              <span className="text-sm text-luxe-muted">{tp.layout.label}</span>
               <button
                 onClick={() => handleChangeTestimonialLayout('portrait')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
@@ -1367,7 +1395,7 @@ const AdminContent: React.FC = () => {
                     fill="none"
                   />
                 </svg>
-                直立式
+                {tp.layout.portrait}
               </button>
               <button
                 onClick={() => handleChangeTestimonialLayout('landscape')}
@@ -1393,11 +1421,11 @@ const AdminContent: React.FC = () => {
                     fill="none"
                   />
                 </svg>
-                橫式
+                {tp.layout.landscape}
               </button>
               <button
                 onClick={() => handleChangeTestimonialLayout('quote-grid')}
-                title="三欄引言牆：以文字評價為主，一次顯示 3 則、整組換場"
+                title={tp.layout.quoteGridTip}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                   testimonialConfig.card_layout === 'quote-grid'
                     ? 'bg-luxe-gold/20 border-luxe-gold/50 text-luxe-gold'
@@ -1440,13 +1468,15 @@ const AdminContent: React.FC = () => {
                     fill="none"
                   />
                 </svg>
-                引言牆
+                {tp.layout.quoteGrid}
               </button>
             </div>
 
             {/* 輪播間隔 */}
             <div className="flex items-center gap-2 ml-auto">
-              <label className="text-sm text-luxe-muted">輪播間隔（ms）</label>
+              <label className="text-sm text-luxe-muted">
+                {tp.form.intervalMs}
+              </label>
               <input
                 type="number"
                 min={1000}
@@ -1463,7 +1493,7 @@ const AdminContent: React.FC = () => {
                 onClick={handleSaveTestimonialConfig}
                 disabled={saving}
               >
-                套用
+                {tp.actions.apply}
               </PillButton>
             </div>
 
@@ -1473,7 +1503,7 @@ const AdminContent: React.FC = () => {
               size="sm"
               onClick={() => setShowTestimonialPreview(true)}
             >
-              👁 預覽效果
+              {tp.actions.previewEffect}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -1481,15 +1511,17 @@ const AdminContent: React.FC = () => {
               data-tour="testimonial-add"
               onClick={() => openTestimonialModal()}
             >
-              + 新增幻燈片
+              {tp.actions.addSlide}
             </PillButton>
           </div>
 
           {testimonialLoading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : testimonials.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              尚無幻燈片，點擊上方「新增幻燈片」開始
+              {tp.empty.testimonials}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1516,7 +1548,7 @@ const AdminContent: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="text-luxe-text font-medium text-sm">
-                          {slide.name || '(未命名)'}
+                          {slide.name || tp.fallback.unnamed}
                         </span>
                         {slide.achievement && (
                           <span className="text-xs bg-luxe-gold/10 text-luxe-gold px-2 py-0.5 rounded-full">
@@ -1525,13 +1557,13 @@ const AdminContent: React.FC = () => {
                         )}
                         {!slide.is_active && (
                           <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">
-                            停用
+                            {t.adminCommon.disabled}
                           </span>
                         )}
                       </div>
                       {slide.quote && (
                         <p className="text-luxe-muted text-xs line-clamp-1">
-                          「{slide.quote}」
+                          {tp.quoteWrap.replace('{text}', slide.quote)}
                         </p>
                       )}
                     </div>
@@ -1548,13 +1580,13 @@ const AdminContent: React.FC = () => {
                         size="sm"
                         onClick={() => openTestimonialModal(slide)}
                       >
-                        編輯
+                        {t.common.edit}
                       </PillButton>
                       <button
                         onClick={() => handleDeleteTestimonial(slide)}
                         className="text-red-400 hover:text-red-300 text-sm px-1"
                       >
-                        刪除
+                        {t.common.delete}
                       </button>
                     </div>
                   </div>
@@ -1578,8 +1610,8 @@ const AdminContent: React.FC = () => {
               />
               <span className="text-sm text-luxe-text">
                 {galleryConfig.is_published
-                  ? '🟢 首頁顯示中'
-                  : '⚫ 已隱藏（草稿）'}
+                  ? tp.status.visibleOnHome
+                  : tp.status.hiddenDraft}
               </span>
             </div>
             <div className="flex gap-2 ml-auto">
@@ -1589,23 +1621,25 @@ const AdminContent: React.FC = () => {
                 size="sm"
                 onClick={() => setShowGalleryPreview(true)}
               >
-                👁 預覽效果
+                {tp.actions.previewEffect}
               </PillButton>
               <PillButton
                 theme="luxe"
                 variant="outline"
                 onClick={() => openGalleryModal()}
               >
-                + 新增相片
+                {tp.actions.addPhoto}
               </PillButton>
             </div>
           </div>
 
           {galleryLoading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : gallerySlides.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              尚無相片，點擊上方「新增相片」開始
+              {tp.empty.gallery}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1631,11 +1665,11 @@ const AdminContent: React.FC = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-luxe-text text-sm">
-                        {slide.caption || '(無說明文字)'}
+                        {slide.caption || tp.fallback.noCaption}
                       </p>
                       {!slide.is_active && (
                         <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded mt-1 inline-block">
-                          停用
+                          {t.adminCommon.disabled}
                         </span>
                       )}
                     </div>
@@ -1652,13 +1686,13 @@ const AdminContent: React.FC = () => {
                         size="sm"
                         onClick={() => openGalleryModal(slide)}
                       >
-                        編輯
+                        {t.common.edit}
                       </PillButton>
                       <button
                         onClick={() => handleDeleteGallery(slide)}
                         className="text-red-400 hover:text-red-300 text-sm px-1"
                       >
-                        刪除
+                        {t.common.delete}
                       </button>
                     </div>
                   </div>
@@ -1673,19 +1707,26 @@ const AdminContent: React.FC = () => {
       {activeTab === 'marquee' && (
         <div>
           <div className="p-3 mb-4 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
-            📌 首頁兩列無限滾動的
-            <span className="text-luxe-gold mx-1">認證標章</span>與
-            <span className="text-luxe-gold mx-1">成果數字</span>
-            ，各自獨立管理、可個別停用或調整順序。
+            {tp.sections.marqueeIntroLead}
+            <span className="text-luxe-gold mx-1">
+              {tp.sections.marqueeTermCert}
+            </span>
+            {tp.sections.marqueeIntroJoin}
+            <span className="text-luxe-gold mx-1">
+              {tp.sections.marqueeTermStat}
+            </span>
+            {tp.sections.marqueeIntroTail}
           </div>
 
           {/* 認證標章 */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-luxe-gold/15">
               <div>
-                <h2 className="text-luxe-text font-medium">🏅 認證標章</h2>
+                <h2 className="text-luxe-text font-medium">
+                  {tp.sections.certsTitle}
+                </h2>
                 <p className="text-luxe-muted text-xs">
-                  第一列（向左滾動）— 每筆含 Emoji + 認證名 + 副說明
+                  {tp.sections.certsDesc}
                 </p>
               </div>
               <PillButton
@@ -1694,11 +1735,13 @@ const AdminContent: React.FC = () => {
                 size="sm"
                 onClick={() => openMarqueeModal(undefined, 'cert')}
               >
-                + 新增認證
+                {tp.actions.addCert}
               </PillButton>
             </div>
             {marqueeLoading ? (
-              <div className="text-center py-8 text-luxe-muted">載入中...</div>
+              <div className="text-center py-8 text-luxe-muted">
+                {t.common.loading}
+              </div>
             ) : (
               <div className="space-y-2">
                 {marqueeItems
@@ -1721,7 +1764,7 @@ const AdminContent: React.FC = () => {
                             {item.label}
                           </p>
                           <p className="text-luxe-muted text-xs">
-                            {item.sub || '(無副說明)'}
+                            {item.sub || tp.fallback.noSubtext}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -1736,13 +1779,13 @@ const AdminContent: React.FC = () => {
                             size="sm"
                             onClick={() => openMarqueeModal(item)}
                           >
-                            編輯
+                            {t.common.edit}
                           </PillButton>
                           <button
                             onClick={() => handleDeleteMarquee(item)}
                             className="text-red-400 hover:text-red-300 text-sm px-1"
                           >
-                            刪除
+                            {t.common.delete}
                           </button>
                         </div>
                       </div>
@@ -1751,7 +1794,7 @@ const AdminContent: React.FC = () => {
                 {marqueeItems.filter((it) => it.type === 'cert').length ===
                   0 && (
                   <div className="text-center py-8 text-luxe-muted">
-                    尚無認證，點擊右上「新增認證」開始
+                    {tp.empty.certs}
                   </div>
                 )}
               </div>
@@ -1762,9 +1805,11 @@ const AdminContent: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-luxe-gold/15">
               <div>
-                <h2 className="text-luxe-text font-medium">📊 成果數字</h2>
+                <h2 className="text-luxe-text font-medium">
+                  {tp.sections.statsTitle}
+                </h2>
                 <p className="text-luxe-muted text-xs">
-                  第二列（向右滾動）— 每筆含 數值 + 說明（不需 Emoji）
+                  {tp.sections.statsDesc}
                 </p>
               </div>
               <PillButton
@@ -1773,11 +1818,13 @@ const AdminContent: React.FC = () => {
                 size="sm"
                 onClick={() => openMarqueeModal(undefined, 'stat')}
               >
-                + 新增數字
+                {tp.actions.addStat}
               </PillButton>
             </div>
             {marqueeLoading ? (
-              <div className="text-center py-8 text-luxe-muted">載入中...</div>
+              <div className="text-center py-8 text-luxe-muted">
+                {t.common.loading}
+              </div>
             ) : (
               <div className="space-y-2">
                 {marqueeItems
@@ -1797,7 +1844,7 @@ const AdminContent: React.FC = () => {
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-luxe-text text-sm">
-                            {item.sub || '(無說明)'}
+                            {item.sub || tp.fallback.noDescription}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -1812,13 +1859,13 @@ const AdminContent: React.FC = () => {
                             size="sm"
                             onClick={() => openMarqueeModal(item)}
                           >
-                            編輯
+                            {t.common.edit}
                           </PillButton>
                           <button
                             onClick={() => handleDeleteMarquee(item)}
                             className="text-red-400 hover:text-red-300 text-sm px-1"
                           >
-                            刪除
+                            {t.common.delete}
                           </button>
                         </div>
                       </div>
@@ -1827,7 +1874,7 @@ const AdminContent: React.FC = () => {
                 {marqueeItems.filter((it) => it.type === 'stat').length ===
                   0 && (
                   <div className="text-center py-8 text-luxe-muted">
-                    尚無數字，點擊右上「新增數字」開始
+                    {tp.empty.stats}
                   </div>
                 )}
               </div>
@@ -1841,23 +1888,24 @@ const AdminContent: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted flex-1 mr-4">
-              🎙 首頁 Podcast
-              區塊會顯示所有啟用中的單集。分類用來決定卡片的顏色標籤。
+              {tp.sections.podcastIntro}
             </div>
             <PillButton
               theme="luxe"
               variant="outline"
               onClick={() => openPodcastModal()}
             >
-              + 新增單集
+              {tp.actions.addEpisode}
             </PillButton>
           </div>
 
           {podcastLoading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : episodes.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              尚無單集，點擊右上「新增單集」開始
+              {tp.empty.episodes}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1874,10 +1922,10 @@ const AdminContent: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h3 className="text-luxe-text font-medium text-sm">
-                          {ep.title || '(未命名)'}
+                          {ep.title || tp.fallback.unnamed}
                         </h3>
                         <span className="text-xs px-2 py-0.5 bg-luxe-gold/10 text-luxe-gold/70 rounded-full">
-                          {EPISODE_CATEGORY_LABEL[ep.category] || ep.category}
+                          {tp.podcastCategory[ep.category] || ep.category}
                         </span>
                         {ep.duration && (
                           <span className="text-xs text-luxe-muted">
@@ -1908,13 +1956,13 @@ const AdminContent: React.FC = () => {
                         size="sm"
                         onClick={() => openPodcastModal(ep)}
                       >
-                        編輯
+                        {t.common.edit}
                       </PillButton>
                       <button
                         onClick={() => handleDeletePodcast(ep)}
                         className="text-red-400 hover:text-red-300 text-sm px-1"
                       >
-                        刪除
+                        {t.common.delete}
                       </button>
                     </div>
                   </div>
@@ -1929,13 +1977,16 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={!!editingSection}
         onClose={() => setEditingSection(null)}
-        title={`編輯 - ${editingSection?.content_name || ''}`}
+        title={tp.modal.editContent.replace(
+          '{name}',
+          editingSection?.content_name || ''
+        )}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4">
           <Input
-            label="Key（唯讀）"
+            label={tp.form.keyReadonly}
             value={editingSection?.content_key || ''}
             disabled
             theme="luxe"
@@ -1956,7 +2007,7 @@ const AdminContent: React.FC = () => {
           STRING_ARRAY_KEYS.has(editingSection.content_key) ? (
             <div>
               <TagInput
-                label="清單項目（按 Enter 新增、Backspace 刪除最後一筆）"
+                label={tp.form.listItems}
                 theme="luxe"
                 maxTags={20}
                 tags={(() => {
@@ -1973,13 +2024,13 @@ const AdminContent: React.FC = () => {
                 onChange={(tags) =>
                   setEditContent(JSON.stringify(tags))
                 }
-                placeholder="例如：體態"
-                hint="一項一句，會自動以 JSON 陣列存入 DB"
+                placeholder={tp.form.listItemsPlaceholder}
+                hint={tp.form.listItemsHint}
               />
             </div>
           ) : editingSection?.content_type === 'image' ? (
             <ImageInput
-              label="圖片"
+              label={tp.form.image}
               value={editContent}
               onChange={(url) => {
                 setEditContent(url);
@@ -1993,16 +2044,16 @@ const AdminContent: React.FC = () => {
             />
           ) : editingSection?.content_type === 'json' ? (
             <Textarea
-              label="內容（JSON 格式）"
+              label={tp.form.contentJson}
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               theme="luxe"
               rows={8}
-              placeholder='例：["體態","自信","健康","未來"]'
+              placeholder={tp.form.contentJsonPlaceholder}
             />
           ) : (
             <Textarea
-              label="內容"
+              label={tp.form.content}
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               theme="luxe"
@@ -2015,7 +2066,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setEditingSection(null)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2023,7 +2074,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSaveContent}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t.adminCommon.saving : t.common.save}
             </PillButton>
           </div>
         </div>
@@ -2033,13 +2084,13 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="新增網站內容"
+        title={tp.modal.createContent}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4">
           <Input
-            label="識別碼 (Key) *"
+            label={tp.form.contentKey}
             value={newContentForm.contentKey}
             onChange={(e) =>
               setNewContentForm({
@@ -2047,11 +2098,11 @@ const AdminContent: React.FC = () => {
                 contentKey: e.target.value.replace(/\s/g, '_').toLowerCase(),
               })
             }
-            placeholder="例如: hero_cta_text"
+            placeholder={tp.form.contentKeyPlaceholder}
             theme="luxe"
           />
           <Input
-            label="顯示名稱 *"
+            label={tp.form.displayName}
             value={newContentForm.contentName}
             onChange={(e) =>
               setNewContentForm({
@@ -2059,12 +2110,12 @@ const AdminContent: React.FC = () => {
                 contentName: e.target.value,
               })
             }
-            placeholder="例如: 首頁行動按鈕文字"
+            placeholder={tp.form.displayNamePlaceholder}
             theme="luxe"
           />
           <div>
             <label className="block text-sm text-luxe-muted mb-1">
-              內容類型
+              {tp.form.contentTypeLabel}
             </label>
             <select
               value={newContentForm.contentType}
@@ -2080,10 +2131,10 @@ const AdminContent: React.FC = () => {
               }
               className="w-full bg-luxe-surface border border-luxe-gold/20 rounded-lg px-4 py-3 text-luxe-text focus:outline-none focus:border-luxe-gold/50 [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
             >
-              <option value="text">純文字</option>
-              <option value="html">HTML</option>
-              <option value="json">JSON 陣列</option>
-              <option value="image">圖片（上傳或 Cloudinary 網址）</option>
+              <option value="text">{tp.contentType.text}</option>
+              <option value="html">{tp.contentType.html}</option>
+              <option value="json">{tp.contentType.json}</option>
+              <option value="image">{tp.contentType.image}</option>
             </select>
           </div>
           {/* 範本選擇器 - 根據輸入的 Key 動態顯示 */}
@@ -2097,7 +2148,7 @@ const AdminContent: React.FC = () => {
           )}
           {newContentForm.contentType === 'image' ? (
             <ImageInput
-              label="初始圖片"
+              label={tp.form.initialImage}
               value={newContentForm.contentValue}
               onChange={(url) =>
                 setNewContentForm({ ...newContentForm, contentValue: url })
@@ -2113,7 +2164,7 @@ const AdminContent: React.FC = () => {
             />
           ) : (
             <Textarea
-              label="初始內容"
+              label={tp.form.initialContent}
               value={newContentForm.contentValue}
               onChange={(e) =>
                 setNewContentForm({
@@ -2131,7 +2182,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setShowCreateModal(false)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2139,7 +2190,7 @@ const AdminContent: React.FC = () => {
               onClick={handleCreateContent}
               disabled={saving}
             >
-              {saving ? '新增中...' : '新增'}
+              {saving ? tp.actions.creating : t.common.create}
             </PillButton>
           </div>
         </div>
@@ -2149,24 +2200,24 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showPopupModal}
         onClose={() => setShowPopupModal(false)}
-        title={editingPopup ? '編輯彈窗' : '新增彈窗'}
+        title={editingPopup ? tp.modal.editPopup : tp.modal.createPopup}
         theme="luxe"
         size="full"
       >
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <Input
-            label="彈窗標題 *"
+            label={tp.form.popupTitle}
             value={popupForm.popupTitle}
             onChange={(e) =>
               setPopupForm({ ...popupForm, popupTitle: e.target.value })
             }
-            placeholder="例如: 新年優惠活動"
+            placeholder={tp.form.popupTitlePlaceholder}
             theme="luxe"
           />
 
           <div>
             <label className="block text-sm text-luxe-muted mb-2">
-              彈窗內容（富文本編輯器）
+              {tp.form.popupContent}
             </label>
             {/* 彈窗內文插圖：放進 content-images 的 site_popup_* 前綴 */}
             <ImageUploadTargetProvider
@@ -2190,7 +2241,7 @@ const AdminContent: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-luxe-muted mb-1">
-                開始時間（選填）
+                {tp.form.startDate}
               </label>
               <input
                 type="datetime-local"
@@ -2203,7 +2254,7 @@ const AdminContent: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm text-luxe-muted mb-1">
-                結束時間（選填）
+                {tp.form.endDate}
               </label>
               <input
                 type="datetime-local"
@@ -2225,7 +2276,7 @@ const AdminContent: React.FC = () => {
               }
             />
             <span className="text-sm text-luxe-text">
-              每位用戶僅顯示一次（使用 localStorage 記錄）
+              {tp.form.showOnce}
             </span>
           </div>
 
@@ -2235,7 +2286,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setShowPopupModal(false)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2243,7 +2294,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSavePopup}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t.adminCommon.saving : t.common.save}
             </PillButton>
           </div>
         </div>
@@ -2252,14 +2303,18 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showTestimonialModal}
         onClose={() => setShowTestimonialModal(false)}
-        title={editingTestimonial ? '編輯學員見證' : '新增學員見證'}
+        title={
+          editingTestimonial
+            ? tp.modal.editTestimonial
+            : tp.modal.createTestimonial
+        }
         theme="luxe"
         size="lg"
         tourId="testimonial-form"
       >
         <div className="space-y-4">
           <ImageInput
-            label="學員照片"
+            label={tp.form.studentPhoto}
             value={testimonialForm.imageUrl}
             onChange={(url) => {
               setTestimonialForm({ ...testimonialForm, imageUrl: url });
@@ -2273,16 +2328,16 @@ const AdminContent: React.FC = () => {
             error={testimonialUrlError}
           />
           <Input
-            label="學員姓名 *"
+            label={tp.form.studentName}
             value={testimonialForm.name}
             onChange={(e) =>
               setTestimonialForm({ ...testimonialForm, name: e.target.value })
             }
-            placeholder="例如：小美"
+            placeholder={tp.form.studentNamePlaceholder}
             theme="luxe"
           />
           <Input
-            label="成就標籤（選填）"
+            label={tp.form.achievement}
             value={testimonialForm.achievement}
             onChange={(e) =>
               setTestimonialForm({
@@ -2290,16 +2345,16 @@ const AdminContent: React.FC = () => {
                 achievement: e.target.value,
               })
             }
-            placeholder="例如：3個月減脂12公斤"
+            placeholder={tp.form.achievementPlaceholder}
             theme="luxe"
           />
           <Textarea
-            label="見證內文（選填）"
+            label={tp.form.quote}
             value={testimonialForm.quote}
             onChange={(e) =>
               setTestimonialForm({ ...testimonialForm, quote: e.target.value })
             }
-            placeholder="學員的真實感言..."
+            placeholder={tp.form.quotePlaceholder}
             theme="luxe"
             rows={4}
           />
@@ -2309,7 +2364,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setShowTestimonialModal(false)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2318,7 +2373,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSaveTestimonial}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t.adminCommon.saving : t.common.save}
             </PillButton>
           </div>
         </div>
@@ -2328,7 +2383,7 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showTestimonialPreview}
         onClose={() => setShowTestimonialPreview(false)}
-        title="預覽 — 學員見證幻燈片"
+        title={tp.modal.previewTestimonials}
         theme="luxe"
         size="full"
       >
@@ -2345,13 +2400,13 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showGalleryModal}
         onClose={() => setShowGalleryModal(false)}
-        title={editingGallery ? '編輯相片' : '新增相片'}
+        title={editingGallery ? tp.modal.editPhoto : tp.modal.createPhoto}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4">
           <ImageInput
-            label="相片"
+            label={tp.form.photo}
             value={galleryForm.imageUrl}
             onChange={(url) => {
               setGalleryForm({ ...galleryForm, imageUrl: url });
@@ -2365,12 +2420,12 @@ const AdminContent: React.FC = () => {
             error={galleryUrlError}
           />
           <Input
-            label="圖片說明文字（選填）"
+            label={tp.form.caption}
             value={galleryForm.caption}
             onChange={(e) =>
               setGalleryForm({ ...galleryForm, caption: e.target.value })
             }
-            placeholder="例如：培訓現場記錄"
+            placeholder={tp.form.captionPlaceholder}
             theme="luxe"
           />
           <div className="flex justify-end gap-3 pt-2">
@@ -2379,7 +2434,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setShowGalleryModal(false)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2387,7 +2442,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSaveGallery}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t.adminCommon.saving : t.common.save}
             </PillButton>
           </div>
         </div>
@@ -2397,7 +2452,7 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showGalleryPreview}
         onClose={() => setShowGalleryPreview(false)}
-        title="預覽 — 相片輪播（手動翻頁）"
+        title={tp.modal.previewGallery}
         theme="luxe"
         size="full"
       >
@@ -2416,8 +2471,12 @@ const AdminContent: React.FC = () => {
         onClose={() => setShowMarqueeModal(false)}
         title={
           editingMarquee
-            ? `編輯 ${marqueeForm.type === 'cert' ? '認證' : '數字'}`
-            : `新增 ${marqueeForm.type === 'cert' ? '認證' : '數字'}`
+            ? marqueeForm.type === 'cert'
+              ? tp.modal.editCert
+              : tp.modal.editStat
+            : marqueeForm.type === 'cert'
+              ? tp.modal.createCert
+              : tp.modal.createStat
         }
         theme="luxe"
         size="lg"
@@ -2426,7 +2485,7 @@ const AdminContent: React.FC = () => {
           {marqueeForm.type === 'cert' ? (
             <>
               <Input
-                label="Emoji 圖示"
+                label={tp.form.emojiIcon}
                 value={marqueeForm.icon}
                 onChange={(e) =>
                   setMarqueeForm({ ...marqueeForm, icon: e.target.value })
@@ -2435,42 +2494,42 @@ const AdminContent: React.FC = () => {
                 theme="luxe"
               />
               <Input
-                label="認證名稱 *"
+                label={tp.form.certName}
                 value={marqueeForm.label}
                 onChange={(e) =>
                   setMarqueeForm({ ...marqueeForm, label: e.target.value })
                 }
-                placeholder="例如：NSCA-CPT"
+                placeholder={tp.form.certNamePlaceholder}
                 theme="luxe"
               />
               <Input
-                label="副說明"
+                label={tp.form.certSub}
                 value={marqueeForm.sub}
                 onChange={(e) =>
                   setMarqueeForm({ ...marqueeForm, sub: e.target.value })
                 }
-                placeholder="例如：美國體能協會認證"
+                placeholder={tp.form.certSubPlaceholder}
                 theme="luxe"
               />
             </>
           ) : (
             <>
               <Input
-                label="數值 *"
+                label={tp.form.statValue}
                 value={marqueeForm.label}
                 onChange={(e) =>
                   setMarqueeForm({ ...marqueeForm, label: e.target.value })
                 }
-                placeholder="例如：130+ / 95% / 8萬+"
+                placeholder={tp.form.statValuePlaceholder}
                 theme="luxe"
               />
               <Input
-                label="說明"
+                label={tp.form.statSub}
                 value={marqueeForm.sub}
                 onChange={(e) =>
                   setMarqueeForm({ ...marqueeForm, sub: e.target.value })
                 }
-                placeholder="例如：培訓教練人次"
+                placeholder={tp.form.statSubPlaceholder}
                 theme="luxe"
               />
             </>
@@ -2481,7 +2540,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setShowMarqueeModal(false)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2489,7 +2548,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSaveMarquee}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t.adminCommon.saving : t.common.save}
             </PillButton>
           </div>
         </div>
@@ -2499,22 +2558,22 @@ const AdminContent: React.FC = () => {
       <Modal
         isOpen={showPodcastModal}
         onClose={() => setShowPodcastModal(false)}
-        title={editingEpisode ? '編輯 Podcast 單集' : '新增 Podcast 單集'}
+        title={editingEpisode ? tp.modal.editEpisode : tp.modal.createEpisode}
         theme="luxe"
         size="lg"
       >
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <Input
-            label="標題 *"
+            label={tp.form.episodeTitle}
             value={podcastForm.title}
             onChange={(e) =>
               setPodcastForm({ ...podcastForm, title: e.target.value })
             }
-            placeholder="例如：新手必聽：健身入門的 5 大迷思"
+            placeholder={tp.form.episodeTitlePlaceholder}
             theme="luxe"
           />
           <Textarea
-            label="卡片短描述（約 1-2 行）"
+            label={tp.form.shortDescription}
             value={podcastForm.description}
             onChange={(e) =>
               setPodcastForm({
@@ -2522,12 +2581,12 @@ const AdminContent: React.FC = () => {
                 description: e.target.value,
               })
             }
-            placeholder="例如：打破常見的健身迷思，建立正確的訓練觀念..."
+            placeholder={tp.form.shortDescriptionPlaceholder}
             theme="luxe"
             rows={2}
           />
           <Textarea
-            label="展開後完整介紹"
+            label={tp.form.fullDescription}
             value={podcastForm.fullDescription}
             onChange={(e) =>
               setPodcastForm({
@@ -2535,22 +2594,22 @@ const AdminContent: React.FC = () => {
                 fullDescription: e.target.value,
               })
             }
-            placeholder="完整單集介紹內容..."
+            placeholder={tp.form.fullDescriptionPlaceholder}
             theme="luxe"
             rows={5}
           />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
-              label="時長"
+              label={tp.form.duration}
               value={podcastForm.duration}
               onChange={(e) =>
                 setPodcastForm({ ...podcastForm, duration: e.target.value })
               }
-              placeholder="例如：45:30"
+              placeholder={tp.form.durationPlaceholder}
               theme="luxe"
             />
             <Input
-              label="發佈日期"
+              label={tp.form.publishDate}
               value={podcastForm.episodeDate}
               onChange={(e) =>
                 setPodcastForm({
@@ -2558,12 +2617,12 @@ const AdminContent: React.FC = () => {
                   episodeDate: e.target.value,
                 })
               }
-              placeholder="例如：2024-01-15"
+              placeholder={tp.form.publishDatePlaceholder}
               theme="luxe"
             />
             <div>
               <label className="block text-sm text-luxe-muted mb-1">
-                分類
+                {t.adminCommon.colCategory}
               </label>
               <select
                 value={podcastForm.category}
@@ -2577,7 +2636,7 @@ const AdminContent: React.FC = () => {
               >
                 {EPISODE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {EPISODE_CATEGORY_LABEL[c]}
+                    {tp.podcastCategory[c]}
                   </option>
                 ))}
               </select>
@@ -2589,7 +2648,7 @@ const AdminContent: React.FC = () => {
               variant="outline"
               onClick={() => setShowPodcastModal(false)}
             >
-              取消
+              {t.common.cancel}
             </PillButton>
             <PillButton
               theme="luxe"
@@ -2597,7 +2656,7 @@ const AdminContent: React.FC = () => {
               onClick={handleSavePodcast}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t.adminCommon.saving : t.common.save}
             </PillButton>
           </div>
         </div>

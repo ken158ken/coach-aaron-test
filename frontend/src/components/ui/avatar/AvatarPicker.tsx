@@ -22,6 +22,8 @@ import {
 import BoringAvatar from "boring-avatars";
 import { renderToStaticMarkup } from "react-dom/server";
 import AvatarCropper from "./AvatarCropper";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 
 /** 日誌工具 */
 const logger = {
@@ -51,18 +53,39 @@ interface AvatarPickerProps {
 
 /** DiceBear 可用的風格清單 */
 const DICEBEAR_STYLES = [
-  { key: "avataaars", label: "Avataaars", style: avataaars },
-  { key: "adventurer", label: "探險家", style: adventurer },
-  { key: "bottts", label: "機器人", style: bottts },
-  { key: "funEmoji", label: "趣味表情", style: funEmoji },
-  { key: "lorelei", label: "Lorelei", style: lorelei },
-  { key: "micah", label: "Micah", style: micah },
-  { key: "miniavs", label: "Mini", style: miniavs },
-  { key: "notionists", label: "Notion風", style: notionists },
-  { key: "openPeeps", label: "Open Peeps", style: openPeeps },
-  { key: "pixelArt", label: "像素風", style: pixelArt },
-  { key: "thumbs", label: "讚", style: thumbs },
+  { key: "avataaars", style: avataaars },
+  { key: "adventurer", style: adventurer },
+  { key: "bottts", style: bottts },
+  { key: "funEmoji", style: funEmoji },
+  { key: "lorelei", style: lorelei },
+  { key: "micah", style: micah },
+  { key: "miniavs", style: miniavs },
+  { key: "notionists", style: notionists },
+  { key: "openPeeps", style: openPeeps },
+  { key: "pixelArt", style: pixelArt },
+  { key: "thumbs", style: thumbs },
 ] as const;
+
+/** DiceBear 風格顯示名稱（專有名詞維持原文，描述性的走字典） */
+const dicebearLabel = (
+  key: (typeof DICEBEAR_STYLES)[number]["key"],
+  t: AllTranslations,
+): string => {
+  const map: Record<string, string> = {
+    avataaars: "Avataaars",
+    adventurer: t.avatarUi.styleAdventurer,
+    bottts: t.avatarUi.styleBottts,
+    funEmoji: t.avatarUi.styleFunEmoji,
+    lorelei: "Lorelei",
+    micah: "Micah",
+    miniavs: "Mini",
+    notionists: t.avatarUi.styleNotionists,
+    openPeeps: "Open Peeps",
+    pixelArt: t.avatarUi.stylePixelArt,
+    thumbs: t.avatarUi.styleThumbs,
+  };
+  return map[key] ?? key;
+};
 
 /* ================================================================== */
 /*  Boring Avatars 設定                                                */
@@ -70,13 +93,29 @@ const DICEBEAR_STYLES = [
 
 /** Boring Avatars 可用的變體 */
 const BORING_VARIANTS = [
-  { key: "beam", label: "光束" },
-  { key: "marble", label: "大理石" },
-  { key: "pixel", label: "像素" },
-  { key: "sunset", label: "日落" },
-  { key: "ring", label: "圓環" },
-  { key: "bauhaus", label: "包浩斯" },
+  { key: "beam" },
+  { key: "marble" },
+  { key: "pixel" },
+  { key: "sunset" },
+  { key: "ring" },
+  { key: "bauhaus" },
 ] as const;
+
+/** Boring Avatars 變體顯示名稱 */
+const boringLabel = (
+  key: (typeof BORING_VARIANTS)[number]["key"],
+  t: AllTranslations,
+): string => {
+  const map: Record<string, string> = {
+    beam: t.avatarUi.boringBeam,
+    marble: t.avatarUi.boringMarble,
+    pixel: t.avatarUi.boringPixel,
+    sunset: t.avatarUi.boringSunset,
+    ring: t.avatarUi.boringRing,
+    bauhaus: t.avatarUi.boringBauhaus,
+  };
+  return map[key] ?? key;
+};
 
 /** 調色盤 */
 const BORING_COLORS = ["#D4AF37", "#1a1a2e", "#16213e", "#0f3460", "#e94560"];
@@ -130,10 +169,9 @@ const svgToPngBase64 = (svgString: string, size = 400): Promise<string> => {
 /*  Tabs 設定                                                          */
 /* ================================================================== */
 
-const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+const TABS: { key: TabKey; icon: React.ReactNode }[] = [
   {
     key: "upload",
-    label: "上傳裁切",
     icon: (
       <svg
         className="w-4 h-4"
@@ -152,7 +190,6 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   },
   {
     key: "dicebear",
-    label: "風格頭像",
     icon: (
       <svg
         className="w-4 h-4"
@@ -171,7 +208,6 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   },
   {
     key: "boring",
-    label: "幾何頭像",
     icon: (
       <svg
         className="w-4 h-4"
@@ -205,6 +241,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
   onCancel,
   loading = false,
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("upload");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedDicebear, setSelectedDicebear] = useState(0);
@@ -433,7 +470,11 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               }`}
           >
             {tab.icon}
-            {tab.label}
+            {tab.key === "upload"
+              ? t.avatarUi.tabUpload
+              : tab.key === "dicebear"
+                ? t.avatarUi.tabDicebear
+                : t.avatarUi.tabBoring}
           </button>
         ))}
       </div>
@@ -474,11 +515,11 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                   />
                 </svg>
                 <span className="text-[10px] text-luxe-muted group-hover:text-luxe-text transition-colors">
-                  選擇圖片
+                  {t.avatarUi.chooseImage}
                 </span>
               </button>
               <p className="text-xs text-luxe-muted">
-                支援 JPG / PNG / WebP，最大 5MB
+                {t.avatarUi.uploadHint}
               </p>
             </div>
           )}
@@ -494,7 +535,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               {dicebearPreview ? (
                 <img
                   src={dicebearPreview}
-                  alt="預覽"
+                  alt={t.chatUi.previewAlt}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -506,7 +547,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
             <button
               onClick={randomizeSeed}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-luxe-muted hover:text-luxe-gold border border-luxe-gold/20 rounded-lg transition-colors"
-              title="隨機生成"
+              title={t.avatarUi.randomize}
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -521,7 +562,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              隨機風格
+              {t.avatarUi.randomStyle}
             </button>
           </div>
 
@@ -546,7 +587,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                     {thumbSrc ? (
                       <img
                         src={thumbSrc}
-                        alt={style.label}
+                        alt={dicebearLabel(style.key, t)}
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -555,7 +596,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                     )}
                   </div>
                   <span className="text-[9px] sm:text-[10px] text-luxe-muted truncate w-full text-center">
-                    {style.label}
+                    {dicebearLabel(style.key, t)}
                   </span>
                 </button>
               );
@@ -569,7 +610,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               disabled={processing || loading}
               className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text border border-luxe-gold/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              取消
+              {t.common.cancel}
             </button>
             <button
               onClick={handleDicebearConfirm}
@@ -579,10 +620,10 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               {processing || loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
-                  處理中…
+                  {t.avatarUi.processing}
                 </>
               ) : (
-                "使用此頭像"
+                t.avatarUi.useThisAvatar
               )}
             </button>
           </div>
@@ -605,7 +646,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
             <button
               onClick={randomizeSeed}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-luxe-muted hover:text-luxe-gold border border-luxe-gold/20 rounded-lg transition-colors"
-              title="隨機生成"
+              title={t.avatarUi.randomize}
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -620,7 +661,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              隨機風格
+              {t.avatarUi.randomStyle}
             </button>
           </div>
 
@@ -648,7 +689,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
                   />
                 </div>
                 <span className="text-[10px] text-luxe-muted">
-                  {variant.label}
+                  {boringLabel(variant.key, t)}
                 </span>
               </button>
             ))}
@@ -661,7 +702,7 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               disabled={processing || loading}
               className="px-4 py-2 text-sm text-luxe-muted hover:text-luxe-text border border-luxe-gold/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              取消
+              {t.common.cancel}
             </button>
             <button
               onClick={handleBoringConfirm}
@@ -671,10 +712,10 @@ const AvatarPicker: React.FC<AvatarPickerProps> = ({
               {processing || loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
-                  處理中…
+                  {t.avatarUi.processing}
                 </>
               ) : (
-                "使用此頭像"
+                t.avatarUi.useThisAvatar
               )}
             </button>
           </div>

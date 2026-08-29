@@ -32,6 +32,8 @@ function getActiveConversationId(pathname: string): string | null {
 export function useChatNotifications(): {
   unreadTotal: number;
   conversations: ChatConversation[];
+  /** 對話清單是否已完成第一次載入（空清單≠載入中，用這個旗標區分） */
+  conversationsLoaded: boolean;
   refreshConversations: () => void;
   /** 訂閱單一通知（ChatPage 用）*/
   subscribe: (cb: (n: ChatNotification) => void) => () => void;
@@ -39,6 +41,7 @@ export function useChatNotifications(): {
   const { user } = useAuth();
   const location = useLocation();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [unreadTotal, setUnreadTotal] = useState(0);
   const subscribersRef = useRef<Array<(n: ChatNotification) => void>>([]);
   const titleOriginalRef = useRef<string>("");
@@ -53,7 +56,8 @@ export function useChatNotifications(): {
         const total = data.reduce((s, c) => s + (c.unread_count || 0), 0);
         setUnreadTotal(total);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setConversationsLoaded(true));
   }, [user]);
 
   // 初始 + 每分鐘 refresh（穩態 fallback）
@@ -61,6 +65,8 @@ export function useChatNotifications(): {
     if (!user) {
       setConversations([]);
       setUnreadTotal(0);
+      // 未登入沒有東西可載，視為已載入完成（避免空狀態卡在「載入中」）
+      setConversationsLoaded(true);
       return;
     }
     refreshConversations();
@@ -132,5 +138,11 @@ export function useChatNotifications(): {
     };
   }, []);
 
-  return { unreadTotal, conversations, refreshConversations, subscribe };
+  return {
+    unreadTotal,
+    conversations,
+    conversationsLoaded,
+    refreshConversations,
+    subscribe,
+  };
 }

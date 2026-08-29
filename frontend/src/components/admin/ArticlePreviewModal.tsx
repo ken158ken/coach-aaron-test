@@ -6,6 +6,8 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "@/context";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
 
 interface ArticlePreviewModalProps {
   isOpen: boolean;
@@ -34,28 +36,27 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
   article,
   isSubmitting = false,
 }) => {
+  const { t } = useLanguage();
+  const a = t.adminLayout;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (isOpen && typeof document !== "undefined") {
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      if (typeof document !== "undefined") {
-        document.body.style.overflow = "";
-      }
-    };
-  }, [isOpen]);
+  /*
+   * 捲動鎖 + Escape 一律走共用 hook。
+   * 這裡原本直接寫 `document.body.style.overflow = "hidden" / ""`，會繞過
+   * useScrollLock 的計數器：疊層時本元件卸載就把別人的鎖清掉，
+   * 之後 lockCount 再也回不到 0，整個 session 的捲動鎖就永久失效。
+   */
+  useModalBehavior(isOpen, onClose);
 
   // 只在客戶端掛載後才渲染，避免 SSR 水合問題
   if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 modal-layer modal-scroll flex items-start justify-center overflow-y-auto bg-black/80 backdrop-blur-sm">
       {/* 背景點擊關閉 */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -66,12 +67,13 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
           <div className="flex items-center gap-3">
             <span className="text-2xl">👁️</span>
             <div>
-              <h2 className="text-lg font-medium text-luxe-text">預覽文章</h2>
-              <p className="text-xs text-gray-400">確認排版後再發布</p>
+              <h2 className="text-lg font-medium text-luxe-text">{a.previewTitle}</h2>
+              <p className="text-xs text-gray-400">{a.previewSubtitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label={t.adminCommon.close}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-luxe-gold/10 text-gray-400 hover:text-white transition-colors"
           >
             <svg
@@ -102,19 +104,19 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
                 </span>
               )}
               <span className="text-luxe-muted text-sm">
-                {article.status === "published" ? "已發布" : "草稿"}
+                {article.status === "published" ? t.common.published : t.common.draft}
               </span>
             </div>
 
             {/* Title */}
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-light text-luxe-text mb-4 sm:mb-6">
-              {article.title || "未輸入標題"}
+              {article.title || a.previewUntitled}
             </h1>
 
             {/* Article Info */}
             <div className="flex flex-wrap items-center gap-6 text-luxe-muted text-sm">
-              <span>網址：/articles/{article.slug || "未設定"}</span>
-              <span>預覽時間：{new Date().toLocaleString()}</span>
+              <span>{a.previewUrlLabel}/articles/{article.slug || a.previewSlugUnset}</span>
+              <span>{a.previewedAt}{new Date().toLocaleString()}</span>
             </div>
 
             {/* Excerpt */}
@@ -148,7 +150,7 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
                 dangerouslySetInnerHTML={{
                   __html:
                     article.content ||
-                    "<p class='text-gray-500'>文章內容尚未撰寫</p>",
+                    `<p class='text-gray-500'>${a.previewNoContent}</p>`,
                 }}
               />
 
@@ -175,10 +177,10 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
         <div className="sticky bottom-0 flex items-center justify-between px-6 py-4 bg-luxe-black border-t border-luxe-gold/20 rounded-b-xl">
           <div className="text-sm text-gray-400">
             {!article.title && (
-              <span className="text-amber-400">⚠️ 請輸入標題</span>
+              <span className="text-amber-400">⚠️ {a.previewWarnNoTitle}</span>
             )}
             {!article.content && (
-              <span className="text-amber-400 ml-2">⚠️ 請輸入內容</span>
+              <span className="text-amber-400 ml-2">⚠️ {a.previewWarnNoContent}</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -186,14 +188,14 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
               onClick={onClose}
               className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
             >
-              繼續編輯
+              {a.previewKeepEditing}
             </button>
             <button
               onClick={onConfirm}
               disabled={isSubmitting || !article.title || !article.content}
               className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm bg-luxe-gold text-black hover:bg-luxe-gold/90 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isSubmitting ? "發布中..." : "確認發布"}
+              {isSubmitting ? a.previewPublishing : a.previewConfirmPublish}
             </button>
           </div>
         </div>

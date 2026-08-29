@@ -18,7 +18,7 @@ const STORAGE_KEY_SCROLL = "videos_scroll_y";
 const STORAGE_KEY_COUNT = "videos_loaded_count";
 
 const Videos: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [videos, setVideos] = useState<Video[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -145,16 +145,8 @@ const Videos: React.FC = () => {
     <div className="relative min-h-screen bg-transparent">
       <SEOHead
         title={t.videos.heading}
-        description={
-          language === "en"
-            ? "Free fitness knowledge — training tutorials, nutrition guides, lifestyle tips."
-            : "免費的健身知識分享，提供訓練教學、營養指南、生活建議等多元影片內容。"
-        }
-        keywords={
-          language === "en"
-            ? ["fitness videos", "training tutorials", "nutrition guide", "fitness knowledge"]
-            : ["健身影片", "訓練教學", "營養指南", "健身知識"]
-        }
+        description={t.videosExtra.seoDescription}
+        keywords={t.videosExtra.seoKeywords}
         url="/videos"
       />
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
@@ -181,9 +173,7 @@ const Videos: React.FC = () => {
                 className="text-white/40 text-xs sm:text-sm text-center mb-6 sm:mb-8"
                 data-aos="fade-up"
               >
-                {language === "en"
-                  ? `${total} videos`
-                  : `共 ${total} 部影片`}
+                {t.videosExtra.totalCount.replace("{count}", String(total))}
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -224,9 +214,7 @@ const Videos: React.FC = () => {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                       />
                     </svg>
-                    {loadingMore
-                      ? (language === "en" ? "Loading more..." : "載入更多...")
-                      : ""}
+                    {loadingMore ? t.videosExtra.loadingMore : ""}
                   </div>
                 </div>
               )}
@@ -238,7 +226,8 @@ const Videos: React.FC = () => {
       {/* Back to top */}
       <button
         onClick={scrollToTop}
-        aria-label="Back to top"
+        aria-label={t.videosExtra.backToTop}
+        title={t.videosExtra.backToTop}
         className={`fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all duration-300 shadow-lg ${
           showTop
             ? "opacity-100 translate-y-0 pointer-events-auto"

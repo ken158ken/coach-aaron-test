@@ -14,7 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { format, addDays, startOfToday } from "date-fns";
-import { zhTW } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
 import {
   bookingService,
   type AvailableSlot,
@@ -25,6 +25,7 @@ import {
 } from "@/services/booking/coach.service";
 import { courseService } from "@/services";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   PillButton,
   Input,
@@ -42,6 +43,8 @@ const BookingPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const dialog = useDialog();
+  const { t, isZhTW } = useLanguage();
+  const dfLocale = isZhTW ? zhTW : enUS;
 
   const [profile, setProfile] = useState<CoachPublicProfile | null>(null);
   const [allSlots, setAllSlots] = useState<AvailableSlot[]>([]);
@@ -80,7 +83,7 @@ const BookingPage: React.FC = () => {
         if (!cancelled) setAllSlots(slots);
       } catch (err) {
         console.error(err);
-        if (!cancelled) setError("載入諮詢時段失敗");
+        if (!cancelled) setError(t.bookingPage.loadFailed);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -143,7 +146,7 @@ const BookingPage: React.FC = () => {
   const handleSubmit = async () => {
     if (!pickedSlot) return;
     if (!form.contactEmail && !form.contactPhone) {
-      setError("請提供 email 或電話至少一項");
+      setError(t.bookingPage.contactRequired);
       return;
     }
     try {
@@ -158,14 +161,14 @@ const BookingPage: React.FC = () => {
       });
       setPickedSlot(null);
       await dialog.alert({
-        title: "送出成功",
-        message: "已送出預約申請，教練確認後會以 email 通知你。",
+        title: t.bookingPage.submitSuccessTitle,
+        message: t.bookingPage.submitSuccessMessage,
       });
       navigate("/my-bookings");
     } catch (err) {
       console.error(err);
       const msg =
-        err instanceof Error ? err.message : "送出預約失敗，請稍後再試";
+        err instanceof Error ? err.message : t.bookingPage.submitFailed;
       setError(msg);
     } finally {
       setSaving(false);
@@ -175,7 +178,7 @@ const BookingPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-muted">
-        載入中...
+        {t.common.loading}
       </div>
     );
   }
@@ -183,7 +186,7 @@ const BookingPage: React.FC = () => {
   if (!profile) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-muted">
-        教練目前未開放預約
+        {t.bookingPage.coachUnavailable}
       </div>
     );
   }
@@ -193,12 +196,14 @@ const BookingPage: React.FC = () => {
       {/* Header */}
       <div className="mb-8" data-tour="booking-header">
         <h1 className="text-2xl sm:text-3xl font-light text-inherit mb-2">
-          預約 {profile.display_name} 的諮詢時間
+          {t.bookingPage.heading.replace("{coach}", profile.display_name)}
         </h1>
         <p className="text-sm text-muted">
-          每次諮詢 {profile.default_slot_minutes} 分鐘 · 時區{" "}
-          {profile.timezone} · 最短 {profile.booking_notice_hours} 小時前預約
-          · 最長 {profile.booking_window_days} 天內
+          {t.bookingPage.meta
+            .replace("{minutes}", String(profile.default_slot_minutes))
+            .replace("{timezone}", profile.timezone)
+            .replace("{noticeHours}", String(profile.booking_notice_hours))
+            .replace("{windowDays}", String(profile.booking_window_days))}
         </p>
       </div>
 
@@ -220,7 +225,7 @@ const BookingPage: React.FC = () => {
         <div data-tour="booking-calendar">
           <DayPicker
             mode="single"
-            locale={zhTW}
+            locale={dfLocale}
             selected={selectedDay}
             onSelect={setSelectedDay}
             disabled={[
@@ -240,7 +245,7 @@ const BookingPage: React.FC = () => {
             toDate={addDays(startOfToday(), profile.booking_window_days)}
           />
           <p className="mt-3 text-xs text-muted">
-            🟢 亮色日期有可預約時段，點擊選擇日期
+            {t.bookingPage.calendarHint}
           </p>
         </div>
 
@@ -248,11 +253,16 @@ const BookingPage: React.FC = () => {
         <div data-tour="booking-slots">
           <h3 className="text-inherit font-medium mb-3">
             {selectedDay
-              ? `${format(selectedDay, "yyyy 年 MM 月 dd 日", { locale: zhTW })} 可預約時段`
-              : "請先在左側選日期"}
+              ? t.bookingPage.slotsForDay.replace(
+                  "{date}",
+                  format(selectedDay, t.bookingPage.dayHeadingFormat, {
+                    locale: dfLocale,
+                  }),
+                )
+              : t.bookingPage.pickDayFirst}
           </h3>
           {selectedDay && slotsOfDay.length === 0 && (
-            <p className="text-sm text-muted">該日無可預約時段</p>
+            <p className="text-sm text-muted">{t.bookingPage.noSlotsThatDay}</p>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {slotsOfDay.map((s) => (
@@ -270,9 +280,9 @@ const BookingPage: React.FC = () => {
       </div>
 
       <div className="mt-6 text-sm text-muted" data-tour="booking-my-link">
-        想看自己的預約紀錄？前往{" "}
+        {t.bookingPage.viewMyBookingsPrefix}{" "}
         <Link to="/my-bookings" className="text-gold hover:underline">
-          我的預約
+          {t.myBookings.heading}
         </Link>
       </div>
 
@@ -280,7 +290,7 @@ const BookingPage: React.FC = () => {
       <Modal
         isOpen={!!pickedSlot}
         onClose={() => setPickedSlot(null)}
-        title="送出預約"
+        title={t.bookingPage.submitTitle}
         theme="luxe"
         size="lg"
         tourId="booking-submit"
@@ -292,19 +302,22 @@ const BookingPage: React.FC = () => {
               data-tour="booking-form-slot"
             >
               <p className="text-inherit text-sm">
-                時段：
+                {t.bookingPage.slotLabel}
                 <span className="text-gold ml-1">
                   {pickedSlot.localDate} {pickedSlot.localTime}
                 </span>
               </p>
               <p className="text-muted text-xs mt-1">
-                時長 {profile.default_slot_minutes} 分鐘
+                {t.bookingPage.durationLabel.replace(
+                  "{minutes}",
+                  String(profile.default_slot_minutes),
+                )}
               </p>
             </div>
 
             <div>
               <label className="block text-sm text-muted mb-1">
-                想諮詢的課程（選填）
+                {t.bookingPage.courseLabel}
               </label>
               <select
                 data-tour="booking-form-course"
@@ -314,7 +327,7 @@ const BookingPage: React.FC = () => {
                 }
                 className="coach-booking-select studio-input w-full rounded-lg px-4 py-3 cursor-pointer"
               >
-                <option value="">不指定</option>
+                <option value="">{t.bookingPage.courseNone}</option>
                 {courses.map((c) => (
                   <option key={c.course_id} value={c.course_id}>
                     {c.course_title}
@@ -325,10 +338,10 @@ const BookingPage: React.FC = () => {
 
             <Textarea
               data-tour="booking-form-note"
-              label="想聊什麼？（選填）"
+              label={t.bookingPage.noteLabel}
               value={form.userNote}
               onChange={(e) => setForm({ ...form, userNote: e.target.value })}
-              placeholder="例：想了解 XX 課程內容、有 OO 問題想討論..."
+              placeholder={t.bookingPage.notePlaceholder}
               theme="luxe"
               rows={4}
             />
@@ -338,26 +351,26 @@ const BookingPage: React.FC = () => {
               data-tour="booking-form-contact"
             >
               <Input
-                label="聯絡 Email"
+                label={t.bookingPage.contactEmailLabel}
                 value={form.contactEmail}
                 onChange={(e) =>
                   setForm({ ...form, contactEmail: e.target.value })
                 }
-                placeholder="預約通知會寄到此信箱"
+                placeholder={t.bookingPage.contactEmailPlaceholder}
                 theme="luxe"
               />
               <Input
-                label="聯絡電話"
+                label={t.bookingPage.contactPhoneLabel}
                 value={form.contactPhone}
                 onChange={(e) =>
                   setForm({ ...form, contactPhone: e.target.value })
                 }
-                placeholder="例：0912-345-678"
+                placeholder={t.contact.phonePlaceholder}
                 theme="luxe"
               />
             </div>
             <p className="text-xs text-muted">
-              email 與電話至少需填一項。
+              {t.bookingPage.contactHint}
             </p>
 
             <div className="flex justify-end gap-3 pt-2 border-t border-gold/10">
@@ -366,7 +379,7 @@ const BookingPage: React.FC = () => {
                 variant="outline"
                 onClick={() => setPickedSlot(null)}
               >
-                取消
+                {t.common.cancel}
               </PillButton>
               <PillButton
                 theme="luxe"
@@ -375,7 +388,7 @@ const BookingPage: React.FC = () => {
                 onClick={handleSubmit}
                 disabled={saving}
               >
-                {saving ? "送出中..." : "送出預約"}
+                {saving ? t.bookingPage.submitting : t.bookingPage.submitTitle}
               </PillButton>
             </div>
           </div>

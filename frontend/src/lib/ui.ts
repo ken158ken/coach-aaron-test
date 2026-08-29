@@ -9,17 +9,22 @@
  * @param {string | undefined} dateString - ISO 日期字串
  * @returns {string} 格式化後的日期
  */
-export const formatDate = (dateString: string | undefined): string => {
-  if (!dateString) return "未知";
+export const formatDate = (
+  dateString: string | undefined,
+  /** BCP-47 語言碼；預設 zh-TW 維持既有呼叫端相容 */
+  locale: "zh-TW" | "en" = "zh-TW",
+): string => {
+  const unknown = locale === "en" ? "Unknown" : "未知";
+  if (!dateString) return unknown;
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString("zh-TW", {
+    return date.toLocaleDateString(locale === "en" ? "en-US" : "zh-TW", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
   } catch {
-    return "未知";
+    return unknown;
   }
 };
 

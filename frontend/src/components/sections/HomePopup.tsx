@@ -8,6 +8,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { contentService, type ActivePopup } from "@/services/site/content.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useLanguage } from "@/context/LanguageContext";
+import { useLocalize } from "@/hooks/useLocalize";
 import { LogoMark } from "@/components/brand";
 
 /** 日誌工具 */
@@ -25,6 +27,9 @@ const POPUP_STORAGE_PREFIX = "coach_popup_seen_";
  * 管理員可在後台設定內容，用戶開啟首頁時自動顯示
  */
 const HomePopup: React.FC = () => {
+  const { t } = useLanguage();
+  const { loc } = useLocalize();
+  const copy = t.homePopup;
   const [popup, setPopup] = useState<ActivePopup | null>(null);
   const [visible, setVisible] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
@@ -82,6 +87,14 @@ const HomePopup: React.FC = () => {
 
   if (!popup || !visible) return null;
 
+  // DB 內容：site_popups 有 popup_title_en / popup_content_en 兩個英文欄位，
+  // 交給 loc() 依語言挑選（英文欄位為空時自動 fallback 中文）。
+  // ⚠️ ActivePopup 型別定義在 services/site/content.service.ts（不在本次可改檔案內），
+  //    故沿用本專案既有的 `as unknown as Record<string, unknown>` 寫法。
+  const popupRecord = popup as unknown as Record<string, unknown>;
+  const popupTitle = loc(popupRecord, "popup_title");
+  const popupContent = loc(popupRecord, "popup_content");
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[12vh] sm:pt-[15vh] p-4">
       {/* 過渡遮罩 */}
@@ -109,17 +122,17 @@ const HomePopup: React.FC = () => {
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gold/10 hover:bg-gold/20 text-muted hover:text-gold transition-all z-10"
-          aria-label="關閉"
+          aria-label={copy.close}
         >
           ✕
         </button>
 
         {/* 標題（品牌 mark + 文字） */}
-        {popup.popup_title && (
+        {popupTitle && (
           <div className="px-6 pt-6 pb-3 flex items-center gap-3">
-            <LogoMark size={36} title="阿倫教官" />
+            <LogoMark size={36} title={copy.logoTitle} />
             <h2 className="text-lg sm:text-xl font-medium tracking-wide">
-              {popup.popup_title}
+              {popupTitle}
             </h2>
           </div>
         )}
@@ -137,7 +150,7 @@ const HomePopup: React.FC = () => {
               [&_li]:text-muted [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3
               [&_strong]:text-gold [&_strong]:font-semibold
               [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-3 [&_blockquote]:text-muted"
-            dangerouslySetInnerHTML={{ __html: popup.popup_content }}
+            dangerouslySetInnerHTML={{ __html: popupContent }}
           />
         </div>
 
@@ -147,7 +160,7 @@ const HomePopup: React.FC = () => {
             onClick={handleClose}
             className="px-7 py-2.5 bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 rounded-lg text-sm tracking-widest transition-all duration-200 hover:shadow-lg hover:shadow-gold/10"
           >
-            開始探索
+            {copy.cta}
           </button>
         </div>
       </div>

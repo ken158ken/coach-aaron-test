@@ -22,6 +22,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface AnimatedTestimonialItem {
   /** 主要文字（見證引言 / 經歷簡述） */
@@ -80,9 +81,10 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
   advanceOnClick = false,
   showClickHint = false,
   hoverScale = false,
-  clickHintText = '點擊看下一張',
+  clickHintText,
   imageRotateMs = 0,
 }) => {
+  const { t } = useLanguage();
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState(false);
   // 內層照片索引：只作用於「當前 active 項目」的多張 images
@@ -153,7 +155,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
           onMouseLeave={() => setHovered(false)}
           onClick={advanceOnClick ? handleNext : undefined}
           role={advanceOnClick ? 'button' : undefined}
-          aria-label={advanceOnClick ? '下一段' : undefined}
+          aria-label={advanceOnClick ? t.carouselUi.nextItem : undefined}
         >
           <AnimatePresence>
             {testimonials.map((t, index) => (
@@ -192,7 +194,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
               }`}
             >
               <span className="rounded-full bg-black/60 backdrop-blur-sm border border-gold/30 text-gold text-xs px-3 py-1">
-                {clickHintText} →
+                {clickHintText ?? t.carouselUi.clickHint} →
               </span>
             </div>
           )}
@@ -235,7 +237,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
               <>
                 <button
                   onClick={handlePrev}
-                  aria-label="上一張"
+                  aria-label={t.carouselUi.prevSlide}
                   className="group/btn w-9 h-9 rounded-full bg-surface border border-white/10 flex items-center justify-center text-white/60 hover:text-gold hover:border-gold/40 transition-colors"
                 >
                   <svg className="w-4 h-4 transition-transform group-hover/btn:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,7 +246,7 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
                 </button>
                 <button
                   onClick={handleNext}
-                  aria-label="下一張"
+                  aria-label={t.carouselUi.nextSlide}
                   className="group/btn w-9 h-9 rounded-full bg-surface border border-white/10 flex items-center justify-center text-white/60 hover:text-gold hover:border-gold/40 transition-colors"
                 >
                   <svg className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,11 +255,11 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
                 </button>
 
                 <div className="flex gap-1.5 ml-1">
-                  {testimonials.map((t, i) => (
+                  {testimonials.map((item, i) => (
                     <button
-                      key={`dot-${t.name}-${i}`}
+                      key={`dot-${item.name}-${i}`}
                       onClick={() => setActive(i)}
-                      aria-label={`第 ${i + 1} 張`}
+                      aria-label={t.carouselUi.goToSlide.replace("{n}", String(i + 1))}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
                         i === active ? 'w-5 bg-gold' : 'w-1.5 bg-white/20 hover:bg-white/40'
                       }`}

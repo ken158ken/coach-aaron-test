@@ -13,6 +13,7 @@ import {
   useTransform,
 } from 'framer-motion';
 import { GlowButton, TextButton } from '@/components/ui';
+import { useLanguage } from '@/context/LanguageContext';
 import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
 import { getInitialData } from '@/ssr/initialData';
@@ -46,6 +47,18 @@ interface HeroSectionProps {
  * @returns {JSX.Element} Hero 區塊
  */
 const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
+  const { t, isZhTW } = useLanguage();
+  const copy = t.heroSection;
+
+  /**
+   * site_content 的值目前只有中文（公開 API `GET /api/content` 只回傳
+   * content_value，未帶 content_value_en），所以：
+   *   - 中文模式：DB 值優先，空值時退回字典
+   *   - 英文模式：一律用字典（不能把中文 DB 值直接吐給英文使用者）
+   */
+  const pick = (dbValue: string, dict: string): string =>
+    isZhTW && dbValue.trim() ? dbValue : dict;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
@@ -60,15 +73,12 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   //   丙組（搭主標 C 案）：['教練', '軍師', '後盾', '陪跑員']
   // ⚠️ 字數請維持 2–3 字，避免翻字時版面跳動。
   const [flipWords, setFlipWords] = useState<string[]>(
-    () =>
-      parseJsonArray(readSSRContent().hero_flip_words) ?? [
-        '系統',
-        '軍師',
-        '陪跑',
-        '實戰',
-      ]
+    () => parseJsonArray(readSSRContent().hero_flip_words) ?? []
   );
   const [wordIndex, setWordIndex] = useState(0);
+  /** 實際輪播詞：中文模式才吃 DB 覆寫，英文模式一律用字典 */
+  const words =
+    isZhTW && flipWords.length > 0 ? flipWords : copy.flipWords;
   // SSR / hydration 首次 render 時 flip word 必須可見：framer 的 initial
   // 會輸出 inline opacity:0 + blur，JS 到位前 H1 的關鍵詞會整個隱形。
   // mount 後才啟用 initial，換字動畫照舊。
@@ -76,12 +86,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   useEffect(() => setFlipMounted(true), []);
 
   useEffect(() => {
-    const t = setInterval(
-      () => setWordIndex((i) => (i + 1) % flipWords.length),
+    if (words.length <= 1) return;
+    const timer = setInterval(
+      () => setWordIndex((i) => (i + 1) % words.length),
       2500
     );
-    return () => clearInterval(t);
-  }, []);
+    return () => clearInterval(timer);
+  }, [words.length]);
 
   // Spotlight — 滑鼠跟隨聚光燈
   const rawX = useMotionValue(0.5);
@@ -108,9 +119,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   //   B 案（痛點對話，搭乙組）：'你很會教 但業績呢\n私教變現，是一門可以學的技術'
   //   C 案（同行對同行，搭丙組）：'教練的 教練\n私教變現 × 銷售心理學，帶你走過我走過的路'
   const [heroTitle, setHeroTitle] = useState(
-    () =>
-      readSSRContent().hero_title?.trim() ||
-      getDefaultTemplate('hero_title', '私教變現 系統\n把你的專業，變成穩定的收入')
+    () => readSSRContent().hero_title?.trim() || getDefaultTemplate('hero_title')
   );
   // 副標採定稿新 A 案。備選：
   //   B 案：'十年健身產業、50 人教練團隊、130+ 位教練的實戰驗證\n專業不會自己變成收入，但它可以被設計成收入'
@@ -119,18 +128,15 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   const [heroSubtitle, setHeroSubtitle] = useState(
     () =>
       readSSRContent().hero_subtitle?.trim() ||
-      getDefaultTemplate(
-        'hero_subtitle',
-        '給私人教練的商業實戰培訓\n從體驗課成交、續約經營到個人品牌，一套可複製的變現系統'
-      )
+      getDefaultTemplate('hero_subtitle')
   );
   // CTA 備選：主按鈕 '查看課程與方案' ／ '我要提升業績'
   //           次按鈕 '先聊聊你的狀況' ／ '免費諮詢'
   const [ctaPrimary, setCtaPrimary] = useState(
-    () => readSSRContent().hero_cta_primary?.trim() || '看變現方案'
+    () => readSSRContent().hero_cta_primary?.trim() || ''
   );
   const [ctaSecondary, setCtaSecondary] = useState(
-    () => readSSRContent().hero_cta_secondary?.trim() || '預約 1 對 1 諮詢'
+    () => readSSRContent().hero_cta_secondary?.trim() || ''
   );
 
   // 從 DB 載入文案（空值或錯誤時保留 fallback）
@@ -276,7 +282,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
           ref={titleRef}
           className="silver-heading font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight tracking-[4px] sm:tracking-[6px] uppercase will-change-transform"
         >
-          {heroTitle.split('\n').map((line, i) => {
+          {pick(heroTitle, copy.title).split('\n').map((line, i) => {
             if (i === 0) {
               // Flip Words: 靜態前綴 + 動畫輪播詞
               //
@@ -310,7 +316,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
                         className="inline-block text-luxe-gold"
                       >
                         {/* 後台改短 flipWords 時 wordIndex 可能越界，回退首詞避免 H1 出現空字 */}
-                        {flipWords[wordIndex] ?? flipWords[0]}
+                        {words[wordIndex] ?? words[0]}
                       </motion.span>
                     </AnimatePresence>
                   </span>
@@ -331,7 +337,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
           ref={subtitleRef}
           className="text-sm sm:text-base md:text-lg text-white/50 mb-8 sm:mb-10 max-w-xl mx-auto font-light tracking-[2px]"
         >
-          {heroSubtitle.split('\n').map((line, i) => (
+          {pick(heroSubtitle, copy.subtitle).split('\n').map((line, i) => (
             <React.Fragment key={i}>
               {i > 0 && (
                 <>
@@ -350,10 +356,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
           className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <GlowButton to="/courses" size="lg">
-            {ctaPrimary}
+            {pick(ctaPrimary, copy.ctaPrimary)}
           </GlowButton>
           <TextButton to="/contact" theme="studio">
-            {ctaSecondary}
+            {pick(ctaSecondary, copy.ctaSecondary)}
           </TextButton>
         </div>
       </div>

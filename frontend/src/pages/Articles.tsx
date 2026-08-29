@@ -17,6 +17,25 @@ import { getInitialData } from "@/ssr/initialData";
 import { dataKeys } from "@/ssr/routeData";
 import type { Article, ArticlesResponse } from "@/types";
 
+/** 分類篩選選項：中文原值當 key，_en 供顯示時本地化 */
+interface CategoryOption {
+  article_category: string;
+  article_category_en?: string | null;
+}
+
+/** 從文章清單萃取不重複的分類（保留 _en 以便標籤本地化） */
+function extractCategories(list: Article[]): CategoryOption[] {
+  const map = new Map<string, CategoryOption>();
+  list.forEach((a) => {
+    if (!a.article_category || map.has(a.article_category)) return;
+    map.set(a.article_category, {
+      article_category: a.article_category,
+      article_category_en: a.article_category_en,
+    });
+  });
+  return [...map.values()];
+}
+
 /**
  * Articles - 公開文章列表頁面
  *
@@ -35,13 +54,14 @@ const Articles: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(ssrList?.totalPages || 1);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [categories, setCategories] = useState<string[]>(() => [
-    ...new Set(
-      ssrArticles
-        .map((a) => a.article_category)
-        .filter((c): c is string => !!c),
-    ),
-  ]);
+  /**
+   * 分類清單。
+   * article_category = 資料庫中文原值 → 篩選 / API query 一律用它，切語言不受影響。
+   * article_category_en = 顯示用英文標籤，交給 loc() 依語言挑選（空值自動 fallback 中文）。
+   */
+  const [categories, setCategories] = useState<CategoryOption[]>(() =>
+    extractCategories(ssrArticles),
+  );
   const articlesRef = useScrollReveal();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -64,24 +84,18 @@ const Articles: React.FC = () => {
         setTotalPages(res.totalPages || 1);
 
         // 從文章中提取分類
-        const cats = [
-          ...new Set(
-            res.articles
-              .map((a) => a.article_category)
-              .filter((c): c is string => !!c),
-          ),
-        ];
+        const cats = extractCategories(res.articles);
         if (cats.length > 0 && categories.length === 0) {
           setCategories(cats);
         }
       } else {
         setArticles([]);
-        setError("載入文章失敗");
+        setError(t.articlesExtra.loadFailed);
       }
     } catch (err) {
       console.error("Failed to fetch articles:", err);
       setArticles([]);
-      setError("載入文章失敗");
+      setError(t.articlesExtra.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -100,8 +114,8 @@ const Articles: React.FC = () => {
   const seoHead = (
     <SEOHead
       title={t.article.pageLabel}
-      description="健身教練的專業分享與訓練心得，提供健身新手入門指南、訓練技巧、營養建議等實用內容"
-      keywords={["健身", "訓練", "教練", "健身知識", "運動"]}
+      description={t.articlesExtra.seoDescription}
+      keywords={t.articlesExtra.seoKeywords}
       url="/articles"
       breadcrumbs={[{ name: t.article.pageLabel, url: "/articles" }]}
     />
@@ -125,7 +139,7 @@ const Articles: React.FC = () => {
       {/* 主要內容 */}
       <div className="relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 px-4">
         <div className="studio-container">
-          <PageHeader label="Knowledge" title={t.article.pageLabel} subtitle={language === "en" ? "Professional insights and training tips from Coach Aaron" : "健身教練的專業分享與訓練心得"} />
+          <PageHeader label="Knowledge" title={t.article.pageLabel} subtitle={t.articlesExtra.subtitle} />
           {/* Category Filter */}
           {categories.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 sm:mb-8 hide-scrollbar">
@@ -137,11 +151,11 @@ const Articles: React.FC = () => {
               </button>
               {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => { setSelectedCategory(cat); setCurrentPage(1); }}
-                  className={`page-filter-pill shrink-0 ${selectedCategory === cat ? "active" : ""}`}
+                  key={cat.article_category}
+                  onClick={() => { setSelectedCategory(cat.article_category); setCurrentPage(1); }}
+                  className={`page-filter-pill shrink-0 ${selectedCategory === cat.article_category ? "active" : ""}`}
                 >
-                  {cat}
+                  {loc(cat as unknown as Record<string, unknown>, "article_category")}
                 </button>
               ))}
             </div>
@@ -188,7 +202,7 @@ const Articles: React.FC = () => {
                       <div className="aspect-16/10 overflow-hidden">
                         <img
                           src={article.article_thumbnail_url}
-                          alt={article.article_title}
+                          alt={loc(article as unknown as Record<string, unknown>, "article_title")}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>

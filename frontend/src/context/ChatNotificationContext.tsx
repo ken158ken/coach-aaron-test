@@ -13,6 +13,8 @@ import type { ChatConversation } from "@/services/social/chat.service";
 interface ChatNotificationContextValue {
   unreadTotal: number;
   conversations: ChatConversation[];
+  /** 對話清單是否已完成第一次載入（空清單≠載入中） */
+  conversationsLoaded: boolean;
   refreshConversations: () => void;
   subscribe: (cb: (n: ChatNotification) => void) => () => void;
 }
@@ -38,6 +40,7 @@ export function useChatNotificationContext(): ChatNotificationContextValue {
     return {
       unreadTotal: 0,
       conversations: [],
+      conversationsLoaded: true,
       refreshConversations: () => {},
       subscribe: () => () => {},
     };

@@ -12,18 +12,23 @@ import {
   type ChatMessage,
   type ChatParticipant,
   type ChatUser,
-  getConversationName,
 } from "@/services/social/chat.service";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useConversationMessages } from "@/hooks/useChat";
 import { usePresenceMany } from "@/hooks/usePresence";
-import { formatLastSeen } from "@/services/social/presence.service";
+
 import { subscribeConversation } from "@/services/social/realtime.service";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import PresenceDot from "./PresenceDot";
 import UserAvatar from "./UserAvatar";
 import GroupMembersModal from "./GroupMembersModal";
+import {
+  localizedConversationName,
+  localizedLastSeen,
+  localizedUserName,
+} from "./chatNames";
 
 interface MessageThreadProps {
   conversation: ChatConversation;
@@ -45,6 +50,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   const hasLeft = !!conversation.my_left_at;
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t, isZhTW } = useLanguage();
   const me = Number(user?.user_id || 0);
   const { messages, loading, appendLocal, replaceLocal, removeLocal } =
     useConversationMessages(conversation.id);
@@ -106,11 +112,8 @@ const MessageThread: React.FC<MessageThreadProps> = ({
     return m;
   }, [conversation]);
 
-  const senderNameOf = (id: number): string => {
-    const u = senderMap.get(id);
-    if (!u) return "用戶";
-    return u.admin_display_name || u.display_name || u.name || "用戶";
-  };
+  const senderNameOf = (id: number): string =>
+    localizedUserName(senderMap.get(id), t);
 
   // 新訊息進來自動捲到底
   useEffect(() => {
@@ -142,12 +145,12 @@ const MessageThread: React.FC<MessageThreadProps> = ({
       const res = await fetch(`/api/export/chat/${conversation.id}?format=${format}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("下載失敗");
+      if (!res.ok) throw new Error(t.memberCenter.downloadFailed);
       const disposition = res.headers.get("content-disposition") || "";
       const match = disposition.match(/filename\*=UTF-8''(.+)/i);
       const filename = match
         ? decodeURIComponent(match[1])
-        : `對話_${conversation.id.slice(0, 8)}.${format}`;
+        : `${t.memberCenter.chatFilePrefix}_${conversation.id.slice(0, 8)}.${format}`;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -160,7 +163,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
     } finally {
       setExportingFmt(null);
     }
-  }, [conversation.id]);
+  }, [conversation.id, t]);
 
   const handleSend = async (data: { content: string; image: File | null }) => {
     // 樂觀更新：立刻把訊息放進去，不等 server roundtrip
@@ -190,12 +193,15 @@ const MessageThread: React.FC<MessageThreadProps> = ({
     }
   };
 
-  const headerName = getConversationName(conversation, me);
+  const headerName = localizedConversationName(conversation, me, t);
   const headerSub =
     conversation.type === "dm" && partnerPresence
-      ? formatLastSeen(partnerPresence.last_seen_at)
+      ? localizedLastSeen(partnerPresence.last_seen_at, t, isZhTW)
       : conversation.type === "group"
-        ? `${(conversation.participants as ChatParticipant[]).length} 位成員`
+        ? t.chatUi.memberCount.replace(
+            "{count}",
+            String((conversation.participants as ChatParticipant[]).length),
+          )
         : "";
 
   return (
@@ -210,7 +216,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
             data-tour="chat-back"
             onClick={onBack}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors lg:hidden"
-            title="返回"
+            title={t.common.back}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -250,7 +256,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
           <button
             onClick={() => setShowMembers(true)}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
-            title="查看成員"
+            title={t.chatUi.viewMembers}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -264,7 +270,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
             onClick={() => setShowExportMenu((v) => !v)}
             disabled={exportingFmt !== null}
             className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
-            title="匯出對話"
+            title={t.exportFeature.exportConversation}
           >
             {exportingFmt ? (
               <span className="w-5 h-5 flex items-center justify-center">
@@ -280,12 +286,14 @@ const MessageThread: React.FC<MessageThreadProps> = ({
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
               <div className="absolute right-0 top-9 z-20 w-44 bg-surface border border-gold/20 rounded-xl shadow-xl overflow-hidden">
-                <p className="px-3 py-2 text-[10px] text-muted uppercase tracking-widest border-b border-gold/10">匯出格式</p>
+                <p className="px-3 py-2 text-[10px] text-muted uppercase tracking-widest border-b border-gold/10">
+                  {t.exportFeature.exportFormat}
+                </p>
                 {[
-                  { fmt: "txt",  label: "純文字 (.txt)" },
-                  { fmt: "md",   label: "Markdown (.md)" },
-                  { fmt: "xlsx", label: "Excel (.xlsx)" },
-                  { fmt: "docx", label: "Word (.docx)" },
+                  { fmt: "txt", label: t.exportFeature.formatTxt },
+                  { fmt: "md", label: t.exportFeature.formatMd },
+                  { fmt: "xlsx", label: t.exportFeature.formatXlsx },
+                  { fmt: "docx", label: t.exportFeature.formatDocx },
                 ].map(({ fmt, label }) => (
                   <button
                     key={fmt}
@@ -303,7 +311,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
         <button
           onClick={() => navigate("/chat")}
           className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors hidden lg:block"
-          title="關閉"
+          title={t.chatUi.close}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -318,11 +326,13 @@ const MessageThread: React.FC<MessageThreadProps> = ({
         className="flex-1 overflow-y-auto px-3 py-3"
       >
         {loading && (
-          <div className="text-center py-8 text-muted text-sm">載入中...</div>
+          <div className="text-center py-8 text-muted text-sm">
+            {t.common.loading}
+          </div>
         )}
         {!loading && messages.length === 0 && (
           <div className="text-center py-12 text-muted text-sm">
-            尚無訊息，打個招呼吧
+            {t.chatUi.noMessagesGreeting}
           </div>
         )}
         {messages.map((msg: ChatMessage, idx: number) => {
@@ -358,7 +368,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
       {/* Input — 已離開群組則顯示說明而非輸入框 */}
       {hasLeft ? (
         <div className="border-t border-gold/15 bg-surface-2/40 px-4 py-3 text-center text-sm text-muted">
-          🚪 你已離開此群組，無法發送新訊息（仍可瀏覽舊訊息）
+          {t.chatUi.leftGroupNotice}
         </div>
       ) : (
         <MessageInput onSend={handleSend} />

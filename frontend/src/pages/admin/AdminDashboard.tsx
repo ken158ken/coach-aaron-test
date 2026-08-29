@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { StatCard, Loading } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 import { get } from "@/services/api";
 
 interface RankedItem {
@@ -66,6 +67,7 @@ const BarChart: React.FC<{
 };
 
 const AdminDashboard: React.FC = () => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -79,31 +81,33 @@ const AdminDashboard: React.FC = () => {
         if (res && typeof res === "object" && "userCount" in res) {
           setStats(res);
         } else {
-          setError("載入統計數據失敗：數據格式錯誤");
+          setError(t.adminDashboardPage.loadFailedFormat);
         }
       } catch (err) {
         console.error("Failed to fetch stats:", err);
-        setError("載入統計數據失敗");
+        setError(t.adminDashboardPage.loadFailed);
       } finally {
         setLoading(false);
       }
     };
     fetchStats();
-  }, []);
+  }, [t]);
+
+  const d = t.adminDashboardPage;
 
   /** `tour` 為新手導覽定位錨點（frontend/src/tours/pages/adminDashboard.tour.ts） */
   const primaryStats = [
-    { value: stats?.userCount?.toLocaleString() || "0", label: "總用戶數", icon: "👥", sub: `本月新增 ${stats?.newUsersThisMonth ?? 0}`, tour: "dashboard-stat-users" },
-    { value: stats?.courseCount?.toLocaleString() || "0", label: "線上課程", icon: "📚", sub: `預約 ${stats?.bookingCount ?? 0} 筆`, tour: "dashboard-stat-courses" },
-    { value: stats?.articleCount?.toLocaleString() || "0", label: "已發布文章", icon: "📝", sub: `共 ${(stats?.totalArticleViews ?? 0).toLocaleString()} 次閱覽`, tour: "dashboard-stat-articles" },
-    { value: `NT$ ${(stats?.monthlyRevenue || 0).toLocaleString()}`, label: "本月營收", icon: "💰", sub: `訂單 ${stats?.orderCount ?? 0} 筆`, tour: "dashboard-stat-revenue" },
+    { value: stats?.userCount?.toLocaleString() || "0", label: d.statUsers, icon: "👥", sub: d.statUsersSub.replace("{n}", String(stats?.newUsersThisMonth ?? 0)), tour: "dashboard-stat-users" },
+    { value: stats?.courseCount?.toLocaleString() || "0", label: d.statCourses, icon: "📚", sub: d.statCoursesSub.replace("{n}", String(stats?.bookingCount ?? 0)), tour: "dashboard-stat-courses" },
+    { value: stats?.articleCount?.toLocaleString() || "0", label: d.statArticles, icon: "📝", sub: d.statArticlesSub.replace("{n}", (stats?.totalArticleViews ?? 0).toLocaleString()), tour: "dashboard-stat-articles" },
+    { value: `NT$ ${(stats?.monthlyRevenue || 0).toLocaleString()}`, label: d.statRevenue, icon: "💰", sub: d.statRevenueSub.replace("{n}", String(stats?.orderCount ?? 0)), tour: "dashboard-stat-revenue" },
   ];
 
   const contentStats = [
-    { value: stats?.videoCount?.toLocaleString() || "0", label: "Reels 影片", icon: "🎬" },
-    { value: stats?.lessonCount?.toLocaleString() || "0", label: "教學影片", icon: "🎓", sub: `${(stats?.totalLessonViews ?? 0).toLocaleString()} 次觀看` },
-    { value: stats?.orderCount?.toLocaleString() || "0", label: "總訂單", icon: "🛒" },
-    { value: stats?.bookingCount?.toLocaleString() || "0", label: "預約諮詢", icon: "📅" },
+    { value: stats?.videoCount?.toLocaleString() || "0", label: d.statReels, icon: "🎬" },
+    { value: stats?.lessonCount?.toLocaleString() || "0", label: d.statLessons, icon: "🎓", sub: d.statLessonsSub.replace("{n}", (stats?.totalLessonViews ?? 0).toLocaleString()) },
+    { value: stats?.orderCount?.toLocaleString() || "0", label: d.statOrders, icon: "🛒" },
+    { value: stats?.bookingCount?.toLocaleString() || "0", label: d.statBookings, icon: "📅" },
   ];
 
   const dotGridStyle: React.CSSProperties = {
@@ -120,7 +124,7 @@ const AdminDashboard: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
   };
 
-  if (loading) return <Loading text="載入中..." />;
+  if (loading) return <Loading text={t.common.loading} />;
 
   return (
     <div className="relative">
@@ -128,8 +132,8 @@ const AdminDashboard: React.FC = () => {
 
       {/* Header */}
       <div className="mb-6" data-tour="dashboard-header">
-        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">儀表板</h1>
-        <p className="text-sm text-luxe-muted">歡迎來到管理後台</p>
+        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">{t.admin.dashboard}</h1>
+        <p className="text-sm text-luxe-muted">{d.pageSubtitle}</p>
       </div>
 
       {error && (
@@ -185,40 +189,40 @@ const AdminDashboard: React.FC = () => {
       <div className="grid lg:grid-cols-3 gap-4 sm:gap-6" data-tour="dashboard-rankings">
         {/* 熱門文章 */}
         <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-5">
-          <h2 className="text-sm font-medium text-luxe-text mb-4">📝 熱門文章（閱覽次數）</h2>
+          <h2 className="text-sm font-medium text-luxe-text mb-4">📝 {d.rankArticles}</h2>
           {stats?.topArticles && stats.topArticles.length > 0 ? (
             <BarChart
-              items={stats.topArticles.map((a) => ({ label: a.title, value: a.views ?? 0, suffix: " 次" }))}
+              items={stats.topArticles.map((a) => ({ label: a.title, value: a.views ?? 0, suffix: d.unitViews }))}
               color="bg-blue-400"
             />
           ) : (
-            <p className="text-xs text-luxe-muted">暫無資料</p>
+            <p className="text-xs text-luxe-muted">{t.common.noData}</p>
           )}
         </div>
 
         {/* 熱門教學影片 */}
         <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-5">
-          <h2 className="text-sm font-medium text-luxe-text mb-4">🎓 熱門教學影片（觀看次數）</h2>
+          <h2 className="text-sm font-medium text-luxe-text mb-4">🎓 {d.rankLessons}</h2>
           {stats?.topLessons && stats.topLessons.length > 0 ? (
             <BarChart
-              items={stats.topLessons.map((l) => ({ label: l.title, value: l.views ?? 0, suffix: " 次" }))}
+              items={stats.topLessons.map((l) => ({ label: l.title, value: l.views ?? 0, suffix: d.unitViews }))}
               color="bg-purple-400"
             />
           ) : (
-            <p className="text-xs text-luxe-muted">暫無資料</p>
+            <p className="text-xs text-luxe-muted">{t.common.noData}</p>
           )}
         </div>
 
         {/* 課程報名 */}
         <div className="bg-luxe-surface rounded-lg border border-luxe-gold/10 p-4 sm:p-5">
-          <h2 className="text-sm font-medium text-luxe-text mb-4">📚 課程報名（人數）</h2>
+          <h2 className="text-sm font-medium text-luxe-text mb-4">📚 {d.rankCourses}</h2>
           {stats?.topCourses && stats.topCourses.length > 0 ? (
             <BarChart
-              items={stats.topCourses.map((c) => ({ label: c.title, value: c.enrolled ?? 0, suffix: " 人" }))}
+              items={stats.topCourses.map((c) => ({ label: c.title, value: c.enrolled ?? 0, suffix: d.unitPeople }))}
               color="bg-luxe-gold"
             />
           ) : (
-            <p className="text-xs text-luxe-muted">暫無資料</p>
+            <p className="text-xs text-luxe-muted">{t.common.noData}</p>
           )}
         </div>
       </div>
@@ -229,7 +233,7 @@ const AdminDashboard: React.FC = () => {
         data-tour="dashboard-analytics"
       >
         <p className="text-xs text-luxe-muted">
-          💡 網站訪問人數、跳出率、來源分析請透過{" "}
+          💡 {d.analyticsBefore}{" "}
           <a
             href="https://analytics.google.com"
             target="_blank"
@@ -238,7 +242,7 @@ const AdminDashboard: React.FC = () => {
           >
             Google Analytics
           </a>{" "}
-          或{" "}
+          {d.analyticsOr}{" "}
           <a
             href="https://vercel.com/analytics"
             target="_blank"
@@ -247,7 +251,7 @@ const AdminDashboard: React.FC = () => {
           >
             Vercel Analytics
           </a>{" "}
-          查看（Vercel Analytics SDK 已安裝，在 Vercel 後台啟用即可）
+          {d.analyticsAfter}
         </p>
       </div>
     </div>

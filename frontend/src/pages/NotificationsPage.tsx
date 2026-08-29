@@ -6,11 +6,13 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { format, isToday, isYesterday } from "date-fns";
-import { zhTW } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
 import { PillButton } from "@/components/ui";
 import { useNotificationContext } from "@/context/NotificationContext";
 import { pushSubscriptionService } from "@/services/notifications/pushSubscription.service";
 import type { Notification } from "@/services/notifications/notification.service";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 
 const TYPE_ICON: Record<string, string> = {
   chat_message: "💬",
@@ -22,17 +24,21 @@ const TYPE_ICON: Record<string, string> = {
   booking_cancelled: "⚠️",
 };
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, t: AllTranslations, isZh: boolean): string {
   const d = new Date(iso);
-  if (isToday(d)) return "今天 " + format(d, "HH:mm", { locale: zhTW });
-  if (isYesterday(d)) return "昨天 " + format(d, "HH:mm", { locale: zhTW });
-  return format(d, "yyyy/MM/dd HH:mm", { locale: zhTW });
+  const dfLocale = isZh ? zhTW : enUS;
+  if (isToday(d))
+    return t.dateTime.today + " " + format(d, "HH:mm", { locale: dfLocale });
+  if (isYesterday(d))
+    return t.dateTime.yesterday + " " + format(d, "HH:mm", { locale: dfLocale });
+  return format(d, "yyyy/MM/dd HH:mm", { locale: dfLocale });
 }
 
 type Filter = "all" | "unread";
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t, isZhTW } = useLanguage();
   const { notifications, unreadCount, markRead, markAllRead, remove } =
     useNotificationContext();
   const [filter, setFilter] = useState<Filter>("all");
@@ -72,7 +78,9 @@ const NotificationsPage: React.FC = () => {
         setPushOn(true);
       }
     } catch (err) {
-      setPushError(err instanceof Error ? err.message : "切換失敗");
+      setPushError(
+        err instanceof Error ? err.message : t.notificationsPage.toggleFailed,
+      );
     } finally {
       setPushBusy(false);
     }
@@ -82,9 +90,11 @@ const NotificationsPage: React.FC = () => {
     <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light">通知中心</h1>
+          <h1 className="text-2xl sm:text-3xl font-light">
+            {t.notificationsPage.heading}
+          </h1>
           <p className="text-sm text-muted mt-1">
-            7 天內的所有通知；過期會自動清除
+            {t.notificationsPage.subtitle}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -95,7 +105,7 @@ const NotificationsPage: React.FC = () => {
             data-tour="notif-mark-all"
             onClick={() => markAllRead()}
           >
-            全部已讀
+            {t.notificationsPage.markAllRead}
           </PillButton>
         )}
       </div>
@@ -107,13 +117,15 @@ const NotificationsPage: React.FC = () => {
       >
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium">📱 瀏覽器推播通知</h3>
+            <h3 className="text-sm font-medium">
+              {t.notificationsPage.pushHeading}
+            </h3>
             <p className="text-xs text-muted mt-0.5">
               {!pushSubscriptionService.isSupported()
-                ? "你的瀏覽器不支援推播通知"
+                ? t.notificationsPage.pushUnsupported
                 : pushOn
-                  ? "✅ 已開啟，瀏覽器關掉也會收到推播"
-                  : "關閉中。開啟後即使瀏覽器關掉，也能收到新訊息 / 預約通知"}
+                  ? t.notificationsPage.pushOn
+                  : t.notificationsPage.pushOff}
             </p>
             {pushError && (
               <p className="text-xs text-red-400 mt-1">{pushError}</p>
@@ -127,7 +139,11 @@ const NotificationsPage: React.FC = () => {
               onClick={togglePush}
               disabled={pushBusy}
             >
-              {pushBusy ? "處理中..." : pushOn ? "停用" : "啟用推播"}
+              {pushBusy
+                ? t.notificationsPage.pushBusy
+                : pushOn
+                  ? t.notificationsPage.pushDisable
+                  : t.notificationsPage.pushEnable}
             </PillButton>
           )}
         </div>
@@ -145,7 +161,9 @@ const NotificationsPage: React.FC = () => {
                 : "text-muted hover:text-inherit"
             }`}
           >
-            {f === "all" ? "全部" : `未讀 (${unreadCount})`}
+            {f === "all"
+              ? t.common.all
+              : `${t.notificationsPage.unread} (${unreadCount})`}
           </button>
         ))}
       </div>
@@ -153,13 +171,15 @@ const NotificationsPage: React.FC = () => {
       {/* List */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted">
-          {filter === "unread" ? "沒有未讀通知" : "目前沒有通知"}
+          {filter === "unread"
+            ? t.notificationsPage.emptyUnread
+            : t.notificationsPage.emptyAll}
           <br />
           <Link
             to="/"
             className="mt-2 inline-block text-gold hover:underline text-sm"
           >
-            回首頁
+            {t.notificationsPage.backHome}
           </Link>
         </div>
       ) : (
@@ -188,7 +208,7 @@ const NotificationsPage: React.FC = () => {
                     {n.title}
                   </h4>
                   <span className="text-[10px] text-muted shrink-0">
-                    {formatTime(n.created_at)}
+                    {formatTime(n.created_at, t, isZhTW)}
                   </span>
                 </div>
                 {n.body && (
@@ -199,7 +219,7 @@ const NotificationsPage: React.FC = () => {
                 data-tour="notif-delete"
                 onClick={() => remove(n.id)}
                 className="text-muted hover:text-red-400 text-xs px-1 shrink-0"
-                title="刪除"
+                title={t.common.delete}
               >
                 ✕
               </button>

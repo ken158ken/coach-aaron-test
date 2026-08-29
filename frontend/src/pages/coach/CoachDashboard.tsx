@@ -12,10 +12,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
-import { zhTW } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
+import type { Locale } from "date-fns";
 import {
   bookingService,
-  BOOKING_STATUS_LABEL,
   type CoachBookingRow,
   type BookingStatus,
 } from "@/services/booking/booking.service";
@@ -35,10 +35,21 @@ import {
   useDialog,
 } from "@/components/ui";
 import { Toggle } from "@/components/ui/form";
+import { useLanguage } from "@/context/LanguageContext";
+import type { AllTranslations } from "@/context/LanguageContext";
 
 type TabType = "pending" | "all" | "schedule" | "google";
 
-const WEEKDAYS = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+/** 週幾（索引 0 = 週日），文案走翻譯字典 */
+const weekdayNames = (t: AllTranslations): string[] => [
+  t.coachDash.sun,
+  t.coachDash.mon,
+  t.coachDash.tue,
+  t.coachDash.wed,
+  t.coachDash.thu,
+  t.coachDash.fri,
+  t.coachDash.sat,
+];
 
 const STATUS_STYLE: Record<BookingStatus, string> = {
   pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
@@ -48,19 +59,22 @@ const STATUS_STYLE: Record<BookingStatus, string> = {
   completed: "bg-gold/15 text-gold border-gold/30",
 };
 
-const GOOGLE_MSG: Record<string, string> = {
-  connected: "✅ Google 日曆已連結",
-  denied: "❌ 已拒絕授權",
-  no_code: "❌ 授權流程異常（缺少 code）",
-  bad_state: "❌ 授權狀態不匹配，請重試",
-  no_refresh: "⚠️ Google 未回傳 refresh_token，請到 Google 帳號設定撤銷此應用後再試",
-  error: "❌ 授權失敗，請稍後再試",
-};
+const googleMessages = (t: AllTranslations): Record<string, string> => ({
+  connected: t.coachDash.googleMsgConnected,
+  denied: t.coachDash.googleMsgDenied,
+  no_code: t.coachDash.googleMsgNoCode,
+  bad_state: t.coachDash.googleMsgBadState,
+  no_refresh: t.coachDash.googleMsgNoRefresh,
+  error: t.coachDash.googleMsgError,
+});
 
 const CoachDashboard: React.FC = () => {
   const navigate = useNavigate();
   const dialog = useDialog();
   const { canAccess, loading: accessLoading } = useCoachAccess();
+  const { t, isZhTW } = useLanguage();
+  const dfLocale = isZhTW ? zhTW : enUS;
+  const WEEKDAYS = weekdayNames(t);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [tab, setTab] = useState<TabType>("pending");
@@ -77,12 +91,12 @@ const CoachDashboard: React.FC = () => {
   useEffect(() => {
     const g = searchParams.get("google");
     if (g) {
-      setBanner(GOOGLE_MSG[g] || g);
+      setBanner(googleMessages(t)[g] || g);
       const sp = new URLSearchParams(searchParams);
       sp.delete("google");
       setSearchParams(sp, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, t]);
 
   // ====== 預約 ======
   const [pendingList, setPendingList] = useState<CoachBookingRow[]>([]);
@@ -116,7 +130,10 @@ const CoachDashboard: React.FC = () => {
       fetchAll();
     } catch (err) {
       console.error(err);
-      await dialog.alert({ title: "失敗", message: "批准失敗" });
+      await dialog.alert({
+        title: t.coachDash.failedTitle,
+        message: t.coachDash.approveFailed,
+      });
     }
   };
   const handleReject = async () => {
@@ -129,15 +146,21 @@ const CoachDashboard: React.FC = () => {
       fetchAll();
     } catch (err) {
       console.error(err);
-      await dialog.alert({ title: "失敗", message: "拒絕失敗" });
+      await dialog.alert({
+        title: t.coachDash.failedTitle,
+        message: t.coachDash.rejectFailed,
+      });
     }
   };
   const handleCoachCancel = async (b: CoachBookingRow) => {
     const ok = await dialog.confirm({
-      title: "取消預約",
-      message: `確定要取消 ${b.user?.display_name || b.user?.name || "用戶"} 的預約？`,
+      title: t.myBookings.cancelTitle,
+      message: t.coachDash.cancelBookingMessage.replace(
+        "{name}",
+        b.user?.display_name || b.user?.name || t.chatUi.userFallback,
+      ),
       variant: "danger",
-      confirmText: "取消",
+      confirmText: t.common.cancel,
     });
     if (!ok) return;
     await bookingService.coachCancel(b.id);
@@ -192,15 +215,18 @@ const CoachDashboard: React.FC = () => {
       fetchRules();
     } catch (err) {
       console.error(err);
-      await dialog.alert({ title: "失敗", message: "儲存失敗" });
+      await dialog.alert({
+        title: t.coachDash.failedTitle,
+        message: t.coachDash.saveFailed,
+      });
     }
   };
   const deleteRule = async (r: AvailabilityRule) => {
     const ok = await dialog.confirm({
-      title: "刪除規則",
+      title: t.coachDash.deleteRuleTitle,
       message: `${WEEKDAYS[r.weekday]} ${String(r.start_time).slice(0, 5)}-${String(r.end_time).slice(0, 5)}`,
       variant: "danger",
-      confirmText: "刪除",
+      confirmText: t.common.delete,
     });
     if (!ok) return;
     await coachService.deleteAvailability(r.id);
@@ -219,18 +245,21 @@ const CoachDashboard: React.FC = () => {
       fetchTimeOffs();
     } catch (err) {
       console.error(err);
-      await dialog.alert({ title: "失敗", message: "新增休假失敗" });
+      await dialog.alert({
+        title: t.coachDash.failedTitle,
+        message: t.coachDash.addTimeOffFailed,
+      });
     }
   };
-  const deleteTimeOff = async (t: TimeOff) => {
+  const deleteTimeOff = async (off: TimeOff) => {
     const ok = await dialog.confirm({
-      title: "刪除休假",
-      message: t.reason || "此休假",
+      title: t.coachDash.deleteTimeOffTitle,
+      message: off.reason || t.coachDash.thisTimeOff,
       variant: "danger",
-      confirmText: "刪除",
+      confirmText: t.common.delete,
     });
     if (!ok) return;
-    await coachService.deleteTimeOff(t.id);
+    await coachService.deleteTimeOff(off.id);
     fetchTimeOffs();
   };
 
@@ -271,7 +300,7 @@ const CoachDashboard: React.FC = () => {
   if (accessLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-muted">
-        載入中...
+        {t.common.loading}
       </div>
     );
   }
@@ -285,10 +314,10 @@ const CoachDashboard: React.FC = () => {
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-light text-inherit">
-            教練儀表板
+            {t.coachDash.heading}
           </h1>
           <p className="text-sm text-muted mt-1">
-            {profile?.display_name} · 管理預約、時段與 Google 日曆整合
+            {profile?.display_name} · {t.coachDash.subtitle}
           </p>
         </div>
       </div>
@@ -308,22 +337,28 @@ const CoachDashboard: React.FC = () => {
       {/* Tabs */}
       <div data-tour="coach-tabs" className="flex flex-wrap gap-2 mb-6">
         {[
-          { k: "pending", label: `🔔 待審核 (${pendingList.length})` },
-          { k: "all", label: "📅 全部預約" },
-          { k: "schedule", label: "⚙️ 時段設定" },
-          { k: "google", label: "🔗 Google 日曆" },
-        ].map((t) => (
+          {
+            k: "pending",
+            label: t.coachDash.tabPending.replace(
+              "{count}",
+              String(pendingList.length),
+            ),
+          },
+          { k: "all", label: t.coachDash.tabAll },
+          { k: "schedule", label: t.coachDash.tabSchedule },
+          { k: "google", label: t.coachDash.tabGoogle },
+        ].map((tb) => (
           <button
-            key={t.k}
-            data-tour={`coach-tab-${t.k}`}
-            onClick={() => setTab(t.k as TabType)}
+            key={tb.k}
+            data-tour={`coach-tab-${tb.k}`}
+            onClick={() => setTab(tb.k as TabType)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t.k
+              tab === tb.k
                 ? "bg-gold/20 text-gold border border-gold/30"
                 : "text-muted hover:text-inherit hover:bg-surface"
             }`}
           >
-            {t.label}
+            {tb.label}
           </button>
         ))}
       </div>
@@ -333,13 +368,15 @@ const CoachDashboard: React.FC = () => {
         <div data-tour="coach-pending-list" className="space-y-3">
           {pendingList.length === 0 ? (
             <div className="text-center py-12 text-muted">
-              沒有待審核的預約
+              {t.coachDash.noPending}
             </div>
           ) : (
             pendingList.map((b) => (
               <BookingCard
                 key={b.id}
                 b={b}
+                t={t}
+                dfLocale={dfLocale}
                 onOpen={() => {
                   setReviewing(b);
                   setReviewNote("");
@@ -355,7 +392,7 @@ const CoachDashboard: React.FC = () => {
         <div className="space-y-3">
           {allList.length === 0 ? (
             <div className="text-center py-12 text-muted">
-              尚無預約紀錄
+              {t.coachDash.noBookings}
             </div>
           ) : (
             allList.map((b) => (
@@ -367,24 +404,29 @@ const CoachDashboard: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="text-inherit font-medium">
-                        {b.user?.display_name || b.user?.name || "(匿名)"}
+                        {b.user?.display_name ||
+                          b.user?.name ||
+                          t.coachDash.anonymous}
                       </span>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLE[b.status]}`}
                       >
-                        {BOOKING_STATUS_LABEL[b.status]}
+                        {t.bookingStatus[b.status]}
                       </span>
                       {b.google_event_id && (
                         <span className="text-xs text-muted">
-                          🔗 已同步 Google
+                          {t.coachDash.syncedWithGoogle}
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-muted">
                       {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
-                        locale: zhTW,
+                        locale: dfLocale,
                       })}{" "}
-                      - {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
+                      -{" "}
+                      {format(new Date(b.end_at), "HH:mm", {
+                        locale: dfLocale,
+                      })}
                     </p>
                     <p className="text-xs text-muted mt-1">
                       {b.contact_email || "—"} · {b.contact_phone || "—"}
@@ -396,7 +438,8 @@ const CoachDashboard: React.FC = () => {
                     )}
                     {b.coach_note && (
                       <p className="text-xs text-gold/70 mt-1">
-                        批註：{b.coach_note}
+                        {t.coachDash.noteLabel}
+                        {b.coach_note}
                       </p>
                     )}
                   </div>
@@ -405,7 +448,7 @@ const CoachDashboard: React.FC = () => {
                       onClick={() => handleCoachCancel(b)}
                       className="text-red-400 hover:text-red-300 text-xs"
                     >
-                      取消
+                      {t.common.cancel}
                     </button>
                   )}
                 </div>
@@ -424,10 +467,12 @@ const CoachDashboard: React.FC = () => {
               data-tour="coach-profile-settings"
               className="bg-surface rounded-lg border border-gold/15 p-4"
             >
-              <h2 className="text-inherit font-medium mb-3">基本設定</h2>
+              <h2 className="text-inherit font-medium mb-3">
+                {t.coachDash.basicSettings}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
-                  label="顯示名稱"
+                  label={t.member.displayName}
                   value={profile.display_name}
                   onChange={(e) =>
                     setProfile({ ...profile, display_name: e.target.value })
@@ -436,7 +481,7 @@ const CoachDashboard: React.FC = () => {
                   theme="luxe"
                 />
                 <Input
-                  label="諮詢時長（分鐘）"
+                  label={t.coachDash.slotMinutes}
                   type="number"
                   value={profile.default_slot_minutes}
                   onChange={(e) =>
@@ -453,7 +498,7 @@ const CoachDashboard: React.FC = () => {
                   theme="luxe"
                 />
                 <Input
-                  label="前置時間（小時）"
+                  label={t.coachDash.noticeHours}
                   type="number"
                   value={profile.booking_notice_hours}
                   onChange={(e) =>
@@ -470,7 +515,7 @@ const CoachDashboard: React.FC = () => {
                   theme="luxe"
                 />
                 <Input
-                  label="可訂範圍（天）"
+                  label={t.coachDash.windowDays}
                   type="number"
                   value={profile.booking_window_days}
                   onChange={(e) =>
@@ -487,7 +532,7 @@ const CoachDashboard: React.FC = () => {
                   theme="luxe"
                 />
                 <Input
-                  label="取消時效（小時）"
+                  label={t.coachDash.cancellationHours}
                   type="number"
                   value={profile.cancellation_hours}
                   onChange={(e) =>
@@ -513,12 +558,14 @@ const CoachDashboard: React.FC = () => {
                     }}
                   />
                   <span className="text-sm text-inherit">
-                    {profile.is_active ? "✅ 開放預約" : "⏸ 暫停預約"}
+                    {profile.is_active
+                      ? t.coachDash.bookingOpen
+                      : t.coachDash.bookingPaused}
                   </span>
                 </div>
               </div>
               <p className="text-xs text-muted mt-2">
-                修改後失焦（離開欄位）自動儲存
+                {t.coachDash.autoSaveHint}
               </p>
             </section>
           )}
@@ -526,7 +573,9 @@ const CoachDashboard: React.FC = () => {
           {/* 每週規則 */}
           <section>
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gold/15">
-              <h2 className="text-inherit font-medium">每週可預約時段</h2>
+              <h2 className="text-inherit font-medium">
+                {t.coachDash.weeklySlots}
+              </h2>
               <PillButton
                 data-tour="coach-add-rule"
                 theme="luxe"
@@ -540,13 +589,13 @@ const CoachDashboard: React.FC = () => {
                   })
                 }
               >
-                + 新增規則
+                {t.coachDash.addRule}
               </PillButton>
             </div>
             <div className="space-y-2">
               {rules.length === 0 && (
                 <p className="text-sm text-muted text-center py-6">
-                  尚無規則，點右上「新增規則」開始
+                  {t.coachDash.noRules}
                 </p>
               )}
               {rules.map((r) => (
@@ -577,13 +626,13 @@ const CoachDashboard: React.FC = () => {
                         })
                       }
                     >
-                      編輯
+                      {t.common.edit}
                     </PillButton>
                     <button
                       onClick={() => deleteRule(r)}
                       className="text-red-400 hover:text-red-300 text-sm px-1"
                     >
-                      刪除
+                      {t.common.delete}
                     </button>
                   </div>
                 </div>
@@ -594,7 +643,7 @@ const CoachDashboard: React.FC = () => {
           {/* 休假 */}
           <section>
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gold/15">
-              <h2 className="text-inherit font-medium">休假區間</h2>
+              <h2 className="text-inherit font-medium">{t.coachDash.timeOff}</h2>
               <PillButton
                 data-tour="coach-add-timeoff"
                 theme="luxe"
@@ -625,39 +674,39 @@ const CoachDashboard: React.FC = () => {
                   });
                 }}
               >
-                + 新增休假
+                {t.coachDash.addTimeOff}
               </PillButton>
             </div>
             <div className="space-y-2">
               {timeOffs.length === 0 && (
                 <p className="text-sm text-muted text-center py-6">
-                  未來無休假安排
+                  {t.coachDash.noTimeOff}
                 </p>
               )}
-              {timeOffs.map((t) => (
+              {timeOffs.map((off) => (
                 <div
-                  key={t.id}
+                  key={off.id}
                   className="bg-surface rounded-lg border border-gold/10 p-3 flex items-center justify-between"
                 >
                   <div>
                     <p className="text-inherit text-sm">
-                      {format(new Date(t.start_at), "yyyy/MM/dd HH:mm", {
-                        locale: zhTW,
+                      {format(new Date(off.start_at), "yyyy/MM/dd HH:mm", {
+                        locale: dfLocale,
                       })}{" "}
                       —{" "}
-                      {format(new Date(t.end_at), "yyyy/MM/dd HH:mm", {
-                        locale: zhTW,
+                      {format(new Date(off.end_at), "yyyy/MM/dd HH:mm", {
+                        locale: dfLocale,
                       })}
                     </p>
-                    {t.reason && (
-                      <p className="text-xs text-muted mt-1">{t.reason}</p>
+                    {off.reason && (
+                      <p className="text-xs text-muted mt-1">{off.reason}</p>
                     )}
                   </div>
                   <button
-                    onClick={() => deleteTimeOff(t)}
+                    onClick={() => deleteTimeOff(off)}
                     className="text-red-400 hover:text-red-300 text-sm px-1"
                   >
-                    刪除
+                    {t.common.delete}
                   </button>
                 </div>
               ))}
@@ -672,25 +721,27 @@ const CoachDashboard: React.FC = () => {
           data-tour="coach-google-panel"
           className="bg-surface rounded-lg border border-gold/15 p-6 max-w-xl"
         >
-          <h2 className="text-inherit font-medium mb-3">Google 日曆同步</h2>
-          <p className="text-sm text-muted mb-4">
-            連結後，可預約時段會自動避開你 Google 日曆中已有的行程；批准預約時也會自動在日曆建立事件。
-          </p>
+          <h2 className="text-inherit font-medium mb-3">
+            {t.coachDash.googleSyncTitle}
+          </h2>
+          <p className="text-sm text-muted mb-4">{t.coachDash.googleSyncDesc}</p>
           <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg mb-4">
             <p className="text-sm text-inherit">
-              狀態：
+              {t.coachDash.statusLabel}
               {googleStatus?.connected ? (
                 googleStatus.valid ? (
                   <span className="text-emerald-400 ml-1">
-                    ✅ 已連結（Token 有效）
+                    {t.coachDash.googleConnected}
                   </span>
                 ) : (
                   <span className="text-amber-400 ml-1">
-                    ⚠️ 已連結但 Token 失效，請重新連結
+                    {t.coachDash.googleTokenExpired}
                   </span>
                 )
               ) : (
-                <span className="text-muted ml-1">⚪ 未連結</span>
+                <span className="text-muted ml-1">
+                  {t.coachDash.googleNotConnected}
+                </span>
               )}
             </p>
             {googleStatus?.calendarId && (
@@ -705,7 +756,9 @@ const CoachDashboard: React.FC = () => {
               className="inline-block"
             >
               <PillButton theme="luxe" variant="filled">
-                {googleStatus?.connected ? "重新連結" : "連結 Google 日曆"}
+                {googleStatus?.connected
+                  ? t.coachDash.reconnect
+                  : t.coachDash.connectGoogle}
               </PillButton>
             </a>
             {googleStatus?.connected && (
@@ -717,7 +770,7 @@ const CoachDashboard: React.FC = () => {
                   refreshGoogleStatus();
                 }}
               >
-                解除連結
+                {t.coachDash.disconnect}
               </PillButton>
             )}
           </div>
@@ -728,7 +781,7 @@ const CoachDashboard: React.FC = () => {
       <Modal
         isOpen={!!reviewing}
         onClose={() => setReviewing(null)}
-        title="審核預約"
+        title={t.coachDash.reviewTitle}
         theme="luxe"
         size="lg"
         tourId="coach-review"
@@ -737,21 +790,25 @@ const CoachDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="p-3 bg-gold/5 border border-gold/20 rounded-lg">
               <p className="text-inherit">
-                <span className="text-muted text-sm">用戶：</span>
+                <span className="text-muted text-sm">{t.coachDash.userLabel}</span>
                 {reviewing.user?.display_name || reviewing.user?.name}
               </p>
               <p className="text-inherit text-sm mt-1">
-                <span className="text-muted">時段：</span>
+                <span className="text-muted">{t.bookingPage.slotLabel}</span>
                 {format(
                   new Date(reviewing.start_at),
                   "yyyy/MM/dd (EEE) HH:mm",
-                  { locale: zhTW },
+                  { locale: dfLocale },
                 )}{" "}
                 -{" "}
-                {format(new Date(reviewing.end_at), "HH:mm", { locale: zhTW })}
+                {format(new Date(reviewing.end_at), "HH:mm", {
+                  locale: dfLocale,
+                })}
               </p>
               <p className="text-muted text-xs mt-1">
-                聯絡：{reviewing.contact_email || "—"} · {reviewing.contact_phone || "—"}
+                {t.coachDash.contactLabel}
+                {reviewing.contact_email || "—"} ·{" "}
+                {reviewing.contact_phone || "—"}
               </p>
               {reviewing.course && (
                 <p className="text-muted text-xs mt-1">
@@ -766,10 +823,10 @@ const CoachDashboard: React.FC = () => {
             </div>
             <Textarea
               data-tour="coach-review-note"
-              label="批註（選填，拒絕時建議說明理由）"
+              label={t.coachDash.reviewNoteLabel}
               value={reviewNote}
               onChange={(e) => setReviewNote(e.target.value)}
-              placeholder="例：時段調整為下週三 14:00 / 很抱歉該時段臨時有事"
+              placeholder={t.coachDash.reviewNotePlaceholder}
               theme="luxe"
               rows={3}
             />
@@ -782,21 +839,21 @@ const CoachDashboard: React.FC = () => {
                 variant="outline"
                 onClick={() => setReviewing(null)}
               >
-                返回
+                {t.common.back}
               </PillButton>
               <PillButton
                 theme="luxe"
                 variant="outline"
                 onClick={handleReject}
               >
-                拒絕
+                {t.coachDash.reject}
               </PillButton>
               <PillButton
                 theme="luxe"
                 variant="filled"
                 onClick={handleApprove}
               >
-                批准 + 同步 Google
+                {t.coachDash.approveAndSync}
               </PillButton>
             </div>
           </div>
@@ -807,14 +864,20 @@ const CoachDashboard: React.FC = () => {
       <Modal
         isOpen={!!ruleModal}
         onClose={() => setRuleModal(null)}
-        title={ruleModal?.editing ? "編輯規則" : "新增規則"}
+        title={
+          ruleModal?.editing
+            ? t.coachDash.editRuleTitle
+            : t.coachDash.newRuleTitle
+        }
         theme="luxe"
         size="lg"
       >
         {ruleModal && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-muted mb-1">週幾</label>
+              <label className="block text-sm text-muted mb-1">
+                {t.coachDash.weekdayLabel}
+              </label>
               <select
                 value={ruleModal.weekday}
                 onChange={(e) =>
@@ -834,7 +897,7 @@ const CoachDashboard: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="開始"
+                label={t.coachDash.startLabel}
                 type="time"
                 value={ruleModal.startTime}
                 onChange={(e) =>
@@ -843,7 +906,7 @@ const CoachDashboard: React.FC = () => {
                 theme="luxe"
               />
               <Input
-                label="結束"
+                label={t.coachDash.endLabel}
                 type="time"
                 value={ruleModal.endTime}
                 onChange={(e) =>
@@ -858,10 +921,10 @@ const CoachDashboard: React.FC = () => {
                 variant="outline"
                 onClick={() => setRuleModal(null)}
               >
-                取消
+                {t.common.cancel}
               </PillButton>
               <PillButton theme="luxe" variant="filled" onClick={saveRule}>
-                儲存
+                {t.common.save}
               </PillButton>
             </div>
           </div>
@@ -872,7 +935,7 @@ const CoachDashboard: React.FC = () => {
       <Modal
         isOpen={!!timeOffModal}
         onClose={() => setTimeOffModal(null)}
-        title="新增休假"
+        title={t.coachDash.addTimeOffTitle}
         theme="luxe"
         size="lg"
       >
@@ -881,7 +944,7 @@ const CoachDashboard: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-muted mb-1">
-                  開始時間
+                  {t.coachDash.startTimeLabel}
                 </label>
                 <input
                   type="datetime-local"
@@ -897,7 +960,7 @@ const CoachDashboard: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm text-muted mb-1">
-                  結束時間
+                  {t.coachDash.endTimeLabel}
                 </label>
                 <input
                   type="datetime-local"
@@ -910,12 +973,12 @@ const CoachDashboard: React.FC = () => {
               </div>
             </div>
             <Input
-              label="備註（選填）"
+              label={t.coachDash.reasonLabel}
               value={timeOffModal.reason}
               onChange={(e) =>
                 setTimeOffModal({ ...timeOffModal, reason: e.target.value })
               }
-              placeholder="例如：連假、出國、受訓"
+              placeholder={t.coachDash.reasonPlaceholder}
               theme="luxe"
             />
             <div className="flex justify-end gap-3 pt-2">
@@ -924,10 +987,10 @@ const CoachDashboard: React.FC = () => {
                 variant="outline"
                 onClick={() => setTimeOffModal(null)}
               >
-                取消
+                {t.common.cancel}
               </PillButton>
               <PillButton theme="luxe" variant="filled" onClick={saveTimeOff}>
-                新增
+                {t.common.create}
               </PillButton>
             </div>
           </div>
@@ -940,8 +1003,10 @@ const CoachDashboard: React.FC = () => {
 /** 待審核卡片 */
 const BookingCard: React.FC<{
   b: CoachBookingRow;
+  t: AllTranslations;
+  dfLocale: Locale;
   onOpen: () => void;
-}> = ({ b, onOpen }) => (
+}> = ({ b, t, dfLocale, onOpen }) => (
   <div
     data-tour="coach-pending-card"
     onClick={onOpen}
@@ -951,18 +1016,20 @@ const BookingCard: React.FC<{
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-inherit font-medium">
-            {b.user?.display_name || b.user?.name || "(匿名)"}
+            {b.user?.display_name || b.user?.name || t.coachDash.anonymous}
           </span>
-          <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLE[b.status]}`}>
-            {BOOKING_STATUS_LABEL[b.status]}
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLE[b.status]}`}
+          >
+            {t.bookingStatus[b.status]}
           </span>
         </div>
         <p className="text-sm text-muted">
           {format(new Date(b.start_at), "yyyy/MM/dd (EEE) HH:mm", {
-            locale: zhTW,
+            locale: dfLocale,
           })}
           {" - "}
-          {format(new Date(b.end_at), "HH:mm", { locale: zhTW })}
+          {format(new Date(b.end_at), "HH:mm", { locale: dfLocale })}
         </p>
         {b.user_note && (
           <p className="text-sm text-inherit/80 mt-2 line-clamp-2">
@@ -970,7 +1037,7 @@ const BookingCard: React.FC<{
           </p>
         )}
       </div>
-      <span className="text-gold text-xs">點擊審核 →</span>
+      <span className="text-gold text-xs">{t.coachDash.tapToReview}</span>
     </div>
   </div>
 );

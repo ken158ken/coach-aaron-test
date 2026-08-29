@@ -6,6 +6,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface BadgeItem {
   /** 顯示在圓形 badge 上的 emoji 或文字 */
@@ -39,6 +40,7 @@ const ImagesBadge: React.FC<ImagesBadgeProps> = ({
   hoverSpread = 18,
   overlap = -14,
 }) => {
+  const { t } = useLanguage();
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   /**
@@ -109,7 +111,7 @@ const ImagesBadge: React.FC<ImagesBadgeProps> = ({
                         className="mt-2.5 flex items-center justify-center gap-1 w-full py-1.5 rounded-lg bg-white/8 border border-white/12 text-white/70 text-[11px] hover:bg-white/14 hover:text-white/95 transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        前往
+                        {t.uiCommon.goTo}
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>

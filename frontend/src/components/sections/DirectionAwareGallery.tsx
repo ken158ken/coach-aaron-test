@@ -9,6 +9,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { slidesService, type GallerySlide } from '@/services/site/slides.service';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useLanguage } from '@/context/LanguageContext';
 import { getInitialData } from '@/ssr/initialData';
 import { dataKeys } from '@/ssr/routeData';
 
@@ -57,6 +58,8 @@ interface GalleryItemProps {
 
 const GalleryItem: React.FC<GalleryItemProps> = ({ slide, index }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+  const photoAlt = t.gallery.photoAlt.replace('{n}', String(index + 1));
   const [hovered, setHovered] = useState(false);
   const [dir, setDir] = useState<Dir>('top');
 
@@ -75,7 +78,7 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ slide, index }) => {
     >
       <img
         src={slide.image_url}
-        alt={slide.caption || `相片 ${index + 1}`}
+        alt={slide.caption || photoAlt}
         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         loading="lazy"
       />
@@ -95,7 +98,7 @@ const GalleryItem: React.FC<GalleryItemProps> = ({ slide, index }) => {
                 {slide.caption}
               </p>
             ) : (
-              <p className="text-white/50 text-xs">相片 {index + 1}</p>
+              <p className="text-white/50 text-xs">{photoAlt}</p>
             )}
             <div className="mt-3 w-8 h-px bg-gold/70" />
           </motion.div>
@@ -117,11 +120,21 @@ const DirectionAwareGallery: React.FC = () => {
   const [loading, setLoading] = useState(!initialGallery);
 
   const { get } = useSiteContent();
+  const { t, isZhTW } = useLanguage();
+  const copy = t.gallery.moments;
+
+  /**
+   * site_content 只存中文（`GET /api/content` 未回傳 content_value_en）：
+   * 中文模式 DB 值優先，英文模式一律用字典。
+   */
+  const pick = (key: string, dict: string): string =>
+    isZhTW ? get(key, dict) : dict;
+
   const mHeader = {
-    tagline: get('moments_tagline', 'Moments'),
+    tagline: pick('moments_tagline', copy.tagline),
     // 標題備選：'現場紀錄' ／ '培訓現場'（後者已用於 GallerySlider，勿重複）
-    title: get('moments_title', 'Moments'),
-    subtitle: get('moments_subtitle', '滑過每張照片，看看數字之外的東西'),
+    title: pick('moments_title', copy.title),
+    subtitle: pick('moments_subtitle', copy.subtitle),
   };
 
   useEffect(() => {

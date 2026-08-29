@@ -52,6 +52,17 @@ export interface TourStep {
   title: string;
   /** 說明內容，可含少量 HTML（`<b>`、`<br>`、`<code>`） */
   desc: string;
+  /**
+   * 英文標題。
+   *
+   * 導覽文案刻意**就地雙語**、不進 `locales/adminExtra.ts`：
+   * 一步的中英文、選擇器、方位是同一件事，拆成字典 key 之後
+   * 「改了步驟卻忘了改翻譯」幾乎必然發生，而且審稿時要兩個檔案對著看。
+   * 引擎依語言挑 `title` / `titleEn`，缺英文就回退中文（永遠不會開天窗）。
+   */
+  titleEn?: string;
+  /** 英文說明；HTML 標籤用法同 `desc` */
+  descEn?: string;
   /** popover 方位 */
   side?: TourSide;
   /** popover 對齊 */
@@ -68,10 +79,29 @@ export interface TourDefinition {
   id: string;
   /** 導覽名稱（用於 aria-label 與除錯） */
   title: string;
+  /** 導覽名稱的英文版 */
+  titleEn?: string;
   /** 步驟列表 */
   steps: TourStep[];
   /** modal 群組定義 */
   groups?: Record<string, TourModalGroup>;
+}
+
+/**
+ * 導覽外框本身的介面文字（上一步／下一步／完成…）。
+ *
+ * 引擎是純模組、拿不到 React context，所以這些字由 `useTour` 從字典
+ * （`adminExtra.tourUi`）讀好後傳進來，引擎本身不認識任何語言。
+ */
+export interface TourUiText {
+  /** 下一步按鈕 */
+  next: string;
+  /** 上一步按鈕 */
+  prev: string;
+  /** 最後一步的完成按鈕 */
+  done: string;
+  /** 關閉鈕的無障礙標籤 */
+  closeAria: string;
 }
 
 /** 已依裝置解析過的步驟（引擎內部用） */

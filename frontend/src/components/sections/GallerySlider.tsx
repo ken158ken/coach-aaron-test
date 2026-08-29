@@ -21,6 +21,7 @@ import {
 } from '@/services/site/slides.service';
 import Sparkles from '@/components/ui/Sparkles';
 import { useSiteContent } from '@/hooks/useSiteContent';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface GallerySliderProps {
   preview?: boolean;
@@ -58,6 +59,8 @@ const SlideCard: React.FC<SlideCardProps> = ({
   onClick,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+  const copy = t.gallery;
 
   // 3D tilt — 只在中央卡 (pos===0) 啟用
   const mouseX = useMotionValue(0);
@@ -171,7 +174,7 @@ const SlideCard: React.FC<SlideCardProps> = ({
           >
             <img
               src={slide.image_url}
-              alt={slide.caption || `相片 ${index + 1}`}
+              alt={slide.caption || copy.photoAlt.replace('{n}', String(index + 1))}
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -228,15 +231,22 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const { get } = useSiteContent();
+  const { t, isZhTW } = useLanguage();
+  const copy = t.gallery;
+
+  /**
+   * site_content 只存中文（`GET /api/content` 未回傳 content_value_en）：
+   * 中文模式 DB 值優先，英文模式一律用字典。
+   */
+  const pick = (key: string, dict: string): string =>
+    isZhTW ? get(key, dict) : dict;
+
   const gHeader = {
-    tagline: get('gallery_tagline', 'Gallery'),
+    tagline: pick('gallery_tagline', copy.tagline),
     // 與 DirectionAwareGallery 分工：本區＝培訓現場（課程／講座照），
     // Moments＝幕後／團隊／日常，避免兩區標題語意重疊
-    title: get('gallery_title', '培訓現場'),
-    subtitle: get(
-      'gallery_subtitle',
-      '課程、講座、陪跑會議——實際發生過的現場'
-    ),
+    title: pick('gallery_title', copy.title),
+    subtitle: pick('gallery_subtitle', copy.subtitle),
   };
 
   // 觸控滑動追蹤
@@ -287,7 +297,9 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
   if (!preview && !config.is_published) return null;
   if (loading)
     return (
-      <div className="py-20 text-center text-white/30 text-sm">載入中...</div>
+      <div className="py-20 text-center text-white/30 text-sm">
+        {t.common.loading}
+      </div>
     );
   if (!slides.length) return null;
 
@@ -348,7 +360,7 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
           <>
             <button
               onClick={prev}
-              aria-label="上一張"
+              aria-label={copy.prev}
               className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/60 border border-gold/25 flex items-center justify-center text-white/60 hover:text-gold hover:border-gold/50 hover:bg-black/80 transition-all duration-200"
             >
               <svg
@@ -367,7 +379,7 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
             </button>
             <button
               onClick={next}
-              aria-label="下一張"
+              aria-label={copy.next}
               className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-black/60 border border-gold/25 flex items-center justify-center text-white/60 hover:text-gold hover:border-gold/50 hover:bg-black/80 transition-all duration-200"
             >
               <svg
@@ -399,7 +411,7 @@ const GallerySlider: React.FC<GallerySliderProps> = ({
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
-                aria-label={`第 ${i + 1} 張`}
+                aria-label={copy.slideLabel.replace('{n}', String(i + 1))}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   i === current
                     ? 'w-6 bg-gold'

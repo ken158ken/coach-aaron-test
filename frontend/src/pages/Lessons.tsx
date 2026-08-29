@@ -20,7 +20,7 @@ import { dataKeys } from "@/ssr/routeData";
 import type { LessonSummary } from "@/types";
 
 const Lessons: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { loc } = useLocalize();
   // ── SSR 預抓資料 ──
   const ssrLessons = getInitialData<LessonSummary[]>(dataKeys.lessonsList());
@@ -55,9 +55,21 @@ const Lessons: React.FC = () => {
   }, [t.common.error]);
 
   // 從 lessons 提取分類
-  const categories = [
-    ...new Set(lessons.map((l) => l.category).filter((c): c is string => !!c)),
-  ];
+  // value = 資料庫中文原值（篩選比對用）；label = 依語言顯示（英文讀 category_en）
+  const categoryMap = new Map<string, string>();
+  lessons.forEach((l) => {
+    if (!l.category || categoryMap.has(l.category)) return;
+    categoryMap.set(
+      l.category,
+      loc(l as unknown as Record<string, unknown>, "category") || l.category,
+    );
+  });
+  const categories = [...categoryMap.entries()].map(([value, label]) => ({
+    value,
+    label,
+  }));
+
+  // 篩選一律比對中文原值，不受顯示標籤語言影響
   const filtered = selectedCategory
     ? lessons.filter((l) => l.category === selectedCategory)
     : lessons;
@@ -65,16 +77,11 @@ const Lessons: React.FC = () => {
   // SEO — 必須在 early return 之前建立
   const seoHead = (
     <SEOHead
-      title={language === "en" ? "Lessons" : "教學影片"}
-      description={
-        language === "en"
-          ? "In-depth coaching lessons with full transcripts"
-          : "完整的教練教學影片，含逐字稿，深入學習各種主題"
-      }
+      title={t.lessonsPage.title}
+      description={t.lessonsPage.seoDescription}
+      keywords={t.lessonsPage.seoKeywords}
       url="/lessons"
-      breadcrumbs={[
-        { name: language === "en" ? "Lessons" : "教學影片", url: "/lessons" },
-      ]}
+      breadcrumbs={[{ name: t.lessonsPage.title, url: "/lessons" }]}
     />
   );
 
@@ -94,12 +101,8 @@ const Lessons: React.FC = () => {
         <div className="luxe-container max-w-7xl mx-auto">
           <PageHeader
             label="Lessons"
-            title={language === "en" ? "Lessons" : "教學影片"}
-            subtitle={
-              language === "en"
-                ? "In-depth coaching lessons with full transcripts"
-                : "深入解析訓練、營養與心理學，每集都附完整逐字稿"
-            }
+            title={t.lessonsPage.title}
+            subtitle={t.lessonsPage.subtitle}
           />
 
           {/* Category 篩選 */}
@@ -113,11 +116,11 @@ const Lessons: React.FC = () => {
               </button>
               {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`page-filter-pill shrink-0 ${selectedCategory === cat ? "active" : ""}`}
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
+                  className={`page-filter-pill shrink-0 ${selectedCategory === cat.value ? "active" : ""}`}
                 >
-                  {cat}
+                  {cat.label}
                 </button>
               ))}
             </div>
@@ -166,11 +169,7 @@ const Lessons: React.FC = () => {
           ) : (
             <div className="text-center py-16">
               <span className="text-5xl mb-4 block">🎬</span>
-              <p className="text-white/50">
-                {language === "en"
-                  ? "No lessons available yet"
-                  : "目前還沒有教學影片"}
-              </p>
+              <p className="text-white/50">{t.lessonsPage.noLessons}</p>
             </div>
           )}
         </div>

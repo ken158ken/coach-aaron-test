@@ -6,25 +6,35 @@
  *              資料來源：DB `marquee_items` 表 — 由 admin CRUD 管理
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { marqueeService, type MarqueeItem } from '@/services/site/marquee.service';
+import { useLanguage } from '@/context/LanguageContext';
 import { getInitialData } from '@/ssr/initialData';
 import { dataKeys } from '@/ssr/routeData';
+
+/** 單筆預設項目：只留穩定的 id / icon / 排序，label 與 sub 由字典提供 */
+interface MarqueeSeed {
+  id: number;
+  icon: string;
+  /** 對應 t.certifications.certs / .stats 底下的 key */
+  key: string;
+}
 
 /**
  * 預設認證標章（DB 載入失敗時的 fallback）— cert 軌只放證照，不混業績數字。
  *
  * 「130+ 教練」「月入 8 萬」「10 年經驗」等成果數字改列到下方 stat 軌，
  * 避免混淆「認證」與「成果」兩種不同性質的資訊。
+ * 文案（label / sub）在 i18n 字典 `t.certifications.certs`。
  */
-const DEFAULT_CERTS: MarqueeItem[] = [
-  { id: -1, type: 'cert', icon: '🏅', label: 'NSCA-CPT', sub: '美國肌力與體能協會 私人教練認證', sort_order: 1, is_active: true, created_at: '' },
-  { id: -2, type: 'cert', icon: '🎓', label: 'TQUK Level 3', sub: '英國認證心理諮詢', sort_order: 2, is_active: true, created_at: '' },
-  { id: -3, type: 'cert', icon: '🧠', label: 'NLP 執行師', sub: '神經語言程式學', sort_order: 3, is_active: true, created_at: '' },
-  { id: -4, type: 'cert', icon: '🧭', label: 'Andaction 生活教練', sub: '目標設定與行動陪伴', sort_order: 4, is_active: true, created_at: '' },
-  { id: -5, type: 'cert', icon: '📜', label: '健身教練 C 級', sub: '健身指導員培訓認證', sort_order: 5, is_active: true, created_at: '' },
-  { id: -6, type: 'cert', icon: '💪', label: 'ACE-CPT', sub: '美國運動委員會認證', sort_order: 6, is_active: true, created_at: '' },
-  { id: -7, type: 'cert', icon: '🏆', label: 'ISSA-CPT', sub: '國際運動科學協會', sort_order: 7, is_active: true, created_at: '' },
+const CERT_SEEDS: MarqueeSeed[] = [
+  { id: -1, icon: '🏅', key: 'nsca' },
+  { id: -2, icon: '🎓', key: 'tquk' },
+  { id: -3, icon: '🧠', key: 'nlp' },
+  { id: -4, icon: '🧭', key: 'andaction' },
+  { id: -5, icon: '📜', key: 'fitnessC' },
+  { id: -6, icon: '💪', key: 'ace' },
+  { id: -7, icon: '🏆', key: 'issa' },
 ];
 
 /**
@@ -32,17 +42,46 @@ const DEFAULT_CERTS: MarqueeItem[] = [
  *
  * 已移除模板帶來的假數據：95% 學員續課率、3 倍平均業績成長、500+ 服務學員數、
  * 4.9★ 學員平均評分（且「學員」一詞在 B2B 語境下語意錯誤）。
+ * 文案（label / sub）在 i18n 字典 `t.certifications.stats`。
  */
-const DEFAULT_STATS: MarqueeItem[] = [
-  { id: -11, type: 'stat', icon: '', label: '50 人', sub: '教練團隊管理規模', sort_order: 1, is_active: true, created_at: '' },
-  { id: -12, type: 'stat', icon: '', label: '1000+ 小時', sub: '教學與授課時數', sort_order: 2, is_active: true, created_at: '' },
-  { id: -13, type: 'stat', icon: '', label: '10 年', sub: '健身產業經歷', sort_order: 3, is_active: true, created_at: '' },
-  { id: -14, type: 'stat', icon: '', label: '58 集', sub: '《陪你健身》Podcast', sort_order: 4, is_active: true, created_at: '' },
-  { id: -15, type: 'stat', icon: '', label: '130+', sub: '協助提升收入的教練', sort_order: 5, is_active: true, created_at: '' },
-  { id: -16, type: 'stat', icon: '', label: '8 萬', sub: '個人私教月收入', sort_order: 6, is_active: true, created_at: '' },
+const STAT_SEEDS: MarqueeSeed[] = [
+  { id: -11, icon: '', key: 'team' },
+  { id: -12, icon: '', key: 'hours' },
+  { id: -13, icon: '', key: 'years' },
+  { id: -14, icon: '', key: 'episodes' },
+  { id: -15, icon: '', key: 'coaches' },
+  { id: -16, icon: '', key: 'income' },
 ];
 
+/** 把 seed + 字典文案組成 MarqueeItem（與 DB 回傳同型別） */
+const buildDefaults = (
+  seeds: MarqueeSeed[],
+  type: MarqueeItem['type'],
+  labels: Record<string, { label: string; sub: string }>
+): MarqueeItem[] =>
+  seeds.map((seed, i) => ({
+    id: seed.id,
+    type,
+    icon: seed.icon,
+    label: labels[seed.key]?.label ?? '',
+    sub: labels[seed.key]?.sub ?? '',
+    sort_order: i + 1,
+    is_active: true,
+    created_at: '',
+  }));
+
 const CertificationMarquee: React.FC = () => {
+  const { t } = useLanguage();
+  const copy = t.certifications;
+
+  const defaultCerts = useMemo(
+    () => buildDefaults(CERT_SEEDS, 'cert', copy.certs),
+    [copy.certs]
+  );
+  const defaultStats = useMemo(
+    () => buildDefaults(STAT_SEEDS, 'stat', copy.stats),
+    [copy.stats]
+  );
   // ── SSR 預抓資料：有資料時 SSR 直接輸出 DB 內容（否則用寫死預設值，
   //    兩種情況 server / client 首次 render 都一致，不會 hydration mismatch）。
   //    只作「初值」：mount 後仍照常 fetch 覆蓋（SSR HTML 可能是 CDN 舊快取）──
@@ -54,12 +93,9 @@ const CertificationMarquee: React.FC = () => {
     ? ssrItems.filter((i) => i.type === 'stat')
     : [];
 
-  const [certs, setCerts] = useState<MarqueeItem[]>(
-    ssrCerts.length > 0 ? ssrCerts : DEFAULT_CERTS
-  );
-  const [stats, setStats] = useState<MarqueeItem[]>(
-    ssrStats.length > 0 ? ssrStats : DEFAULT_STATS
-  );
+  // 空陣列 = 尚無 DB 資料 → 渲染時改用字典預設值（見下方 displayCerts）
+  const [certs, setCerts] = useState<MarqueeItem[]>(ssrCerts);
+  const [stats, setStats] = useState<MarqueeItem[]>(ssrStats);
 
   useEffect(() => {
     marqueeService
@@ -75,21 +111,26 @@ const CertificationMarquee: React.FC = () => {
       });
   }, []);
 
+  // ⚠️ marquee_items 表沒有 label_en / sub_en 欄位，DB 內容目前只有中文；
+  //    有 DB 資料時仍照顯示（不隱藏後台新增的項目），無資料才用已翻譯的預設值。
+  const displayCerts = certs.length > 0 ? certs : defaultCerts;
+  const displayStats = stats.length > 0 ? stats : defaultStats;
+
   // 複製兩份讓動畫無縫循環
-  const certsDuped = [...certs, ...certs];
-  const statsDuped = [...stats, ...stats];
+  const certsDuped = [...displayCerts, ...displayCerts];
+  const statsDuped = [...displayStats, ...displayStats];
 
   return (
     <section className="py-12 sm:py-16 overflow-hidden">
       {/* Section label */}
       <div className="text-center mb-8 px-4" data-aos="fade-up">
         <span className="text-gold text-xs uppercase tracking-widest">
-          Credentials
+          {copy.tagline}
         </span>
         {/* 定稿標題為「Credentials 專業認證」；上方 tagline 已顯示 Credentials，
             此處只放中文以免重複。備選：'專業背書' ／ '證照與資歷' */}
         <h2 className="mt-2 text-xl sm:text-2xl font-light text-white/80">
-          專業認證
+          {copy.title}
         </h2>
       </div>
 

@@ -14,6 +14,7 @@ import {
   Toggle,
 } from "@/components/ui";
 import { get, put } from "@/services/api";
+import { useLanguage } from "@/context/LanguageContext";
 import type { User, PaginatedUsersResponse } from "@/types";
 
 /** 課程售價可見性介面 */
@@ -42,14 +43,16 @@ const logger = {
 /** 檢視模式 */
 type ViewMode = "list" | "card-sm" | "card-md" | "card-lg";
 
-const viewOptions: { mode: ViewMode; icon: string; label: string }[] = [
-  { mode: "list", icon: "☰", label: "清單" },
-  { mode: "card-sm", icon: "▪▪▪", label: "小圖" },
-  { mode: "card-md", icon: "◻◻", label: "中圖" },
-  { mode: "card-lg", icon: "⬜", label: "大圖" },
+/** 檢視模式選項（label 需要字典，所以只在這裡留 icon 對應） */
+const viewModeIcons: { mode: ViewMode; icon: string }[] = [
+  { mode: "list", icon: "☰" },
+  { mode: "card-sm", icon: "▪▪▪" },
+  { mode: "card-md", icon: "◻◻" },
+  { mode: "card-lg", icon: "⬜" },
 ];
 
 const AdminUsers: React.FC = () => {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -68,6 +71,21 @@ const AdminUsers: React.FC = () => {
   // 篩選狀態
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activeFilter, setActiveFilter] = useState<string>("all");
+
+  /** 檢視模式選項（label 走字典） */
+  const viewOptions = useMemo(
+    () =>
+      viewModeIcons.map((v) => ({
+        ...v,
+        label: {
+          list: t.adminUsersPage.view.list,
+          "card-sm": t.adminUsersPage.view.small,
+          "card-md": t.adminUsersPage.view.medium,
+          "card-lg": t.adminUsersPage.view.large,
+        }[v.mode],
+      })),
+    [t],
+  );
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -105,19 +123,19 @@ const AdminUsers: React.FC = () => {
         } else {
           logger.error("Failed to fetch users", res);
           setUsers([]);
-          setError("載入用戶失敗：數據格式錯誤");
+          setError(t.adminUsersPage.error.loadFormat);
         }
       } catch (err) {
         logger.error("Failed to fetch users", err);
         setUsers([]);
-        setError("載入用戶失敗");
+        setError(t.adminUsersPage.error.loadFailed);
       } finally {
         setLoading(false);
       }
     };
 
     fetchUsers();
-  }, [currentPage]);
+  }, [currentPage, t]);
 
   /**
    * 取得指定使用者的課程售價可見性
@@ -160,7 +178,7 @@ const AdminUsers: React.FC = () => {
       );
     } catch (err) {
       logger.error("Failed to toggle price visibility", err);
-      setError("切換售價可見性失敗");
+      setError(t.adminUsersPage.error.togglePrice);
     }
   };
 
@@ -175,7 +193,7 @@ const AdminUsers: React.FC = () => {
       );
     } catch (err) {
       logger.error("Failed to batch toggle price visibility", err);
-      setError("批次切換售價可見性失敗");
+      setError(t.adminUsersPage.error.batchTogglePrice);
     }
   };
 
@@ -225,7 +243,9 @@ const AdminUsers: React.FC = () => {
           : "bg-luxe-muted/15 text-luxe-muted"
       }`}
     >
-      {user.role === "admin" ? "管理員" : "用戶"}
+      {user.role === "admin"
+        ? t.adminUsersPage.role.admin
+        : t.adminUsersPage.role.user}
     </span>
   );
 
@@ -241,7 +261,9 @@ const AdminUsers: React.FC = () => {
       <span
         className={`w-1.5 h-1.5 rounded-full ${user.is_active ? "bg-emerald-400" : "bg-red-400"}`}
       />
-      {user.is_active ? "活躍" : "停用"}
+      {user.is_active
+        ? t.adminUsersPage.status.active
+        : t.adminUsersPage.status.inactive}
     </span>
   );
 
@@ -273,7 +295,7 @@ const AdminUsers: React.FC = () => {
   const columns = [
     {
       key: "name" as const,
-      header: "姓名",
+      header: t.adminUsersPage.table.colName,
       isPrimary: true,
       sortValue: (user: User) => (user.name || "").toLowerCase(),
       render: (user: User) => (
@@ -285,29 +307,29 @@ const AdminUsers: React.FC = () => {
     },
     {
       key: "email" as const,
-      header: "電子郵件",
+      header: t.adminUsersPage.table.colEmail,
       sortValue: (user: User) => user.email.toLowerCase(),
     },
     {
       key: "role" as const,
-      header: "角色",
+      header: t.adminUsersPage.table.colRole,
       sortValue: (user: User) => (user.role === "admin" ? 0 : 1),
       render: (user: User) => getRoleBadge(user),
     },
     {
       key: "is_active" as const,
-      header: "狀態",
+      header: t.adminCommon.colStatus,
       sortValue: (user: User) => (user.is_active ? 1 : 0),
       render: (user: User) => getStatusBadge(user),
     },
     {
       key: "createdAt" as const,
-      header: "建立日期",
+      header: t.adminUsersPage.table.colCreatedAt,
       hideOnMobile: true,
     },
     {
       key: "actions" as const,
-      header: "操作",
+      header: t.adminCommon.colActions,
       sortable: false,
       render: (user: User) => (
         <div className="flex gap-2">
@@ -319,7 +341,7 @@ const AdminUsers: React.FC = () => {
             }}
             className="text-blue-400 hover:underline text-sm"
           >
-            查看
+            {t.adminUsersPage.table.actionView}
           </button>
           <button
             data-tour="users-edit-btn"
@@ -329,7 +351,7 @@ const AdminUsers: React.FC = () => {
             }}
             className="text-luxe-gold hover:underline text-sm"
           >
-            編輯
+            {t.common.edit}
           </button>
         </div>
       ),
@@ -342,9 +364,11 @@ const AdminUsers: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-light text-luxe-text">
-            用戶管理
+            {t.admin.users}
           </h1>
-          <p className="text-sm sm:text-base text-luxe-muted">管理系統用戶</p>
+          <p className="text-sm sm:text-base text-luxe-muted">
+            {t.adminUsersPage.pageSubtitle}
+          </p>
         </div>
         <PillButton
           theme="luxe"
@@ -352,7 +376,7 @@ const AdminUsers: React.FC = () => {
           className="w-full sm:w-auto"
           data-tour="users-add"
         >
-          新增用戶
+          {t.adminUsersPage.addUser}
         </PillButton>
       </div>
 
@@ -360,7 +384,7 @@ const AdminUsers: React.FC = () => {
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <Input
           data-tour="users-search"
-          placeholder="搜尋姓名或信箱..."
+          placeholder={t.adminUsersPage.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           theme="luxe"
@@ -393,9 +417,9 @@ const AdminUsers: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部角色</option>
-          <option value="admin">管理員</option>
-          <option value="user">一般用戶</option>
+          <option value="all">{t.adminUsersPage.filter.allRoles}</option>
+          <option value="admin">{t.adminUsersPage.role.admin}</option>
+          <option value="user">{t.adminUsersPage.filter.standardUser}</option>
         </select>
         <select
           data-tour="users-status-filter"
@@ -409,9 +433,9 @@ const AdminUsers: React.FC = () => {
             backgroundSize: "1.25em 1.25em",
           }}
         >
-          <option value="all">全部狀態</option>
-          <option value="active">活躍</option>
-          <option value="inactive">停用</option>
+          <option value="all">{t.adminUsersPage.filter.allStatuses}</option>
+          <option value="active">{t.adminUsersPage.status.active}</option>
+          <option value="inactive">{t.adminUsersPage.status.inactive}</option>
         </select>
         {/* 檢視模式切換 */}
         <div
@@ -437,7 +461,9 @@ const AdminUsers: React.FC = () => {
 
       {/* 篩選結果計數 */}
       <div className="mb-3 text-xs text-luxe-muted">
-        顯示 {filteredUsers.length} / {users.length} 位用戶
+        {t.adminUsersPage.resultCount
+          .replace("{n}", String(filteredUsers.length))
+          .replace("{total}", String(users.length))}
       </div>
 
       {/* Error Message */}
@@ -457,7 +483,7 @@ const AdminUsers: React.FC = () => {
             keyExtractor={(user) => user.user_id}
             loading={loading}
             theme="luxe"
-            emptyMessage="沒有找到用戶"
+            emptyMessage={t.adminUsersPage.empty}
             sortable
             onRowClick={(user) => setDetailUser(user)}
           />
@@ -473,10 +499,12 @@ const AdminUsers: React.FC = () => {
       ) : (
         <>
           {loading ? (
-            <div className="text-center py-12 text-luxe-muted">載入中...</div>
+            <div className="text-center py-12 text-luxe-muted">
+              {t.common.loading}
+            </div>
           ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12 text-luxe-muted">
-              沒有找到用戶
+              {t.adminUsersPage.empty}
             </div>
           ) : (
             <div
@@ -541,7 +569,7 @@ const AdminUsers: React.FC = () => {
                           }}
                           className="text-luxe-gold hover:underline text-xs flex-1"
                         >
-                          編輯
+                          {t.common.edit}
                         </button>
                       </div>
                     </div>
@@ -565,12 +593,16 @@ const AdminUsers: React.FC = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs text-luxe-muted border-t border-luxe-gold/10 pt-3">
                         <div>
-                          <span className="text-luxe-muted/60">建立日期</span>
+                          <span className="text-luxe-muted/60">
+                            {t.adminUsersPage.detail.createdAt}
+                          </span>
                           <p className="text-luxe-text">{user.createdAt}</p>
                         </div>
                         {user.phone_number && (
                           <div className="col-span-2">
-                            <span className="text-luxe-muted/60">電話</span>
+                            <span className="text-luxe-muted/60">
+                              {t.adminUsersPage.detail.phoneShort}
+                            </span>
                             <p className="text-luxe-text">
                               {user.phone_number}
                             </p>
@@ -586,7 +618,7 @@ const AdminUsers: React.FC = () => {
                           }}
                           className="text-luxe-gold hover:underline text-xs flex-1"
                         >
-                          編輯
+                          {t.common.edit}
                         </button>
                       </div>
                     </div>
@@ -610,7 +642,7 @@ const AdminUsers: React.FC = () => {
       <Modal
         isOpen={!!detailUser}
         onClose={() => setDetailUser(null)}
-        title="用戶詳情"
+        title={t.adminUsersPage.detail.title}
         theme="luxe"
         size="md"
         tourId="user-detail"
@@ -637,7 +669,7 @@ const AdminUsers: React.FC = () => {
             >
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">
-                  用戶 ID
+                  {t.adminUsersPage.detail.userId}
                 </span>
                 <span className="text-luxe-text font-mono">
                   {detailUser.user_id}
@@ -645,7 +677,7 @@ const AdminUsers: React.FC = () => {
               </div>
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">
-                  顯示名稱
+                  {t.adminUsersPage.detail.displayName}
                 </span>
                 <span className="text-luxe-text">
                   {detailUser.display_name || "—"}
@@ -653,7 +685,7 @@ const AdminUsers: React.FC = () => {
               </div>
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">
-                  電話號碼
+                  {t.adminUsersPage.detail.phone}
                 </span>
                 <span className="text-luxe-text">
                   {detailUser.phone_number || "—"}
@@ -661,7 +693,7 @@ const AdminUsers: React.FC = () => {
               </div>
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">
-                  建立日期
+                  {t.adminUsersPage.detail.createdAt}
                 </span>
                 <span className="text-luxe-text">
                   {detailUser.created_at?.split("T")[0] || "—"}
@@ -669,10 +701,12 @@ const AdminUsers: React.FC = () => {
               </div>
               <div>
                 <span className="text-luxe-muted text-xs block mb-0.5">
-                  帳號狀態
+                  {t.adminUsersPage.detail.accountStatus}
                 </span>
                 <span className="text-luxe-text">
-                  {detailUser.is_active ? "✅ 活躍" : "❌ 停用"}
+                  {detailUser.is_active
+                    ? `✅ ${t.adminUsersPage.status.active}`
+                    : `❌ ${t.adminUsersPage.status.inactive}`}
                 </span>
               </div>
             </div>
@@ -685,7 +719,7 @@ const AdminUsers: React.FC = () => {
                 data-tour="user-detail-price"
                 onClick={() => setShowPriceModal(true)}
               >
-                💰 課程售價設定
+                💰 {t.adminUsersPage.price.title}
               </PillButton>
               <div className="flex gap-3">
                 <PillButton
@@ -693,7 +727,7 @@ const AdminUsers: React.FC = () => {
                   variant="outline"
                   onClick={() => setDetailUser(null)}
                 >
-                  關閉
+                  {t.adminCommon.close}
                 </PillButton>
                 <PillButton
                   theme="luxe"
@@ -703,7 +737,7 @@ const AdminUsers: React.FC = () => {
                     setDetailUser(null);
                   }}
                 >
-                  編輯用戶
+                  {t.adminUsersPage.detail.editUser}
                 </PillButton>
               </div>
             </div>
@@ -715,7 +749,10 @@ const AdminUsers: React.FC = () => {
       <Modal
         isOpen={showPriceModal && !!detailUser}
         onClose={() => setShowPriceModal(false)}
-        title={`課程售價設定 — ${detailUser?.display_name || detailUser?.name || ""}`}
+        title={t.adminUsersPage.price.titleFor.replace(
+          "{name}",
+          detailUser?.display_name || detailUser?.name || "",
+        )}
         theme="luxe"
         size="md"
       >
@@ -727,21 +764,25 @@ const AdminUsers: React.FC = () => {
                   onClick={() => handleBatchToggle(detailUser.user_id, true)}
                   className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
                 >
-                  全部開啟
+                  {t.adminUsersPage.price.showAll}
                 </button>
                 <button
                   onClick={() => handleBatchToggle(detailUser.user_id, false)}
                   className="text-[11px] px-2.5 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
                 >
-                  全部關閉
+                  {t.adminUsersPage.price.hideAll}
                 </button>
               </div>
             )}
 
             {priceLoading ? (
-              <div className="text-xs text-luxe-muted py-6 text-center">載入中...</div>
+              <div className="text-xs text-luxe-muted py-6 text-center">
+                {t.common.loading}
+              </div>
             ) : priceVisibility.length === 0 ? (
-              <div className="text-xs text-luxe-muted py-6 text-center">尚無課程資料</div>
+              <div className="text-xs text-luxe-muted py-6 text-center">
+                {t.adminUsersPage.price.empty}
+              </div>
             ) : (
               <div className="max-h-[60vh] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-luxe-gold/20 scrollbar-track-transparent">
                 {priceVisibility.map((item) => (
@@ -755,14 +796,20 @@ const AdminUsers: React.FC = () => {
                         NT$ {item.price?.toLocaleString() || 0}
                         {item.status !== "published" && (
                           <span className="ml-1.5 text-amber-400/80">
-                            ({item.status === "draft" ? "草稿" : "已封存"})
+                            (
+                            {item.status === "draft"
+                              ? t.common.draft
+                              : t.adminUsersPage.price.archived}
+                            )
                           </span>
                         )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-[10px] ${item.show_price ? "text-emerald-400" : "text-luxe-muted"}`}>
-                        {item.show_price ? "顯示" : "隱藏"}
+                        {item.show_price
+                          ? t.adminUsersPage.price.shown
+                          : t.adminUsersPage.price.hidden}
                       </span>
                       <Toggle
                         checked={item.show_price}
@@ -782,7 +829,7 @@ const AdminUsers: React.FC = () => {
 
             <div className="flex justify-end pt-2 border-t border-luxe-gold/10">
               <PillButton theme="luxe" variant="outline" onClick={() => setShowPriceModal(false)}>
-                關閉
+                {t.adminCommon.close}
               </PillButton>
             </div>
           </div>
@@ -793,7 +840,7 @@ const AdminUsers: React.FC = () => {
       <Modal
         isOpen={!!selectedUser}
         onClose={() => setSelectedUser(null)}
-        title="編輯用戶"
+        title={t.adminUsersPage.detail.editUser}
         theme="luxe"
         tourId="user-edit"
       >
@@ -801,12 +848,12 @@ const AdminUsers: React.FC = () => {
           <form className="space-y-4">
             <Input
               data-tour="user-edit-name"
-              label="姓名"
+              label={t.adminUsersPage.table.colName}
               defaultValue={selectedUser.name || ""}
               theme="luxe"
             />
             <Input
-              label="電子郵件"
+              label={t.adminUsersPage.table.colEmail}
               defaultValue={selectedUser.email}
               theme="luxe"
               disabled
@@ -817,10 +864,10 @@ const AdminUsers: React.FC = () => {
                 variant="outline"
                 onClick={() => setSelectedUser(null)}
               >
-                取消
+                {t.common.cancel}
               </PillButton>
               <PillButton theme="luxe" variant="filled" data-tour="user-edit-submit">
-                儲存
+                {t.common.save}
               </PillButton>
             </div>
           </form>

@@ -20,6 +20,7 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import React, { useCallback, useRef, useState, useEffect } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import ImageInput, {
   useImageUploadTarget,
 } from "@/components/ui/ImageInput";
@@ -49,6 +50,7 @@ const GalleryItem: React.FC<GalleryItemProps> = ({
   onResize,
   onRemove,
 }) => {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = useRef(0);
@@ -118,7 +120,7 @@ const GalleryItem: React.FC<GalleryItemProps> = ({
           onRemove(index);
         }}
         className="absolute top-1 right-1 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-lg"
-        title="移除此圖片"
+        title={t.imageGallery.removeThisImage}
       >
         ✕
       </button>
@@ -203,6 +205,7 @@ const ImageGalleryComponent: React.FC<NodeViewProps> = ({
   updateAttributes,
   selected,
 }) => {
+  const { t } = useLanguage();
   const images: GalleryImage[] = node.attrs.images || [];
   const MAX_IMAGES = 3;
 
@@ -240,7 +243,7 @@ const ImageGalleryComponent: React.FC<NodeViewProps> = ({
         {/* 標籤 */}
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] text-luxe-gold/60 bg-luxe-gold/10 px-2 py-0.5 rounded">
-            📷 圖片庫 ({images.length}/{MAX_IMAGES})
+            {t.imageGallery.title} ({images.length}/{MAX_IMAGES})
           </span>
         </div>
 
@@ -267,7 +270,7 @@ const ImageGalleryComponent: React.FC<NodeViewProps> = ({
         {/* 空狀態提示 */}
         {images.length === 0 && (
           <p className="text-luxe-muted/50 text-xs mt-1">
-            點擊上方「＋ 新增圖片」加入圖片，最多 {MAX_IMAGES} 張一排
+            {t.imageGallery.emptyHint.replace("{max}", String(MAX_IMAGES))}
           </p>
         )}
       </div>

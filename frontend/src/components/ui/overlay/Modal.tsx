@@ -3,8 +3,11 @@
  * @module components/ui/overlay/Modal
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useOverlayEscape } from "@/hooks/useOverlayEscape";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ModalProps {
   isOpen: boolean;
@@ -37,22 +40,18 @@ const Modal: React.FC<ModalProps> = ({
   className = "",
   tourId,
 }) => {
-  useScrollLock(isOpen);
+  const { t } = useLanguage();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    setMounted(true);
+  }, []);
 
-    if (isOpen) {
-      window.addEventListener("keydown", handleEscape);
-    }
+  useScrollLock(isOpen);
+  /* Escape 走共用堆疊：疊層時只關最上層 */
+  useOverlayEscape(isOpen, onClose);
 
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const sizes = {
     sm: "max-w-sm",
@@ -65,8 +64,13 @@ const Modal: React.FC<ModalProps> = ({
 
 
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 px-3 sm:p-4">
+  /*
+   * Portal 到 body：讓「疊層順序 = 開啟順序」。
+   * 沒有 portal 的話，本元件會被釘在頁面樹的原位，
+   * 之後才 portal 出去的 Dialog 一定畫在它上面 —— 就算 z-index 相同也贏不了。
+   */
+  return createPortal(
+    <div className="fixed inset-0 modal-layer modal-scroll flex items-start sm:items-center justify-center overflow-y-auto py-6 px-3 sm:p-4">
       {/* Backdrop with enhanced blur */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -98,7 +102,7 @@ const Modal: React.FC<ModalProps> = ({
             <button
               onClick={onClose}
               data-tour-modal-close=""
-              aria-label="關閉"
+              aria-label={t.adminCommon.close}
               className="p-1 transition-colors text-muted hover:text-inherit"
             >
               <svg
@@ -119,11 +123,12 @@ const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content */}
-        <div className="p-4 sm:p-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-[70vh] overflow-y-auto modal-scroll">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
