@@ -13,9 +13,8 @@ import type {
   YouTubeInfo,
   ExportData,
 } from "./types";
-
-/** Cloudinary URL 驗證 */
-const CLOUDINARY_REGEX = /^https:\/\/res\.cloudinary\.com\/.+/i;
+// 圖片網址驗證走全站唯一實作（frontend/src/lib/imageUrl.ts），此處只做轉出
+export { isAllowedImageUrl } from "@/lib/imageUrl";
 
 /** YouTube URL 驗證 */
 const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i;
@@ -25,13 +24,6 @@ const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i;
  */
 export const generateId = (): string => {
   return crypto.randomUUID();
-};
-
-/**
- * 驗證 Cloudinary URL
- */
-export const isValidCloudinaryUrl = (url: string): boolean => {
-  return CLOUDINARY_REGEX.test(url);
 };
 
 /**

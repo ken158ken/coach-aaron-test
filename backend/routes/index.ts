@@ -25,6 +25,8 @@ import bookingRoutes     from "./bookings.js";
 import chatRoutes        from "./chat.js";
 import presenceRoutes    from "./presence.js";
 import chatCronRoutes    from "./chatCron.js";
+import imageCronRoutes   from "./imageCron.js";
+import uploadsRoutes     from "./uploads.js";
 import notificationsRoutes from "./notifications.js";
 import landingRoutes     from "./landing.js";
 import exportRoutes      from "./export.js";
@@ -64,6 +66,9 @@ export function registerRoutes(app: Express): void {
   // ── 通知 ──────────────────────────────────────────────
   app.use("/api/notifications", notificationsRoutes);
 
+  // ── 圖片上傳（統一入口） ──────────────────────────────
+  app.use("/api/uploads",     uploadsRoutes);
+
   // ── 後台管理 ──────────────────────────────────────────
   app.use("/api/admin",         adminRoutes);
   app.use("/api/admin/export",  adminExportRoutes);
@@ -76,4 +81,5 @@ export function registerRoutes(app: Express): void {
 
   // ── 排程任務 ──────────────────────────────────────────
   app.use("/api/cron",        chatCronRoutes);
+  app.use("/api/cron",        imageCronRoutes);
 }

@@ -11,6 +11,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/context";
+import { LogoMark } from "@/components/brand";
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -304,10 +305,19 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <Link
           to="/"
           onClick={onNavigate}
-          className="flex items-center gap-2 sm:gap-3"
+          aria-label="阿倫教官 後台"
+          className={`flex items-center gap-2 sm:gap-3 ${
+            isOpen ? "" : "w-full justify-center"
+          }`}
         >
-          <span className="text-luxe-gold text-xl sm:text-2xl font-bold flex-shrink-0">
-            A
+          {/* 品牌 mark 放在淺色圓角底片上（與 app icon 同一套處理）。
+              admin sidebar 是深色 surface，酒紅 mark 直接貼上去對比僅約 1.75:1，
+              墊底片後在深/淺兩種 admin 主題下都清楚，收合成 w-20 也維持置中。 */}
+          <span
+            className="flex-shrink-0 flex items-center justify-center rounded-[7px] bg-[#f6f4f0] w-9 h-9"
+            aria-hidden="true"
+          >
+            <LogoMark className="w-7 h-7" />
           </span>
           {isOpen && (
             <span className="text-sm sm:text-base text-luxe-text font-light tracking-widest whitespace-nowrap">

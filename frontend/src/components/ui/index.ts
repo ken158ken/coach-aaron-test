@@ -47,6 +47,12 @@ export {
   useDialog,
 } from "./Dialog";
 
+// Image input（全站統一圖片欄位：上傳 / Cloudinary 網址雙模式）
+export { default as ImageInput, ImageUploadTargetProvider, useImageUploadTarget } from "./ImageInput";
+export type { ImageInputProps, ImageEntity, ImageKind, ImageUploadTarget } from "./ImageInput";
+export { default as ImagePickerModal } from "./ImagePickerModal";
+export type { ImagePickerModalProps } from "./ImagePickerModal";
+
 // Tooltip
 export { default as Tooltip } from "./Tooltip";
 

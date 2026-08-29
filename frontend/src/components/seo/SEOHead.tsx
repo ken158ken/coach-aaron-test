@@ -66,6 +66,14 @@ const DEFAULT_DESCRIPTION =
 const DEFAULT_IMAGE = "/images/og-default.jpg";
 
 /**
+ * 品牌 logo（JSON-LD 用）
+ * 需為可直接抓取的點陣圖；Google 建議至少 112×112，這裡用 512×512 的 PWA icon。
+ * 對應檔案：public/icons/icon-512.png
+ */
+const BRAND_LOGO_PATH = "/icons/icon-512.png";
+const BRAND_LOGO_SIZE = 512;
+
+/**
  * 網站根 URL — 優先使用環境變數 VITE_SITE_URL
  * SSR 環境無 import.meta.env 時自動 fallback
  */
@@ -123,6 +131,26 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const graph: Record<string, any>[] = [];
 
+    // Organization：只在首頁輸出一次，作為全站的品牌實體
+    // （用 url prop 顯式判斷，不能只看 fullUrl —— 沒傳 url 的頁面
+    //   其 fullUrl 也會等於站台根，會誤判成首頁）
+    if (url === "/" || url === DEFAULT_URL || url === `${DEFAULT_URL}/`) {
+      graph.push({
+        "@type": "Organization",
+        name: "阿倫教官",
+        alternateName: "Coach Aaron",
+        url: DEFAULT_URL,
+        logo: {
+          "@type": "ImageObject",
+          url: `${DEFAULT_URL}${BRAND_LOGO_PATH}`,
+          width: BRAND_LOGO_SIZE,
+          height: BRAND_LOGO_SIZE,
+        },
+        description: DEFAULT_DESCRIPTION,
+        sameAs: ["https://www.instagram.com/coach.luen/"],
+      });
+    }
+
     if (isArticle) {
       graph.push({
         "@type": "Article",
@@ -135,7 +163,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         publisher: {
           "@type": "Organization",
           name: DEFAULT_SITE_NAME,
-          logo: { "@type": "ImageObject", url: `${DEFAULT_URL}/icons/icon-192.png` },
+          logo: { "@type": "ImageObject", url: `${DEFAULT_URL}${BRAND_LOGO_PATH}` },
         },
         url: fullUrl,
         articleSection: category,

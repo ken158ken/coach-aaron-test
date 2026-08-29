@@ -20,6 +20,9 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import React, { useCallback, useRef, useState, useEffect } from "react";
+import ImageInput, {
+  useImageUploadTarget,
+} from "@/components/ui/ImageInput";
 
 // ============ 型別定義 ============
 
@@ -28,11 +31,6 @@ interface GalleryImage {
   alt?: string;
   width?: number;
 }
-
-// Cloudinary URL 驗證
-const CLOUDINARY_REGEX = /^https:\/\/res\.cloudinary\.com\/.+/i;
-const isValidCloudinaryUrl = (url: string): boolean =>
-  CLOUDINARY_REGEX.test(url.trim());
 
 // ============ 單張圖片子元件（含 Resize） ============
 
@@ -163,63 +161,37 @@ interface AddImagePanelProps {
 }
 
 const AddImagePanel: React.FC<AddImagePanelProps> = ({ onAdd, canAdd }) => {
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
-  const [preview, setPreview] = useState(false);
+  const [draft, setDraft] = useState("");
+  // 上傳目標由編輯頁的 ImageUploadTargetProvider 提供
+  //（文章 / 課程 + 對應 id；新建中的實體則為 null → 走 temp/）
+  const target = useImageUploadTarget();
 
-  const handleAdd = useCallback(() => {
-    if (!url.trim()) {
-      setError("請輸入圖片網址");
-      return;
-    }
-    if (!isValidCloudinaryUrl(url)) {
-      setError(
-        "只能使用 Cloudinary 圖片網址（https://res.cloudinary.com/...）",
-      );
-      return;
-    }
-    onAdd(url.trim());
-    setUrl("");
-    setError("");
-    setPreview(false);
-  }, [url, onAdd]);
-
-  const handleUrlChange = useCallback((value: string) => {
-    setUrl(value);
-    setError("");
-    setPreview(isValidCloudinaryUrl(value));
-  }, []);
+  /** ImageInput 產生網址後直接加進圖片庫，不用再按一次確認 */
+  const handleChange = useCallback(
+    (url: string) => {
+      if (!url) {
+        setDraft("");
+        return;
+      }
+      onAdd(url);
+      setDraft("");
+    },
+    [onAdd],
+  );
 
   if (!canAdd) return null;
 
   return (
-    <div className="flex-shrink-0 w-full sm:w-auto min-w-[120px] max-w-[240px]">
-      <div className="border-2 border-dashed border-luxe-gold/30 rounded-lg p-2 hover:border-luxe-gold/60 transition-colors">
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => handleUrlChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="Cloudinary URL..."
-          className="w-full text-xs bg-transparent border-none outline-none text-luxe-text placeholder:text-luxe-muted/50 mb-1.5"
-        />
-        {preview && (
-          <img
-            src={url}
-            alt="預覽"
-            className="w-full h-16 object-cover rounded mb-1.5"
-            onError={() => setPreview(false)}
-          />
-        )}
-        {error && <p className="text-red-400 text-[10px] mb-1">{error}</p>}
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="w-full py-1 text-xs bg-luxe-gold/20 hover:bg-luxe-gold/30 text-luxe-gold rounded transition-colors"
-        >
-          ＋ 新增圖片
-        </button>
-      </div>
+    <div className="flex-shrink-0 w-full sm:w-72">
+      <ImageInput
+        value={draft}
+        onChange={handleChange}
+        entity={target.entity}
+        entityKey={target.entityKey}
+        kind="content"
+        aspectHint="4 / 3"
+        compact
+      />
     </div>
   );
 };

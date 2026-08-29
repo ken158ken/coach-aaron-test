@@ -540,10 +540,12 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({
  * const { prompt, confirm, alert } = useDialog();
  *
  * // Prompt
+ * // ⚠️ 圖片欄位請改用 <ImageInput> / <ImagePickerModal>（支援上傳＋網址雙模式），
+ * //    不要用 prompt 收圖片網址。
  * const url = await prompt({
- *   title: "輸入圖片網址",
- *   placeholder: "https://res.cloudinary.com/...",
- *   validateUrl: isValidCloudinaryUrl,
+ *   title: "輸入網址",
+ *   placeholder: "https://...",
+ *   validateUrl: (v) => /^https?:\/\//.test(v),
  * });
  *
  * // Confirm

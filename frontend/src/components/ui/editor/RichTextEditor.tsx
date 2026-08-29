@@ -1,13 +1,13 @@
 /**
  * RichTextEditor 元件 - Tiptap 富文本編輯器
  * @module components/ui/editor/RichTextEditor
- * @description 支援 Cloudinary 圖片、YouTube 影片嵌入、可調整尺寸
+ * @description 支援上傳圖片 / Cloudinary 圖片、YouTube 影片嵌入、可調整尺寸
  *
  * 功能特性：
- * - 只允許 Cloudinary 圖片和 YouTube 影片
+ * - 插圖走全站統一的 ImageInput（上傳到自家 Storage 或貼 Cloudinary 網址）
+ * - 影片限 YouTube
  * - 圖片/影片可自訂尺寸
  * - 選中元素後可編輯調整
- * - 停用檔案上傳功能
  */
 
 import React, { useCallback, useState, useEffect } from "react";
@@ -20,6 +20,8 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import { Tooltip } from "@/components/ui";
+import ImageInput, { useImageUploadTarget } from "@/components/ui/ImageInput";
+import { isAllowedImageUrl } from "@/lib/imageUrl";
 
 /** 主題類型 */
 type Theme = "abyss" | "prism" | "luxe";
@@ -40,9 +42,6 @@ interface RichTextEditorProps {
   /** 自訂樣式 */
   className?: string;
 }
-
-/** Cloudinary 圖片 URL 驗證正則 */
-const CLOUDINARY_REGEX = /^https:\/\/res\.cloudinary\.com\/.+/i;
 
 /** YouTube URL 驗證正則 */
 const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i;
@@ -178,6 +177,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [showLinkModal, setShowLinkModal] = useState(false);
 
   // 圖片表單
+  // 上傳目標由外層的 ImageUploadTargetProvider 決定（沒包就退回 article/temp）
+  const uploadTarget = useImageUploadTarget();
   const [imageUrl, setImageUrl] = useState("");
   const [imageAlt, setImageAlt] = useState("");
   const [imageWidth, setImageWidth] = useState(100);
@@ -282,8 +283,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
       if (target.tagName === "IMG") {
         const img = target as HTMLImageElement;
-        if (!CLOUDINARY_REGEX.test(img.src)) {
-          setError("此圖片不是來自 Cloudinary，建議重新上傳");
+        if (!isAllowedImageUrl(img.src)) {
+          setError("此圖片來源不在允許清單（可能是舊資料），建議重新上傳");
         }
 
         setSelectedElement(img);
@@ -356,24 +357,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   if (!editor) return null;
 
-  /** 驗證並插入 Cloudinary 圖片 */
+  /** 驗證並插入圖片（自家 Storage 上傳結果或 Cloudinary 網址） */
   const handleInsertImage = useCallback(() => {
     setError("");
 
     if (!imageUrl.trim()) {
-      setError("請輸入圖片網址");
+      setError("請先上傳圖片或貼上圖片網址");
       return;
     }
 
-    if (!CLOUDINARY_REGEX.test(imageUrl)) {
-      setError(
-        "⚠️ 只支援 Cloudinary 圖片！\n請將圖片上傳至 Cloudinary 後貼上連結\n（網址必須以 https://res.cloudinary.com/ 開頭）",
-      );
-      logger.warn("非 Cloudinary 圖片被拒絕", imageUrl);
+    if (!isAllowedImageUrl(imageUrl)) {
+      setError("圖片來源不合法，請改用上傳，或貼上本站 Cloudinary 帳號的網址。");
+      logger.warn("不允許的圖片來源被拒絕", imageUrl);
       return;
     }
 
-    logger.info("插入 Cloudinary 圖片", { url: imageUrl, width: imageWidth });
+    logger.info("插入圖片", { url: imageUrl, width: imageWidth });
 
     const alignStyle =
       imageAlign === "center"
@@ -1000,39 +999,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div
             className={`w-full max-w-md p-6 rounded-xl border ${styles.modalContent}`}
           >
-            <h3 className="text-lg font-medium mb-4">插入 Cloudinary 圖片</h3>
-
-            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-              <p className="font-medium text-amber-400 text-sm mb-2">
-                ⚠️ 重要提示
-              </p>
-              <p className="text-xs text-gray-300">
-                只支援 Cloudinary 圖片！請先將圖片上傳至{" "}
-                <a
-                  href="https://cloudinary.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-amber-400 underline"
-                >
-                  Cloudinary
-                </a>
-                ，然後複製圖片網址。
-              </p>
-            </div>
+            <h3 className="text-lg font-medium mb-4">插入圖片</h3>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">
-                  Cloudinary 圖片網址 *
-                </label>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://res.cloudinary.com/..."
-                  className={`w-full px-3 py-2 rounded-lg border ${styles.input}`}
-                />
-              </div>
+              <ImageInput
+                label="圖片"
+                value={imageUrl}
+                onChange={(url) => {
+                  setImageUrl(url);
+                  setError("");
+                }}
+                entity={uploadTarget.entity}
+                entityKey={uploadTarget.entityKey}
+                kind="content"
+                aspectHint="16 / 9"
+                required
+              />
               <div>
                 <label className="block text-sm mb-1">替代文字（SEO 用）</label>
                 <input

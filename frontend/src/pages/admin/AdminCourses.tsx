@@ -15,6 +15,7 @@ import {
   Textarea,
   TagInput,
   useDialog,
+  ImageUploadTargetProvider,
 } from "@/components/ui";
 // 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
 import { RichTextEditor } from "@/components/ui/editor";
@@ -821,13 +822,17 @@ const AdminCourses: React.FC = () => {
             <label className="block text-luxe-muted text-sm mb-2">
               課程詳細內容
             </label>
-            <RichTextEditor
-              content={formData.content}
-              onChange={handleContentChange}
-              theme="luxe"
-              placeholder="輸入課程詳細內容..."
-              minHeight="300px"
-            />
+            <ImageUploadTargetProvider
+              value={{ entity: "course", entityKey: editingCourse?.course_id ?? null }}
+            >
+              <RichTextEditor
+                content={formData.content}
+                onChange={handleContentChange}
+                theme="luxe"
+                placeholder="輸入課程詳細內容..."
+                minHeight="300px"
+              />
+            </ImageUploadTargetProvider>
           </div>
 
           {/* 狀態 */}

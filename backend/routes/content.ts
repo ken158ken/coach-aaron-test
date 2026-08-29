@@ -6,13 +6,15 @@
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import { isAllowedImageUrl, imageUrlErrorMessage } from "../utils/imageUrl.js";
+import {
+  deleteEntityImages,
+  finalizeHtmlImages,
+  finalizeImageUrl,
+  replaceCleanup,
+} from "../utils/imageStorage.js";
 
 const router: Router = express.Router();
-
-/** 圖片型內容網址限定 Cloudinary（與 slides.ts 對齊） */
-const CLOUDINARY_PREFIX = "https://res.cloudinary.com/daejq0zo9/";
-const isValidCloudinaryUrl = (url: unknown): boolean =>
-  typeof url === "string" && url.startsWith(CLOUDINARY_PREFIX);
 
 // ===== 公開 API =====
 
@@ -112,28 +114,22 @@ router.put(
       const { id } = req.params;
       const { contentValue, contentName, contentType, isActive } = req.body;
 
-      // image 型內容：驗證必須是 Cloudinary URL
+      // 取得現況：判斷 content_type、拿 content_key 組 storage 路徑、留舊值刪檔
+      const { data: existing } = await supabaseAdmin
+        .from("site_content")
+        .select("content_type, content_key, content_value")
+        .eq("content_id", id)
+        .single();
+
       // 決策 content_type 後再驗 value：若本次一併改 type，以新的 type 為準
       const effectiveType =
-        contentType !== undefined
-          ? contentType
-          : (
-              await supabaseAdmin
-                .from("site_content")
-                .select("content_type")
-                .eq("content_id", id)
-                .single()
-            ).data?.content_type;
+        contentType !== undefined ? contentType : existing?.content_type;
 
-      if (
-        effectiveType === "image" &&
-        contentValue !== undefined &&
-        contentValue !== "" &&
-        !isValidCloudinaryUrl(contentValue)
-      ) {
-        res.status(400).json({
-          error: `圖片網址必須使用 Cloudinary（${CLOUDINARY_PREFIX}...）`,
-        });
+      const isImageUpdate =
+        effectiveType === "image" && contentValue !== undefined;
+
+      if (isImageUpdate && !isAllowedImageUrl(contentValue)) {
+        res.status(400).json({ error: imageUrlErrorMessage("網站內容圖片") });
         return;
       }
 
@@ -143,6 +139,16 @@ router.put(
       if (contentType !== undefined) updateData.content_type = contentType;
       if (isActive !== undefined) updateData.is_active = isActive;
 
+      // image 型內容：暫存檔搬到 `content-images/site_{content_key}/`
+      if (isImageUpdate && existing?.content_key) {
+        updateData.content_value = await finalizeImageUrl({
+          entity: "site-content",
+          entityKey: existing.content_key,
+          url: contentValue,
+          kind: "image",
+        });
+      }
+
       const { data, error } = await supabaseAdmin
         .from("site_content")
         .update(updateData)
@@ -151,6 +157,11 @@ router.put(
         .single();
 
       if (error) throw error;
+
+      if (isImageUpdate) {
+        await replaceCleanup(existing?.content_value, updateData.content_value);
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Update site content error:", err);
@@ -172,15 +183,20 @@ router.post(
       const { contentKey, contentName, contentValue, contentType, sortOrder } =
         req.body;
 
-      if (
-        contentType === "image" &&
-        contentValue &&
-        !isValidCloudinaryUrl(contentValue)
-      ) {
-        res.status(400).json({
-          error: `圖片網址必須使用 Cloudinary（${CLOUDINARY_PREFIX}...）`,
-        });
+      if (contentType === "image" && !isAllowedImageUrl(contentValue)) {
+        res.status(400).json({ error: imageUrlErrorMessage("網站內容圖片") });
         return;
+      }
+
+      // content_key 由前端提供（不像其他實體要等 DB 給 id），可先 finalize 再 insert
+      let finalValue = contentValue;
+      if (contentType === "image" && contentValue && contentKey) {
+        finalValue = await finalizeImageUrl({
+          entity: "site-content",
+          entityKey: contentKey,
+          url: contentValue,
+          kind: "image",
+        });
       }
 
       const { data, error } = await supabaseAdmin
@@ -188,7 +204,7 @@ router.post(
         .insert({
           content_key: contentKey,
           content_name: contentName,
-          content_value: contentValue || "",
+          content_value: finalValue || "",
           content_type: contentType || "text",
           sort_order: sortOrder || 0,
           is_active: true,
@@ -217,12 +233,25 @@ router.delete(
     try {
       const { id } = req.params;
 
+      // 先拿 content_key（刪掉就查不到了）
+      const { data: existing } = await supabaseAdmin
+        .from("site_content")
+        .select("content_key")
+        .eq("content_id", id)
+        .single();
+
       const { error } = await supabaseAdmin
         .from("site_content")
         .delete()
         .eq("content_id", id);
 
       if (error) throw error;
+
+      // 硬刪除 → 清掉 `content-images/site_{content_key}/`
+      if (existing?.content_key) {
+        await deleteEntityImages("site-content", existing.content_key);
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error("Delete site content error:", err);
@@ -284,6 +313,25 @@ router.post(
         .single();
 
       if (error) throw error;
+
+      // 內文 HTML 若含 temp 暫存圖，搬到 `site_popup_{id}/` 正式路徑
+      try {
+        const html = await finalizeHtmlImages({
+          entity: "site-content",
+          entityKey: `popup_${data.popup_id}`,
+          html: data.popup_content as string | null,
+        });
+        if (html !== data.popup_content) {
+          await supabaseAdmin
+            .from("site_popups")
+            .update({ popup_content: html })
+            .eq("popup_id", data.popup_id);
+          data.popup_content = html;
+        }
+      } catch (imgErr) {
+        console.error("Popup 圖片 finalize 失敗:", imgErr);
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Create popup error:", err);
@@ -314,7 +362,14 @@ router.put(
 
       const updateData: Record<string, unknown> = {};
       if (popupTitle !== undefined) updateData.popup_title = popupTitle;
-      if (popupContent !== undefined) updateData.popup_content = popupContent;
+      if (popupContent !== undefined) {
+        // 內文 HTML 若含 temp 暫存圖，搬到 `site_popup_{id}/` 正式路徑
+        updateData.popup_content = await finalizeHtmlImages({
+          entity: "site-content",
+          entityKey: `popup_${id}`,
+          html: popupContent as string | null,
+        });
+      }
       if (showOnce !== undefined) updateData.show_once = showOnce;
       if (startDate !== undefined) updateData.start_date = startDate;
       if (endDate !== undefined) updateData.end_date = endDate;
@@ -364,6 +419,14 @@ router.delete(
         .eq("popup_id", id);
 
       if (error) throw error;
+
+      // 硬刪除成功後連帶清掉 `site_popup_{id}/` 的內文圖片
+      try {
+        await deleteEntityImages("site-content", `popup_${id}`);
+      } catch (imgErr) {
+        console.error("Popup 圖片清理失敗:", imgErr);
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error("Delete popup error:", err);

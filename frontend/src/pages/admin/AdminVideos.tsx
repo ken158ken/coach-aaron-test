@@ -13,7 +13,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { PillButton, Input, useDialog } from "@/components/ui";
+import { PillButton, Input, useDialog, ImageInput } from "@/components/ui";
 import { get, post, put } from "@/services/api";
 import { videoService } from "@/services/content/video.service";
 import type { AdminVideo } from "@/types";
@@ -70,8 +70,6 @@ const AdminVideos: React.FC = () => {
   // ── 批量新增影片 Modal 狀態 ──
   const [showAddModal, setShowAddModal] = useState(false);
   const [addSubmitting, setAddSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileRowRef = useRef<number>(-1); // 記錄哪一列在上傳
 
   type AddRow = {
     id: number;
@@ -79,15 +77,13 @@ const AdminVideos: React.FC = () => {
     title: string;
     description: string;
     type: string;
-    thumbnail: string;      // 預覽用：剛選檔為 base64，上傳完成後替換為 public URL
-    thumbnailUrl: string;   // 實際要送到後端儲存的 URL（Storage public URL）
-    uploading: boolean;     // 縮圖上傳中
-    uploadError: string;    // 上傳錯誤訊息
+    thumbnailUrl: string;   // 縮圖的 Storage public URL（也是預覽來源）
+    uploading: boolean;     // 縮圖上傳中（送出前用來擋住未完成的上傳）
   };
 
   const newRow = (id: number): AddRow => ({
     id, url: "", title: "", description: "", type: "instagram",
-    thumbnail: "", thumbnailUrl: "", uploading: false, uploadError: "",
+    thumbnailUrl: "", uploading: false,
   });
 
   const [addRows, setAddRows] = useState<AddRow[]>(() => [newRow(0)]);
@@ -306,51 +302,37 @@ const AdminVideos: React.FC = () => {
     setAddRows((prev) => prev.filter((r) => r.id !== id));
   };
 
-  /** 本機上傳截圖給特定列：先顯示 base64 預覽，同步上傳到 Storage 取得 public URL */
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const rowId = fileRowRef.current;
-    if (!file || rowId < 0) return;
-
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = (ev.target?.result as string) ?? "";
-      // 1) 立即顯示本機預覽（UX 瞬間反應）
-      updateRow(rowId, {
-        thumbnail: dataUrl,
-        thumbnailUrl: "",
-        uploading: true,
-        uploadError: "",
-      });
-
-      // 2) 背景上傳到 Storage
-      try {
-        const { url } = await post<{ url: string }>(
-          "/api/videos/upload-thumbnail",
-          { image: dataUrl },
-        );
-        // 上傳成功後，用 URL 替換 base64 預覽（同時作為實際儲存值）
-        updateRow(rowId, {
-          thumbnail: url,
-          thumbnailUrl: url,
-          uploading: false,
-        });
-      } catch (err) {
-        logger.error("上傳縮圖失敗", err);
-        updateRow(rowId, {
-          uploading: false,
-          uploadError: "上傳失敗，請重試",
-        });
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const openFilePicker = (rowId: number) => {
-    fileRowRef.current = rowId;
-    fileInputRef.current?.click();
-  };
+  /**
+   * 上傳截圖給特定列。
+   * 影片縮圖沿用既有的 temp→finalize 機制（`/api/videos/upload-thumbnail`，
+   * base64 進、thumbnails bucket 出），所以不走統一的 /api/uploads；
+   * UI 則交給 ImageInput，與其他上傳點一致。
+   */
+  const uploadRowThumbnail = (rowId: number) => (file: File): Promise<string> =>
+    new Promise<string>((resolve, reject) => {
+      updateRow(rowId, { uploading: true });
+      const reader = new FileReader();
+      reader.onerror = () => {
+        updateRow(rowId, { uploading: false });
+        reject(new Error("讀取檔案失敗，請重新選擇。"));
+      };
+      reader.onload = async (ev) => {
+        const dataUrl = (ev.target?.result as string) ?? "";
+        try {
+          const { url } = await post<{ url: string }>(
+            "/api/videos/upload-thumbnail",
+            { image: dataUrl },
+          );
+          updateRow(rowId, { uploading: false });
+          resolve(url);
+        } catch (err) {
+          logger.error("上傳縮圖失敗", err);
+          updateRow(rowId, { uploading: false });
+          reject(new Error("上傳失敗，請重試。"));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
 
   /** 關閉 modal 並重置 */
   const closeAddModal = () => {
@@ -717,9 +699,6 @@ const AdminVideos: React.FC = () => {
         </>
       )}
 
-      {/* 隱藏 file input（批量各列共用，由 fileRowRef 記錄目標列） */}
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-
       {/* ═══════════════════════════════════════════════════════
           批量新增影片 Modal
       ═══════════════════════════════════════════════════════ */}
@@ -803,43 +782,14 @@ const AdminVideos: React.FC = () => {
                     </div>
 
                     {/* 右欄：截圖 */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] text-luxe-muted">截圖（選填）</label>
-
-                      {/* 預覽 */}
-                      <div className="relative aspect-video rounded-lg overflow-hidden bg-luxe-bg border border-luxe-gold/10 flex items-center justify-center">
-                        {row.thumbnail ? (
-                          <>
-                            <img src={row.thumbnail} alt="" className="w-full h-full object-cover" />
-                            <button
-                              onClick={() => updateRow(row.id, { thumbnail: "", thumbnailUrl: "", uploadError: "" })}
-                              className="absolute top-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded hover:bg-black/90"
-                            >移除</button>
-                            {row.uploading && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <span className="text-[10px] text-white bg-black/60 px-2 py-1 rounded">上傳中…</span>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-luxe-muted/30 text-xs">無截圖</span>
-                        )}
-                      </div>
-
-                      {/* 錯誤訊息 */}
-                      {row.uploadError && (
-                        <p className="text-[10px] text-red-400">{row.uploadError}</p>
-                      )}
-
-                      {/* 上傳按鈕 */}
-                      <button
-                        type="button"
-                        onClick={() => openFilePicker(row.id)}
-                        className="w-full text-[10px] py-1.5 rounded-lg border border-luxe-gold/20 text-luxe-muted hover:text-luxe-gold hover:border-luxe-gold/40 transition-all"
-                      >
-                        📁 上傳截圖
-                      </button>
-                    </div>
+                    <ImageInput
+                      label="截圖（選填）"
+                      value={row.thumbnailUrl}
+                      onChange={(url) => updateRow(row.id, { thumbnailUrl: url })}
+                      aspectHint="16 / 9"
+                      compact
+                      uploadFn={uploadRowThumbnail(row.id)}
+                    />
                   </div>
                 </div>
               ))}

@@ -1,21 +1,30 @@
 {
-  "name": "Coach Aaron Fitness",
-  "short_name": "Coach Aaron",
-  "description": "專業健身教練 - 打造理想體態",
+  "name": "阿倫教官 Coach Aaron",
+  "short_name": "阿倫教官",
+  "description": "給私人教練的商業實戰培訓：銷售心理學、體驗課成交、續約經營與個人品牌，把專業變成穩定收入。",
+  "lang": "zh-Hant-TW",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#d4af37",
+  "background_color": "#f6f4f0",
+  "theme_color": "#f5f3ef",
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

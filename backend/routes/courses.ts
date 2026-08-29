@@ -6,7 +6,6 @@
  */
 
 import express, { Request, Response, Router } from "express";
-import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import {
   authenticateToken,
@@ -22,11 +21,26 @@ import {
   logSecurityEvent,
 } from "../utils/sanitizer.js";
 import { logger } from "../utils/logger.js";
-
-const COURSE_IMAGE_BUCKET = "course-images";
-const CLOUDINARY_PREFIX = "https://res.cloudinary.com/";
+import {
+  CLOUDINARY_PREFIX,
+  isAllowedImageUrl,
+  isCloudinaryUrl,
+  imageUrlErrorMessage,
+} from "../utils/imageUrl.js";
+import {
+  finalizeHtmlImages,
+  finalizeImageUrl,
+  replaceCleanup,
+} from "../utils/imageStorage.js";
+import { uploadBase64AsTemp } from "./uploads.js";
 
 const router: Router = express.Router();
+
+/** 課程的圖片欄位 → 上傳 kind（決定壓縮尺寸與檔名） */
+const COURSE_IMAGE_FIELDS = [
+  { column: "course_thumbnail_url", kind: "cover", label: "課程封面" },
+  { column: "course_banner_url", kind: "banner", label: "課程橫幅" },
+] as const;
 
 // ===== 公開 API =====
 
@@ -423,6 +437,17 @@ router.post(
         status,
       } = req.body;
 
+      // 圖片欄位驗證（只接受 Cloudinary 或本站上傳）
+      for (const field of COURSE_IMAGE_FIELDS) {
+        const value = field.column === "course_thumbnail_url"
+          ? course_thumbnail_url
+          : course_banner_url;
+        if (!isAllowedImageUrl(value)) {
+          res.status(400).json({ error: imageUrlErrorMessage(field.label) });
+          return;
+        }
+      }
+
       const { data, error } = await supabaseAdmin
         .from("courses")
         .insert({
@@ -445,6 +470,43 @@ router.post(
         .single();
 
       if (error) throw error;
+
+      // 拿到 course_id 後，把暫存圖片搬到 `{course_id}/` 正式路徑並回寫欄位
+      if (data?.course_id) {
+        try {
+          const finalized: Record<string, unknown> = {};
+          for (const field of COURSE_IMAGE_FIELDS) {
+            const current = data[field.column] as string | null;
+            const next = await finalizeImageUrl({
+              entity: "course",
+              entityKey: data.course_id,
+              url: current,
+              kind: field.kind,
+            });
+            if (next !== current) finalized[field.column] = next;
+          }
+
+          // 內文 HTML 的插圖也要從 temp 搬正式路徑
+          const html = await finalizeHtmlImages({
+            entity: "course",
+            entityKey: data.course_id,
+            html: data.course_content as string | null,
+          });
+          if (html !== data.course_content) finalized.course_content = html;
+          if (Object.keys(finalized).length > 0) {
+            await supabaseAdmin
+              .from("courses")
+              .update(finalized)
+              .eq("course_id", data.course_id);
+            Object.assign(data, finalized);
+          }
+        } catch (imgErr) {
+          // 圖片留在 temp（cron 24h 後會清），課程本身已建立成功，不擋回應
+          logger.error("課程圖片 finalize 失敗", imgErr as Error, {
+            courseId: data.course_id,
+          });
+        }
+      }
 
       // 為所有現存使用者建立售價可見性記錄（預設 false）
       try {
@@ -528,6 +590,47 @@ router.put(
         }
       });
 
+      // ── 圖片欄位：驗證 → finalize 暫存檔 → 更新後刪舊檔 ──
+      for (const field of COURSE_IMAGE_FIELDS) {
+        if (updateData[field.column] === undefined) continue;
+        if (!isAllowedImageUrl(updateData[field.column])) {
+          res.status(400).json({ error: imageUrlErrorMessage(field.label) });
+          return;
+        }
+      }
+
+      // 撈舊值，等 DB 更新成功後才刪舊檔（先刪會在更新失敗時留下壞連結）
+      const changedImageFields = COURSE_IMAGE_FIELDS.filter(
+        (f) => updateData[f.column] !== undefined,
+      );
+      let previous: Record<string, unknown> = {};
+      if (changedImageFields.length > 0) {
+        const { data: prev } = await supabaseAdmin
+          .from("courses")
+          .select(changedImageFields.map((f) => f.column).join(","))
+          .eq("course_id", id)
+          .single();
+        previous = (prev as unknown as Record<string, unknown>) ?? {};
+
+        for (const field of changedImageFields) {
+          updateData[field.column] = await finalizeImageUrl({
+            entity: "course",
+            entityKey: String(id),
+            url: updateData[field.column] as string | null,
+            kind: field.kind,
+          });
+        }
+      }
+
+      // 內文 HTML 的插圖：temp → `{course_id}/` 正式路徑
+      if (typeof updateData.course_content === "string") {
+        updateData.course_content = await finalizeHtmlImages({
+          entity: "course",
+          entityKey: String(id),
+          html: updateData.course_content,
+        });
+      }
+
       const { data, error } = await supabaseAdmin
         .from("courses")
         .update(updateData)
@@ -536,6 +639,11 @@ router.put(
         .single();
 
       if (error) throw error;
+
+      for (const field of changedImageFields) {
+        await replaceCleanup(previous[field.column], updateData[field.column]);
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Update course error:", err);
@@ -609,10 +717,13 @@ router.delete(
 );
 
 /**
- * 上傳課程圖片（封面/Banner）— base64 → WebP → Supabase Storage
+ * 上傳課程圖片（封面/Banner）
  * @route POST /api/courses/upload-image
  * body: { image: string }  // "data:image/...;base64,..."
- * Bucket: course-images（需在 Supabase 後台建立，設為 public）
+ *
+ * @deprecated 相容期保留 — 請改用 `POST /api/uploads/course/:entityKey|temp`。
+ * 這裡只做薄轉發：走同一套壓縮參數，檔案落在 `course-images/temp/`，
+ * 課程儲存時由 finalizeImageUrl 搬到 `{course_id}/`。
  */
 router.post(
   "/upload-image",
@@ -620,36 +731,19 @@ router.post(
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { image } = req.body as { image?: string };
-      if (!image || !image.startsWith("data:image/")) {
+      const { image, kind } = req.body as { image?: string; kind?: string };
+      const result = await uploadBase64AsTemp("course", kind ?? "cover", image);
+      res.json({ url: result.url, path: result.path });
+    } catch (err) {
+      const message = (err as Error)?.message;
+      if (message === "INVALID_DATA_URL") {
         res.status(400).json({ error: "請提供有效的圖片 (base64 data URL)" });
         return;
       }
-
-      const base64 = image.replace(/^data:image\/\w+;base64,/, "");
-      const inputBuffer = Buffer.from(base64, "base64");
-
-      const webpBuffer = await sharp(inputBuffer)
-        .resize({ width: 1200, withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toBuffer();
-
-      const filename = `course_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
-      const { error: uploadErr } = await supabaseAdmin.storage
-        .from(COURSE_IMAGE_BUCKET)
-        .upload(filename, webpBuffer, {
-          contentType: "image/webp",
-          upsert: false,
-        });
-
-      if (uploadErr) throw uploadErr;
-
-      const { data } = supabaseAdmin.storage
-        .from(COURSE_IMAGE_BUCKET)
-        .getPublicUrl(filename);
-
-      res.json({ url: data.publicUrl });
-    } catch (err) {
+      if (message === "FILE_TOO_LARGE") {
+        res.status(400).json({ error: "圖片檔案過大，請壓到 5MB 以內" });
+        return;
+      }
       logger.error("上傳課程圖片失敗", err as Error);
       res.status(500).json({ error: "上傳圖片失敗" });
     }
@@ -657,7 +751,7 @@ router.post(
 );
 
 /**
- * 檢查圖片 URL 是否可存取（僅允許 Cloudinary）
+ * 檢查圖片 URL 是否可存取（僅允許指定 Cloudinary 帳號）
  * @route POST /api/courses/check-image-url
  * body: { url: string }
  * response: { ok: boolean, error?: string }
@@ -673,7 +767,7 @@ router.post(
         res.status(400).json({ ok: false, error: "請提供圖片網址" });
         return;
       }
-      if (!url.startsWith(CLOUDINARY_PREFIX)) {
+      if (!isCloudinaryUrl(url)) {
         res.status(400).json({
           ok: false,
           error: `圖片網址必須以 ${CLOUDINARY_PREFIX} 開頭`,

@@ -21,6 +21,13 @@ import {
   sanitizeApiResponseArray,
   logSecurityEvent,
 } from "../utils/sanitizer.js";
+import { isAllowedImageUrl, imageUrlErrorMessage } from "../utils/imageUrl.js";
+import {
+  finalizeHtmlImages,
+  finalizeImageUrl,
+  replaceCleanup,
+  replaceHtmlCleanup,
+} from "../utils/imageStorage.js";
 
 const router: Router = express.Router();
 
@@ -567,6 +574,14 @@ router.post(
         res.status(400).json({ error: "標題為必填" });
         return;
       }
+      if (!isAllowedImageUrl(thumbnailUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("文章封面") });
+        return;
+      }
+      if (!isAllowedImageUrl(bannerUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("文章橫幅") });
+        return;
+      }
 
       const { data, error } = await supabaseAdmin
         .from("articles")
@@ -589,6 +604,53 @@ router.post(
         .single();
 
       if (error) throw error;
+
+      // 拿到 article_id 後，把封面／橫幅／內文插圖從 temp 搬到 `{article_id}/`
+      if (data?.article_id) {
+        try {
+          const finalized: Record<string, unknown> = {};
+
+          const cover = await finalizeImageUrl({
+            entity: "article",
+            entityKey: data.article_id,
+            url: data.article_thumbnail_url as string | null,
+            kind: "cover",
+          });
+          if (cover !== data.article_thumbnail_url) {
+            finalized.article_thumbnail_url = cover;
+          }
+
+          const banner = await finalizeImageUrl({
+            entity: "article",
+            entityKey: data.article_id,
+            url: data.article_banner_url as string | null,
+            kind: "banner",
+          });
+          if (banner !== data.article_banner_url) {
+            finalized.article_banner_url = banner;
+          }
+
+          const html = await finalizeHtmlImages({
+            entity: "article",
+            entityKey: data.article_id,
+            html: data.article_content as string | null,
+          });
+          if (html !== data.article_content) finalized.article_content = html;
+
+          if (Object.keys(finalized).length > 0) {
+            await supabaseAdmin
+              .from("articles")
+              .update(finalized)
+              .eq("article_id", data.article_id);
+            Object.assign(data, finalized);
+          }
+        } catch (imgErr) {
+          logger.error("文章圖片 finalize 失敗", imgErr, {
+            articleId: data.article_id,
+          });
+        }
+      }
+
       res.json(data);
     } catch (err) {
       logger.error("Create article error:", err);
@@ -621,10 +683,21 @@ router.put(
         isFeatured,
       } = req.body;
 
-      // 取得現有文章狀態
+      if (thumbnailUrl !== undefined && !isAllowedImageUrl(thumbnailUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("文章封面") });
+        return;
+      }
+      if (bannerUrl !== undefined && !isAllowedImageUrl(bannerUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("文章橫幅") });
+        return;
+      }
+
+      // 取得現有文章狀態 + 舊圖片值（更新成功後才拿來刪舊檔）
       const { data: existing } = await supabaseAdmin
         .from("articles")
-        .select("status, published_at")
+        .select(
+          "status, published_at, article_thumbnail_url, article_banner_url, article_content",
+        )
         .eq("article_id", id)
         .single();
 
@@ -634,11 +707,29 @@ router.put(
       if (slug !== undefined) updateData.article_slug = slug;
       if (description !== undefined)
         updateData.article_description = description;
-      if (content !== undefined) updateData.article_content = content;
-      if (thumbnailUrl !== undefined)
-        updateData.article_thumbnail_url = thumbnailUrl;
-      if (bannerUrl !== undefined)
-        updateData.article_banner_url = bannerUrl;
+      if (content !== undefined) {
+        updateData.article_content = await finalizeHtmlImages({
+          entity: "article",
+          entityKey: String(id),
+          html: content,
+        });
+      }
+      if (thumbnailUrl !== undefined) {
+        updateData.article_thumbnail_url = await finalizeImageUrl({
+          entity: "article",
+          entityKey: String(id),
+          url: thumbnailUrl,
+          kind: "cover",
+        });
+      }
+      if (bannerUrl !== undefined) {
+        updateData.article_banner_url = await finalizeImageUrl({
+          entity: "article",
+          entityKey: String(id),
+          url: bannerUrl,
+          kind: "banner",
+        });
+      }
       if (keywords !== undefined) updateData.article_keywords = keywords;
       if (category !== undefined) updateData.article_category = category;
       if (status !== undefined) updateData.status = status;
@@ -661,6 +752,32 @@ router.put(
         .single();
 
       if (error) throw error;
+
+      // DB 更新成功才刪舊檔（含內文被移除的插圖）
+      try {
+        if (updateData.article_thumbnail_url !== undefined) {
+          await replaceCleanup(
+            existing?.article_thumbnail_url,
+            updateData.article_thumbnail_url,
+          );
+        }
+        if (updateData.article_banner_url !== undefined) {
+          await replaceCleanup(
+            existing?.article_banner_url,
+            updateData.article_banner_url,
+          );
+        }
+        if (updateData.article_content !== undefined) {
+          await replaceHtmlCleanup(
+            existing?.article_content,
+            updateData.article_content,
+          );
+        }
+      } catch (imgErr) {
+        // 舊檔沒刪掉不影響資料正確性，cron 孤兒掃描會補刀
+        logger.error("文章舊圖清理失敗", imgErr, { articleId: id });
+      }
+
       res.json(data);
     } catch (err) {
       logger.error("Update article error:", err);

@@ -1,20 +1,29 @@
 /**
  * @fileoverview 幻燈片管理路由
  * 處理學員見證幻燈片（testimonial_slides）與相片輪播（gallery_slides）的 CRUD 操作
- * 圖片網址限定使用 Cloudinary（res.cloudinary.com/daejq0zo9/）
+ *
+ * 圖片來源：Cloudinary（鎖 daejq0zo9）或本站上傳（content-images bucket）
+ *   - 見證：`content-images/{id}/photo_*.webp`
+ *   - 輪播：`content-images/gallery_{id}/photo_*.webp`
+ * 兩者都是硬刪除，刪 row 時會一併清掉整個資料夾。
  */
 
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import { logger } from "../utils/logger.js";
+import { isAllowedImageUrl, imageUrlErrorMessage } from "../utils/imageUrl.js";
+import {
+  deleteEntityImages,
+  finalizeImageUrl,
+  replaceCleanup,
+} from "../utils/imageStorage.js";
 
 const router: Router = express.Router();
 
-/** 限定只允許指定 Cloudinary 帳號的網址 */
-const CLOUDINARY_PREFIX = "https://res.cloudinary.com/daejq0zo9/";
-
-const isValidCloudinaryUrl = (url: unknown): boolean =>
-  typeof url === "string" && url.startsWith(CLOUDINARY_PREFIX);
+/** image_url 是 NOT NULL 欄位 — 新增時必須有值且合法 */
+const isValidSlideImage = (url: unknown): boolean =>
+  typeof url === "string" && url.trim() !== "" && isAllowedImageUrl(url);
 
 // =======================================================
 // 公開 API
@@ -140,8 +149,8 @@ router.post(
     try {
       const { imageUrl, name, achievement, quote, sortOrder } = req.body;
 
-      if (!isValidCloudinaryUrl(imageUrl)) {
-        res.status(400).json({ error: "圖片網址必須使用 Cloudinary（daejq0zo9）" });
+      if (!isValidSlideImage(imageUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("見證照片") });
         return;
       }
 
@@ -159,6 +168,28 @@ router.post(
         .single();
 
       if (error) throw error;
+
+      // 拿到 id 後把暫存圖搬到 `{id}/`
+      if (data?.id) {
+        try {
+          const finalUrl = await finalizeImageUrl({
+            entity: "testimonial",
+            entityKey: data.id,
+            url: data.image_url as string,
+            kind: "photo",
+          });
+          if (finalUrl !== data.image_url) {
+            await supabaseAdmin
+              .from("testimonial_slides")
+              .update({ image_url: finalUrl })
+              .eq("id", data.id);
+            data.image_url = finalUrl;
+          }
+        } catch (imgErr) {
+          logger.error("見證照片 finalize 失敗", imgErr as Error, { id: data.id });
+        }
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Create testimonial slide error:", err);
@@ -253,18 +284,34 @@ router.put(
       const { id } = req.params;
       const { imageUrl, name, achievement, quote, sortOrder, isActive } = req.body;
 
-      if (imageUrl !== undefined && !isValidCloudinaryUrl(imageUrl)) {
-        res.status(400).json({ error: "圖片網址必須使用 Cloudinary（daejq0zo9）" });
+      if (imageUrl !== undefined && !isValidSlideImage(imageUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("見證照片") });
         return;
       }
 
       const updateData: Record<string, unknown> = {};
-      if (imageUrl !== undefined)   updateData.image_url   = imageUrl;
       if (name !== undefined)       updateData.name        = name;
       if (achievement !== undefined) updateData.achievement = achievement;
       if (quote !== undefined)      updateData.quote       = quote;
       if (sortOrder !== undefined)  updateData.sort_order  = sortOrder;
       if (isActive !== undefined)   updateData.is_active   = isActive;
+
+      let previousImage: string | null = null;
+      if (imageUrl !== undefined) {
+        const { data: prev } = await supabaseAdmin
+          .from("testimonial_slides")
+          .select("image_url")
+          .eq("id", id)
+          .single();
+        previousImage = prev?.image_url ?? null;
+
+        updateData.image_url = await finalizeImageUrl({
+          entity: "testimonial",
+          entityKey: String(id),
+          url: imageUrl,
+          kind: "photo",
+        });
+      }
 
       const { data, error } = await supabaseAdmin
         .from("testimonial_slides")
@@ -274,6 +321,11 @@ router.put(
         .single();
 
       if (error) throw error;
+
+      if (imageUrl !== undefined) {
+        await replaceCleanup(previousImage, updateData.image_url);
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Update testimonial slide error:", err);
@@ -299,6 +351,10 @@ router.delete(
         .eq("id", id);
 
       if (error) throw error;
+
+      // 硬刪除 → 連整個 `content-images/{id}/` 資料夾一起清掉
+      await deleteEntityImages("testimonial", String(id));
+
       res.json({ success: true });
     } catch (err) {
       console.error("Delete testimonial slide error:", err);
@@ -347,8 +403,8 @@ router.post(
     try {
       const { imageUrl, caption, sortOrder } = req.body;
 
-      if (!isValidCloudinaryUrl(imageUrl)) {
-        res.status(400).json({ error: "圖片網址必須使用 Cloudinary（daejq0zo9）" });
+      if (!isValidSlideImage(imageUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("輪播相片") });
         return;
       }
 
@@ -364,6 +420,28 @@ router.post(
         .single();
 
       if (error) throw error;
+
+      // 拿到 id 後把暫存圖搬到 `gallery_{id}/`
+      if (data?.id) {
+        try {
+          const finalUrl = await finalizeImageUrl({
+            entity: "gallery",
+            entityKey: data.id,
+            url: data.image_url as string,
+            kind: "photo",
+          });
+          if (finalUrl !== data.image_url) {
+            await supabaseAdmin
+              .from("gallery_slides")
+              .update({ image_url: finalUrl })
+              .eq("id", data.id);
+            data.image_url = finalUrl;
+          }
+        } catch (imgErr) {
+          logger.error("輪播相片 finalize 失敗", imgErr as Error, { id: data.id });
+        }
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Create gallery slide error:", err);
@@ -438,16 +516,32 @@ router.put(
       const { id } = req.params;
       const { imageUrl, caption, sortOrder, isActive } = req.body;
 
-      if (imageUrl !== undefined && !isValidCloudinaryUrl(imageUrl)) {
-        res.status(400).json({ error: "圖片網址必須使用 Cloudinary（daejq0zo9）" });
+      if (imageUrl !== undefined && !isValidSlideImage(imageUrl)) {
+        res.status(400).json({ error: imageUrlErrorMessage("輪播相片") });
         return;
       }
 
       const updateData: Record<string, unknown> = {};
-      if (imageUrl !== undefined)  updateData.image_url  = imageUrl;
       if (caption !== undefined)   updateData.caption    = caption;
       if (sortOrder !== undefined) updateData.sort_order = sortOrder;
       if (isActive !== undefined)  updateData.is_active  = isActive;
+
+      let previousImage: string | null = null;
+      if (imageUrl !== undefined) {
+        const { data: prev } = await supabaseAdmin
+          .from("gallery_slides")
+          .select("image_url")
+          .eq("id", id)
+          .single();
+        previousImage = prev?.image_url ?? null;
+
+        updateData.image_url = await finalizeImageUrl({
+          entity: "gallery",
+          entityKey: String(id),
+          url: imageUrl,
+          kind: "photo",
+        });
+      }
 
       const { data, error } = await supabaseAdmin
         .from("gallery_slides")
@@ -457,6 +551,11 @@ router.put(
         .single();
 
       if (error) throw error;
+
+      if (imageUrl !== undefined) {
+        await replaceCleanup(previousImage, updateData.image_url);
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Update gallery slide error:", err);
@@ -482,6 +581,10 @@ router.delete(
         .eq("id", id);
 
       if (error) throw error;
+
+      // 硬刪除 → 連整個 `content-images/gallery_{id}/` 資料夾一起清掉
+      await deleteEntityImages("gallery", String(id));
+
       res.json({ success: true });
     } catch (err) {
       console.error("Delete gallery slide error:", err);

@@ -31,7 +31,7 @@ export function getAuthToken(): string | null {
  * - Production 環境 → "" (same-origin，透過 Vercel rewrites)
  * - 開發環境 → http://localhost:5000
  */
-const getBaseURL = (): string => {
+export const getBaseURL = (): string => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (import.meta.env.PROD) return "";
   return "http://localhost:5000";

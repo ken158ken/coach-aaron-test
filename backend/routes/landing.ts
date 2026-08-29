@@ -22,6 +22,10 @@ import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin, optionalAuth } from "../middleware/auth.js";
 import { sanitizeId } from "../utils/sanitizer.js";
 import { logger } from "../utils/logger.js";
+import { IMAGE_BUCKETS, deleteFolder } from "../utils/imageStorage.js";
+
+/** LP 專案圖片 bucket（常數集中在 utils/imageStorage.ts） */
+const LP_IMAGE_BUCKET = IMAGE_BUCKETS.LANDING;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -556,7 +560,14 @@ router.delete("/projects/:id", authenticateToken, requireAdmin, async (req: Requ
 
     if (error) throw error;
 
-    logger.info("刪除 LP 專案", { id: numericValue, admin: req.user?.email });
+    // 硬刪除 → 清掉 `lp-images/{projectId}/` 整個資料夾
+    const removed = await deleteFolder(LP_IMAGE_BUCKET, String(numericValue));
+
+    logger.info("刪除 LP 專案", {
+      id: numericValue,
+      imagesRemoved: removed,
+      admin: req.user?.email,
+    });
     res.json({ success: true });
   } catch (err) {
     logger.error("刪除 LP 專案失敗", err);
@@ -622,13 +633,13 @@ router.post(
       const filename = `${numericValue}/${Date.now()}.webp`;
 
       const { error: uploadErr } = await supabaseAdmin.storage
-        .from("lp-images")
+        .from(LP_IMAGE_BUCKET)
         .upload(filename, webpBuffer, { contentType: "image/webp", upsert: false });
 
       if (uploadErr) throw uploadErr;
 
       const { data: publicData } = supabaseAdmin.storage
-        .from("lp-images")
+        .from(LP_IMAGE_BUCKET)
         .getPublicUrl(filename);
 
       logger.info("LP 圖片上傳成功", { projectId: numericValue, path: filename });
@@ -658,7 +669,7 @@ router.delete(
       return;
     }
     try {
-      const { error } = await supabaseAdmin.storage.from("lp-images").remove([path]);
+      const { error } = await supabaseAdmin.storage.from(LP_IMAGE_BUCKET).remove([path]);
       if (error) throw error;
       res.json({ success: true });
     } catch (err) {

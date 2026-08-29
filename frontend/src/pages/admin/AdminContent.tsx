@@ -13,6 +13,8 @@ import {
   Textarea,
   Modal,
   useDialog,
+  ImageInput,
+  ImageUploadTargetProvider,
 } from '@/components/ui';
 import { Toggle, TagInput } from '@/components/ui/form';
 // 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
@@ -46,6 +48,7 @@ import { TestimonialCarousel } from '@/components/sections';
 import { GallerySlider } from '@/components/sections';
 import { getTemplates, type ContentTemplate } from '@/utils/contentTemplates';
 import { HOMEPAGE_SECTIONS, KEY_TO_SECTION_ID } from '@/utils/homepageSections';
+import { imageUrlError } from '@/lib/imageUrl';
 
 /** 用 chip / tag 編輯器呈現的 JSON 字串陣列 keys */
 const STRING_ARRAY_KEYS = new Set<string>([
@@ -53,9 +56,6 @@ const STRING_ARRAY_KEYS = new Set<string>([
   'coach_intro_bullets',
 ]);
 
-/** Cloudinary 限定前綴 */
-const CLOUDINARY_PREFIX = 'https://res.cloudinary.com/daejq0zo9/';
-const isValidCloudinaryUrl = (url: string) => url.startsWith(CLOUDINARY_PREFIX);
 
 /** 日誌工具 */
 const logger = {
@@ -407,14 +407,13 @@ const AdminContent: React.FC = () => {
   const handleSaveContent = async () => {
     if (!editingSection) return;
 
-    // image 型：前端檔 Cloudinary
-    if (
-      editingSection.content_type === 'image' &&
-      editContent.trim() !== '' &&
-      !isValidCloudinaryUrl(editContent)
-    ) {
-      setEditUrlError(`圖片網址必須以 ${CLOUDINARY_PREFIX} 開頭`);
-      return;
+    // image 型：只接受自家 Storage 上傳結果或 Cloudinary 網址
+    if (editingSection.content_type === 'image') {
+      const imgError = imageUrlError(editContent, '圖片');
+      if (imgError) {
+        setEditUrlError(imgError);
+        return;
+      }
     }
     // json 型：驗證格式
     if (editingSection.content_type === 'json' && editContent.trim() !== '') {
@@ -447,14 +446,13 @@ const AdminContent: React.FC = () => {
       setError('Key 和名稱為必填');
       return;
     }
-    // image 型：Cloudinary 驗證
-    if (
-      newContentForm.contentType === 'image' &&
-      newContentForm.contentValue.trim() !== '' &&
-      !isValidCloudinaryUrl(newContentForm.contentValue)
-    ) {
-      setError(`圖片網址必須以 ${CLOUDINARY_PREFIX} 開頭`);
-      return;
+    // image 型：只接受自家 Storage 上傳結果或 Cloudinary 網址
+    if (newContentForm.contentType === 'image') {
+      const imgError = imageUrlError(newContentForm.contentValue, '圖片');
+      if (imgError) {
+        setError(imgError);
+        return;
+      }
     }
     // json 型：格式驗證
     if (
@@ -646,10 +644,13 @@ const AdminContent: React.FC = () => {
   };
 
   const handleSaveTestimonial = async () => {
-    if (!isValidCloudinaryUrl(testimonialForm.imageUrl)) {
-      setTestimonialUrlError(
-        '網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭'
-      );
+    if (!testimonialForm.imageUrl.trim()) {
+      setTestimonialUrlError('請上傳照片或貼上圖片網址');
+      return;
+    }
+    const testimonialImgError = imageUrlError(testimonialForm.imageUrl, '照片');
+    if (testimonialImgError) {
+      setTestimonialUrlError(testimonialImgError);
       return;
     }
     try {
@@ -763,10 +764,13 @@ const AdminContent: React.FC = () => {
   };
 
   const handleSaveGallery = async () => {
-    if (!isValidCloudinaryUrl(galleryForm.imageUrl)) {
-      setGalleryUrlError(
-        '網址必須以 https://res.cloudinary.com/daejq0zo9/ 開頭'
-      );
+    if (!galleryForm.imageUrl.trim()) {
+      setGalleryUrlError('請上傳相片或貼上圖片網址');
+      return;
+    }
+    const galleryImgError = imageUrlError(galleryForm.imageUrl, '相片');
+    if (galleryImgError) {
+      setGalleryUrlError(galleryImgError);
       return;
     }
     try {
@@ -1966,36 +1970,19 @@ const AdminContent: React.FC = () => {
               />
             </div>
           ) : editingSection?.content_type === 'image' ? (
-            <div className="space-y-2">
-              <Input
-                label="圖片網址（必須 Cloudinary）"
-                value={editContent}
-                onChange={(e) => {
-                  setEditContent(e.target.value);
-                  setEditUrlError('');
-                }}
-                placeholder={`${CLOUDINARY_PREFIX}image/upload/...`}
-                theme="luxe"
-              />
-              {editUrlError && (
-                <p className="text-red-400 text-xs">{editUrlError}</p>
-              )}
-              {editContent && isValidCloudinaryUrl(editContent) && (
-                <div className="mt-2 w-32 h-40 rounded-lg overflow-hidden border border-luxe-gold/20">
-                  <img
-                    src={editContent}
-                    alt="預覽"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              {editContent && !isValidCloudinaryUrl(editContent) && (
-                <div className="mt-2 p-2 bg-orange-900/20 border border-orange-500/30 rounded text-xs text-orange-300">
-                  ⚠️ 目前值不是 Cloudinary
-                  網址（可能是舊的本地檔）。儲存時必須替換成 Cloudinary URL。
-                </div>
-              )}
-            </div>
+            <ImageInput
+              label="圖片"
+              value={editContent}
+              onChange={(url) => {
+                setEditContent(url);
+                setEditUrlError('');
+              }}
+              entity="site-content"
+              entityKey={`site_${editingSection.content_key}`}
+              kind="photo"
+              aspectHint="3 / 4"
+              error={editUrlError}
+            />
           ) : editingSection?.content_type === 'json' ? (
             <Textarea
               label="內容（JSON 格式）"
@@ -2088,7 +2075,7 @@ const AdminContent: React.FC = () => {
               <option value="text">純文字</option>
               <option value="html">HTML</option>
               <option value="json">JSON 陣列</option>
-              <option value="image">圖片 (Cloudinary URL)</option>
+              <option value="image">圖片（上傳或 Cloudinary 網址）</option>
             </select>
           </div>
           {/* 範本選擇器 - 根據輸入的 Key 動態顯示 */}
@@ -2100,18 +2087,36 @@ const AdminContent: React.FC = () => {
               }
             />
           )}
-          <Textarea
-            label="初始內容"
-            value={newContentForm.contentValue}
-            onChange={(e) =>
-              setNewContentForm({
-                ...newContentForm,
-                contentValue: e.target.value,
-              })
-            }
-            theme="luxe"
-            rows={4}
-          />
+          {newContentForm.contentType === 'image' ? (
+            <ImageInput
+              label="初始圖片"
+              value={newContentForm.contentValue}
+              onChange={(url) =>
+                setNewContentForm({ ...newContentForm, contentValue: url })
+              }
+              entity="site-content"
+              entityKey={
+                newContentForm.contentKey
+                  ? `site_${newContentForm.contentKey}`
+                  : null
+              }
+              kind="photo"
+              aspectHint="3 / 4"
+            />
+          ) : (
+            <Textarea
+              label="初始內容"
+              value={newContentForm.contentValue}
+              onChange={(e) =>
+                setNewContentForm({
+                  ...newContentForm,
+                  contentValue: e.target.value,
+                })
+              }
+              theme="luxe"
+              rows={4}
+            />
+          )}
           <div className="flex justify-end gap-3">
             <PillButton
               theme="luxe"
@@ -2155,13 +2160,23 @@ const AdminContent: React.FC = () => {
             <label className="block text-sm text-luxe-muted mb-2">
               彈窗內容（富文本編輯器）
             </label>
-            <RichTextEditor
-              content={popupForm.popupContent}
-              onChange={(html) =>
-                setPopupForm({ ...popupForm, popupContent: html })
-              }
-              theme="luxe"
-            />
+            {/* 彈窗內文插圖：放進 content-images 的 site_popup_* 前綴 */}
+            <ImageUploadTargetProvider
+              value={{
+                entity: 'site-content',
+                entityKey: editingPopup
+                  ? `site_popup_${editingPopup.popup_id}`
+                  : null,
+              }}
+            >
+              <RichTextEditor
+                content={popupForm.popupContent}
+                onChange={(html) =>
+                  setPopupForm({ ...popupForm, popupContent: html })
+                }
+                theme="luxe"
+              />
+            </ImageUploadTargetProvider>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2234,43 +2249,20 @@ const AdminContent: React.FC = () => {
         size="lg"
       >
         <div className="space-y-4">
-          {/* Cloudinary URL 說明 */}
-          <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
-            📌 圖片網址限定使用 Cloudinary：
-            <br />
-            <span className="text-luxe-gold/80 font-mono break-all">
-              https://res.cloudinary.com/daejq0zo9/image/upload/...
-            </span>
-          </div>
-          <div>
-            <Input
-              label="圖片網址 (Cloudinary) *"
-              value={testimonialForm.imageUrl}
-              onChange={(e) => {
-                setTestimonialForm({
-                  ...testimonialForm,
-                  imageUrl: e.target.value,
-                });
-                setTestimonialUrlError('');
-              }}
-              placeholder="https://res.cloudinary.com/daejq0zo9/image/upload/..."
-              theme="luxe"
-            />
-            {testimonialUrlError && (
-              <p className="text-red-400 text-xs mt-1">{testimonialUrlError}</p>
-            )}
-            {/* 圖片預覽 */}
-            {testimonialForm.imageUrl &&
-              isValidCloudinaryUrl(testimonialForm.imageUrl) && (
-                <div className="mt-2 w-20 h-24 rounded-lg overflow-hidden border border-luxe-gold/20">
-                  <img
-                    src={testimonialForm.imageUrl}
-                    alt="預覽"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-          </div>
+          <ImageInput
+            label="學員照片"
+            value={testimonialForm.imageUrl}
+            onChange={(url) => {
+              setTestimonialForm({ ...testimonialForm, imageUrl: url });
+              setTestimonialUrlError('');
+            }}
+            entity="testimonial"
+            entityKey={editingTestimonial?.id ?? null}
+            kind="photo"
+            aspectHint="3 / 4"
+            required
+            error={testimonialUrlError}
+          />
           <Input
             label="學員姓名 *"
             value={testimonialForm.name}
@@ -2348,38 +2340,20 @@ const AdminContent: React.FC = () => {
         size="lg"
       >
         <div className="space-y-4">
-          <div className="p-3 bg-luxe-gold/5 border border-luxe-gold/20 rounded-lg text-xs text-luxe-muted">
-            📌 圖片網址限定使用 Cloudinary：
-            <br />
-            <span className="text-luxe-gold/80 font-mono break-all">
-              https://res.cloudinary.com/daejq0zo9/image/upload/...
-            </span>
-          </div>
-          <div>
-            <Input
-              label="圖片網址 (Cloudinary) *"
-              value={galleryForm.imageUrl}
-              onChange={(e) => {
-                setGalleryForm({ ...galleryForm, imageUrl: e.target.value });
-                setGalleryUrlError('');
-              }}
-              placeholder="https://res.cloudinary.com/daejq0zo9/image/upload/..."
-              theme="luxe"
-            />
-            {galleryUrlError && (
-              <p className="text-red-400 text-xs mt-1">{galleryUrlError}</p>
-            )}
-            {galleryForm.imageUrl &&
-              isValidCloudinaryUrl(galleryForm.imageUrl) && (
-                <div className="mt-2 w-32 h-20 rounded-lg overflow-hidden border border-luxe-gold/20">
-                  <img
-                    src={galleryForm.imageUrl}
-                    alt="預覽"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-          </div>
+          <ImageInput
+            label="相片"
+            value={galleryForm.imageUrl}
+            onChange={(url) => {
+              setGalleryForm({ ...galleryForm, imageUrl: url });
+              setGalleryUrlError('');
+            }}
+            entity="gallery"
+            entityKey={editingGallery ? `gallery_${editingGallery.id}` : null}
+            kind="photo"
+            aspectHint="16 / 10"
+            required
+            error={galleryUrlError}
+          />
           <Input
             label="圖片說明文字（選填）"
             value={galleryForm.caption}

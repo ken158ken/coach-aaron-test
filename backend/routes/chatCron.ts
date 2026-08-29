@@ -15,6 +15,7 @@
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { logger } from "../utils/logger.js";
+import { IMAGE_BUCKETS } from "../utils/imageStorage.js";
 
 const router: Router = express.Router();
 
@@ -49,7 +50,7 @@ router.get(
       for (let i = 0; i < paths.length; i += 100) {
         const batch = paths.slice(i, i + 100);
         const { error: rmErr } = await supabaseAdmin.storage
-          .from("chat-images")
+          .from(IMAGE_BUCKETS.CHAT)
           .remove(batch);
         if (rmErr) {
           logger.warn("storage 清理部分失敗（不阻擋 DB 刪除）", {

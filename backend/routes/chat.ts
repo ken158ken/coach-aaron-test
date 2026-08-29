@@ -18,6 +18,10 @@ import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
 import { createNotification } from "../utils/notifications.js";
+import { IMAGE_BUCKETS } from "../utils/imageStorage.js";
+
+/** 聊天圖片 bucket（常數集中在 utils/imageStorage.ts） */
+const CHAT_IMAGE_BUCKET = IMAGE_BUCKETS.CHAT;
 
 const router: Router = express.Router();
 
@@ -581,7 +585,7 @@ router.post(
         imagePath = `${id}/${stamp}-${random}.${ext}`;
 
         const { error: upErr } = await supabaseAdmin.storage
-          .from("chat-images")
+          .from(CHAT_IMAGE_BUCKET)
           .upload(imagePath, file.buffer, {
             contentType: file.mimetype,
             cacheControl: "604800", // 7 天
@@ -592,7 +596,7 @@ router.post(
           return;
         }
         const { data: pub } = supabaseAdmin.storage
-          .from("chat-images")
+          .from(CHAT_IMAGE_BUCKET)
           .getPublicUrl(imagePath);
         imageUrl = pub.publicUrl;
       }

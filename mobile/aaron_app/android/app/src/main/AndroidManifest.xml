@@ -10,7 +10,7 @@
         android:maxSdkVersion="32"/>
 
     <application
-        android:label="Aaron"
+        android:label="阿倫教官"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

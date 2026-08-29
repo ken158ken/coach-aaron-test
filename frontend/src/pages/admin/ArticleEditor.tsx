@@ -9,19 +9,19 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/context";
-import { Loading, Tooltip } from "@/components/ui";
+import {
+  Loading,
+  Tooltip,
+  ImageInput,
+  ImagePickerModal,
+  ImageUploadTargetProvider,
+} from "@/components/ui";
 import { useDialog } from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/editor";
 import { useRichTextEditor } from "@/hooks/useRichTextEditor";
 import { articleService } from "@/services/content/article.service";
 import ArticlePreviewModal from "@/components/admin/ArticlePreviewModal";
-
-/**
- * 驗證 Cloudinary 圖片網址
- */
-const isValidCloudinaryUrl = (url: string): boolean => {
-  return /^https?:\/\/res\.cloudinary\.com\/.+/.test(url);
-};
+import { imageUrlError } from "@/lib/imageUrl";
 
 /**
  * 驗證 YouTube 網址
@@ -149,6 +149,12 @@ const ArticleEditor: React.FC = () => {
 
   // 使用說明 Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // 內文插圖 Modal（取代舊的純文字 prompt）
+  const [showImagePicker, setShowImagePicker] = useState(false);
+
+  /** 圖片上傳目標：已存檔文章用 id，新文章走 temp（後端儲存時搬正） */
+  const uploadEntityKey = isNew ? null : (id ?? null);
 
   useScrollLock(showCategoryModal || showPreviewModal || showHelpModal);
 
@@ -391,44 +397,24 @@ const ArticleEditor: React.FC = () => {
     setHasChanges(true);
   }, []);
 
-  /** 插入圖片（強制 Cloudinary 驗證） */
-  const handleInsertImage = useCallback(async () => {
-    const url = await dialog.prompt({
-      title: "插入圖片",
-      message: "請輸入 Cloudinary 圖片網址：",
-      placeholder: "https://res.cloudinary.com/...",
-      validation: (value) => {
-        if (!isValidCloudinaryUrl(value)) {
-          return "❌ 只能使用 Cloudinary 圖片網址！\n請確保網址以 https://res.cloudinary.com/ 開頭";
-        }
-        return null;
-      },
-      renderPreview: (value) =>
-        isValidCloudinaryUrl(value) ? (
-          <div className="mt-4 rounded-lg overflow-hidden border border-luxe-gold/30">
-            <img
-              src={value}
-              alt="圖片預覽"
-              className="max-h-48 mx-auto object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          </div>
-        ) : null,
-    });
+  /** 設定圖片欄位（封面 / Banner），值由 ImageInput 提供 */
+  const setImageField = useCallback(
+    (field: "coverImage" | "bannerImage", url: string) => {
+      setArticle((prev) => ({ ...prev, [field]: url }));
+      setHasChanges(true);
+    },
+    [],
+  );
 
-    if (url && editor) {
-      // 二次驗證（防護措施）
-      if (!isValidCloudinaryUrl(url)) {
-        await dialog.alert({
-          type: "error",
-          title: "無效的圖片網址",
-          message: "只能使用 Cloudinary 圖片網址！",
-        });
-        return;
-      }
-      // 使用可調整大小的圖片擴展
+  /** 插入內文插圖：開啟 ImageInput modal（上傳 or Cloudinary 網址） */
+  const handleInsertImage = useCallback(() => {
+    setShowImagePicker(true);
+  }, []);
+
+  /** Modal 確認後把圖片塞進編輯器 */
+  const handleImagePicked = useCallback(
+    (url: string) => {
+      if (!editor) return;
       editor
         .chain()
         .focus()
@@ -437,8 +423,9 @@ const ArticleEditor: React.FC = () => {
           attrs: { src: url },
         })
         .run();
-    }
-  }, [editor, dialog]);
+    },
+    [editor],
+  );
 
   /** 插入圖片庫（最多三張一排） */
   const handleInsertImageGallery = useCallback(() => {
@@ -617,19 +604,13 @@ const ArticleEditor: React.FC = () => {
       return;
     }
 
-    // 驗證圖片網址必須是 Cloudinary
-    if (article.coverImage && !isValidCloudinaryUrl(article.coverImage)) {
+    // 驗證圖片網址：自家 Storage 上傳結果 或 Cloudinary 皆可
+    const coverError = imageUrlError(article.coverImage, "封面圖片");
+    const bannerError = imageUrlError(article.bannerImage, "Banner 圖片");
+    if (coverError || bannerError) {
       await dialog.alert({
         title: "圖片網址錯誤",
-        message: "封面圖片必須使用 Cloudinary 網址（https://res.cloudinary.com/...）",
-        type: "error",
-      });
-      return;
-    }
-    if (article.bannerImage && !isValidCloudinaryUrl(article.bannerImage)) {
-      await dialog.alert({
-        title: "圖片網址錯誤",
-        message: "Banner 圖片必須使用 Cloudinary 網址（https://res.cloudinary.com/...）",
+        message: coverError || bannerError || "",
         type: "error",
       });
       return;
@@ -871,15 +852,20 @@ const ArticleEditor: React.FC = () => {
               />
             </div>
 
-            {/* 富文本編輯器 */}
-            <RichTextEditor
-              editor={editor}
-              onInsertImage={handleInsertImage}
-              onInsertImageGallery={handleInsertImageGallery}
-              onInsertYoutube={handleInsertYoutube}
-              onInsertLoom={handleInsertLoom}
-              onInsertLink={handleInsertLink}
-            />
+            {/* 富文本編輯器
+                Provider 讓編輯器內的插圖（圖片庫 node view）知道要傳到哪篇文章 */}
+            <ImageUploadTargetProvider
+              value={{ entity: "article", entityKey: uploadEntityKey }}
+            >
+              <RichTextEditor
+                editor={editor}
+                onInsertImage={handleInsertImage}
+                onInsertImageGallery={handleInsertImageGallery}
+                onInsertYoutube={handleInsertYoutube}
+                onInsertLoom={handleInsertLoom}
+                onInsertLink={handleInsertLink}
+              />
+            </ImageUploadTargetProvider>
           </div>
         </div>
 
@@ -1071,80 +1057,28 @@ const ArticleEditor: React.FC = () => {
                 </div>
 
                 {/* 封面縮圖 */}
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    封面縮圖
-                    <span className="ml-1 text-gray-600">（列表卡片用）</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={article.coverImage}
-                    onChange={(e) => {
-                      setArticle((prev) => ({
-                        ...prev,
-                        coverImage: e.target.value,
-                      }));
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://res.cloudinary.com/..."
-                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
-                      article.coverImage && !isValidCloudinaryUrl(article.coverImage)
-                        ? "border-red-500 focus:border-red-400"
-                        : "border-luxe-gold/30 focus:border-luxe-gold"
-                    }`}
-                  />
-                  {article.coverImage && !isValidCloudinaryUrl(article.coverImage) && (
-                    <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
-                  )}
-                  {article.coverImage && isValidCloudinaryUrl(article.coverImage) && (
-                    <img
-                      src={article.coverImage}
-                      alt="封面預覽"
-                      className="mt-2 w-full h-24 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  )}
-                </div>
+                <ImageInput
+                  label="封面縮圖"
+                  hint="列表卡片用"
+                  value={article.coverImage}
+                  onChange={(url) => setImageField("coverImage", url)}
+                  entity="article"
+                  entityKey={uploadEntityKey}
+                  kind="cover"
+                  aspectHint="16 / 9"
+                />
 
                 {/* Banner 大圖 */}
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    Banner 大圖
-                    <span className="ml-1 text-gray-600">（內頁頂部橫幅用）</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={article.bannerImage}
-                    onChange={(e) => {
-                      setArticle((prev) => ({
-                        ...prev,
-                        bannerImage: e.target.value,
-                      }));
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://res.cloudinary.com/..."
-                    className={`w-full px-3 py-2 bg-luxe-bg border rounded-lg outline-none text-sm ${
-                      article.bannerImage && !isValidCloudinaryUrl(article.bannerImage)
-                        ? "border-red-500 focus:border-red-400"
-                        : "border-luxe-gold/30 focus:border-luxe-gold"
-                    }`}
-                  />
-                  {article.bannerImage && !isValidCloudinaryUrl(article.bannerImage) && (
-                    <p className="text-xs text-red-400 mt-1">必須使用 Cloudinary 網址</p>
-                  )}
-                  {article.bannerImage && isValidCloudinaryUrl(article.bannerImage) && (
-                    <img
-                      src={article.bannerImage}
-                      alt="Banner 預覽"
-                      className="mt-2 w-full h-24 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  )}
-                </div>
+                <ImageInput
+                  label="Banner 大圖"
+                  hint="內頁頂部橫幅用"
+                  value={article.bannerImage}
+                  onChange={(url) => setImageField("bannerImage", url)}
+                  entity="article"
+                  entityKey={uploadEntityKey}
+                  kind="banner"
+                  aspectHint="21 / 9"
+                />
 
                 {/* 狀態 */}
                 <div>
@@ -1423,6 +1357,17 @@ const ArticleEditor: React.FC = () => {
         onConfirm={handleConfirmPublish}
         article={article}
         isSubmitting={isSaving}
+      />
+
+      {/* 內文插圖選擇 Modal（上傳 / Cloudinary 網址） */}
+      <ImagePickerModal
+        isOpen={showImagePicker}
+        onClose={() => setShowImagePicker(false)}
+        onConfirm={handleImagePicked}
+        entity="article"
+        entityKey={uploadEntityKey}
+        kind="content"
+        title="插入圖片"
       />
     </div>
   );

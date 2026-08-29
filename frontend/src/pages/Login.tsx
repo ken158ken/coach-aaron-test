@@ -12,6 +12,7 @@ import SEOHead from "@/components/seo/SEOHead";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { authService } from "@/services";
 import { useLanguage } from "@/context/LanguageContext";
+import { LogoVertical } from "@/components/brand";
 
 /**
  * Login - 登入頁面
@@ -124,8 +125,13 @@ const Login: React.FC = () => {
         {/* Logo / Title */}
         <div className="text-center mb-8 sm:mb-10">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-light text-gold tracking-widest">
-              AARON
+            {/* 保留 h1 作為頁面標題語意，可視內容改為直式品牌 lockup；
+                文字為 currentColor，沿用原本的 text-gold */}
+            <h1 className="text-gold m-0">
+              <LogoVertical
+                title="阿倫教官 Coach Aaron"
+                className="h-32 sm:h-40 w-auto mx-auto"
+              />
             </h1>
           </Link>
           <p className="text-sm sm:text-base text-muted mt-2 font-light">

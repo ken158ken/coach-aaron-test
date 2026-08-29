@@ -15,7 +15,6 @@
  */
 
 import express, { Request, Response, Router } from "express";
-import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
@@ -26,8 +25,12 @@ import {
   parseTranscript,
   type TranscriptEntry,
 } from "../utils/loom.js";
-
-const LESSON_THUMB_BUCKET = "lesson-thumbnails";
+import {
+  isAllowedLessonThumbnailUrl,
+  imageUrlErrorMessage,
+} from "../utils/imageUrl.js";
+import { finalizeImageUrl, replaceCleanup } from "../utils/imageStorage.js";
+import { uploadBase64AsTemp } from "./uploads.js";
 
 const router: Router = express.Router();
 
@@ -184,6 +187,13 @@ router.post(
         res.status(400).json({ error: "loom_url 無法解析出影片 id" });
         return;
       }
+      if (
+        body.thumbnail_url !== undefined &&
+        !isAllowedLessonThumbnailUrl(body.thumbnail_url)
+      ) {
+        res.status(400).json({ error: imageUrlErrorMessage("影片縮圖") });
+        return;
+      }
 
       // 處理 transcript
       let transcript = await resolveTranscript(loomId, body);
@@ -226,6 +236,30 @@ router.post(
         .select()
         .single();
       if (error) throw error;
+
+      // 拿到 id 後把暫存縮圖搬到 `{id}/` 正式路徑
+      if (data?.id) {
+        try {
+          const finalUrl = await finalizeImageUrl({
+            entity: "lesson",
+            entityKey: data.id,
+            url: data.thumbnail_url as string | null,
+            kind: "thumb",
+          });
+          if (finalUrl !== data.thumbnail_url) {
+            await supabaseAdmin
+              .from("lesson_videos")
+              .update({ thumbnail_url: finalUrl })
+              .eq("id", data.id);
+            data.thumbnail_url = finalUrl;
+          }
+        } catch (imgErr) {
+          logger.error("教學影片縮圖 finalize 失敗", imgErr as Error, {
+            lessonId: data.id,
+          });
+        }
+      }
+
       res.json(data);
     } catch (err) {
       logger.error("新增教學影片失敗", err as Error);
@@ -247,6 +281,14 @@ router.put(
         return;
       }
       const body = req.body || {};
+
+      if (
+        body.thumbnail_url !== undefined &&
+        !isAllowedLessonThumbnailUrl(body.thumbnail_url)
+      ) {
+        res.status(400).json({ error: imageUrlErrorMessage("影片縮圖") });
+        return;
+      }
 
       const update: UpdateRow = {};
       if (body.title !== undefined) update.title = body.title.trim();
@@ -339,6 +381,25 @@ router.put(
         update.transcript = await resolveTranscript(loomIdForFetch || "", body);
       }
 
+      // ── 縮圖：finalize 暫存檔 → 更新成功後刪舊檔 ──
+      let previousThumbnail: string | null = null;
+      const thumbnailChanged = update.thumbnail_url !== undefined;
+      if (thumbnailChanged) {
+        const { data: prev } = await supabaseAdmin
+          .from("lesson_videos")
+          .select("thumbnail_url")
+          .eq("id", id)
+          .single();
+        previousThumbnail = prev?.thumbnail_url ?? null;
+
+        update.thumbnail_url = (await finalizeImageUrl({
+          entity: "lesson",
+          entityKey: String(id),
+          url: update.thumbnail_url,
+          kind: "thumb",
+        })) as string | null;
+      }
+
       const { data, error } = await supabaseAdmin
         .from("lesson_videos")
         .update(update)
@@ -346,6 +407,11 @@ router.put(
         .select()
         .single();
       if (error) throw error;
+
+      if (thumbnailChanged) {
+        await replaceCleanup(previousThumbnail, update.thumbnail_url);
+      }
+
       res.json(data);
     } catch (err) {
       logger.error("更新教學影片失敗", err as Error);
@@ -404,10 +470,13 @@ async function resolveTranscript(
 }
 
 /**
- * 上傳教學影片截圖 — base64 → WebP → Supabase Storage
+ * 上傳教學影片截圖
  * @route POST /api/lessons/upload-thumbnail
  * body: { image: string }  // "data:image/...;base64,..."
- * Bucket: lesson-thumbnails（需在 Supabase 後台建立，設為 public）
+ *
+ * @deprecated 相容期保留 — 請改用 `POST /api/uploads/lesson/:id|temp`。
+ * 薄轉發到共用邏輯，檔案落在 `lesson-thumbnails/temp/`，
+ * 影片儲存時由 finalizeImageUrl 搬到 `{id}/`。
  */
 router.post(
   "/upload-thumbnail",
@@ -416,35 +485,18 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { image } = req.body as { image?: string };
-      if (!image || !image.startsWith("data:image/")) {
+      const result = await uploadBase64AsTemp("lesson", "thumb", image);
+      res.json({ url: result.url, path: result.path });
+    } catch (err) {
+      const message = (err as Error)?.message;
+      if (message === "INVALID_DATA_URL") {
         res.status(400).json({ error: "請提供有效的圖片 (base64 data URL)" });
         return;
       }
-
-      const base64 = image.replace(/^data:image\/\w+;base64,/, "");
-      const inputBuffer = Buffer.from(base64, "base64");
-
-      const webpBuffer = await sharp(inputBuffer)
-        .resize({ width: 800, withoutEnlargement: true })
-        .webp({ quality: 82 })
-        .toBuffer();
-
-      const filename = `lesson_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.webp`;
-      const { error: uploadErr } = await supabaseAdmin.storage
-        .from(LESSON_THUMB_BUCKET)
-        .upload(filename, webpBuffer, {
-          contentType: "image/webp",
-          upsert: false,
-        });
-
-      if (uploadErr) throw uploadErr;
-
-      const { data } = supabaseAdmin.storage
-        .from(LESSON_THUMB_BUCKET)
-        .getPublicUrl(filename);
-
-      res.json({ url: data.publicUrl });
-    } catch (err) {
+      if (message === "FILE_TOO_LARGE") {
+        res.status(400).json({ error: "圖片檔案過大，請壓到 5MB 以內" });
+        return;
+      }
       logger.error("上傳教學影片截圖失敗", err as Error);
       res.status(500).json({ error: "上傳截圖失敗" });
     }

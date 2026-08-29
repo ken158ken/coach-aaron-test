@@ -6,6 +6,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { SOCIAL_LINKS } from "@/constants";
+import { LogoMark } from "@/components/brand";
 
 /**
  * Inline SVG 社群圖示
@@ -76,8 +77,10 @@ const Footer: React.FC = (): JSX.Element => {
       <div className="studio-container">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
 
-          {/* Brand */}
-          <div className="flex items-center gap-3">
+          {/* Brand：用 mark + 銀刃字，而非橫式 lockup —— 頁尾單列高度下
+              lockup 的次行「AARON COACH」只剩約 7px，且會失去 silver-text 效果 */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <LogoMark className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
             <span className="font-display font-bold tracking-[4px] silver-text text-base sm:text-lg">
               阿倫教官
             </span>

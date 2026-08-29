@@ -17,6 +17,7 @@ import React, {
 import { useNavigate, useParams } from "react-router-dom";
 import { landingService } from "../../services/site/landing.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { ImageInput } from "@/components/ui";
 import type {
   LpProjectDetail,
   LpResolvedField,
@@ -128,99 +129,32 @@ function isChanged(fe: FieldEdit): boolean {
 const FieldInput: React.FC<{
   field: FieldEdit;
   onChange: (fe: FieldEdit) => void;
-  onUploadImage?: (file: File) => Promise<string>;
-}> = ({ field, onChange, onUploadImage }) => {
+  /** 圖片欄位一定會拿到；非圖片欄位不會用到 */
+  onUploadImage: (file: File) => Promise<string>;
+  onDeleteImage: (url: string) => void;
+}> = ({ field, onChange, onUploadImage, onDeleteImage }) => {
   const changed = isChanged(field);
-  const [uploading, setUploading] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const set = (patch: Partial<FieldEdit>) =>
     onChange({ ...field, ...patch });
 
-  const handleFileSelect = async (file: File) => {
-    if (!onUploadImage) return;
-    setUploading(true);
-    try {
-      const url = await onUploadImage(file);
-      set({ cloudinaryUrl: url });
-    } catch (err) {
-      alert(`上傳失敗：${(err as Error).message}`);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   if (isImageField(field)) {
     return (
-      <div className="space-y-3">
-        {/* Current image preview */}
-        {field.cloudinaryUrl && (
-          <div className="relative aspect-video w-full max-w-xs rounded-lg overflow-hidden border border-luxe-gold/10 group">
-            <img
-              src={field.cloudinaryUrl}
-              alt={field.field_label}
-              className="w-full h-full object-cover"
-            />
-            <button
-              onClick={() => set({ cloudinaryUrl: "", cloudinaryPublicId: "" })}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white/70 hover:text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Upload zone */}
-        {onUploadImage && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
-                e.target.value = "";
-              }}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="w-full max-w-xs flex flex-col items-center gap-2 py-4 border-2 border-dashed rounded-lg text-xs text-luxe-muted hover:text-luxe-text hover:border-luxe-gold/40 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
-              style={{ borderColor: "rgba(197,160,89,0.2)" }}
-            >
-              {uploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-transparent border-luxe-gold rounded-full animate-spin" />
-                  上傳中…
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  點擊上傳圖片
-                  <span className="text-xs text-luxe-muted/50">JPG / PNG / WebP，最大 5MB</span>
-                </>
-              )}
-            </button>
-          </>
-        )}
-
-        {/* Manual URL input */}
-        <div className="space-y-1">
-          <p className="text-xs text-luxe-muted/40">或直接貼上圖片 URL</p>
-          <input
-            type="url"
-            value={field.cloudinaryUrl}
-            onChange={(e) => set({ cloudinaryUrl: e.target.value })}
-            placeholder="https://..."
-            className={`w-full bg-luxe-bg border rounded-lg px-3 py-2.5 text-base text-luxe-text placeholder:text-luxe-muted/40 focus:outline-none focus:ring-1 focus:ring-luxe-gold/40 transition-colors ${
-              changed ? "border-luxe-gold/50" : "border-luxe-gold/10 focus:border-luxe-gold/30"
-            }`}
-          />
-        </div>
+      <div className="max-w-xs">
+        <ImageInput
+          value={field.cloudinaryUrl}
+          onChange={(url) =>
+            set({
+              cloudinaryUrl: url,
+              // 換圖 / 移除都讓 public_id 失效，避免殘留舊資產的引用
+              cloudinaryPublicId: url ? field.cloudinaryPublicId : "",
+            })
+          }
+          // LP 圖片放在 lp-images/{projectId}/，沿用既有的 landing 上傳 API
+          uploadFn={onUploadImage}
+          onRemove={onDeleteImage}
+          aspectHint="16 / 9"
+        />
       </div>
     );
   }
@@ -425,6 +359,24 @@ const LandingPageEditor: React.FC = () => {
     const { url } = await landingService.uploadImage(projectId, file);
     return url;
   }, [projectId]);
+
+  /**
+   * 移除圖片時真的把檔案從 lp-images 刪掉。
+   * 後端 path 格式固定是 `{projectId}/{timestamp}.webp`（見 landing.ts 的驗證），
+   * 所以從 public URL 取 `/lp-images/` 之後的片段即可。
+   * 非本站上傳的網址（例如手貼的外部連結）沒有東西可刪，直接略過。
+   */
+  const handleImageDelete = useCallback(
+    (url: string) => {
+      const match = url.match(/\/lp-images\/(\d+\/\d+\.webp)(?:[?#]|$)/);
+      if (!match) return;
+      landingService.deleteImage(projectId, match[1]).catch((err) => {
+        // 刪不掉不該擋住編輯流程，留給孤兒清理 cron 收尾
+        logger.error("LP 圖片刪除失敗", err);
+      });
+    },
+    [projectId],
+  );
 
   // ── Derived ──
   const groups = useMemo(() => {
@@ -888,7 +840,8 @@ const LandingPageEditor: React.FC = () => {
                       <FieldInput
                           field={fe}
                           onChange={updateField}
-                          onUploadImage={isImageField(fe) ? handleImageUpload : undefined}
+                          onUploadImage={handleImageUpload}
+                          onDeleteImage={handleImageDelete}
                         />
                     </div>
                   ))}

@@ -13,6 +13,7 @@ import { useChatNotificationContext } from "@/context/ChatNotificationContext";
 import { GlobalSearch, SearchButton } from "@/components/ui/GlobalSearch";
 import UnreadBadge from "@/components/chat/UnreadBadge";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import { LogoMark } from "@/components/brand";
 
 interface NavLink {
   name: string;
@@ -225,10 +226,15 @@ key={glareKey}
 
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-2 sm:gap-6">
 
-          {/* Logo */}
-          <Link to="/" className="shrink-0">
+          {/* Logo：品牌 mark + 銀刃文字（手機版只留 mark，避免擠壓導覽） */}
+          <Link
+            to="/"
+            aria-label="阿倫教官 Coach Aaron 首頁"
+            className="shrink-0 flex items-center gap-2 sm:gap-2.5"
+          >
+            <LogoMark className="h-8 w-8 sm:h-9 sm:w-9 shrink-0" />
             <span
-              className="font-display font-extrabold text-xl tracking-[4px] silver-text"
+              className="hidden sm:inline font-display font-extrabold text-xl tracking-[4px] silver-text"
               style={{ textDecoration: "none" }}
             >
               AARON COACH

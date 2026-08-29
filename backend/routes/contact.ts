@@ -138,9 +138,24 @@ router.post(
       }
 
       // ===== 5. 組裝郵件 HTML =====
+      // 郵件內的圖片必須是絕對 URL，且多數郵件客戶端不支援 SVG，
+      // 因此用點陣圖 /logo/logo-email.png（400×125，白底，2x 供高解析螢幕）。
+      const siteUrl = (
+        process.env.SITE_URL || "https://coach-aaron-test.vercel.app"
+      ).replace(/\/+$/, "");
+
       const htmlContent = `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a2e; color: #eee; padding: 30px; border-radius: 12px;">
           <div style="text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #d4af37;">
+            <!-- logo 為白底圖，外層給一塊白色底片，讓它在深色卡片上看起來是刻意的品牌帶 -->
+            <div style="display: inline-block; background: #ffffff; border-radius: 8px; padding: 14px 20px; margin-bottom: 18px;">
+              <img
+                src="${siteUrl}/logo/logo-email.png"
+                alt="阿倫教官 Coach Aaron"
+                width="200"
+                style="display: block; width: 200px; max-width: 100%; height: auto; border: 0;"
+              />
+            </div>
             <h1 style="color: #d4af37; font-size: 22px; margin: 0;">📩 網站聯絡表單 - 新訊息</h1>
           </div>
 

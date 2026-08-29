@@ -27,7 +27,7 @@ import {
   createVideoBlock,
   createDividerBlock,
   createSpacerBlock,
-  isValidCloudinaryUrl,
+  isAllowedImageUrl,
   isValidYouTubeUrl,
   exportToJson,
   importFromJson,
@@ -179,8 +179,8 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
       setError("請輸入圖片網址");
       return;
     }
-    if (!isValidCloudinaryUrl(imageUrl)) {
-      setError("只支援 Cloudinary 圖片！請上傳至 Cloudinary 後貼上連結。");
+    if (!isAllowedImageUrl(imageUrl)) {
+      setError("圖片來源不合法，請使用本站上傳的圖片或 Cloudinary 網址。");
       return;
     }
 
