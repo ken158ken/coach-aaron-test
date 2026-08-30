@@ -1,0 +1,72 @@
+# 基礎 CI/CD
+#
+# 兩道防線：
+#   1. typecheck-build — 每次 push/PR：前後端 tsc + 完整 build，編譯級錯誤立即紅燈
+#   2. post-deploy-smoke — push 到 main：等 Vercel 部署上線後對正式站跑煙霧測試
+#      （含後端 /api/cron/smoke 的「註冊 INSERT→回讀→硬刪」真實關鍵路徑，
+#        像 users 欄位 drift 造成註冊全滅這種錯誤會在部署後幾分鐘內被抓到）
+#
+# 需要的 repo secret：CRON_SECRET（與 Vercel 環境變數同值）
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: 安裝依賴（backend）
+        working-directory: backend
+        run: npm ci
+
+      - name: 安裝依賴（frontend）
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck backend
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Build frontend（client + SSR）
+        working-directory: frontend
+        run: npm run build
+
+  post-deploy-smoke:
+    # 只在 main 的 push 跑（Vercel 由 git 整合自動部署，這裡等它上線後驗證）
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: typecheck-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 等待部署並執行煙霧測試
+        env:
+          SITE_URL: https://coach-aaron-test.vercel.app
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          WAIT_SHA: ${{ github.sha }}
+        run: node scripts/smoke-test.mjs
