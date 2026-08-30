@@ -580,7 +580,10 @@ router.put(
           phone_number: phoneNumber,
         })
         .eq("user_id", req.user?.userId)
-        .select()
+        // 明確欄位白名單：絕不回傳 password_hash / auth_provider / deleted_at 等敏感欄
+        .select(
+          "user_id, username, email, display_name, avatar_url, phone_number, email_verified",
+        )
         .single();
 
       if (error) {

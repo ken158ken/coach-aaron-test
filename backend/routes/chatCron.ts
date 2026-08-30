@@ -22,10 +22,14 @@ const router: Router = express.Router();
 router.get(
   "/cleanup-chat",
   async (req: Request, res: Response): Promise<void> => {
-    // 驗證 CRON_SECRET
+    // 驗證 CRON_SECRET —— 未設定時直接拒絕（這是破壞性刪除端點，
+    // 不能因環境變數漏設就 fail-open 變成公開可打）
     const secret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization || "";
-    if (secret && authHeader !== `Bearer ${secret}`) {
+    if (!secret) {
+      res.status(503).json({ error: "CRON_SECRET 未設定" });
+      return;
+    }
+    if ((req.headers.authorization || "") !== `Bearer ${secret}`) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }

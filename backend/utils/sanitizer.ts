@@ -480,6 +480,9 @@ export function sanitizeSearchQuery(
     .replace(/<[^>]*>/g, "")
     // 移除危險字元
     .replace(/['"`;\\]/g, "")
+    // 移除 PostgREST .or()/.ilike() 的中繼字元：逗號=條件分隔、括號=分組、
+    //   點=欄位/運算子分隔。不移除會被注入額外過濾條件（列舉草稿/他表資料）
+    .replace(/[,()]/g, "")
     // 移除多餘空白
     .replace(/\s+/g, " ");
 

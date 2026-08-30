@@ -22,6 +22,7 @@ import {
   logSecurityEvent,
 } from "../utils/sanitizer.js";
 import { isAllowedImageUrl, imageUrlErrorMessage } from "../utils/imageUrl.js";
+import { sanitizeSearchQuery } from "../utils/sanitizer.js";
 import {
   finalizeHtmlImages,
   finalizeImageUrl,
@@ -512,9 +513,10 @@ router.get(
         query = query.eq("status", status);
       }
 
-      if (search) {
+      const safeSearch = sanitizeSearchQuery(search);
+      if (safeSearch) {
         query = query.or(
-          `article_title.ilike.%${search}%,article_description.ilike.%${search}%`,
+          `article_title.ilike.%${safeSearch}%,article_description.ilike.%${safeSearch}%`,
         );
       }
 

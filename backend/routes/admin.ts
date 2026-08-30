@@ -7,6 +7,7 @@ import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 import { UpdateUserData, UpdateWhitelistData } from "../types/database.js";
+import { sanitizeSearchQuery } from "../utils/sanitizer.js";
 
 const router: Router = express.Router();
 
@@ -35,9 +36,10 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
       .order("created_at", { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
-    if (search) {
+    const safeSearch = sanitizeSearchQuery(search);
+    if (safeSearch) {
       query = query.or(
-        `email.ilike.%${search}%,username.ilike.%${search}%,display_name.ilike.%${search}%`,
+        `email.ilike.%${safeSearch}%,username.ilike.%${safeSearch}%,display_name.ilike.%${safeSearch}%`,
       );
     }
 

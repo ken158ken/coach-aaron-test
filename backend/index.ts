@@ -36,8 +36,16 @@ const allowedOrigins: string[] = [
   "http://localhost:5173",
   "http://localhost:3000",
   env.FRONTEND_URL || "",
-  "https://coach-aaron-redesign.vercel.app", // 生產環境域名
+  "https://coach-aaron-test.vercel.app", // 生產環境域名
 ].filter(Boolean);
+
+/**
+ * 本專案自己的 Vercel 網域（正式 + preview 部署）。
+ * preview URL 形如 `coach-aaron-test-<hash>-<scope>.vercel.app`。
+ * 只認 `coach-aaron` 前綴，避免放行任何第三方 `*.vercel.app`（帶 credentials 尤其危險）。
+ */
+const isOwnVercelOrigin = (origin: string): boolean =>
+  /^https:\/\/coach-aaron[a-z0-9-]*\.vercel\.app$/.test(origin);
 
 /**
  * Middleware 設定
@@ -56,8 +64,8 @@ app.use(
       // 允許沒有 origin 的請求（如 Postman、伺服器端請求）
       if (!origin) return callback(null, true);
 
-      // 允許所有 Vercel preview 部署域名（*.vercel.app）
-      if (origin.endsWith(".vercel.app")) {
+      // 只允許本專案自己的 Vercel 網域（正式 + preview），不放行任意 *.vercel.app
+      if (isOwnVercelOrigin(origin)) {
         return callback(null, true);
       }
 
