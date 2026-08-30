@@ -22,7 +22,7 @@ import multer from "multer";
 import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin, optionalAuth } from "../middleware/auth.js";
-import { sanitizeId } from "../utils/sanitizer.js";
+import { sanitizeId, sanitizeSearchQuery } from "../utils/sanitizer.js";
 import { logger } from "../utils/logger.js";
 import { IMAGE_BUCKETS, deleteFolder } from "../utils/imageStorage.js";
 
@@ -808,5 +808,246 @@ router.post("/leads", leadLimiter, async (req: Request, res: Response) => {
     sendError(res, 500, "送出失敗，請稍後再試");
   }
 });
+
+// ─────────────────────────────────────────────────────────────
+// 管理員 API：表單報名（lp_leads）管理
+// ─────────────────────────────────────────────────────────────
+//
+// 教練後台檢視／處理 Landing Page 報名。全掛 requireAdmin、一律 supabaseAdmin。
+// 路由順序：literal 前綴（/leads/stats）必須註冊在動態 `/leads/:id` 之前，
+//           否則 stats 會被 :id 攔截。
+//
+
+/** lead 狀態白名單 */
+const LEAD_STATUSES = [
+  "new",
+  "contacted",
+  "booked",
+  "closed",
+  "spam",
+] as const;
+type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+/** 列表卡片用欄位（不含較大的 answers）*/
+const LEAD_LIST_COLUMNS =
+  "id, project_id, project_slug, project_name, name, phone, email, " +
+  "line_id, instagram, summary, status, coach_note, created_at, updated_at";
+
+const COACH_NOTE_MAX = 5000;
+
+/**
+ * GET /api/landing/leads
+ * 報名列表（分頁 + 搜尋姓名/電話/email + status 篩選），依建立時間新→舊
+ */
+router.get(
+  "/leads",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      const statusFilter = String(req.query.status || "").trim();
+
+      let query = supabaseAdmin
+        .from("lp_leads")
+        .select(LEAD_LIST_COLUMNS, { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (
+        statusFilter &&
+        (LEAD_STATUSES as readonly string[]).includes(statusFilter)
+      ) {
+        query = query.eq("status", statusFilter);
+      }
+
+      const safeSearch = sanitizeSearchQuery(req.query.search);
+      if (safeSearch) {
+        // sanitizeSearchQuery 已移除 , ( ) . 等 PostgREST 中繼字元，可安全組 .or()
+        query = query.or(
+          `name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`,
+        );
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+
+      res.json({
+        data: data ?? [],
+        total: count ?? 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count ?? 0) / limit),
+      });
+    } catch (err) {
+      logger.error("取得報名列表失敗", err);
+      sendError(res, 500, "無法取得報名列表");
+    }
+  },
+);
+
+/**
+ * GET /api/landing/leads/stats
+ * 各狀態計數（literal，須在 /leads/:id 之前）
+ */
+router.get(
+  "/leads/stats",
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const results = await Promise.all(
+        LEAD_STATUSES.map(async (status) => {
+          const { count } = await supabaseAdmin
+            .from("lp_leads")
+            .select("id", { count: "exact", head: true })
+            .eq("status", status);
+          return [status, count || 0] as const;
+        }),
+      );
+      const { count: total } = await supabaseAdmin
+        .from("lp_leads")
+        .select("id", { count: "exact", head: true });
+
+      const byStatus = Object.fromEntries(results) as Record<LeadStatus, number>;
+      res.json({ total: total || 0, ...byStatus });
+    } catch (err) {
+      logger.error("取得報名統計失敗", err);
+      sendError(res, 500, "無法取得報名統計");
+    }
+  },
+);
+
+/**
+ * GET /api/landing/leads/:id
+ * 單筆完整報名（含 answers / summary）
+ */
+router.get(
+  "/leads/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
+    if (!isValid) { sendError(res, 400, errorMessage!); return; }
+
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("lp_leads")
+        .select("*")
+        .eq("id", numericValue)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) { sendError(res, 404, "找不到此報名"); return; }
+      res.json(data);
+    } catch (err) {
+      logger.error("取得報名詳情失敗", err);
+      sendError(res, 500, "無法取得報名詳情");
+    }
+  },
+);
+
+/**
+ * PUT /api/landing/leads/:id/status
+ * 切換處理狀態
+ */
+router.put(
+  "/leads/:id/status",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
+    if (!isValid) { sendError(res, 400, errorMessage!); return; }
+
+    const status = String(req.body.status || "");
+    if (!(LEAD_STATUSES as readonly string[]).includes(status)) {
+      sendError(res, 400, "狀態值無效");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("lp_leads")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", numericValue)
+        .select("id, status, updated_at")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) { sendError(res, 404, "找不到此報名"); return; }
+      res.json(data);
+    } catch (err) {
+      logger.error("切換報名狀態失敗", err);
+      sendError(res, 500, "切換狀態失敗");
+    }
+  },
+);
+
+/**
+ * PUT /api/landing/leads/:id/note
+ * 更新教練備註（coach_note）
+ */
+router.put(
+  "/leads/:id/note",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
+    if (!isValid) { sendError(res, 400, errorMessage!); return; }
+
+    const note = String(req.body.coach_note ?? "").slice(0, COACH_NOTE_MAX);
+
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("lp_leads")
+        .update({ coach_note: note || null, updated_at: new Date().toISOString() })
+        .eq("id", numericValue)
+        .select("id, coach_note, updated_at")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) { sendError(res, 404, "找不到此報名"); return; }
+      res.json(data);
+    } catch (err) {
+      logger.error("更新報名備註失敗", err);
+      sendError(res, 500, "更新備註失敗");
+    }
+  },
+);
+
+/**
+ * DELETE /api/landing/leads/:id
+ * 刪除單筆報名
+ */
+router.delete(
+  "/leads/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const { isValid, numericValue, errorMessage } = sanitizeId(req.params.id, "id");
+    if (!isValid) { sendError(res, 400, errorMessage!); return; }
+
+    try {
+      const { data: existing } = await supabaseAdmin
+        .from("lp_leads")
+        .select("id")
+        .eq("id", numericValue)
+        .maybeSingle();
+      if (!existing) { sendError(res, 404, "找不到此報名"); return; }
+
+      const { error } = await supabaseAdmin
+        .from("lp_leads")
+        .delete()
+        .eq("id", numericValue);
+      if (error) throw error;
+
+      logger.info("刪除 LP 報名", { id: numericValue, admin: req.user?.email });
+      res.json({ success: true });
+    } catch (err) {
+      logger.error("刪除報名失敗", err);
+      sendError(res, 500, "刪除失敗");
+    }
+  },
+);
 
 export default router;

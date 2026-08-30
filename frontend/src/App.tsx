@@ -81,6 +81,7 @@ const AdminContent = lazy(() => import("@/pages/admin/AdminContent")); // → ti
 const AdminWhitelist = lazy(() => import("@/pages/admin/AdminWhitelist"));
 const AdminWhispers = lazy(() => import("@/pages/admin/AdminWhispers"));
 const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
+const AdminLeads = lazy(() => import("@/pages/admin/AdminLeads"));
 const AdminArticles = lazy(() => import("@/pages/admin/AdminArticles")); // → tiptap
 const AdminExport = lazy(() => import("@/pages/admin/AdminExport"));
 const AdminGoogleCalendar = lazy(() => import("@/pages/admin/AdminGoogleCalendar"));
@@ -305,6 +306,7 @@ function App(): JSX.Element {
                   <Route path="whitelist" element={<AdminWhitelist />} />
                   <Route path="whispers" element={<AdminWhispers />} />
                   <Route path="feedback" element={<AdminFeedback />} />
+                  <Route path="leads" element={<AdminLeads />} />
                   <Route path="export" element={<AdminExport />} />
                   <Route path="google-calendar" element={<AdminGoogleCalendar />} />
                 </Route>

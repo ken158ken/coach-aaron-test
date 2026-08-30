@@ -14,6 +14,7 @@ import { useLanguage } from "@/context";
 import { LogoMark } from "@/components/brand";
 import UnreadBadge from "@/components/chat/UnreadBadge";
 import { feedbackService } from "@/services/feedback/feedback.service";
+import { leadsService } from "@/services/site/leads.service";
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -55,6 +56,22 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     // 切換到反饋頁時重新抓一次，回覆完數字才會更新
   }, [location.pathname]);
 
+  // 待聯繫（new）的報名數（表單報名項目的紅圈）
+  const [newLeadsCount, setNewLeadsCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    leadsService
+      .stats()
+      .then((s) => {
+        if (!cancelled) setNewLeadsCount(s.new || 0);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // 切換頁面時重新抓一次，處理完數字才會更新
+  }, [location.pathname]);
+
   // 定義標籤映射：核心字典沒有的幾條走 adminLayout.nav*
   const labels: Record<string, string> = {
     dashboard: t.admin.dashboard,
@@ -67,6 +84,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     whitelist: t.admin.whitelist,
     whispers: t.adminLayout.navWhispers,
     feedback: t.adminFeedbackPage.navLabel,
+    leads: t.adminLeadsPage.navLabel,
     content: t.adminLayout.navContent,
     export: t.admin.export,
     googleCalendar: t.adminLayout.navGoogleCalendar,
@@ -75,6 +93,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   // 項目 → 紅圈數字
   const badges: Record<string, number> = {
     feedback: waitingCoachCount,
+    leads: newLeadsCount,
   };
 
   const navItems: { path: string; labelKey: string; icon: React.ReactNode }[] =
@@ -270,6 +289,26 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
               strokeLinejoin="round"
               strokeWidth={2}
               d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+            />
+          </svg>
+        ),
+      },
+      {
+        path: "/admin/leads",
+        labelKey: "leads",
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 7h4"
             />
           </svg>
         ),

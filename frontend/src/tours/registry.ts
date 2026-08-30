@@ -45,6 +45,7 @@ const ENTRIES: TourEntry[] = [
   { pattern: "/admin/whitelist", load: () => import("./pages/adminWhitelist.tour") },
   { pattern: "/admin/whispers", load: () => import("./pages/adminWhispers.tour") },
   { pattern: "/admin/feedback", load: () => import("./pages/adminFeedback.tour") },
+  { pattern: "/admin/leads", load: () => import("./pages/adminLeads.tour") },
   { pattern: "/admin/export", load: () => import("./pages/adminExport.tour") },
   {
     pattern: "/admin/google-calendar",
