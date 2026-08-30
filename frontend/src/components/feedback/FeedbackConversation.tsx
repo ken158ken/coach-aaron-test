@@ -2,19 +2,23 @@
  * 反饋對話串（氣泡）
  * @module components/feedback/FeedbackConversation
  *
+ * 意見反饋 = 開發者(developer) ↔ 教練(coach) 的內部溝通。
  * 視角決定左右：author_role === viewerRole 的訊息靠右（自己這邊），其餘靠左。
- *   會員視角：學員(member) 靠右、教練(coach) 靠左
- *   教練視角：教練(coach) 靠右、學員(member) 靠左
+ *   以開發者身分檢視：開發者(developer) 靠右、教練(coach) 靠左
+ *   以教練身分檢視：教練(coach) 靠右、開發者(developer) 靠左
  *
- * 編輯／刪除只提供給「會員本人的 member 訊息」（後端也只放行這個組合）。
+ * 編輯／刪除只提供給「自己送出的訊息」（後端也只放行作者本人）。
  */
 
 import React, { useState } from "react";
-import type { FeedbackMessage } from "@/services/feedback/feedback.service";
+import type {
+  FeedbackMessage,
+  AuthorRole,
+} from "@/services/feedback/feedback.service";
 import { FeedbackImageThumb } from "./FeedbackImage";
 
 export interface ConversationLabels {
-  roleMember: string;
+  roleDeveloper: string;
   roleCoach: string;
   edited: string;
   edit: string;
@@ -25,7 +29,7 @@ export interface ConversationLabels {
 
 interface Props {
   messages: FeedbackMessage[];
-  viewerRole: "member" | "coach";
+  viewerRole: AuthorRole;
   theme?: "studio" | "luxe";
   labels: ConversationLabels;
   formatTime: (iso: string) => string;
@@ -85,13 +89,10 @@ const FeedbackConversation: React.FC<Props> = ({
       {messages.map((m) => {
         const own = m.author_role === viewerRole;
         const roleLabel =
-          m.author_role === "member" ? labels.roleMember : labels.roleCoach;
+          m.author_role === "developer" ? labels.roleDeveloper : labels.roleCoach;
         const avatarChar = (m.author_name || roleLabel).trim().charAt(0) || "?";
-        const canManage =
-          own &&
-          m.author_role === "member" &&
-          viewerRole === "member" &&
-          !!onEditMessage;
+        // 只能管理自己送出的訊息（後端也只放行作者本人）
+        const canManage = own && !!onEditMessage;
         const isEditing = editingId === m.id;
         const wasEdited = m.updated_at && m.updated_at !== m.created_at;
 

@@ -1,10 +1,15 @@
 /**
- * AdminFeedback — 意見反饋後台（教練視角）
+ * AdminFeedback — 意見反饋後台（開發者 ↔ 教練）
  * @module pages/admin/AdminFeedback
  * @theme luxe
  *
- * 依 ERP feedback 模組：狀態統計籤（計數＋篩選）＋搜尋＋大/中/小顯示切換＋卡片牆，
- * 詳情含可編輯標題、狀態一鍵切換 chip、刪整串、對話氣泡、教練回覆輸入列（附圖／貼上）。
+ * 定位：這是「開發者（我）↔ 教練」的內部溝通平台，純 admin 功能，一般學員看不到。
+ * 兩個角色共用這一個面板，用頂部「以 __ 身分」選擇器切換開發者/教練，
+ * 送出建串／回覆時帶該身分（author_role），氣泡左右也依此視角決定。
+ *
+ * 功能：狀態統計籤（計數＋篩選）＋搜尋＋大/中/小顯示切換＋卡片牆；
+ * 可新增反饋串（開發者或教練都能發起）；詳情含可編輯標題、狀態一鍵切換 chip、
+ * 刪整串、對話氣泡、回覆輸入列（附圖／貼上）。
  */
 
 import React, { useCallback, useEffect, useState } from "react";
@@ -15,6 +20,7 @@ import { useDialog } from "@/components/ui";
 import {
   feedbackService,
   FEEDBACK_STATUSES,
+  type AuthorRole,
   type FeedbackThreadSummary,
   type FeedbackThreadDetail,
   type FeedbackStatus,
@@ -27,13 +33,14 @@ import { FeedbackImageThumb, FeedbackLightbox } from "@/components/feedback/Feed
 /** 狀態徽章樣式（luxe）*/
 const STATUS_STYLE: Record<FeedbackStatus, string> = {
   waiting_coach: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  waiting_member: "bg-luxe-gold/15 text-luxe-gold border-luxe-gold/30",
+  waiting_developer: "bg-luxe-gold/15 text-luxe-gold border-luxe-gold/30",
   in_progress: "bg-sky-500/15 text-sky-400 border-sky-500/30",
   resolved: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
 };
 
 type SizeMode = "large" | "medium" | "small";
 const SIZE_KEY = "admin_feedback_size";
+const ROLE_KEY = "admin_feedback_role";
 
 const AdminFeedback: React.FC = () => {
   const { t, isZhTW } = useLanguage();
@@ -49,9 +56,19 @@ const AdminFeedback: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | "">("");
   const [size, setSize] = useState<SizeMode>("medium");
 
+  // 目前以哪個身分發言（開發者 / 教練）— 決定送出的 author_role 與氣泡視角
+  const [role, setRole] = useState<AuthorRole>("developer");
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FeedbackThreadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // 新增反饋串（compose）
+  const [composing, setComposing] = useState(false);
+  const [composeTitle, setComposeTitle] = useState("");
+  const [composeText, setComposeText] = useState("");
+  const [composeFiles, setComposeFiles] = useState<File[]>([]);
+  const [creating, setCreating] = useState(false);
 
   // 標題編輯
   const [editingTitle, setEditingTitle] = useState(false);
@@ -73,10 +90,30 @@ const AdminFeedback: React.FC = () => {
       /* ignore */
     }
   }, []);
+
+  // 讀取上次選的身分
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ROLE_KEY) as AuthorRole | null;
+      if (saved === "developer" || saved === "coach") setRole(saved);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const changeSize = (s: SizeMode) => {
     setSize(s);
     try {
       localStorage.setItem(SIZE_KEY, s);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const changeRole = (r: AuthorRole) => {
+    setRole(r);
+    try {
+      localStorage.setItem(ROLE_KEY, r);
     } catch {
       /* ignore */
     }
@@ -213,7 +250,7 @@ const AdminFeedback: React.FC = () => {
     if (!replyText.trim() && replyFiles.length === 0) return;
     try {
       setReplying(true);
-      await feedbackService.replyAdmin(selectedId, replyText.trim(), replyFiles);
+      await feedbackService.replyAdmin(selectedId, replyText.trim(), replyFiles, role);
       setReplyText("");
       setReplyFiles([]);
       await refreshDetail();
@@ -225,8 +262,38 @@ const AdminFeedback: React.FC = () => {
     }
   };
 
+  const resetCompose = () => {
+    setComposing(false);
+    setComposeTitle("");
+    setComposeText("");
+    setComposeFiles([]);
+  };
+
+  const handleCreate = async () => {
+    if (!composeTitle.trim()) return;
+    if (!composeText.trim() && composeFiles.length === 0) return;
+    try {
+      setCreating(true);
+      const { id } = await feedbackService.create(
+        composeTitle.trim(),
+        composeText.trim(),
+        composeFiles,
+        role,
+      );
+      resetCompose();
+      await fetchList();
+      await fetchStats();
+      await openThread(id);
+    } catch (err) {
+      console.error(err);
+      await dialog.alert({ title: fp.errors.createFailed, message: "" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const convLabels = {
-    roleMember: fp.conversation.roleMember,
+    roleDeveloper: fp.conversation.roleDeveloper,
     roleCoach: fp.conversation.roleCoach,
     edited: fp.conversation.edited,
     edit: fp.conversation.edit,
@@ -236,11 +303,35 @@ const AdminFeedback: React.FC = () => {
   };
   const attachLabels = { ...fp.attach };
 
+  // 「以 __ 身分」身分選擇器（開發者 / 教練）
+  const renderRoleSwitcher = (tourTag?: string) => (
+    <div className="flex items-center gap-2" data-tour={tourTag}>
+      <span className="text-xs text-luxe-muted">{fp.roleSwitcher.label}</span>
+      <div className="flex rounded-full border border-luxe-gold/15 overflow-hidden">
+        {(["developer", "coach"] as AuthorRole[]).map((r) => (
+          <button
+            key={r}
+            onClick={() => changeRole(r)}
+            className={`px-3 py-1 text-xs transition-colors ${
+              role === r
+                ? "bg-luxe-gold/20 text-luxe-gold"
+                : "text-luxe-muted hover:text-luxe-text"
+            }`}
+          >
+            {r === "developer"
+              ? fp.roleSwitcher.developer
+              : fp.roleSwitcher.coach}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   // 統計籤定義（全部 + 4 狀態）
   const statChips: { key: FeedbackStatus | ""; label: string; count: number }[] = [
     { key: "", label: fp.stats.all, count: stats?.total ?? 0 },
+    { key: "waiting_developer", label: fp.stats.waiting_developer, count: stats?.waiting_developer ?? 0 },
     { key: "waiting_coach", label: fp.stats.waiting_coach, count: stats?.waiting_coach ?? 0 },
-    { key: "waiting_member", label: fp.stats.waiting_member, count: stats?.waiting_member ?? 0 },
     { key: "in_progress", label: fp.stats.in_progress, count: stats?.in_progress ?? 0 },
     { key: "resolved", label: fp.stats.resolved, count: stats?.resolved ?? 0 },
   ];
@@ -290,7 +381,7 @@ const AdminFeedback: React.FC = () => {
                 </span>
                 {detail.owner_name && (
                   <span className="text-xs text-luxe-muted">
-                    · {fp.fromMember.replace("{name}", detail.owner_name)}
+                    · {fp.startedBy.replace("{name}", detail.owner_name)}
                   </span>
                 )}
               </div>
@@ -365,15 +456,26 @@ const AdminFeedback: React.FC = () => {
 
             <FeedbackConversation
               messages={detail.messages}
-              viewerRole="coach"
+              viewerRole={role}
               theme="luxe"
               labels={convLabels}
               formatTime={formatTime}
               onImageClick={(id, name) => setLightbox({ id, name })}
             />
 
-            {/* 教練回覆輸入列 */}
+            {/* 回覆輸入列 */}
             <div className="mt-6 pt-5 border-t border-luxe-gold/10" data-tour="adminfeedback-reply">
+              <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                {renderRoleSwitcher("adminfeedback-role")}
+                <span className="text-[11px] text-luxe-muted">
+                  {fp.reply.replyingAs.replace(
+                    "{role}",
+                    role === "developer"
+                      ? fp.roleSwitcher.developer
+                      : fp.roleSwitcher.coach,
+                  )}
+                </span>
+              </div>
               <textarea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
@@ -417,12 +519,83 @@ const AdminFeedback: React.FC = () => {
   // ─────────────────────────────────────────────────────────
   return (
     <div>
-      <div className="mb-5" data-tour="adminfeedback-header">
-        <h1 className="text-xl sm:text-2xl font-light text-luxe-text">{fp.pageTitle}</h1>
-        <p className="text-sm text-luxe-muted">
-          {fp.pageSubtitle.replace("{n}", String(stats?.total ?? 0))}
-        </p>
+      <div className="mb-5 flex items-start justify-between gap-3 flex-wrap" data-tour="adminfeedback-header">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-light text-luxe-text">{fp.pageTitle}</h1>
+          <p className="text-sm text-luxe-muted">
+            {fp.pageSubtitle.replace("{n}", String(stats?.total ?? 0))}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {renderRoleSwitcher("adminfeedback-role")}
+          <button
+            onClick={() => setComposing((v) => !v)}
+            data-tour="adminfeedback-new"
+            className="text-sm px-4 py-2 rounded-full bg-luxe-gold text-black font-medium hover:bg-luxe-gold/90 transition-colors"
+          >
+            {composing ? fp.compose.cancel : `＋ ${fp.compose.newThread}`}
+          </button>
+        </div>
       </div>
+
+      {/* 新增反饋串 compose 面板 */}
+      {composing && (
+        <div
+          className="bg-luxe-surface rounded-2xl border border-luxe-gold/15 p-4 sm:p-5 mb-5"
+          data-tour="adminfeedback-compose"
+        >
+          <p className="text-sm text-luxe-muted mb-3">
+            {fp.compose.hint.replace(
+              "{role}",
+              role === "developer"
+                ? fp.roleSwitcher.developer
+                : fp.roleSwitcher.coach,
+            )}
+          </p>
+          <input
+            value={composeTitle}
+            onChange={(e) => setComposeTitle(e.target.value)}
+            maxLength={200}
+            placeholder={fp.compose.titlePlaceholder}
+            className="w-full rounded-xl bg-luxe-bg/60 border border-luxe-gold/15 px-3.5 py-2.5 text-sm text-luxe-text outline-none focus:border-luxe-gold/40 mb-2"
+          />
+          <textarea
+            value={composeText}
+            onChange={(e) => setComposeText(e.target.value)}
+            rows={4}
+            placeholder={fp.compose.contentPlaceholder}
+            className="w-full rounded-xl bg-luxe-bg/60 border border-luxe-gold/15 px-3.5 py-2.5 text-sm text-luxe-text outline-none focus:border-luxe-gold/40 resize-y"
+          />
+          <div className="mt-2">
+            <AttachmentPicker
+              files={composeFiles}
+              onChange={setComposeFiles}
+              theme="luxe"
+              labels={attachLabels}
+              listenPaste
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-3">
+            <button
+              onClick={resetCompose}
+              className="text-sm px-4 py-2 rounded-full text-luxe-muted hover:text-luxe-text transition-colors"
+            >
+              {fp.compose.cancel}
+            </button>
+            <button
+              disabled={
+                creating ||
+                !composeTitle.trim() ||
+                (!composeText.trim() && composeFiles.length === 0)
+              }
+              onClick={handleCreate}
+              className="text-sm px-5 py-2 rounded-full bg-luxe-gold text-black font-medium hover:bg-luxe-gold/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {creating ? fp.compose.creating : fp.compose.create}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 狀態統計籤 */}
       <div className="flex flex-wrap gap-2 mb-4" data-tour="adminfeedback-stats">
@@ -522,7 +695,7 @@ const AdminFeedback: React.FC = () => {
                   {th.title}
                 </h3>
                 <p className="text-xs text-luxe-muted/80 mb-1">
-                  {fp.fromMember.replace("{name}", th.owner_name)}
+                  {fp.startedBy.replace("{name}", th.owner_name)}
                 </p>
                 {th.preview && size !== "small" && (
                   <p

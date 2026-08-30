@@ -104,13 +104,6 @@ const PagesIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) 
   </svg>
 );
 
-const FeedbackIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M7 8h10M7 12h6m-6 8l-3-3H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v9a2 2 0 01-2 2h-6l-4 3z" />
-  </svg>
-);
-
 /* ── Navbar ── */
 const Navbar: React.FC = (): JSX.Element => {
   const { user, logout, mounted, isAdmin } = useAuth();
@@ -251,7 +244,6 @@ const Navbar: React.FC = (): JSX.Element => {
     { path: "/booking", label: t.layoutExtra.bookConsult, icon: <CalendarIcon className="w-5 h-5" /> },
     { path: "/my-bookings", label: t.layoutExtra.myBookings, icon: <BookingsIcon /> },
     { path: "/chat", label: t.layoutExtra.messages, icon: <ChatBubbleIcon />, badge: true },
-    { path: "/feedback", label: t.layoutExtra.feedback, icon: <FeedbackIcon /> },
     ...(isAdmin
       ? [
           { path: "/coach", label: t.layoutExtra.coachDashboard, icon: <CalendarIcon className="w-5 h-5" /> },

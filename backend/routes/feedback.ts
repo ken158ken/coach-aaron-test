@@ -1,28 +1,31 @@
 /**
- * @fileoverview 意見反饋路由
+ * @fileoverview 意見反饋路由（開發者 ↔ 教練）
  *
- * 兩個角色：學員（member）↔ 教練（coach）。
- * 一個 thread 由學員發起，之後雙方一來一往回覆，教練可切換狀態。
+ * 定位：這是「開發者（我）↔ 教練」的內部溝通平台（類似歐捷 ERP 的 客戶↔開發者），
+ * 一般學員登入後看不到、也存取不到。全部端點皆需 requireAdmin。
+ *
+ * 兩個角色都是 admin，共用同一個後台面板（/admin/feedback）：
+ *   - 送出訊息（建串 / 回覆）時，前端「以 __ 身分」選擇器會帶 authorRole（developer|coach）
+ *   - 後端驗證 authorRole ∈ {developer, coach}；若未帶則用 DEVELOPER_EMAIL 猜（預設 coach）
  *
  * 狀態機（feedback_threads.status）：
- *   waiting_coach  — 等待教練回應（學員剛發問 / 回覆後）
- *   waiting_member — 等待學員回應（教練回覆後）
- *   in_progress    — 處理中（教練標記）
- *   resolved       — 已完成（教練標記）
- *
- * 權限：
- *   - 會員端（authenticateToken）：只能存取自己的 thread（thread.user_id === userId）
- *   - 管理端（authenticateToken + requireAdmin）：可存取全部 thread，回覆時 author_role=coach
- *   - 圖片串流（authenticateToken）：thread 擁有者或 admin 才能下載原檔
+ *   waiting_coach     — 等待教練回應（開發者剛發問 / 回覆後）
+ *   waiting_developer — 等待開發者回應（教練發問 / 回覆後）
+ *   in_progress       — 處理中
+ *   resolved          — 已完成
+ *   發言後一律轉為「等待對方回應」：developer 發言 → waiting_coach；coach 發言 → waiting_developer。
  *
  * 圖片：
  *   - 私有 bucket `feedback-images`，路徑 `{thread_id}/{ts}-{rand}.{ext}`
  *   - 原檔不壓縮不裁切（不經 sharp），供截圖清晰檢視
  *   - 單訊息 ≤ 6 張、單檔 ≤ 10MB、mime jpeg/png/webp/gif
- *   - 前端透過 GET /api/feedback/images/:imageId/file 串流讀取（bucket 私有無 public URL）
+ *   - 前端透過 GET /api/feedback/images/:imageId/file 串流讀取（僅 admin 可讀）
  *
  * 路由順序注意：Express 依序比對，literal 前綴（/admin、/images、/messages）
  * 必須註冊在動態 `/:id` 之前，否則會被 `/:id` 攔截。
+ *
+ * DB 相依：035 建表 + 037 把 CHECK 改成 developer|coach / waiting_developer。
+ * 037 套用前，若舊 CHECK（member|coach、waiting_member）還在，寫入新值會被 DB 擋下 500。
  */
 
 import express, { Request, Response, Router } from "express";
@@ -41,12 +44,15 @@ const FEEDBACK_BUCKET = "feedback-images";
 
 /** thread 狀態白名單 */
 const THREAD_STATUSES = [
-  "waiting_member",
+  "waiting_developer",
   "waiting_coach",
   "in_progress",
   "resolved",
 ] as const;
 type ThreadStatus = (typeof THREAD_STATUSES)[number];
+
+/** 作者角色白名單 */
+type AuthorRole = "developer" | "coach";
 
 const TITLE_MAX = 200;
 const CONTENT_MAX = 5000;
@@ -87,6 +93,28 @@ async function isAdminEmail(email: string): Promise<boolean> {
   return !!data;
 }
 
+/**
+ * 判定這次送出訊息的身分（developer|coach）。
+ * 1) 優先採用前端「以 __ 身分」選擇器帶來的 authorRole。
+ * 2) 未帶或非法時，用 env DEVELOPER_EMAIL 對照登入 email：命中 → developer，否則 coach。
+ * 兩人都是 admin，這只是決定氣泡左右與通知對象，語意上安全。
+ */
+function resolveAuthorRole(req: Request): AuthorRole {
+  const raw = String(req.body.authorRole || req.body.author_role || "")
+    .trim()
+    .toLowerCase();
+  if (raw === "developer" || raw === "coach") return raw;
+  const email = (req.user?.email || "").toLowerCase();
+  const devEmail = (process.env.DEVELOPER_EMAIL || "").toLowerCase();
+  if (devEmail && email === devEmail) return "developer";
+  return "coach";
+}
+
+/** 發言後的下一個狀態：等待「對方」回應 */
+function nextStatusAfter(role: AuthorRole): ThreadStatus {
+  return role === "developer" ? "waiting_coach" : "waiting_developer";
+}
+
 type MessageImage = {
   id: string;
   original_name: string | null;
@@ -97,14 +125,14 @@ type MessageImage = {
 type MessageRow = {
   id: string;
   thread_id: string;
-  author_role: "member" | "coach";
+  author_role: AuthorRole;
   author_user_id: number;
   content: string;
   created_at: string;
   updated_at: string;
 };
 
-/** 取一批 user_id 的顯示名稱（member 用 users，coach 優先 admin_whitelist）*/
+/** 取一批 user_id 的顯示名稱（admin 優先 admin_whitelist.display_name）*/
 async function resolveAuthorNames(
   userIds: number[],
 ): Promise<Map<number, string>> {
@@ -244,53 +272,6 @@ function getUploadedFiles(req: Request): Express.Multer.File[] {
   return files.slice(0, MAX_IMAGES);
 }
 
-// ===========================================================
-// 會員端 — 列表 / 建立
-// ===========================================================
-
-/** GET /api/feedback — 我的反饋列表（分頁 + 搜尋）*/
-router.get(
-  "/",
-  authenticateToken,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = Number(req.user?.userId);
-      const page = Math.max(1, Number(req.query.page) || 1);
-      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-      const offset = (page - 1) * limit;
-
-      let query = supabaseAdmin
-        .from("feedback_threads")
-        .select("id, user_id, title, status, created_at, updated_at", {
-          count: "exact",
-        })
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      const safeSearch = sanitizeSearchQuery(req.query.search);
-      if (safeSearch) {
-        query = query.ilike("title", `%${safeSearch}%`);
-      }
-
-      const { data: threads, error, count } = await query;
-      if (error) throw error;
-
-      const summaries = await buildThreadSummaries(threads || []);
-
-      res.json({
-        threads: summaries,
-        total: count || 0,
-        page,
-        totalPages: Math.ceil((count || 0) / limit),
-      });
-    } catch (err) {
-      logger.error("取得反饋列表失敗", err as Error);
-      res.status(500).json({ error: "取得反饋列表失敗" });
-    }
-  },
-);
-
 type ThreadRow = {
   id: string;
   user_id: number;
@@ -300,7 +281,7 @@ type ThreadRow = {
   updated_at: string;
 };
 
-/** 為列表卡片補上：訊息數、最後訊息摘要、是否有圖、擁有者名 */
+/** 為列表卡片補上：訊息數、最後訊息摘要、是否有圖、發起者名 */
 async function buildThreadSummaries(
   threads: ThreadRow[],
 ): Promise<unknown[]> {
@@ -327,8 +308,6 @@ async function buildThreadSummaries(
   // 哪些訊息有圖（用於卡片縮圖標記）
   const msgIds = (msgs || []).map((m) => m.id);
   const imageByMsg = new Map<string, string>(); // message_id → 第一張 image id
-  const msgToThread = new Map<string, string>();
-  (msgs || []).forEach((m) => msgToThread.set(m.id, m.thread_id));
   if (msgIds.length) {
     const { data: imgs } = await supabaseAdmin
       .from("feedback_images")
@@ -366,97 +345,51 @@ async function buildThreadSummaries(
   }));
 }
 
-/** POST /api/feedback — 建立反饋串（multipart 附圖，狀態 waiting_coach）*/
-router.post(
-  "/",
-  authenticateToken,
-  feedbackWriteLimiter,
-  upload.array("images", MAX_IMAGES),
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = Number(req.user?.userId);
-      const title = String(req.body.title || "").trim();
-      const content = String(req.body.content || "").trim();
-      const files = getUploadedFiles(req);
-
-      if (!title) {
-        res.status(400).json({ error: "請填寫標題" });
-        return;
-      }
-      if (title.length > TITLE_MAX) {
-        res.status(400).json({ error: `標題需在 ${TITLE_MAX} 字以內` });
-        return;
-      }
-      if (!content && files.length === 0) {
-        res.status(400).json({ error: "請填寫內容或附上圖片" });
-        return;
-      }
-      if (content.length > CONTENT_MAX) {
-        res.status(400).json({ error: `內容需在 ${CONTENT_MAX} 字以內` });
-        return;
-      }
-
-      // 建立 thread
-      const { data: thread, error: tErr } = await supabaseAdmin
-        .from("feedback_threads")
-        .insert({ user_id: userId, title, status: "waiting_coach" })
-        .select("id, user_id, title, status, created_at, updated_at")
-        .single();
-      if (tErr) throw tErr;
-
-      // 首則訊息（member）
-      const { data: message, error: mErr } = await supabaseAdmin
-        .from("feedback_messages")
-        .insert({
-          thread_id: thread.id,
-          author_role: "member",
-          author_user_id: userId,
-          content,
-        })
-        .select("id")
-        .single();
-      if (mErr) throw mErr;
-
-      if (files.length) {
-        await attachImages(thread.id, message.id, files);
-      }
-
-      // 通知教練（所有 active admin）— 不擋回應
-      void notifyCoaches(thread.id, thread.title, content).catch((e) =>
-        logger.warn("通知教練失敗", { error: (e as Error)?.message }),
-      );
-
-      res.status(201).json({ id: thread.id });
-    } catch (err) {
-      logger.error("建立反饋失敗", err as Error);
-      res.status(500).json({ error: "建立反饋失敗" });
-    }
-  },
-);
-
-/** 推通知給所有 active 教練（admin 白名單對應的 user）*/
-async function notifyCoaches(
-  threadId: string,
-  title: string,
-  content: string,
-): Promise<void> {
+/**
+ * 推通知給對方（發言方是 developer → 通知教練們；是 coach → 通知開發者）。
+ * 教練 = 所有 active admin；開發者 = env DEVELOPER_EMAIL 對應的 user。
+ * 一律排除發言者本人；連結指向 /admin/feedback。
+ */
+async function notifyCounterpart(params: {
+  threadId: string;
+  title: string;
+  content: string;
+  authorRole: AuthorRole;
+  authorUserId: number;
+}): Promise<void> {
+  const { threadId, title, content, authorRole, authorUserId } = params;
   const { data: whitelist } = await supabaseAdmin
     .from("admin_whitelist")
     .select("email")
     .eq("is_active", true);
   const emails = (whitelist || []).map((w) => w.email).filter(Boolean);
   if (!emails.length) return;
+
   const { data: users } = await supabaseAdmin
     .from("users")
-    .select("user_id")
+    .select("user_id, email")
     .in("email", emails);
+
+  const devEmail = (process.env.DEVELOPER_EMAIL || "").toLowerCase();
+  // 收件者：開發者發言 → 通知非開發者（教練）；教練發言 → 通知開發者。
+  const recipients = (users || []).filter((u) => {
+    if (Number(u.user_id) === authorUserId) return false; // 不通知自己
+    const isDev = devEmail && String(u.email || "").toLowerCase() === devEmail;
+    return authorRole === "developer" ? !isDev : isDev;
+  });
+  // 若無法辨識開發者（未設 DEVELOPER_EMAIL），退回通知所有其他 admin，避免漏訊。
+  const targets = recipients.length
+    ? recipients
+    : (users || []).filter((u) => Number(u.user_id) !== authorUserId);
+
+  const roleLabel = authorRole === "developer" ? "開發者" : "教練";
   const preview = (content || "").slice(0, 80);
   await Promise.all(
-    (users || []).map((u) =>
+    targets.map((u) =>
       createNotification({
         userId: u.user_id,
-        type: "feedback_new",
-        title: `新的意見反饋：${title}`,
+        type: "feedback_reply",
+        title: `${roleLabel}在意見反饋留言：${title}`,
         body: preview || "（附圖）",
         link: `/admin/feedback`,
         metadata: { thread_id: threadId },
@@ -466,7 +399,7 @@ async function notifyCoaches(
 }
 
 // ===========================================================
-// 管理端 — 列表 / 統計（literal 前綴，須在 /:id 之前）
+// 管理端 — 列表 / 統計 / 建立（literal 前綴，須在 /:id 之前）
 // ===========================================================
 
 /** GET /api/feedback/admin — 全部反饋列表（分頁 + 搜尋 + status 篩選）*/
@@ -504,7 +437,7 @@ router.get(
       const { data: threads, error, count } = await query;
       if (error) throw error;
 
-      const summaries = await buildThreadSummaries(threads || []);
+      const summaries = await buildThreadSummaries((threads || []) as ThreadRow[]);
 
       res.json({
         threads: summaries,
@@ -551,6 +484,87 @@ router.get(
   },
 );
 
+/**
+ * POST /api/feedback/admin — 建立反饋串（開發者或教練皆可發起，multipart 附圖）
+ * body: title, content, authorRole(developer|coach), images[]
+ * 狀態：發言後轉為等待對方 → developer 建串=waiting_coach、coach 建串=waiting_developer
+ */
+router.post(
+  "/admin",
+  authenticateToken,
+  requireAdmin,
+  feedbackWriteLimiter,
+  upload.array("images", MAX_IMAGES),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = Number(req.user?.userId);
+      const authorRole = resolveAuthorRole(req);
+      const title = String(req.body.title || "").trim();
+      const content = String(req.body.content || "").trim();
+      const files = getUploadedFiles(req);
+
+      if (!title) {
+        res.status(400).json({ error: "請填寫標題" });
+        return;
+      }
+      if (title.length > TITLE_MAX) {
+        res.status(400).json({ error: `標題需在 ${TITLE_MAX} 字以內` });
+        return;
+      }
+      if (!content && files.length === 0) {
+        res.status(400).json({ error: "請填寫內容或附上圖片" });
+        return;
+      }
+      if (content.length > CONTENT_MAX) {
+        res.status(400).json({ error: `內容需在 ${CONTENT_MAX} 字以內` });
+        return;
+      }
+
+      const status = nextStatusAfter(authorRole);
+
+      // 建立 thread（user_id = 發起者本人）
+      const { data: thread, error: tErr } = await supabaseAdmin
+        .from("feedback_threads")
+        .insert({ user_id: userId, title, status })
+        .select("id, user_id, title, status, created_at, updated_at")
+        .single();
+      if (tErr) throw tErr;
+
+      // 首則訊息
+      const { data: message, error: mErr } = await supabaseAdmin
+        .from("feedback_messages")
+        .insert({
+          thread_id: thread.id,
+          author_role: authorRole,
+          author_user_id: userId,
+          content,
+        })
+        .select("id")
+        .single();
+      if (mErr) throw mErr;
+
+      if (files.length) {
+        await attachImages(thread.id, message.id, files);
+      }
+
+      void notifyCounterpart({
+        threadId: thread.id,
+        title: thread.title,
+        content,
+        authorRole,
+        authorUserId: userId,
+      }).catch((e) =>
+        logger.warn("通知反饋對方失敗", { error: (e as Error)?.message }),
+      );
+
+      res.status(201).json({ id: thread.id });
+    } catch (err) {
+      logger.error("建立反饋失敗", err as Error);
+      res.status(500).json({ error: "建立反饋失敗" });
+    }
+  },
+);
+
 /** GET /api/feedback/admin/:id — 反饋詳情（任何串）*/
 router.get(
   "/admin/:id",
@@ -582,7 +596,10 @@ router.get(
   },
 );
 
-/** POST /api/feedback/admin/:id/messages — 教練回覆（轉 waiting_member）*/
+/**
+ * POST /api/feedback/admin/:id/messages — 回覆（帶 authorRole）
+ * developer 回覆 → waiting_coach；coach 回覆 → waiting_developer
+ */
 router.post(
   "/admin/:id/messages",
   authenticateToken,
@@ -592,6 +609,7 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = Number(req.user?.userId);
+      const authorRole = resolveAuthorRole(req);
       const id = String(req.params.id || "");
       const content = String(req.body.content || "").trim();
       const files = getUploadedFiles(req);
@@ -619,7 +637,7 @@ router.post(
         .from("feedback_messages")
         .insert({
           thread_id: id,
-          author_role: "coach",
+          author_role: authorRole,
           author_user_id: userId,
           content,
         })
@@ -629,25 +647,26 @@ router.post(
 
       if (files.length) await attachImages(id, message.id, files);
 
-      // 教練回覆後 → 等待學員回應
+      // 回覆後 → 等待對方回應
       await supabaseAdmin
         .from("feedback_threads")
-        .update({ status: "waiting_member", updated_at: new Date().toISOString() })
+        .update({
+          status: nextStatusAfter(authorRole),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", id);
 
-      // 通知學員
-      void createNotification({
-        userId: thread.user_id,
-        type: "feedback_reply",
-        title: `教練回覆了你的反饋：${thread.title}`,
-        body: (content || "（附圖）").slice(0, 80),
-        link: `/feedback`,
-        metadata: { thread_id: id },
+      void notifyCounterpart({
+        threadId: id,
+        title: thread.title,
+        content,
+        authorRole,
+        authorUserId: userId,
       }).catch(() => {});
 
       res.status(201).json({ id: message.id });
     } catch (err) {
-      logger.error("教練回覆失敗", err as Error);
+      logger.error("反饋回覆失敗", err as Error);
       res.status(500).json({ error: "回覆失敗" });
     }
   },
@@ -788,18 +807,24 @@ async function deleteThreadImages(threadId: string): Promise<void> {
 }
 
 // ===========================================================
-// 圖片串流（literal 前綴，須在 /:id 之前）
+// 圖片串流（literal 前綴，須在 /:id 之前；僅 admin 可讀）
 // ===========================================================
 
-/** GET /api/feedback/images/:imageId/file — 串流原檔（串擁有者或 admin）*/
+/** GET /api/feedback/images/:imageId/file — 串流原檔（僅 admin）*/
 router.get(
   "/images/:imageId/file",
   authenticateToken,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = Number(req.user?.userId);
       const email = req.user?.email || "";
       const imageId = String(req.params.imageId || "");
+
+      // 意見反饋是開發者↔教練的內部平台，一律限 admin 讀取
+      const admin = await isAdminEmail(email);
+      if (!admin) {
+        res.status(403).json({ error: "無權存取此圖片" });
+        return;
+      }
 
       const { data: img } = await supabaseAdmin
         .from("feedback_images")
@@ -808,33 +833,6 @@ router.get(
         .maybeSingle();
       if (!img) {
         res.status(404).json({ error: "圖片不存在" });
-        return;
-      }
-
-      // image → message → thread.user_id
-      const { data: msg } = await supabaseAdmin
-        .from("feedback_messages")
-        .select("thread_id")
-        .eq("id", img.message_id)
-        .maybeSingle();
-      if (!msg) {
-        res.status(404).json({ error: "圖片不存在" });
-        return;
-      }
-      const { data: thread } = await supabaseAdmin
-        .from("feedback_threads")
-        .select("user_id")
-        .eq("id", msg.thread_id)
-        .maybeSingle();
-      if (!thread) {
-        res.status(404).json({ error: "圖片不存在" });
-        return;
-      }
-
-      const isOwner = Number(thread.user_id) === userId;
-      const admin = isOwner ? false : await isAdminEmail(email);
-      if (!isOwner && !admin) {
-        res.status(403).json({ error: "無權存取此圖片" });
         return;
       }
 
@@ -865,13 +863,14 @@ router.get(
 );
 
 // ===========================================================
-// 會員端 — 訊息編輯 / 刪除（literal 前綴，須在 /:id 之前）
+// 訊息編輯 / 刪除（literal 前綴，須在 /:id 之前；僅作者本人）
 // ===========================================================
 
 /** PUT /api/feedback/messages/:messageId — 編輯自己的訊息 */
 router.put(
   "/messages/:messageId",
   authenticateToken,
+  requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = Number(req.user?.userId);
@@ -888,15 +887,15 @@ router.put(
 
       const { data: msg } = await supabaseAdmin
         .from("feedback_messages")
-        .select("id, author_user_id, author_role")
+        .select("id, author_user_id")
         .eq("id", messageId)
         .maybeSingle();
       if (!msg) {
         res.status(404).json({ error: "訊息不存在" });
         return;
       }
-      // 只能改自己的（會員角色 + 本人）
-      if (Number(msg.author_user_id) !== userId || msg.author_role !== "member") {
+      // 只能改自己送出的訊息
+      if (Number(msg.author_user_id) !== userId) {
         res.status(403).json({ error: "無權編輯此訊息" });
         return;
       }
@@ -920,6 +919,7 @@ router.put(
 router.delete(
   "/messages/:messageId",
   authenticateToken,
+  requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = Number(req.user?.userId);
@@ -927,14 +927,14 @@ router.delete(
 
       const { data: msg } = await supabaseAdmin
         .from("feedback_messages")
-        .select("id, thread_id, author_user_id, author_role")
+        .select("id, thread_id, author_user_id")
         .eq("id", messageId)
         .maybeSingle();
       if (!msg) {
         res.status(404).json({ error: "訊息不存在" });
         return;
       }
-      if (Number(msg.author_user_id) !== userId || msg.author_role !== "member") {
+      if (Number(msg.author_user_id) !== userId) {
         res.status(403).json({ error: "無權刪除此訊息" });
         return;
       }
@@ -963,107 +963,6 @@ router.delete(
     } catch (err) {
       logger.error("刪除反饋訊息失敗", err as Error);
       res.status(500).json({ error: "刪除訊息失敗" });
-    }
-  },
-);
-
-// ===========================================================
-// 會員端 — 詳情 / 回覆（動態 /:id，必須註冊在最後）
-// ===========================================================
-
-/** GET /api/feedback/:id — 反饋詳情（只能看自己的）*/
-router.get(
-  "/:id",
-  authenticateToken,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = Number(req.user?.userId);
-      const id = String(req.params.id || "");
-      const { data: thread } = await supabaseAdmin
-        .from("feedback_threads")
-        .select("id, user_id, title, status, created_at, updated_at")
-        .eq("id", id)
-        .maybeSingle();
-      if (!thread) {
-        res.status(404).json({ error: "反饋不存在" });
-        return;
-      }
-      if (Number(thread.user_id) !== userId) {
-        res.status(403).json({ error: "無權存取此反饋" });
-        return;
-      }
-      const messages = await loadThreadMessages(id);
-      res.json({ ...thread, messages });
-    } catch (err) {
-      logger.error("取得反饋詳情失敗", err as Error);
-      res.status(500).json({ error: "取得反饋詳情失敗" });
-    }
-  },
-);
-
-/** POST /api/feedback/:id/messages — 學員回覆（轉 waiting_coach）*/
-router.post(
-  "/:id/messages",
-  authenticateToken,
-  feedbackWriteLimiter,
-  upload.array("images", MAX_IMAGES),
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = Number(req.user?.userId);
-      const id = String(req.params.id || "");
-      const content = String(req.body.content || "").trim();
-      const files = getUploadedFiles(req);
-
-      if (!content && files.length === 0) {
-        res.status(400).json({ error: "請填寫內容或附上圖片" });
-        return;
-      }
-      if (content.length > CONTENT_MAX) {
-        res.status(400).json({ error: `內容需在 ${CONTENT_MAX} 字以內` });
-        return;
-      }
-
-      const { data: thread } = await supabaseAdmin
-        .from("feedback_threads")
-        .select("id, user_id, title")
-        .eq("id", id)
-        .maybeSingle();
-      if (!thread) {
-        res.status(404).json({ error: "反饋不存在" });
-        return;
-      }
-      if (Number(thread.user_id) !== userId) {
-        res.status(403).json({ error: "無權回覆此反饋" });
-        return;
-      }
-
-      const { data: message, error: mErr } = await supabaseAdmin
-        .from("feedback_messages")
-        .insert({
-          thread_id: id,
-          author_role: "member",
-          author_user_id: userId,
-          content,
-        })
-        .select("id")
-        .single();
-      if (mErr) throw mErr;
-
-      if (files.length) await attachImages(id, message.id, files);
-
-      // 學員回覆後 → 等待教練回應
-      await supabaseAdmin
-        .from("feedback_threads")
-        .update({ status: "waiting_coach", updated_at: new Date().toISOString() })
-        .eq("id", id);
-
-      // 通知教練
-      void notifyCoaches(id, thread.title, content).catch(() => {});
-
-      res.status(201).json({ id: message.id });
-    } catch (err) {
-      logger.error("學員回覆失敗", err as Error);
-      res.status(500).json({ error: "回覆失敗" });
     }
   },
 );

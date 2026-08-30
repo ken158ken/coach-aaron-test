@@ -365,6 +365,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       data-tour="admin-sidebar"
       className={`
         fixed left-0 top-0 bottom-0
+        flex flex-col
         bg-luxe-surface border-r border-luxe-gold/10
         transition-all duration-300 overflow-hidden
         ${
@@ -378,8 +379,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         }
       `}
     >
-      {/* Logo + Close (mobile) */}
-      <div className="h-14 sm:h-16 flex items-center justify-between border-b border-luxe-gold/10 px-3">
+      {/* Logo + Close (mobile) — 固定於頂 */}
+      <div className="shrink-0 h-14 sm:h-16 flex items-center justify-between border-b border-luxe-gold/10 px-3">
         <Link
           to="/"
           onClick={onNavigate}
@@ -427,8 +428,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="p-2 sm:p-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
+      {/* Navigation — 中間彈性區，只有這裡在項目過多時才捲動（不再用魔術數字 max-h） */}
+      <nav className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-3">
         <ul className="space-y-1">
           {navItems.map((item) => (
             <li key={item.path} className="relative">
@@ -480,8 +481,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </ul>
       </nav>
 
-      {/* Bottom Section */}
-      <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 border-t border-luxe-gold/10">
+      {/* Bottom Section — 固定於底 */}
+      <div className="shrink-0 p-2 sm:p-3 border-t border-luxe-gold/10">
         <Link
           to="/"
           onClick={onNavigate}

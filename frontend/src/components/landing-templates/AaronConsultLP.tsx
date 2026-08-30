@@ -17,7 +17,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pick, imgSrc, isPlaceholder, sectionVisible, collectIndexed, type LPProps } from "./lpUtils";
-import { useLpShell, LpScopedStyles, LpThemeToggle } from "./lpTheme";
+import { useLpShell, LpChrome } from "./lpTheme";
 import { SEOHead } from "@/components/seo";
 import { post } from "../../services/api";
 
@@ -102,11 +102,14 @@ const GoldRule: React.FC<{ center?: boolean }> = ({ center = true }) => (
 );
 
 /** 條列項目（金槓 / ✓ / ✗ 三種樣式） */
-const Bullet: React.FC<{ mark: "bar" | "check" | "cross"; children: React.ReactNode }> = ({
-  mark,
-  children,
-}) => (
-  <li className="flex items-start gap-3">
+const Bullet: React.FC<{
+  mark: "bar" | "check" | "cross";
+  children: React.ReactNode;
+  /** 額外樣式（例如卡片外觀）；直接掛在 <li> 上，避免 li 巢狀 li */
+  className?: string;
+  style?: React.CSSProperties;
+}> = ({ mark, children, className = "", style }) => (
+  <li className={`flex items-start gap-3 ${className}`} style={style}>
     {mark === "bar" && (
       <span
         className="mt-2 h-[3px] w-5 shrink-0 rounded-full"
@@ -497,7 +500,8 @@ const AaronConsultLP: React.FC<LPProps> = ({ project, fields }) => {
 
   return (
     <div className="lp-root min-h-screen font-sans antialiased" style={cssVars}>
-      <LpScopedStyles />
+      {/* 品牌標頭（LogoMark + 阿倫教官／Coach Aaron）＋ 整合日夜切換鈕 */}
+      <LpChrome mode={mode} onToggle={toggle} />
       {/* 獨立頁自己的分享卡（覆蓋 viewer 的預設值，讓 IG/LINE 分享好看） */}
       <SEOHead
         title={project.seo_title || project.project_name}
@@ -505,7 +509,6 @@ const AaronConsultLP: React.FC<LPProps> = ({ project, fields }) => {
         image={ogImage && !isPlaceholder(ogImage) ? ogImage : undefined}
         url={`/page/${project.custom_slug || ""}`}
       />
-      <LpThemeToggle mode={mode} onToggle={toggle} raised />
 
       {/* ── 1. Hero ─────────────────────────────────── */}
       {show("hero") && (
@@ -675,16 +678,17 @@ const AaronConsultLP: React.FC<LPProps> = ({ project, fields }) => {
             {[1, 2, 3, 4].map((i) => {
               const v = f(`pain_${i}`);
               return v ? (
-                <li
+                <Bullet
                   key={i}
+                  mark="cross"
                   className="rounded-xl px-5 py-4"
                   style={{
                     background: "var(--lp-surface)",
                     border: "1px solid var(--lp-border)",
                   }}
                 >
-                  <Bullet mark="cross">{v}</Bullet>
-                </li>
+                  {v}
+                </Bullet>
               ) : null;
             })}
           </ul>
@@ -763,16 +767,17 @@ const AaronConsultLP: React.FC<LPProps> = ({ project, fields }) => {
             {[1, 2, 3, 4].map((i) => {
               const v = f(`audience_${i}`);
               return v ? (
-                <li
+                <Bullet
                   key={i}
+                  mark="check"
                   className="rounded-xl px-5 py-4"
                   style={{
                     background: "var(--lp-surface)",
                     border: "1px solid var(--lp-border)",
                   }}
                 >
-                  <Bullet mark="check">{v}</Bullet>
-                </li>
+                  {v}
+                </Bullet>
               ) : null;
             })}
           </ul>

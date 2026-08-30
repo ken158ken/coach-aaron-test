@@ -83,7 +83,6 @@ const ENTRIES: TourEntry[] = [
   { pattern: "/dashboard", load: () => import("./pages/memberDashboard.tour") },
   { pattern: "/booking", load: () => import("./pages/memberBooking.tour") },
   { pattern: "/my-bookings", load: () => import("./pages/memberMyBookings.tour") },
-  { pattern: "/feedback", load: () => import("./pages/memberFeedback.tour") },
   { pattern: "/chat", load: () => import("./pages/memberChat.tour") },
   { pattern: "/chat/:conversationId", load: () => import("./pages/memberChat.tour") },
   {

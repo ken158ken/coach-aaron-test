@@ -68,7 +68,6 @@ const MyBookingsPage = lazy(() => import("@/pages/MyBookingsPage"));
 const CoachDashboard = lazy(() => import("@/pages/coach/CoachDashboard"));
 const ChatPage = lazy(() => import("@/pages/Chat"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
-const FeedbackPage = lazy(() => import("@/pages/FeedbackPage"));
 
 // 後台（訪客 100% 用不到）
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
@@ -270,14 +269,6 @@ function App(): JSX.Element {
                     element={
                       <RequireAuth>
                         <NotificationsPage />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="feedback"
-                    element={
-                      <RequireAuth>
-                        <FeedbackPage />
                       </RequireAuth>
                     }
                   />

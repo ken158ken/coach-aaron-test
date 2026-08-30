@@ -20,6 +20,7 @@
 import React, { useCallback, useContext, useMemo, useState, useEffect } from "react";
 import ThemeContext from "../../context/ThemeContext";
 import type { LpPublicProject } from "../../services/site/landing.service";
+import LogoMark from "../brand/LogoMark";
 
 export type LpMode = "light" | "dark";
 
@@ -113,44 +114,46 @@ export function lpPalette(brandInput: string | undefined, mode: LpMode): Record<
   const brand = hexToHsl(brandInput ?? "") ? (brandInput as string) : DEFAULT_BRAND;
 
   if (mode === "light") {
-    const primary = shift(brand, 52);          // 填色（按鈕）
-    const accent = shift(brand, 30, 1.05);      // 文字用強調色（白底上可讀）
+    const primary = shift(brand, 48);          // 填色（按鈕，壓深一點讓白字/CTA 更跳）
+    const accent = shift(brand, 27, 1.1);       // 文字用強調色（白底上可讀，加深加彩度）
     return {
-      bg: "#F6F7F9",
+      bg: "#F5F6F8",
       "bg-alt": "#FFFFFF",
       surface: "#FFFFFF",
-      "surface-2": "#EDF0F4",
-      text: "#111418",
-      muted: "#3F4854",
-      faint: "#5B6572",
-      border: "rgba(17,20,24,0.12)",
-      "border-strong": "rgba(17,20,24,0.22)",
+      "surface-2": "#E9ECF1",
+      text: "#0C0F13",                          // 近黑主文，最高對比
+      muted: "#39424E",                         // 副標 ≈ 9:1（AA/AAA）
+      faint: "#4C5663",                         // 說明小字 ≈ 7:1（AA）
+      border: "rgba(12,15,19,0.14)",
+      "border-strong": "rgba(12,15,19,0.26)",
       primary,
       accent,
-      "primary-soft": `${shift(brand, 52)}1F`,
+      "primary-soft": `${shift(brand, 48)}1F`,
       "on-primary": inkOn(primary),
+      "brandbar-bg": "rgba(255,255,255,0.82)",
       scrim: "rgba(8,10,14,0.55)",
       shadow: "0 10px 30px -12px rgba(17,20,24,0.22)",
       ring: `${shift(brand, 52)}59`,
     };
   }
 
-  const primary = shift(brand, 64);            // 深色底上的填色
-  const accent = shift(brand, 74, 0.95);        // 深色底上的文字強調色
+  const primary = shift(brand, 66);            // 深色底上的填色（提亮，CTA 更跳）
+  const accent = shift(brand, 78, 1);           // 深色底上的文字強調色（更亮更飽和）
   return {
     bg: "#12151A",
     "bg-alt": "#171B22",
     surface: "#1C2027",
-    "surface-2": "#252A33",
+    "surface-2": "#262C36",
     text: "#FFFFFF",
-    muted: "#C6CDD8",
-    faint: "#9BA5B4",
-    border: "rgba(255,255,255,0.16)",
-    "border-strong": "rgba(255,255,255,0.28)",
+    muted: "#D2D8E1",                            // 副標提亮 ≈ 12:1
+    faint: "#AEB7C4",                            // 說明小字提亮 ≈ 8:1（AA）
+    border: "rgba(255,255,255,0.18)",
+    "border-strong": "rgba(255,255,255,0.32)",
     primary,
     accent,
-    "primary-soft": `${shift(brand, 64)}24`,
+    "primary-soft": `${shift(brand, 66)}24`,
     "on-primary": inkOn(primary),
+    "brandbar-bg": "rgba(16,19,24,0.72)",
     scrim: "rgba(6,8,12,0.62)",
     shadow: "0 14px 40px -16px rgba(0,0,0,0.75)",
     ring: `${shift(brand, 64)}66`,
@@ -337,14 +340,81 @@ export const LpThemeToggle: React.FC<{
   </button>
 );
 
-/** 樣式 + 切換鈕的組合，一行掛進任一 LP 版面 */
-export const LpChrome: React.FC<{ mode: LpMode; onToggle: () => void; raised?: boolean }> = ({
-  mode,
-  onToggle,
-  raised,
-}) => (
+/**
+ * 極簡品牌標頭（每個 LP 頂部一條輕量品牌列）。
+ *
+ * 為什麼存在：LP 是獨立頁，沒有站台 Navbar，訪客不易一眼看出「這是誰的頁」。
+ * 這條低調的品牌列：左側 LogoMark ＋「阿倫教官 / Coach Aaron」字樣，
+ * 右側整合日／夜切換鈕。sticky 佔位不覆蓋內容、半透明毛玻璃、深淺主題皆可讀、RWD。
+ */
+export const LpBrandBar: React.FC<{
+  mode: LpMode;
+  onToggle: () => void;
+  /** 品牌主字（預設「阿倫教官」） */
+  name?: string;
+  /** 品牌副字（預設「Coach Aaron」） */
+  tagline?: string;
+}> = ({ mode, onToggle, name = "阿倫教官", tagline = "Coach Aaron" }) => (
+  <div
+    className="lp-brandbar sticky top-0 z-40 w-full backdrop-blur-md"
+    style={{
+      background: "var(--lp-brandbar-bg)",
+      borderBottom: "1px solid var(--lp-border)",
+    }}
+  >
+    <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      {/* 左：Logo + 品牌名 */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <LogoMark size={30} title={`${name} ${tagline}`} className="shrink-0" />
+        <span className="flex flex-col justify-center leading-none min-w-0">
+          <span
+            className="truncate text-[15px] font-bold tracking-tight sm:text-base"
+            style={{ color: "var(--lp-text)" }}
+          >
+            {name}
+          </span>
+          <span
+            className="truncate text-[10px] font-medium uppercase tracking-[0.18em] sm:text-[11px]"
+            style={{ color: "var(--lp-faint)" }}
+          >
+            {tagline}
+          </span>
+        </span>
+      </div>
+
+      {/* 右：日／夜切換（整合，不再另用懸浮鈕） */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={mode === "dark" ? "切換為淺色主題" : "切換為深色主題"}
+        title={mode === "dark" ? "淺色主題" : "深色主題"}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all hover:scale-105 active:scale-95"
+        style={{
+          background: "var(--lp-surface)",
+          color: "var(--lp-accent)",
+          border: "1px solid var(--lp-border-strong)",
+        }}
+      >
+        {mode === "dark" ? <SunIcon /> : <MoonIcon />}
+      </button>
+    </div>
+  </div>
+);
+
+/**
+ * 樣式 + 品牌標頭（含整合的日／夜切換鈕）的組合，一行掛進任一 LP 版面。
+ * 取代舊的「懸浮切換鈕」——切換鈕已整合進品牌列。
+ */
+export const LpChrome: React.FC<{
+  mode: LpMode;
+  onToggle: () => void;
+  /** 保留參數以相容舊呼叫端；品牌列改為 sticky 佔位，不再需要為底部 CTA 讓位 */
+  raised?: boolean;
+  name?: string;
+  tagline?: string;
+}> = ({ mode, onToggle, name, tagline }) => (
   <>
     <LpScopedStyles />
-    <LpThemeToggle mode={mode} onToggle={onToggle} raised={raised} />
+    <LpBrandBar mode={mode} onToggle={onToggle} name={name} tagline={tagline} />
   </>
 );
