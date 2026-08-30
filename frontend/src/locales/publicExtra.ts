@@ -39,6 +39,7 @@ export interface PublicExtraTranslations {
     messages: string;
     coachDashboard: string;
     loginRegister: string;
+    feedback: string;
   };
   /**
    * 教練公開資訊的文字部分。
@@ -428,6 +429,7 @@ export const publicExtra: {
     messages: "訊息",
     coachDashboard: "教練儀表板",
     loginRegister: "登入 / 註冊",
+    feedback: "意見反饋",
   },
   coachInfo: {
     name: "阿倫教官",
@@ -938,6 +940,7 @@ export const publicExtra: {
     messages: "Messages",
     coachDashboard: "Coach dashboard",
     loginRegister: "Log in / Sign up",
+    feedback: "Feedback",
   },
   coachInfo: {
     name: "Coach Aaron",

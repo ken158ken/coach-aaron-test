@@ -76,6 +76,41 @@ const CloseIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) 
   </svg>
 );
 
+const BookingsIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+  </svg>
+);
+
+const ChatBubbleIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+  </svg>
+);
+
+const AppIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="7" y="3" width="10" height="18" rx="2.5" strokeWidth={2} />
+    <path strokeLinecap="round" strokeWidth={2} d="M11 17.5h2" />
+  </svg>
+);
+
+const PagesIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z" />
+  </svg>
+);
+
+const FeedbackIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M7 8h10M7 12h6m-6 8l-3-3H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v9a2 2 0 01-2 2h-6l-4 3z" />
+  </svg>
+);
+
 /* ── Navbar ── */
 const Navbar: React.FC = (): JSX.Element => {
   const { user, logout, mounted, isAdmin } = useAuth();
@@ -92,6 +127,33 @@ const Navbar: React.FC = (): JSX.Element => {
   const [glareKey, setGlareKey] = useState(0);
   const [glareFast, setGlareFast] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // 頭像光暈：未開過使用者選單前較醒目（attract），開過後（localStorage）轉低調常亮
+  const [avatarSeen, setAvatarSeen] = useState(false);
+
+  // 讀取「是否曾開過頭像選單」旗標（SSR 安全，僅客戶端）
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("aaron_navbar_avatar_seen") === "1") {
+        setAvatarSeen(true);
+      }
+    } catch {
+      /* localStorage 不可用時忽略，維持醒目呼吸光暈 */
+    }
+  }, []);
+
+  // 第一次開啟頭像選單後，記錄旗標讓光暈轉為低調
+  const markAvatarSeen = useCallback(() => {
+    setAvatarSeen((prev) => {
+      if (!prev) {
+        try {
+          localStorage.setItem("aaron_navbar_avatar_seen", "1");
+        } catch {
+          /* 忽略寫入失敗 */
+        }
+      }
+      return true;
+    });
+  }, []);
 
   // 滾動偵測：超過 20px 後 navbar 加深背景
   useEffect(() => {
@@ -125,6 +187,20 @@ const Navbar: React.FC = (): JSX.Element => {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
   }, [location.pathname]);
+
+  // 跨越 lg 斷點（桌機↔手機）時重置選單狀態，避免殘留的漢堡選單/下拉在
+  // 切換寬度後卡住、雙選單並存或動畫未清理。matchMedia 只在跨斷點時觸發，
+  // 不會在每個 resize 像素都重置。
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handleBreakpoint = () => {
+      setMobileMenuOpen(false);
+      setUserDropdownOpen(false);
+    };
+    mq.addEventListener("change", handleBreakpoint);
+    return () => mq.removeEventListener("change", handleBreakpoint);
+  }, []);
 
   // 點擊外部關閉 dropdown
   useEffect(() => {
@@ -162,6 +238,28 @@ const Navbar: React.FC = (): JSX.Element => {
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
+  // 登入後的使用者選單項目（桌機頭像下拉 + 手機漢堡選單共用，確保兩端一致）。
+  // admin 專屬項目依 isAdmin 決定；chat 帶未讀 badge。
+  const userMenuItems: {
+    path: string;
+    label: string;
+    icon: JSX.Element;
+    badge?: boolean;
+  }[] = [
+    { path: "/member", label: t.nav.memberCenter, icon: <UserIcon className="w-5 h-5" /> },
+    { path: "/booking", label: t.layoutExtra.bookConsult, icon: <CalendarIcon className="w-5 h-5" /> },
+    { path: "/my-bookings", label: t.layoutExtra.myBookings, icon: <BookingsIcon /> },
+    { path: "/chat", label: t.layoutExtra.messages, icon: <ChatBubbleIcon />, badge: true },
+    { path: "/feedback", label: t.layoutExtra.feedback, icon: <FeedbackIcon /> },
+    ...(isAdmin
+      ? [
+          { path: "/coach", label: t.layoutExtra.coachDashboard, icon: <CalendarIcon className="w-5 h-5" /> },
+          { path: "/admin", label: t.nav.admin, icon: <AdminIcon className="w-5 h-5" /> },
+          { path: "/pages", label: t.nav.landingPages, icon: <PagesIcon /> },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -226,15 +324,16 @@ key={glareKey}
 
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-2 sm:gap-6">
 
-          {/* Logo：品牌 mark + 銀刃文字（手機版只留 mark，避免擠壓導覽） */}
+          {/* Logo：品牌 mark + 銀刃文字。手機版縮小字級/字距並排顯示，
+              避免品牌識別在小螢幕消失，同時不擠壓右側工具列。 */}
           <Link
             to="/"
             aria-label={t.layoutExtra.logoHomeAria}
-            className="shrink-0 flex items-center gap-2 sm:gap-2.5"
+            className="shrink-0 flex items-center gap-1.5 sm:gap-2.5"
           >
             <LogoMark className="h-8 w-8 sm:h-9 sm:w-9 shrink-0" />
             <span
-              className="hidden sm:inline font-display font-extrabold text-xl tracking-[4px] silver-text"
+              className="nav-brand-text font-display font-extrabold text-sm tracking-[1.5px] sm:text-xl sm:tracking-[4px] silver-text whitespace-nowrap"
               style={{ textDecoration: "none" }}
             >
               AARON COACH
@@ -266,8 +365,8 @@ key={glareKey}
             {/* User 區塊 */}
             <div className="relative" ref={dropdownRef}>
               <button
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="relative flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 transition-all duration-300"
+                onClick={() => { markAvatarSeen(); setUserDropdownOpen(!userDropdownOpen); }}
+                className={`avatar-halo ${mounted && !avatarSeen ? "avatar-halo--attract" : ""} relative flex items-center justify-center w-9 h-9 rounded-full border border-white/20 hover:border-white/50 transition-all duration-300`}
                 style={{ background: "rgba(255,255,255,0.05)" }}
                 aria-label={t.layoutExtra.userMenuAria}
               >
@@ -332,79 +431,20 @@ key={glareKey}
 
                   {mounted && user ? (
                     <>
-                      <Link
-                        to="/member"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                      >
-                        <UserIcon className="w-4 h-4" />
-                        <span>{t.nav.memberCenter}</span>
-                      </Link>
-
-                      <Link
-                        to="/booking"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                      >
-                        <CalendarIcon />
-                        <span>{t.layoutExtra.bookConsult}</span>
-                      </Link>
-
-                      <Link
-                        to="/my-bookings"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                        <span>{t.layoutExtra.myBookings}</span>
-                      </Link>
-
-                      <Link
-                        to="/chat"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                      >
-                        <span className="flex items-center gap-3">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          <span>{t.layoutExtra.messages}</span>
-                        </span>
-                        <UnreadBadge count={unreadTotal} />
-                      </Link>
-
-                      {isAdmin && (
-                        <>
-                          <Link
-                            to="/coach"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                          >
-                            <CalendarIcon />
-                            <span>{t.layoutExtra.coachDashboard}</span>
-                          </Link>
-                          <Link
-                            to="/admin"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                          >
-                            <AdminIcon />
-                            <span>{t.nav.admin}</span>
-                          </Link>
-                          <Link
-                            to="/pages"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z" />
-                            </svg>
-                            <span>{t.nav.landingPages}</span>
-                          </Link>
-                        </>
-                      )}
+                      {userMenuItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setUserDropdownOpen(false)}
+                          className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? "text-[#888] hover:text-white hover:bg-white/5" : "text-[#666] hover:text-[#111] hover:bg-black/5"}`}
+                        >
+                          <span className="flex items-center gap-3">
+                            {React.cloneElement(item.icon, { className: "w-4 h-4" })}
+                            <span>{item.label}</span>
+                          </span>
+                          {item.badge && <UnreadBadge count={unreadTotal} />}
+                        </Link>
+                      ))}
 
                       <div className={`my-1 border-t ${isDark ? "border-white/10" : "border-black/8"}`} />
 
@@ -448,7 +488,7 @@ key={glareKey}
       <AnimatePresence>
       {mobileMenuOpen && (
         <motion.div
-          className="fixed inset-0 z-40 flex flex-col pt-20 px-6 pb-8 lg:hidden"
+          className="fixed inset-0 z-40 flex flex-col pt-20 px-6 pb-8 lg:hidden overflow-y-auto"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
@@ -476,17 +516,58 @@ key={glareKey}
             ))}
           </ul>
 
-          <div className={`mt-auto pt-6 border-t flex items-center gap-4 ${isDark ? "border-white/10" : "border-black/10"}`}>
+          {/* 使用者區塊（登入時顯示）：完整搬進桌機頭像下拉的項目，含未讀 badge */}
+          {mounted && user && (
+            <div className={`mt-8 pt-6 border-t ${isDark ? "border-white/10" : "border-black/10"}`}>
+              <div className={`px-1 pb-3 text-xs tracking-[2px] uppercase ${isDark ? "text-[#666]" : "text-[#999]"}`}>
+                {user.name || user.email}
+              </div>
+              <div className="flex flex-col">
+                {userMenuItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between gap-3 py-2.5 text-base transition-colors ${isDark ? "text-[#999] hover:text-white" : "text-[#555] hover:text-[#111]"}`}
+                  >
+                    <span className="flex items-center gap-3">
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </span>
+                    {item.badge && <UnreadBadge count={unreadTotal} />}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={`mt-auto pt-6 border-t flex items-center flex-wrap gap-4 ${isDark ? "border-white/10" : "border-black/10"}`}>
             <button
               onClick={toggleColorMode}
+              aria-label={isDark ? t.layoutExtra.switchToLight : t.layoutExtra.switchToDark}
               className={`w-9 h-9 flex items-center justify-center border rounded transition-all ${isDark ? "border-white/20 text-[#888] hover:text-white hover:border-white/50" : "border-black/20 text-[#666] hover:text-[#111] hover:border-black/50"}`}
             >
               {isDark ? <SunIcon /> : <MoonIcon />}
             </button>
+            <button
+              onClick={() => setLanguage(language === "zh-TW" ? "en" : "zh-TW")}
+              className={`h-9 px-3 flex items-center gap-2 border rounded text-sm transition-all ${isDark ? "border-white/20 text-[#888] hover:text-white hover:border-white/50" : "border-black/20 text-[#666] hover:text-[#111] hover:border-black/50"}`}
+            >
+              <span className="text-base">🌐</span>
+              <span>{language === "zh-TW" ? "English" : "中文"}</span>
+            </button>
+            <Link
+              to="/app"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`h-9 px-3 flex items-center gap-2 border rounded text-sm transition-all ${isDark ? "border-white/20 text-[#888] hover:text-white hover:border-white/50" : "border-black/20 text-[#666] hover:text-[#111] hover:border-black/50"}`}
+            >
+              <AppIcon className="w-4 h-4" />
+              <span>APP</span>
+            </Link>
             {!mounted || !user ? (
               <Link
                 to="/login"
-                className="btn-metal py-2 px-6 text-sm"
+                className="btn-metal py-2 px-6 text-sm ml-auto"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.login}
@@ -494,7 +575,7 @@ key={glareKey}
             ) : (
               <button
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                className="btn-metal py-2 px-6 text-sm"
+                className="btn-metal py-2 px-6 text-sm ml-auto"
               >
                 {t.nav.logout}
               </button>

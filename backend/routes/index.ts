@@ -32,6 +32,7 @@ import landingRoutes     from "./landing.js";
 import exportRoutes      from "./export.js";
 import adminExportRoutes from "./adminExport.js";
 import whispersRoutes    from "./whispers.js";
+import feedbackRoutes    from "./feedback.js";
 
 export function registerRoutes(app: Express): void {
   // ── 認證 ──────────────────────────────────────────────
@@ -78,6 +79,9 @@ export function registerRoutes(app: Express): void {
 
   // ── 悄悄話 ────────────────────────────────────────────
   app.use("/api/whispers",    whispersRoutes);
+
+  // ── 意見反饋 ──────────────────────────────────────────
+  app.use("/api/feedback",    feedbackRoutes);
 
   // ── 排程任務 ──────────────────────────────────────────
   app.use("/api/cron",        chatCronRoutes);

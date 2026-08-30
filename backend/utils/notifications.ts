@@ -26,7 +26,9 @@ export type NotificationType =
   | "booking_pending"
   | "booking_approved"
   | "booking_rejected"
-  | "booking_cancelled";
+  | "booking_cancelled"
+  | "feedback_new"
+  | "feedback_reply";
 
 interface CreateNotificationInput {
   userId: number;

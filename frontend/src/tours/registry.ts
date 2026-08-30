@@ -44,6 +44,7 @@ const ENTRIES: TourEntry[] = [
   },
   { pattern: "/admin/whitelist", load: () => import("./pages/adminWhitelist.tour") },
   { pattern: "/admin/whispers", load: () => import("./pages/adminWhispers.tour") },
+  { pattern: "/admin/feedback", load: () => import("./pages/adminFeedback.tour") },
   { pattern: "/admin/export", load: () => import("./pages/adminExport.tour") },
   {
     pattern: "/admin/google-calendar",
@@ -81,6 +82,7 @@ const ENTRIES: TourEntry[] = [
   { pattern: "/dashboard", load: () => import("./pages/memberDashboard.tour") },
   { pattern: "/booking", load: () => import("./pages/memberBooking.tour") },
   { pattern: "/my-bookings", load: () => import("./pages/memberMyBookings.tour") },
+  { pattern: "/feedback", load: () => import("./pages/memberFeedback.tour") },
   { pattern: "/chat", load: () => import("./pages/memberChat.tour") },
   { pattern: "/chat/:conversationId", load: () => import("./pages/memberChat.tour") },
   {

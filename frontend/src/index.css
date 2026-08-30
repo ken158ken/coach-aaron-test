@@ -151,6 +151,35 @@
   0%   { opacity: 0; transform: scale(0.96); }
   100% { opacity: 1; transform: scale(1); }
 }
+/* 頭像金色呼吸光暈 —— 緩慢、散漫到周圍（散射式 box-shadow + 柔光暈環） */
+@keyframes avatarHaloCalm {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(212,175,101,0.22),
+      0 0 7px 1px rgba(212,175,101,0.22),
+      0 0 14px 4px rgba(212,175,101,0.10);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(226,192,120,0.34),
+      0 0 12px 3px rgba(226,192,120,0.34),
+      0 0 26px 9px rgba(226,192,120,0.16);
+  }
+}
+@keyframes avatarHaloAttract {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(224,190,118,0.45),
+      0 0 12px 2px rgba(224,190,118,0.45),
+      0 0 26px 8px rgba(224,190,118,0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(240,208,138,0.72),
+      0 0 22px 6px rgba(240,208,138,0.66),
+      0 0 44px 16px rgba(240,208,138,0.34);
+  }
+}
 
 [data-color-mode="dark"] {
   --content-bg:     rgba(0, 0, 0, 0.3);
@@ -211,6 +240,36 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8));
     animation: textSweep 5s linear infinite;
+  }
+
+  /* ── 頭像金色呼吸光暈（讓使用者一眼找到頭像入口）── */
+  .avatar-halo {
+    animation: avatarHaloCalm 4.5s ease-in-out infinite;
+    border-color: rgba(224,190,118,0.55) !important;
+  }
+  .avatar-halo.avatar-halo--attract {
+    animation: avatarHaloAttract 2.8s ease-in-out infinite;
+    border-color: rgba(240,208,138,0.85) !important;
+  }
+  /* 淺色主題：金光需要更飽和一點才醒目 */
+  [data-color-mode="light"] .avatar-halo,
+  [data-theme="studio-light"] .avatar-halo {
+    border-color: rgba(179,134,50,0.60) !important;
+  }
+  [data-color-mode="light"] .avatar-halo.avatar-halo--attract,
+  [data-theme="studio-light"] .avatar-halo.avatar-halo--attract {
+    border-color: rgba(179,134,50,0.90) !important;
+  }
+  /* 尊重使用者的減少動態偏好：停用呼吸，改為靜態柔和金光 */
+  @media (prefers-reduced-motion: reduce) {
+    .avatar-halo,
+    .avatar-halo.avatar-halo--attract {
+      animation: none;
+      box-shadow:
+        0 0 0 1px rgba(224,190,118,0.40),
+        0 0 12px 3px rgba(224,190,118,0.30),
+        0 0 22px 7px rgba(224,190,118,0.14);
+    }
   }
 
   .studio-card {
@@ -387,6 +446,13 @@
 [data-theme="studio-light"] .studio-card { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); }
 [data-theme="studio-light"] .studio-card:hover { border-color: rgba(0,0,0,0.4); box-shadow: 0 15px 30px rgba(0,0,0,0.12); }
 [data-theme="studio-light"] .glass-card { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.1); border-top-color: rgba(0,0,0,0.2); }
+/* 品牌字樣：淺色主題改用深色暖金屬漸層，避免銀色漸層在米白底幾乎看不見 */
+[data-theme="studio-light"] .nav-brand-text,
+[data-color-mode="light"] .nav-brand-text {
+  background: linear-gradient(135deg,#241f1b 0%,#5a4f42 28%,#8a7657 50%,#514537 72%,#221d19 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 [data-theme="studio-light"] .nav-link { color: #555; }
 [data-theme="studio-light"] .nav-link:hover, [data-theme="studio-light"] .nav-link.active { color: #111; }
 [data-theme="studio-light"] .nav-link::after { background: #111; box-shadow: none; }

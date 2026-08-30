@@ -68,6 +68,7 @@ const MyBookingsPage = lazy(() => import("@/pages/MyBookingsPage"));
 const CoachDashboard = lazy(() => import("@/pages/coach/CoachDashboard"));
 const ChatPage = lazy(() => import("@/pages/Chat"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const FeedbackPage = lazy(() => import("@/pages/FeedbackPage"));
 
 // 後台（訪客 100% 用不到）
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
@@ -79,6 +80,7 @@ const AdminLessons = lazy(() => import("@/pages/admin/AdminLessons"));
 const AdminContent = lazy(() => import("@/pages/admin/AdminContent")); // → tiptap
 const AdminWhitelist = lazy(() => import("@/pages/admin/AdminWhitelist"));
 const AdminWhispers = lazy(() => import("@/pages/admin/AdminWhispers"));
+const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
 const AdminArticles = lazy(() => import("@/pages/admin/AdminArticles")); // → tiptap
 const AdminExport = lazy(() => import("@/pages/admin/AdminExport"));
 const AdminGoogleCalendar = lazy(() => import("@/pages/admin/AdminGoogleCalendar"));
@@ -270,6 +272,14 @@ function App(): JSX.Element {
                       </RequireAuth>
                     }
                   />
+                  <Route
+                    path="feedback"
+                    element={
+                      <RequireAuth>
+                        <FeedbackPage />
+                      </RequireAuth>
+                    }
+                  />
                 </Route>
 
                 {/* Landing Page 公開預覽（不套 Layout，獨立全頁） */}
@@ -294,6 +304,7 @@ function App(): JSX.Element {
                   <Route path="landing-pages" element={<LandingPageManager />} />
                   <Route path="whitelist" element={<AdminWhitelist />} />
                   <Route path="whispers" element={<AdminWhispers />} />
+                  <Route path="feedback" element={<AdminFeedback />} />
                   <Route path="export" element={<AdminExport />} />
                   <Route path="google-calendar" element={<AdminGoogleCalendar />} />
                 </Route>

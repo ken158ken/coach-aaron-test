@@ -26,10 +26,14 @@ type StatusBadgeKey =
 
 /** 會員區/共用 UI 補充翻譯的形狀（zh 與 en 必須同構） */
 export interface MemberExtraTranslations {
-  /** 相對時間詞（聊天、通知共用） */
+  /** 相對時間詞（聊天、通知、反饋共用） */
   dateTime: {
     today: string;
     yesterday: string;
+    justNow: string;
+    minutesAgo: string;
+    hoursAgo: string;
+    daysAgo: string;
   };
   /** 會員儀表板 /dashboard */
   dashboard: {
@@ -597,12 +601,84 @@ export interface MemberExtraTranslations {
     unknownError: string;
     reload: string;
   };
+  /** 意見反饋 /feedback（學員視角）*/
+  memberFeedback: {
+    seoTitle: string;
+    heading: string;
+    subtitle: string;
+    newFeedback: string;
+    searchPlaceholder: string;
+    loadFailed: string;
+    empty: string;
+    emptyHint: string;
+    emptySearch: string;
+    backToList: string;
+    messagesCount: string;
+    lastUpdated: string;
+    waitingCoach: string;
+    yourTurn: string;
+    statusLabel: {
+      waiting_member: string;
+      waiting_coach: string;
+      in_progress: string;
+      resolved: string;
+    };
+    modal: {
+      title: string;
+      titleLabel: string;
+      titlePlaceholder: string;
+      contentLabel: string;
+      contentPlaceholder: string;
+      attachLabel: string;
+      submit: string;
+      submitting: string;
+      cancel: string;
+    };
+    attach: {
+      dropHint: string;
+      remaining: string;
+      tooMany: string;
+      tooLarge: string;
+      badType: string;
+      removeAria: string;
+    };
+    reply: {
+      placeholder: string;
+      send: string;
+      sending: string;
+    };
+    conversation: {
+      roleMember: string;
+      roleCoach: string;
+      edited: string;
+      edit: string;
+      delete: string;
+      save: string;
+      cancel: string;
+    };
+    deleteMsgTitle: string;
+    deleteMsgMessage: string;
+    validation: {
+      titleRequired: string;
+      contentRequired: string;
+    };
+    errors: {
+      createFailed: string;
+      replyFailed: string;
+      editFailed: string;
+      deleteFailed: string;
+    };
+  };
 }
 
 const zhTW: MemberExtraTranslations = {
   dateTime: {
     today: "今天",
     yesterday: "昨天",
+    justNow: "剛剛",
+    minutesAgo: "{n} 分鐘前",
+    hoursAgo: "{n} 小時前",
+    daysAgo: "{n} 天前",
   },
   dashboard: {
     seoTitle: "會員儀表板 | 阿倫教官",
@@ -1164,12 +1240,83 @@ const zhTW: MemberExtraTranslations = {
     unknownError: "未知錯誤",
     reload: "重新載入",
   },
+  memberFeedback: {
+    seoTitle: "意見反饋",
+    heading: "意見反饋",
+    subtitle: "把問題或想法告訴教練，他會回覆你，一來一往慢慢聊 😊",
+    newFeedback: "＋ 新增反饋",
+    searchPlaceholder: "搜尋標題…",
+    loadFailed: "載入反饋失敗",
+    empty: "還沒有任何反饋",
+    emptyHint: "有問題或建議嗎？點右上角「新增反饋」開始吧！",
+    emptySearch: "找不到符合的反饋",
+    backToList: "← 返回列表",
+    messagesCount: "{n} 則訊息",
+    lastUpdated: "最後更新 {time}",
+    waitingCoach: "還在等教練回覆 →",
+    yourTurn: "換你回覆了 →",
+    statusLabel: {
+      waiting_member: "等待你回應",
+      waiting_coach: "等待教練回應",
+      in_progress: "處理中",
+      resolved: "已完成",
+    },
+    modal: {
+      title: "新增反饋",
+      titleLabel: "標題",
+      titlePlaceholder: "用一句話描述你的問題或想法",
+      contentLabel: "內容",
+      contentPlaceholder: "詳細說說看，教練才能幫上忙…",
+      attachLabel: "附上圖片（選填）",
+      submit: "送出",
+      submitting: "送出中…",
+      cancel: "取消",
+    },
+    attach: {
+      dropHint: "拖放、點擊上傳，或直接貼上截圖",
+      remaining: "還能加 {n} 張",
+      tooMany: "最多只能上傳 {n} 張圖片",
+      tooLarge: "單張圖片不能超過 10MB",
+      badType: "只支援 JPG／PNG／WebP／GIF",
+      removeAria: "移除這張圖片",
+    },
+    reply: {
+      placeholder: "輸入訊息…（可貼上截圖）",
+      send: "送出",
+      sending: "送出中…",
+    },
+    conversation: {
+      roleMember: "學員",
+      roleCoach: "教練",
+      edited: "已編輯",
+      edit: "編輯",
+      delete: "刪除",
+      save: "儲存",
+      cancel: "取消",
+    },
+    deleteMsgTitle: "刪除訊息",
+    deleteMsgMessage: "確定要刪除這則訊息嗎？此動作無法復原。",
+    validation: {
+      titleRequired: "請填寫標題",
+      contentRequired: "請填寫內容或附上圖片",
+    },
+    errors: {
+      createFailed: "送出反饋失敗，請稍後再試",
+      replyFailed: "回覆失敗，請稍後再試",
+      editFailed: "編輯失敗，請稍後再試",
+      deleteFailed: "刪除失敗，請稍後再試",
+    },
+  },
 };
 
 const en: MemberExtraTranslations = {
   dateTime: {
     today: "Today",
     yesterday: "Yesterday",
+    justNow: "just now",
+    minutesAgo: "{n} min ago",
+    hoursAgo: "{n} hr ago",
+    daysAgo: "{n} days ago",
   },
   dashboard: {
     seoTitle: "Member Dashboard | Coach Aaron",
@@ -1747,6 +1894,73 @@ const en: MemberExtraTranslations = {
     errorTitle: "Something went wrong loading this page",
     unknownError: "Unknown error",
     reload: "Reload",
+  },
+  memberFeedback: {
+    seoTitle: "Feedback",
+    heading: "Feedback",
+    subtitle: "Tell your coach what's on your mind — he'll reply, and you can chat back and forth 😊",
+    newFeedback: "＋ New feedback",
+    searchPlaceholder: "Search titles…",
+    loadFailed: "Failed to load feedback",
+    empty: "No feedback yet",
+    emptyHint: "Got a question or an idea? Tap \"New feedback\" in the top right to start.",
+    emptySearch: "No feedback matches your search",
+    backToList: "← Back to list",
+    messagesCount: "{n} messages",
+    lastUpdated: "Updated {time}",
+    waitingCoach: "Waiting on your coach →",
+    yourTurn: "Your turn to reply →",
+    statusLabel: {
+      waiting_member: "Waiting on you",
+      waiting_coach: "Waiting on coach",
+      in_progress: "In progress",
+      resolved: "Resolved",
+    },
+    modal: {
+      title: "New feedback",
+      titleLabel: "Title",
+      titlePlaceholder: "Describe your question or idea in one line",
+      contentLabel: "Details",
+      contentPlaceholder: "Tell us more so your coach can help…",
+      attachLabel: "Attach images (optional)",
+      submit: "Send",
+      submitting: "Sending…",
+      cancel: "Cancel",
+    },
+    attach: {
+      dropHint: "Drop, click to upload, or paste a screenshot",
+      remaining: "{n} more allowed",
+      tooMany: "Up to {n} images only",
+      tooLarge: "Each image must be under 10MB",
+      badType: "Only JPG / PNG / WebP / GIF are supported",
+      removeAria: "Remove this image",
+    },
+    reply: {
+      placeholder: "Type a message… (you can paste screenshots)",
+      send: "Send",
+      sending: "Sending…",
+    },
+    conversation: {
+      roleMember: "Member",
+      roleCoach: "Coach",
+      edited: "edited",
+      edit: "Edit",
+      delete: "Delete",
+      save: "Save",
+      cancel: "Cancel",
+    },
+    deleteMsgTitle: "Delete message",
+    deleteMsgMessage: "Delete this message? This can't be undone.",
+    validation: {
+      titleRequired: "Please enter a title",
+      contentRequired: "Please add a message or an image",
+    },
+    errors: {
+      createFailed: "Couldn't send feedback, please try again",
+      replyFailed: "Couldn't send reply, please try again",
+      editFailed: "Couldn't edit, please try again",
+      deleteFailed: "Couldn't delete, please try again",
+    },
   },
 };
 
