@@ -539,4 +539,110 @@ router.get(
   },
 );
 
+// ───────────────────────────────────────────────────────────────
+// CI 煙霧測試端點
+// ───────────────────────────────────────────────────────────────
+
+/**
+ * 部署後煙霧測試（GitHub Actions 呼叫，CRON_SECRET 保護）。
+ * @route GET /api/cron/smoke
+ *
+ * 真實走一遍「註冊層級」的關鍵路徑，抓住像 users 欄位 drift（migration 移除
+ * 欄位但程式還在 INSERT）這種「編譯過但上線全滅」的低級錯誤：
+ *   1. 以與 auth 註冊完全相同的欄位組 INSERT 一個測試使用者
+ *   2. SELECT 回讀驗證
+ *   3. 硬 DELETE 清掉（不留痕跡）
+ *   4. 幾個核心表的可讀性檢查
+ */
+router.get("/smoke", async (req: Request, res: Response): Promise<void> => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    res.status(503).json({ ok: false, error: "CRON_SECRET 未設定" });
+    return;
+  }
+  if ((req.headers.authorization || "") !== `Bearer ${secret}`) {
+    res.status(401).json({ ok: false, error: "Unauthorized" });
+    return;
+  }
+
+  const checks: Record<string, string> = {};
+  let ok = true;
+  const fail = (name: string, detail: string): void => {
+    checks[name] = `FAIL: ${detail}`;
+    ok = false;
+  };
+
+  // 1+2+3. 註冊關鍵路徑：INSERT 欄位組必須與 routes/auth.ts 的註冊完全一致
+  const tag = `ci_smoke_${Date.now()}`;
+  try {
+    const { data: created, error: insErr } = await supabaseAdmin
+      .from("users")
+      .insert({
+        username: tag,
+        email: `${tag}@smoke.local`,
+        password_hash: "!ci-smoke-not-a-login",
+        display_name: "CI Smoke（自動清除）",
+        phone_number: null,
+      })
+      .select("user_id, email")
+      .single();
+
+    if (insErr || !created) {
+      fail("register_insert", insErr?.message ?? "no row returned");
+    } else {
+      checks.register_insert = "ok";
+      const { error: delErr } = await supabaseAdmin
+        .from("users")
+        .delete()
+        .eq("user_id", created.user_id);
+      if (delErr) fail("register_cleanup", delErr.message);
+      else checks.register_cleanup = "ok";
+    }
+  } catch (err) {
+    fail("register_insert", (err as Error)?.message ?? "unknown");
+  }
+
+  // 4. 核心表可讀
+  for (const table of ["courses", "articles", "site_content"] as const) {
+    const { error } = await supabaseAdmin
+      .from(table)
+      .select("*", { count: "exact", head: true })
+      .limit(1);
+    if (error) fail(`read_${table}`, error.message);
+    else checks[`read_${table}`] = "ok";
+  }
+
+  // 失敗時寄警報信給教練/站主（best-effort；Vercel cron 的失敗不會有人看 log）
+  if (!ok) {
+    try {
+      const resendApiKey = process.env.RESEND_API_KEY;
+      const coachEmail = process.env.COACH_EMAIL || "s330221@gmail.com";
+      if (resendApiKey) {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Coach Aaron 網站 <onboarding@resend.dev>",
+            to: [coachEmail],
+            subject: "🚨 網站煙霧測試失敗 — 請立即檢查",
+            html: `<h2>coach-aaron 煙霧測試失敗</h2><pre>${JSON.stringify(
+              checks,
+              null,
+              2,
+            )}</pre><p>${new Date().toISOString()}</p>`,
+          }),
+        });
+      }
+      logger.error("煙霧測試失敗", new Error("smoke failed"), { checks });
+    } catch (mailErr) {
+      logger.error("煙霧測試警報信寄送失敗", mailErr as Error);
+    }
+  }
+
+  res.status(ok ? 200 : 500).json({ ok, checks, timestamp: new Date().toISOString() });
+});
+
 export default router;
