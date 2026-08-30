@@ -5,11 +5,12 @@
  * 模板代號：AARON_PRICING
  */
 
-import React, { useEffect, useMemo, useState } from "react";
-import { buildCssVars, pick, type LPProps } from "./lpUtils";
+import React, { useEffect, useState } from "react";
+import { pick, type LPProps } from "./lpUtils";
+import { useLpShell, LpChrome } from "./lpTheme";
 
 const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
-  const cssVars = useMemo(() => buildCssVars(project), [project]);
+  const { cssVars, mode, toggle } = useLpShell(project);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
@@ -47,7 +48,8 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
   const ctaBtnUrl = pick(fields, "cta_button_url") || "/booking";
 
   return (
-    <div className="min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg, #0a0a0a)", color: "var(--lp-text, #ffffff)" }}>
+    <div className="lp-root min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg)", color: "var(--lp-text)" }}>
+      <LpChrome mode={mode} onToggle={toggle} />
 
       {/* ── Hero ──────────────────────────────────────────── */}
       <section className="pt-32 pb-16 px-6 text-center">
@@ -70,8 +72,8 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
                 key={i}
                 className={`relative rounded-2xl p-8 flex flex-col transition-all ${plan.featured ? "ring-2 scale-[1.03]" : ""}`}
                 style={{
-                  background: plan.featured ? `linear-gradient(135deg, var(--lp-surface, #141414) 0%, rgba(201,169,110,0.05) 100%)` : "var(--lp-surface, #141414)",
-                  border: `1px solid ${plan.featured ? "var(--lp-primary, #c5a059)" : "var(--lp-border, rgba(255,255,255,0.1))"}`,
+                  background: plan.featured ? `linear-gradient(135deg, var(--lp-surface, #141414) 0%, rgba(201,169,110,0.05) 100%)` : "var(--lp-surface)",
+                  border: `1px solid ${plan.featured ? "var(--lp-primary)" : "var(--lp-border)"}`,
                   outline: plan.featured ? "2px solid var(--lp-primary, #c5a059)" : undefined,
                 }}
               >
@@ -79,14 +81,14 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
                 {plan.badge && (
                   <span
                     className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold text-black whitespace-nowrap"
-                    style={{ background: "var(--lp-primary, #c5a059)" }}
+                    style={{ background: "var(--lp-primary)" }}
                   >
                     {plan.badge}
                   </span>
                 )}
 
                 {/* Plan name */}
-                <h3 className="text-xl font-bold mb-4" style={{ color: plan.featured ? "var(--lp-primary, #c5a059)" : "inherit" }}>
+                <h3 className="text-xl font-bold mb-4" style={{ color: plan.featured ? "var(--lp-primary)" : "inherit" }}>
                   {plan.name}
                 </h3>
 
@@ -101,7 +103,7 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
                   <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.split("\n").filter(Boolean).map((feat, j) => (
                       <li key={j} className="flex items-start gap-2 text-sm text-white/70">
-                        <span className="mt-0.5 shrink-0" style={{ color: "var(--lp-primary, #c5a059)" }}>✓</span>
+                        <span className="mt-0.5 shrink-0" style={{ color: "var(--lp-primary)" }}>✓</span>
                         {feat}
                       </li>
                     ))}
@@ -113,7 +115,7 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
                   href={plan.ctaUrl}
                   className="block text-center py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
                   style={plan.featured
-                    ? { background: "var(--lp-primary, #c5a059)", color: "#000" }
+                    ? { background: "var(--lp-primary)", color: "#000" }
                     : { border: "1px solid var(--lp-border, rgba(255,255,255,0.2))", color: "var(--lp-text, #fff)" }
                   }
                 >
@@ -146,13 +148,13 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
                     {faq.q}
                     <span
                       className="shrink-0 text-lg transition-transform"
-                      style={{ color: "var(--lp-primary, #c5a059)", transform: openFaq === i ? "rotate(45deg)" : "none" }}
+                      style={{ color: "var(--lp-primary)", transform: openFaq === i ? "rotate(45deg)" : "none" }}
                     >
                       +
                     </span>
                   </button>
                   {openFaq === i && faq.a && (
-                    <div className="px-6 pb-5 text-sm text-white/60 leading-relaxed border-t" style={{ borderColor: "var(--lp-border, rgba(255,255,255,0.1))" }}>
+                    <div className="px-6 pb-5 text-sm text-white/60 leading-relaxed border-t" style={{ borderColor: "var(--lp-border)" }}>
                       <p className="pt-4">{faq.a}</p>
                     </div>
                   )}
@@ -164,14 +166,14 @@ const PricingLP: React.FC<LPProps> = ({ project, fields }) => {
       )}
 
       {/* ── Final CTA ─────────────────────────────────────── */}
-      <section className="py-24 px-6" style={{ background: "var(--lp-surface, #141414)" }}>
+      <section className="py-24 px-6" style={{ background: "var(--lp-surface)" }}>
         <div className="max-w-xl mx-auto text-center">
           {ctaTitle && <h2 className="text-3xl font-bold mb-4">{ctaTitle}</h2>}
           {ctaDesc && <p className="text-white/60 mb-8 leading-relaxed">{ctaDesc}</p>}
           <a
             href={ctaBtnUrl}
             className="inline-block px-10 py-4 rounded-xl font-bold text-black transition-all hover:scale-105 hover:opacity-90"
-            style={{ background: "var(--lp-primary, #c5a059)" }}
+            style={{ background: "var(--lp-primary)" }}
           >
             {ctaBtnTxt}
           </a>

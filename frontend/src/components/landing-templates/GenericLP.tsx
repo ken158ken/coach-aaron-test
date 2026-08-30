@@ -12,6 +12,7 @@ import React, { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { LpPublicProject, LpResolvedField } from "../../services/site/landing.service";
 import { getHiddenSections } from "./lpUtils";
+import { useLpShell, LpChrome, mediaCls } from "./lpTheme";
 
 // ─────────────────────────────────────────────────────────
 // Types & helpers
@@ -131,11 +132,11 @@ const HeroSection: React.FC<{
 
   return (
     <section
-      className="relative min-h-[70vh] flex items-center justify-center text-center px-6 py-20 overflow-hidden"
+      className={mediaCls(!!bgUrl, "relative min-h-[70vh] flex items-center justify-center text-center px-6 py-20 overflow-hidden")}
       style={
         bgUrl
           ? { backgroundImage: `url(${bgUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-          : { background: "linear-gradient(135deg, #1a1a2e 0%, #0d0d1a 100%)" }
+          : { background: "linear-gradient(135deg, var(--lp-surface) 0%, var(--lp-bg) 100%)" }
       }
     >
       {/* Overlay */}
@@ -146,7 +147,7 @@ const HeroSection: React.FC<{
       <div className="relative z-10 max-w-3xl mx-auto">
         {titleVal && (
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight text-white">
-            <span className="text-[var(--lp-primary,#C9A96E)]">{titleVal}</span>
+            <span className="text-[color:var(--lp-accent)]">{titleVal}</span>
           </h1>
         )}
         {subtitleVal && (
@@ -162,8 +163,8 @@ const HeroSection: React.FC<{
         {(ctaText || ctaHref) && (
           <a
             href={ctaHref}
-            className="inline-block px-8 py-3 rounded-lg font-semibold text-black transition-all hover:scale-105 hover:opacity-90 active:scale-100"
-            style={{ background: "var(--lp-primary, #C9A96E)" }}
+            className="inline-block px-8 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90 active:scale-100"
+            style={{ background: "var(--lp-primary)", color: "var(--lp-on-primary)" }}
           >
             {ctaText || "立即了解"}
           </a>
@@ -214,7 +215,7 @@ const FeatureGrid: React.FC<{ fields: LpResolvedField[]; title?: string }> = ({
           .filter((f) => fieldValue(f))
           .map((f) => (
             <p key={f.field_id} className="text-sm text-white/60">
-              <span className="text-[var(--lp-primary,#C9A96E)] mr-2">{f.field_label}：</span>
+              <span className="text-[color:var(--lp-accent)] mr-2">{f.field_label}：</span>
               {fieldValue(f)}
             </p>
           ))}
@@ -233,10 +234,11 @@ const FeatureGrid: React.FC<{ fields: LpResolvedField[]; title?: string }> = ({
         {cards.map((card, i) => (
           <div
             key={i}
-            className="rounded-xl p-6 border transition-all hover:border-[var(--lp-primary,#C9A96E)]/50"
+            className="rounded-xl p-6 border transition-all hover:border-[color:var(--lp-accent)]"
             style={{
-              background: "rgba(255,255,255,0.03)",
-              borderColor: "rgba(201,169,110,0.12)",
+              background: "var(--lp-surface)",
+              borderColor: "var(--lp-border)",
+              boxShadow: "var(--lp-shadow)",
             }}
           >
             {card.img && (
@@ -248,7 +250,7 @@ const FeatureGrid: React.FC<{ fields: LpResolvedField[]; title?: string }> = ({
               <div className="text-3xl mb-3">{card.icon}</div>
             )}
             {card.title && (
-              <h3 className="text-lg font-semibold text-[var(--lp-primary,#C9A96E)] mb-2">
+              <h3 className="text-lg font-semibold text-[color:var(--lp-accent)] mb-2">
                 {card.title}
               </h3>
             )}
@@ -303,8 +305,9 @@ const TestimonialSection: React.FC<{ fields: LpResolvedField[]; title?: string }
             key={i}
             className="rounded-xl p-6"
             style={{
-              background: "rgba(201,169,110,0.04)",
-              border: "1px solid rgba(201,169,110,0.12)",
+              background: "var(--lp-surface)",
+              border: "1px solid var(--lp-border)",
+              boxShadow: "var(--lp-shadow)",
             }}
           >
             <p className="text-white/70 text-sm leading-relaxed mb-4 italic">
@@ -320,7 +323,7 @@ const TestimonialSection: React.FC<{ fields: LpResolvedField[]; title?: string }
               )}
               <div>
                 {q.name && (
-                  <p className="text-sm font-semibold text-[var(--lp-primary,#C9A96E)]">
+                  <p className="text-sm font-semibold text-[color:var(--lp-accent)]">
                     {q.name}
                   </p>
                 )}
@@ -353,8 +356,8 @@ const CtaSection: React.FC<{ fields: LpResolvedField[] }> = ({ fields }) => {
     <section
       className="text-center py-16 px-6 rounded-2xl"
       style={{
-        background: "linear-gradient(135deg, rgba(201,169,110,0.08) 0%, rgba(201,169,110,0.02) 100%)",
-        border: "1px solid rgba(201,169,110,0.12)",
+        background: "var(--lp-primary-soft)",
+        border: "1px solid var(--lp-border-strong)",
       }}
     >
       {titleVal && (
@@ -367,8 +370,8 @@ const CtaSection: React.FC<{ fields: LpResolvedField[] }> = ({ fields }) => {
       )}
       <a
         href={btnHref}
-        className="inline-block px-10 py-3.5 rounded-lg font-semibold text-black transition-all hover:scale-105 hover:opacity-90"
-        style={{ background: "var(--lp-primary, #C9A96E)" }}
+        className="inline-block px-10 py-3.5 rounded-lg font-semibold transition-all hover:scale-105 hover:opacity-90"
+        style={{ background: "var(--lp-primary)", color: "var(--lp-on-primary)" }}
       >
         {btnText}
       </a>
@@ -416,7 +419,7 @@ const GenericSection: React.FC<{
                   href={val}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--lp-primary,#C9A96E)] hover:underline text-sm"
+                  className="text-[color:var(--lp-accent)] hover:underline text-sm"
                 >
                   {val}
                 </a>
@@ -425,7 +428,7 @@ const GenericSection: React.FC<{
           }
           if (isSubtitleKey(f.field_key)) {
             return (
-              <p key={f.field_id} className="text-lg text-[var(--lp-primary,#C9A96E)] font-medium">
+              <p key={f.field_id} className="text-lg text-[color:var(--lp-accent)] font-medium">
                 {val}
               </p>
             );
@@ -454,13 +457,8 @@ const GenericSection: React.FC<{
 const META_GROUPS = new Set(["meta", "seo", "social", "tracking", "analytics", "og"]);
 
 const GenericLP: React.FC<Props> = ({ project, fields }) => {
-  // Build CSS custom-property style object from template color_vars
-  const cssVarsStyle = useMemo<React.CSSProperties>(() => {
-    const vars = project.lp_templates?.color_vars ?? {};
-    return Object.fromEntries(
-      Object.entries(vars).map(([k, v]) => [`--lp-${k}`, v]),
-    ) as React.CSSProperties;
-  }, [project.lp_templates?.color_vars]);
+  // 主題感知的 CSS custom properties（深/淺兩套皆由 lpTheme 推導，確保對比）
+  const { cssVars: cssVarsStyle, mode, toggle } = useLpShell(project);
 
   // SEO title
   const seoTitle = project.seo_title || project.project_name;
@@ -527,9 +525,10 @@ const GenericLP: React.FC<Props> = ({ project, fields }) => {
 
   return (
     <div
-      className="min-h-screen bg-studio-bg text-white"
+      className="lp-root min-h-screen"
       style={cssVarsStyle}
     >
+      <LpChrome mode={mode} onToggle={toggle} />
 
       {/* Hero */}
       {(heroFields.length > 0 || project.hero_image_url) && (
@@ -598,8 +597,8 @@ const GenericLP: React.FC<Props> = ({ project, fields }) => {
             </p>
             <Link
               to="/contact"
-              className="inline-block px-8 py-3 rounded-lg font-semibold text-black transition-all hover:scale-105"
-              style={{ background: "var(--lp-primary, #C9A96E)" }}
+              className="inline-block px-8 py-3 rounded-lg font-semibold transition-all hover:scale-105"
+              style={{ background: "var(--lp-primary)", color: "var(--lp-on-primary)" }}
             >
               立即諮詢
             </Link>

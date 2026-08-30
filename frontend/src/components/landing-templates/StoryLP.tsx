@@ -5,11 +5,12 @@
  * 模板代號：AARON_STORY
  */
 
-import React, { useEffect, useMemo } from "react";
-import { buildCssVars, pick, isImage, fv, byGroup, type LPProps } from "./lpUtils";
+import React, { useEffect } from "react";
+import { pick, isImage, fv, byGroup, type LPProps } from "./lpUtils";
+import { useLpShell, LpChrome, mediaCls } from "./lpTheme";
 
 const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
-  const cssVars = useMemo(() => buildCssVars(project), [project]);
+  const { cssVars, mode, toggle } = useLpShell(project);
 
   useEffect(() => {
     const prev = document.title;
@@ -49,14 +50,15 @@ const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
   const contactBtnUrl = pick(fields, "contact_button_url") || "/contact";
 
   return (
-    <div className="min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg, #0a0a0a)", color: "var(--lp-text, #ffffff)" }}>
+    <div className="lp-root min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg)", color: "var(--lp-text)" }}>
+      <LpChrome mode={mode} onToggle={toggle} />
 
       {/* ── Cinematic Hero ────────────────────────────────── */}
       <section
-        className="relative h-screen flex items-end pb-20 px-8 overflow-hidden"
+        className={mediaCls(!!heroBg, "relative h-screen flex items-end pb-20 px-8 overflow-hidden")}
         style={heroBg
           ? { backgroundImage: `url(${heroBg})`, backgroundSize: "cover", backgroundPosition: "center" }
-          : { background: "linear-gradient(160deg, #1a1a2e, #0a0a0a)" }
+          : { background: "linear-gradient(160deg, var(--lp-surface), var(--lp-bg))" }
         }
       >
         {/* Gradient overlay */}
@@ -71,8 +73,8 @@ const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
           {heroTagline && (
             <p className="text-xl text-white/70 font-light leading-relaxed max-w-xl">{heroTagline}</p>
           )}
-          <div className="mt-8 flex items-center gap-2" style={{ color: "var(--lp-primary, #c5a059)" }}>
-            <div className="w-8 h-px" style={{ background: "var(--lp-primary, #c5a059)" }} />
+          <div className="mt-8 flex items-center gap-2" style={{ color: "var(--lp-primary)" }}>
+            <div className="w-8 h-px" style={{ background: "var(--lp-primary)" }} />
             <span className="text-xs uppercase tracking-[0.3em]">Scroll to discover</span>
           </div>
         </div>
@@ -89,16 +91,16 @@ const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
                 </div>
                 {/* Gold accent corner */}
                 <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-xl opacity-30"
-                  style={{ background: "var(--lp-primary, #c5a059)" }} />
+                  style={{ background: "var(--lp-primary)" }} />
               </div>
             ) : (
               <div className="rounded-2xl aspect-[3/4] flex items-center justify-center"
-                style={{ background: "var(--lp-surface, #141414)", border: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}>
+                style={{ background: "var(--lp-surface)", border: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}>
                 <span className="text-6xl opacity-20">📷</span>
               </div>
             )}
             <div>
-              <div className="w-10 h-0.5 mb-8" style={{ background: "var(--lp-primary, #c5a059)" }} />
+              <div className="w-10 h-0.5 mb-8" style={{ background: "var(--lp-primary)" }} />
               {aboutTitle && (
                 <h2 className="text-4xl font-bold mb-8 leading-tight">{aboutTitle}</h2>
               )}
@@ -115,14 +117,14 @@ const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
 
       {/* ── Timeline ──────────────────────────────────────── */}
       {milestones.length > 0 && (
-        <section className="py-32 px-8" style={{ background: "var(--lp-surface, #141414)" }}>
+        <section className="py-32 px-8" style={{ background: "var(--lp-surface)" }}>
           <div className="max-w-3xl mx-auto">
             {msTitle && (
               <h2 className="text-3xl font-bold mb-16 text-center">{msTitle}</h2>
             )}
             <div className="relative">
               {/* Vertical line */}
-              <div className="absolute left-[3.5rem] top-0 bottom-0 w-px" style={{ background: "var(--lp-border, rgba(255,255,255,0.1))" }} />
+              <div className="absolute left-[3.5rem] top-0 bottom-0 w-px" style={{ background: "var(--lp-border)" }} />
 
               <div className="space-y-12">
                 {milestones.map((ms, i) => (
@@ -130,12 +132,12 @@ const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
                     {/* Year + dot */}
                     <div className="w-28 shrink-0 flex items-center gap-3 pt-1">
                       <span className="text-sm font-bold w-12 text-right shrink-0"
-                        style={{ color: "var(--lp-primary, #c5a059)" }}>
+                        style={{ color: "var(--lp-primary)" }}>
                         {ms.year}
                       </span>
                       <div className="w-3 h-3 rounded-full shrink-0"
                         style={{
-                          background: "var(--lp-primary, #c5a059)",
+                          background: "var(--lp-primary)",
                           boxShadow: "0 0 0 4px var(--lp-surface, #141414)",
                         }} />
                     </div>
@@ -184,14 +186,14 @@ const StoryLP: React.FC<LPProps> = ({ project, fields }) => {
 
       {/* ── Contact CTA ───────────────────────────────────── */}
       <section className="py-32 px-8 text-center"
-        style={{ background: "var(--lp-surface, #141414)", borderTop: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}>
+        style={{ background: "var(--lp-surface)", borderTop: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}>
         <div className="max-w-xl mx-auto">
           {contactTitle && <h2 className="text-4xl font-bold mb-6">{contactTitle}</h2>}
           {contactDesc && <p className="text-white/60 mb-10 leading-relaxed">{contactDesc}</p>}
           <a
             href={contactBtnUrl}
             className="inline-flex items-center gap-3 px-10 py-5 rounded-xl font-bold text-black transition-all hover:scale-105 hover:opacity-90"
-            style={{ background: "var(--lp-primary, #c5a059)" }}
+            style={{ background: "var(--lp-primary)" }}
           >
             {contactBtnTxt} →
           </a>

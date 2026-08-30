@@ -5,6 +5,7 @@
  *   GET /api/landing/templates          — 模板列表（page_kind / tags 篩選）
  *   GET /api/landing/templates/:id      — 單一模板 + sections + fields
  *   GET /api/landing/projects/slug/:slug — 已發布專案（by custom_slug）
+ *   POST /api/landing/leads             — LP 表單報名（限流 + 蜜罐，寫入 lp_leads 並寄信通知）
  *
  * 管理員路由（需 requireAdmin）：
  *   GET    /api/landing/projects         — 所有專案列表
@@ -16,6 +17,7 @@
  */
 
 import express, { Request, Response, Router } from "express";
+import rateLimit from "express-rate-limit";
 import multer from "multer";
 import sharp from "sharp";
 import { supabaseAdmin } from "../config/supabase.js";
@@ -678,5 +680,133 @@ router.delete(
     }
   },
 );
+
+// ─────────────────────────────────────────────────────────────
+// 公開 API：Landing Page 表單報名（lead）
+// ─────────────────────────────────────────────────────────────
+
+/** 報名表單限流：每 IP 15 分鐘 8 次 */
+const leadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { error: "送出次數過多，請 15 分鐘後再試" },
+});
+
+/** 去除標籤與危險前綴，但保留換行（摘要是多行的） */
+function cleanLine(input: unknown, max: number): string {
+  return String(input ?? "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/javascript:/gi, "")
+    .replace(/vbscript:/gi, "")
+    .replace(/on\w+\s*=/gi, "")
+    .trim()
+    .slice(0, max);
+}
+
+/**
+ * POST /api/landing/leads
+ * 公開端點：LP 版面的預約/報名表單送出。
+ *
+ * 完整答案以結構化 JSON 存進 lp_leads.answers，並同時寄信通知教練，
+ * 兩條路徑任一成功即視為送出成功（不會有「假送出」）。
+ */
+router.post("/leads", leadLimiter, async (req: Request, res: Response) => {
+  try {
+    const body = req.body ?? {};
+
+    // 蜜罐：機器人填了就靜默成功
+    if (body.website || body.honeypot) {
+      res.json({ success: true });
+      return;
+    }
+
+    const name = cleanLine(body.name, 60);
+    const phone = cleanLine(body.phone, 40);
+    const email = cleanLine(body.email, 254);
+    const summary = cleanLine(body.summary, 8000);
+
+    if (!name || !phone) {
+      sendError(res, 400, "請填寫姓名與聯絡電話");
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      sendError(res, 400, "電子信箱格式不正確");
+      return;
+    }
+
+    const answers =
+      body.answers && typeof body.answers === "object" && !Array.isArray(body.answers)
+        ? (body.answers as Record<string, unknown>)
+        : {};
+
+    const projectId = Number(body.project_id);
+    const row = {
+      project_id: Number.isFinite(projectId) && projectId > 0 ? projectId : null,
+      project_slug: cleanLine(body.project_slug, 255) || null,
+      project_name: cleanLine(body.project_name, 255) || null,
+      name,
+      phone,
+      email: email || null,
+      line_id: cleanLine(body.line_id, 100) || null,
+      instagram: cleanLine(body.instagram, 100) || null,
+      answers,
+      summary,
+      status: "new",
+    };
+
+    // 1) 落地：寫入 lp_leads
+    let stored = false;
+    const { error: dbErr } = await supabaseAdmin.from("lp_leads").insert(row);
+    if (dbErr) {
+      // 資料表尚未建立（migration 未套用）時不擋使用者，改由信件保底
+      logger.error("lp_leads 寫入失敗", dbErr);
+    } else {
+      stored = true;
+    }
+
+    // 2) 通知：寄信給教練（附完整逐題答案）
+    let mailed = false;
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const coachEmail = process.env.COACH_EMAIL || "s330221@gmail.com";
+    if (resendApiKey) {
+      try {
+        const esc = (s: string) =>
+          s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const mailRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Coach Aaron 網站 <onboarding@resend.dev>",
+            to: [coachEmail],
+            ...(email ? { reply_to: email } : {}),
+            subject: `[LP 報名] ${row.project_name || "Landing Page"} - ${name}`,
+            html:
+              `<h2>新的 Landing Page 報名</h2>` +
+              `<p><b>頁面：</b>${esc(row.project_name || "-")}` +
+              (row.project_slug ? `（/page/${esc(row.project_slug)}）` : "") +
+              `</p><hr/><pre style="white-space:pre-wrap;font-family:inherit;font-size:15px">${esc(summary)}</pre>`,
+          }),
+        });
+        mailed = mailRes.ok;
+        if (!mailRes.ok) logger.error("lead 通知信寄送失敗", await mailRes.text());
+      } catch (mailErr) {
+        logger.error("lead 通知信例外", mailErr);
+      }
+    }
+
+    if (!stored && !mailed) {
+      sendError(res, 500, "送出失敗，請稍後再試或直接用 LINE 聯繫");
+      return;
+    }
+
+    res.json({ success: true, stored, mailed });
+  } catch (err) {
+    logger.error("LP lead 送出失敗", err);
+    sendError(res, 500, "送出失敗，請稍後再試");
+  }
+});
 
 export default router;

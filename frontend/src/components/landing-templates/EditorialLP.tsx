@@ -5,9 +5,8 @@
  * 模板代號：AARON_EDITORIAL
  */
 
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import {
-  buildCssVars,
   collectIndexed,
   imgSrc,
   pick,
@@ -20,9 +19,10 @@ import {
   LP_BORDER,
   type LPProps,
 } from "./lpUtils";
+import { useLpShell, LpChrome, mediaCls } from "./lpTheme";
 
 const EditorialLP: React.FC<LPProps> = ({ project, fields }) => {
-  const cssVars = useMemo(() => buildCssVars(project), [project]);
+  const { cssVars, mode, toggle } = useLpShell(project);
 
   useEffect(() => {
     const prev = document.title;
@@ -50,14 +50,15 @@ const EditorialLP: React.FC<LPProps> = ({ project, fields }) => {
 
   return (
     <div
-      className="min-h-screen font-sans antialiased"
+      className="lp-root min-h-screen font-sans antialiased"
       style={{ ...cssVars, background: LP_BG, color: LP_TEXT }}
     >
+      <LpChrome mode={mode} onToggle={toggle} />
 
       {/* ── Hero ──────────────────────────────────────────── */}
       {sectionVisible(project, "hero") && (
         <section
-          className="relative min-h-[80vh] flex items-center justify-center overflow-hidden"
+          className={mediaCls(!!heroBg, "relative min-h-[80vh] flex items-center justify-center overflow-hidden")}
           style={heroBg
             ? { backgroundImage: `url(${heroBg})`, backgroundSize: "cover", backgroundPosition: "center" }
             : { background: `linear-gradient(160deg, ${LP_SURFACE} 0%, ${LP_BG} 100%)` }}

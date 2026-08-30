@@ -5,9 +5,8 @@
  * 模板代號：AARON_CARDS
  */
 
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import {
-  buildCssVars,
   pick,
   collectIndexed,
   sectionVisible,
@@ -20,9 +19,10 @@ import {
   LP_BORDER,
   type LPProps,
 } from "./lpUtils";
+import { useLpShell, LpChrome, mediaCls } from "./lpTheme";
 
 const CardsLP: React.FC<LPProps> = ({ project, fields }) => {
-  const cssVars = useMemo(() => buildCssVars(project), [project]);
+  const { cssVars, mode, toggle } = useLpShell(project);
 
   useEffect(() => {
     const prev = document.title;
@@ -65,13 +65,14 @@ const CardsLP: React.FC<LPProps> = ({ project, fields }) => {
 
   return (
     <div
-      className="min-h-screen font-sans antialiased"
+      className="lp-root min-h-screen font-sans antialiased"
       style={{ ...cssVars, background: LP_BG, color: LP_TEXT }}
     >
+      <LpChrome mode={mode} onToggle={toggle} />
       {/* ── Hero ──────────────────────────────────────────── */}
       {showHero && (
         <section
-          className="relative min-h-[55vh] sm:min-h-[65vh] flex items-center justify-center overflow-hidden"
+          className={mediaCls(!!heroBg, "relative min-h-[55vh] sm:min-h-[65vh] flex items-center justify-center overflow-hidden")}
           style={
             heroBg
               ? {
@@ -79,7 +80,7 @@ const CardsLP: React.FC<LPProps> = ({ project, fields }) => {
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }
-              : { background: "linear-gradient(160deg, #1a1a1a 0%, #0a0a0a 100%)" }
+              : { background: "linear-gradient(160deg, var(--lp-surface) 0%, var(--lp-bg) 100%)" }
           }
         >
           {heroBg && <div className="absolute inset-0 bg-black/60" />}

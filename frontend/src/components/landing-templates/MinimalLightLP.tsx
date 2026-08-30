@@ -6,11 +6,12 @@
  * 預設主題：簡約白（light_classic variant）
  */
 
-import React, { useEffect, useMemo } from "react";
-import { buildCssVars, pick, isImage, fv, byGroup, type LPProps } from "./lpUtils";
+import React, { useEffect } from "react";
+import { pick, isImage, fv, byGroup, type LPProps } from "./lpUtils";
+import { useLpShell, LpChrome } from "./lpTheme";
 
 const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
-  const cssVars = useMemo(() => buildCssVars(project), [project]);
+  const { cssVars, mode, toggle } = useLpShell(project);
 
   useEffect(() => {
     const prev = document.title;
@@ -42,7 +43,8 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
   const ctaBtnUrl = pick(fields, "cta_button_url") || "/booking";
 
   return (
-    <div className="min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg, #ffffff)", color: "var(--lp-text, #111827)" }}>
+    <div className="lp-root min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg)", color: "var(--lp-text)" }}>
+      <LpChrome mode={mode} onToggle={toggle} />
 
       {/* ── Hero (簡潔居中) ──────────────────────────────── */}
       <section className="min-h-[80vh] flex flex-col items-center justify-center text-center px-8 py-24">
@@ -51,20 +53,20 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
             <img src={project.logo_url} alt="logo" className="h-12 mx-auto mb-12 opacity-80" />
           )}
           {heroTitle && (
-            <h1 className="text-5xl sm:text-6xl font-light leading-tight mb-6 tracking-tight" style={{ color: "var(--lp-text, #111827)" }}>
+            <h1 className="text-5xl sm:text-6xl font-light leading-tight mb-6 tracking-tight" style={{ color: "var(--lp-text)" }}>
               {heroTitle}
             </h1>
           )}
           {heroSub && (
             <p className="text-xl text-gray-500 mb-12 leading-relaxed font-light max-w-xl mx-auto"
-              style={{ color: "var(--lp-muted, #6b7280)" }}>
+              style={{ color: "var(--lp-muted)" }}>
               {heroSub}
             </p>
           )}
           <a
             href={heroCtaUrl}
             className="inline-block px-8 py-4 rounded-full font-semibold text-white transition-all hover:opacity-90 hover:scale-105"
-            style={{ background: "var(--lp-primary, #2563eb)" }}
+            style={{ background: "var(--lp-primary)" }}
           >
             {heroCtaTxt}
           </a>
@@ -73,7 +75,7 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
 
       {/* ── About — split layout ─────────────────────────── */}
       {(aboutImg || aboutTitle || aboutBody) && (
-        <section className="py-24 px-8" style={{ background: "var(--lp-surface, #f8fafc)" }}>
+        <section className="py-24 px-8" style={{ background: "var(--lp-surface)" }}>
           <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
             {/* Image side */}
             {aboutImg ? (
@@ -82,18 +84,18 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
               </div>
             ) : (
               <div className="rounded-3xl aspect-[4/5] flex items-center justify-center"
-                style={{ background: "var(--lp-border, rgba(0,0,0,0.05))" }}>
+                style={{ background: "var(--lp-border)" }}>
                 <span className="text-6xl opacity-20">📷</span>
               </div>
             )}
             {/* Text side */}
             <div>
-              <div className="w-8 h-0.5 mb-8" style={{ background: "var(--lp-primary, #2563eb)" }} />
+              <div className="w-8 h-0.5 mb-8" style={{ background: "var(--lp-primary)" }} />
               {aboutTitle && (
                 <h2 className="text-3xl font-semibold mb-6 leading-snug">{aboutTitle}</h2>
               )}
               {aboutBody && (
-                <p className="text-base leading-loose" style={{ color: "var(--lp-muted, #6b7280)" }}>{aboutBody}</p>
+                <p className="text-base leading-loose" style={{ color: "var(--lp-muted)" }}>{aboutBody}</p>
               )}
             </div>
           </div>
@@ -104,15 +106,15 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
       {quoteText && (
         <section className="py-24 px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <p className="text-4xl font-light leading-tight mb-8 italic" style={{ color: "var(--lp-text, #111827)" }}>
-              <span style={{ color: "var(--lp-primary, #2563eb)", fontSize: "4rem", lineHeight: 0, verticalAlign: "text-bottom" }}>"</span>
+            <p className="text-4xl font-light leading-tight mb-8 italic" style={{ color: "var(--lp-text)" }}>
+              <span style={{ color: "var(--lp-primary)", fontSize: "4rem", lineHeight: 0, verticalAlign: "text-bottom" }}>"</span>
               {" "}{quoteText}
             </p>
             {quoteAuthor && (
-              <p className="font-semibold" style={{ color: "var(--lp-primary, #2563eb)" }}>{quoteAuthor}</p>
+              <p className="font-semibold" style={{ color: "var(--lp-primary)" }}>{quoteAuthor}</p>
             )}
             {quoteAuthorTitle && (
-              <p className="text-sm mt-1" style={{ color: "var(--lp-muted, #6b7280)" }}>{quoteAuthorTitle}</p>
+              <p className="text-sm mt-1" style={{ color: "var(--lp-muted)" }}>{quoteAuthorTitle}</p>
             )}
           </div>
         </section>
@@ -120,15 +122,15 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
 
       {/* ── Features — 2×2 grid ──────────────────────────── */}
       {featureItems.length > 0 && (
-        <section className="py-24 px-8" style={{ background: "var(--lp-surface, #f8fafc)" }}>
+        <section className="py-24 px-8" style={{ background: "var(--lp-surface)" }}>
           <div className="max-w-4xl mx-auto">
             <div className="grid sm:grid-cols-2 gap-10">
               {featureItems.map((f, i) => (
                 <div key={i} className="flex gap-5">
-                  <div className="w-1 shrink-0 rounded-full mt-1" style={{ background: "var(--lp-primary, #2563eb)" }} />
+                  <div className="w-1 shrink-0 rounded-full mt-1" style={{ background: "var(--lp-primary)" }} />
                   <div>
                     <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
-                    {f.desc && <p className="text-sm leading-relaxed" style={{ color: "var(--lp-muted, #6b7280)" }}>{f.desc}</p>}
+                    {f.desc && <p className="text-sm leading-relaxed" style={{ color: "var(--lp-muted)" }}>{f.desc}</p>}
                   </div>
                 </div>
               ))}
@@ -144,7 +146,7 @@ const MinimalLightLP: React.FC<LPProps> = ({ project, fields }) => {
           <a
             href={ctaBtnUrl}
             className="inline-block px-10 py-4 rounded-full text-white font-semibold transition-all hover:opacity-90 hover:scale-105"
-            style={{ background: "var(--lp-primary, #2563eb)" }}
+            style={{ background: "var(--lp-primary)" }}
           >
             {ctaBtnTxt} →
           </a>

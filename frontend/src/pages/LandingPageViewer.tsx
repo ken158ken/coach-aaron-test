@@ -18,6 +18,7 @@ import EditorialLP     from "../components/landing-templates/EditorialLP";
 import ShowcaseLP      from "../components/landing-templates/ShowcaseLP";
 import GalleryLP       from "../components/landing-templates/GalleryLP";
 import CardsLP         from "../components/landing-templates/CardsLP";
+import AaronConsultLP  from "../components/landing-templates/AaronConsultLP";
 import type { LPProps } from "../components/landing-templates/lpUtils";
 import { SEOHead } from "@/components/seo";
 import { getInitialData } from "@/ssr/initialData";
@@ -35,6 +36,7 @@ const TEMPLATE_MAP: Record<string, React.FC<LPProps>> = {
   ShowcaseLP,
   GalleryLP,
   CardsLP,
+  AaronConsultLP,
 };
 
 // ── Error / Loading UI ──────────────────────────────────────

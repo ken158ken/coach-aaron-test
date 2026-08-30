@@ -5,11 +5,12 @@
  * 模板代號：AARON_FITNESS_DARK
  */
 
-import React, { useEffect, useMemo } from "react";
-import { buildCssVars, byGroup, pick, isImage, fv, type LPProps } from "./lpUtils";
+import React, { useEffect } from "react";
+import { byGroup, pick, isImage, fv, type LPProps } from "./lpUtils";
+import { useLpShell, LpChrome, mediaCls } from "./lpTheme";
 
 const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
-  const cssVars = useMemo(() => buildCssVars(project), [project]);
+  const { cssVars, mode, toggle } = useLpShell(project);
 
   useEffect(() => {
     const prev = document.title;
@@ -57,18 +58,19 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
   const ctaBtnUrl = pick(fields, "cta_button_url") || "/booking";
 
   return (
-    <div className="min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg, #0a0a0a)", color: "var(--lp-text, #ffffff)" }}>
+    <div className="lp-root min-h-screen font-sans antialiased" style={{ ...cssVars, background: "var(--lp-bg)", color: "var(--lp-text)" }}>
+      <LpChrome mode={mode} onToggle={toggle} />
 
       {/* ── Hero ──────────────────────────────────────────── */}
       <section
-        className="relative min-h-screen flex items-center justify-center overflow-hidden"
-        style={heroBg ? { backgroundImage: `url(${heroBg})`, backgroundSize: "cover", backgroundPosition: "center top" } : { background: "linear-gradient(160deg, #111 0%, #0a0a0a 100%)" }}
+        className={mediaCls(!!heroBg, "relative min-h-screen flex items-center justify-center overflow-hidden")}
+        style={heroBg ? { backgroundImage: `url(${heroBg})`, backgroundSize: "cover", backgroundPosition: "center top" } : { background: "linear-gradient(160deg, var(--lp-surface) 0%, var(--lp-bg) 100%)" }}
       >
         {heroBg && <div className="absolute inset-0 bg-black/60" />}
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto py-32">
           {heroTitle && (
             <h1 className="text-5xl sm:text-7xl font-black leading-none mb-6 tracking-tight">
-              <span style={{ color: "var(--lp-primary, #c5a059)" }}>{heroTitle}</span>
+              <span style={{ color: "var(--lp-primary)" }}>{heroTitle}</span>
             </h1>
           )}
           {heroSub && (
@@ -83,7 +85,7 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
             <a
               href={heroCtaUrl}
               className="inline-flex items-center gap-2 px-10 py-4 rounded-full text-black font-bold text-lg transition-all hover:scale-105 hover:opacity-90 active:scale-100"
-              style={{ background: "var(--lp-primary, #c5a059)" }}
+              style={{ background: "var(--lp-primary)" }}
             >
               {heroCtaTxt}
               <span>→</span>
@@ -92,16 +94,16 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
         </div>
         {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent, var(--lp-bg, #0a0a0a))" }} />
+          style={{ background: "linear-gradient(to bottom, transparent, var(--lp-bg))" }} />
       </section>
 
       {/* ── Stats Band ────────────────────────────────────── */}
       {statItems.length > 0 && (
-        <section className="py-16 px-6" style={{ background: "var(--lp-surface, #141414)" }}>
+        <section className="py-16 px-6" style={{ background: "var(--lp-surface)" }}>
           <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
             {statItems.map((s, i) => (
               <div key={i}>
-                <p className="text-4xl sm:text-5xl font-black mb-2" style={{ color: "var(--lp-primary, #c5a059)" }}>{s.number}</p>
+                <p className="text-4xl sm:text-5xl font-black mb-2" style={{ color: "var(--lp-primary)" }}>{s.number}</p>
                 <p className="text-sm text-white/50 uppercase tracking-widest">{s.label}</p>
               </div>
             ))}
@@ -123,10 +125,10 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
                 <div
                   key={i}
                   className="rounded-2xl p-8 transition-all hover:-translate-y-1"
-                  style={{ background: "var(--lp-surface, #141414)", border: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}
+                  style={{ background: "var(--lp-surface)", border: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}
                 >
                   {f.icon && <div className="text-4xl mb-4">{f.icon}</div>}
-                  <h3 className="text-lg font-bold mb-3" style={{ color: "var(--lp-primary, #c5a059)" }}>{f.title}</h3>
+                  <h3 className="text-lg font-bold mb-3" style={{ color: "var(--lp-primary)" }}>{f.title}</h3>
                   {f.desc && <p className="text-sm text-white/60 leading-relaxed">{f.desc}</p>}
                 </div>
               ))}
@@ -137,7 +139,7 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
 
       {/* ── Testimonials ──────────────────────────────────── */}
       {testiItems.length > 0 && (
-        <section className="py-24 px-6" style={{ background: "var(--lp-surface, #141414)" }}>
+        <section className="py-24 px-6" style={{ background: "var(--lp-surface)" }}>
           <div className="max-w-5xl mx-auto">
             {testiTitle && (
               <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">{testiTitle}</h2>
@@ -149,7 +151,7 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
                   className="rounded-2xl p-6 flex flex-col"
                   style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--lp-border, rgba(255,255,255,0.1))" }}
                 >
-                  <p className="text-4xl mb-4" style={{ color: "var(--lp-primary, #c5a059)", opacity: 0.4 }}>"</p>
+                  <p className="text-4xl mb-4" style={{ color: "var(--lp-primary)", opacity: 0.4 }}>"</p>
                   {t.text && (
                     <p className="text-sm text-white/70 leading-relaxed mb-6 flex-1 italic">{t.text}</p>
                   )}
@@ -158,7 +160,7 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
                       <img src={t.avatar} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                        style={{ background: "var(--lp-primary, #c5a059)", color: "#000" }}>
+                        style={{ background: "var(--lp-primary)", color: "#000" }}>
                         {t.name.charAt(0)}
                       </div>
                     )}
@@ -184,7 +186,7 @@ const FitnessDarkLP: React.FC<LPProps> = ({ project, fields }) => {
           <a
             href={ctaBtnUrl}
             className="inline-flex items-center gap-2 px-12 py-5 rounded-full text-black font-bold text-xl transition-all hover:scale-105 hover:opacity-90"
-            style={{ background: "var(--lp-primary, #c5a059)" }}
+            style={{ background: "var(--lp-primary)" }}
           >
             {ctaBtnTxt} →
           </a>
