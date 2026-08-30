@@ -340,20 +340,9 @@ router.put(
       res.json({ success: true, data });
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      // 詳細錯誤只進 server log，不回傳給前端（原本外洩 Supabase code/hint/detail）
       console.error("Update user profile error:", errMsg, err);
-      // 回傳詳細錯誤以便除錯（含 Supabase 錯誤碼）
-      const supaErr = err as {
-        code?: string;
-        details?: string;
-        hint?: string;
-        message?: string;
-      };
-      res.status(500).json({
-        error: "更新個人資料失敗",
-        detail: supaErr?.message || errMsg,
-        code: supaErr?.code,
-        hint: supaErr?.hint,
-      });
+      res.status(500).json({ error: "更新個人資料失敗" });
     }
   },
 );

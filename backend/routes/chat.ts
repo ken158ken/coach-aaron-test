@@ -161,10 +161,14 @@ async function enrichUsersWithAdminName(
   (admins || []).forEach((a) => {
     if (a.email && a.display_name) map.set(a.email, a.display_name);
   });
-  return users.map((u) => ({
-    ...u,
-    admin_display_name: u.email ? map.get(u.email) || null : null,
-  }));
+  // 剝除 email 後才回傳給前端：DM 只需 user_id + 顯示名，不外洩信箱
+  return users.map((u) => {
+    const adminName = u.email ? map.get(u.email) || null : null;
+    const { email: _email, ...safe } = u;
+    return { ...safe, admin_display_name: adminName } as RawUser & {
+      admin_display_name: string | null;
+    };
+  });
 }
 
 // ===========================================================
@@ -889,10 +893,11 @@ router.get(
         .neq("user_id", me)
         .limit(20);
       if (q) {
-        // 三欄 ILIKE — users 表欄位是 username（不是 name）
+        // 只用 username / display_name 比對；刻意不開放 email 部分比對，
+        // 避免任何登入者用 email ILIKE 確認/收割全站使用者信箱
         const safe = q.replace(/[%_,()]/g, "");
         query = query.or(
-          `username.ilike.%${safe}%,display_name.ilike.%${safe}%,email.ilike.%${safe}%`,
+          `username.ilike.%${safe}%,display_name.ilike.%${safe}%`,
         );
       }
       const { data, error } = await query;

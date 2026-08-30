@@ -20,7 +20,15 @@ import crypto from "crypto";
 import express, { Request, Response, Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import { createRateLimiter } from "../middleware/rateLimiter.js";
 import { logger } from "../utils/logger.js";
+
+/** 訪客提交悄悄話：同 IP 每小時最多 3 次（檔頭註解宣稱有、但原本沒掛） */
+const whisperLimiter = createRateLimiter(
+  60 * 60 * 1000,
+  3,
+  "留言次數過多，請 1 小時後再試",
+);
 
 const router: Router = express.Router();
 
@@ -42,7 +50,7 @@ function sanitizeText(raw: string): string {
  * POST /api/whispers
  * 非登入訪客提交悄悄話
  */
-router.post("/", async (req: Request, res: Response): Promise<void> => {
+router.post("/", whisperLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, contact, message, honeypot } = req.body as {
       name?: string;

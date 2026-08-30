@@ -73,7 +73,9 @@ app.use(
         callback(null, true);
       } else {
         logger.warn("CORS 拒絕來源", { origin });
-        callback(new Error("Not allowed by CORS"));
+        // 不允許的來源：靜默不反射 ACAO（回 false），不要 throw 造成 500
+        logger.warn("CORS 拒絕來源", { origin });
+        callback(null, false);
       }
     },
     credentials: true,
@@ -82,6 +84,21 @@ app.use(
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+
+// 安全性回應標頭（手寫，避免額外相依；涵蓋常見 OWASP 建議）
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-XSS-Protection", "0"); // 現代瀏覽器已棄用，明確關閉舊式過濾器
+  res.setHeader(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=(), payment=()",
+  );
+  // 這是 API 伺服器（前端由 Vercel 靜態 + SSR 提供），HSTS 交給 Vercel；
+  // 此處只補 API 回應該有的保護標頭
+  next();
+});
 
 // 安全性中介軟體
 app.use(sanitizeInput);

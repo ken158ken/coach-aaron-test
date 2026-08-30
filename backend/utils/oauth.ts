@@ -415,7 +415,22 @@ export async function handleSocialLogin(
       user = await findUserByEmail(profile.email);
 
       if (user) {
-        // 相同 Email → 自動綁定
+        // 只有「provider 已驗證該 email 擁有權」才自動綁定到現有帳號，
+        // 否則等於讓任何能在 provider 端填入他人 email 的人接管既有帳號。
+        // Google：以 email_verified claim 為準；其他 provider 保守起見不自動綁定。
+        const emailVerifiedByProvider =
+          profile.provider === "google" && profile.googleEmailVerified === true;
+
+        if (!emailVerifiedByProvider) {
+          logger.warn("社交登入 - 拒絕未驗證 email 的自動綁定", {
+            provider: profile.provider,
+            email: profile.email,
+          });
+          res.redirect(`${frontendUrl}/login?error=email_not_verified`);
+          return;
+        }
+
+        // 相同 Email 且已驗證 → 自動綁定
         logger.info("社交登入 - 自動綁定至現有帳號", {
           provider: profile.provider,
           userId: user.user_id,
