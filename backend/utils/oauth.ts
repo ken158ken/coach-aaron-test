@@ -231,7 +231,7 @@ export async function createUserFromSocial(
         password_hash: "", // 社交登入不需要密碼
         display_name: profile.displayName || username,
         avatar_url: profile.avatarUrl || null,
-        sex: false,
+        // 註：users.sex 欄位已於 migration 025 移除，這裡不可再帶（會 42703 導致註冊失敗）
         email_verified:
           profile.provider === "google" && profile.googleEmailVerified === true,
         auth_provider: profile.provider,

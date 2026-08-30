@@ -7,6 +7,33 @@ import { get, post, put, del } from "../api";
 import type { Course, AdminCourse, CourseReview } from "@/types";
 
 /**
+ * 編輯器的 camelCase payload → 後端 snake_case。
+ * 已是 snake 的 key（quick-edit 等呼叫端）原樣通過；camel 的轉換後移除，
+ * 避免後端 allowedFields 比對不到而整包 no-op。
+ */
+function toCoursePayload(data: Record<string, unknown>): Record<string, unknown> {
+  const CAMEL_TO_SNAKE: Record<string, string> = {
+    courseTitle: "course_title",
+    courseSlug: "course_slug",
+    courseDescription: "course_description",
+    courseContent: "course_content",
+    courseVideoUrl: "course_video_url",
+    courseThumbnailUrl: "course_thumbnail_url",
+    courseBannerUrl: "course_banner_url",
+    courseKeywords: "keywords",
+    courseCategory: "category",
+    courseLevel: "course_level",
+    accessDurationDays: "access_duration_days",
+  };
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) continue;
+    out[CAMEL_TO_SNAKE[key] ?? key] = value;
+  }
+  return out;
+}
+
+/**
  * 正規化課程資料 (資料庫欄位 -> 前端欄位)
  * @param data 原始課程資料
  * @returns 正規化後的課程資料
@@ -105,9 +132,13 @@ export const courseService = {
 
   /**
    * 建立課程（管理員）
+   *
+   * 後端實際路由是 `/api/courses`（`/api/admin/courses` 從不存在——
+   * 舊版指到幽靈端點導致編輯器發布永遠 404）。
+   * 編輯器送 camelCase，後端吃 snake_case，這裡統一轉換。
    */
   create: async (data: Partial<AdminCourse>): Promise<AdminCourse> => {
-    return post<AdminCourse>("/api/admin/courses", data);
+    return post<AdminCourse>("/api/courses", toCoursePayload(data));
   },
 
   /**
@@ -117,14 +148,14 @@ export const courseService = {
     id: number,
     data: Partial<AdminCourse>,
   ): Promise<AdminCourse> => {
-    return put<AdminCourse>(`/api/admin/courses/${id}`, data);
+    return put<AdminCourse>(`/api/courses/${id}`, toCoursePayload(data));
   },
 
   /**
    * 刪除課程（管理員）
    */
   delete: async (id: number): Promise<void> => {
-    return del(`/api/admin/courses/${id}`);
+    return del(`/api/courses/${id}`);
   },
 };
 

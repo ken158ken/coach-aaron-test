@@ -283,7 +283,7 @@ router.post(
           password_hash: passwordHash,
           display_name: displayName || username,
           phone_number: phoneNumber || null,
-          sex: false,
+          // 註：users.sex 欄位已於 migration 025 移除，這裡不可再帶（會 42703 導致註冊失敗）
         })
         .select()
         .single();
