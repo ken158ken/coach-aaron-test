@@ -231,6 +231,189 @@ export async function deleteCoachEvent(
   }
 }
 
+// =====================================================
+// 後台日曆完整管理（/admin/google-calendar 日曆排程 CRUD）
+// =====================================================
+
+/** 後台日曆管理用的事件輕量表示（欄位白名單，不透傳 Google 原始物件） */
+export interface AdminCalendarEvent {
+  id: string;
+  summary: string;
+  description: string;
+  location: string;
+  /** RFC3339 dateTime；全天事件為 'YYYY-MM-DD' */
+  start: string;
+  end: string;
+  allDay: boolean;
+  meetLink: string | null;
+  htmlLink: string | null;
+  /** 會員預約產生的事件會帶 booking id（extendedProperties.private.booking_id） */
+  bookingId: number | null;
+}
+
+function toAdminEvent(e: calendar_v3.Schema$Event): AdminCalendarEvent {
+  const rawBookingId = e.extendedProperties?.private?.booking_id;
+  const bookingId =
+    rawBookingId != null && /^\d+$/.test(rawBookingId)
+      ? Number(rawBookingId)
+      : null;
+  return {
+    id: e.id || "",
+    summary: e.summary || "",
+    description: e.description || "",
+    location: e.location || "",
+    start: e.start?.dateTime || e.start?.date || "",
+    end: e.end?.dateTime || e.end?.date || "",
+    allDay: !e.start?.dateTime,
+    meetLink: e.hangoutLink || null,
+    htmlLink: e.htmlLink || null,
+    bookingId,
+  };
+}
+
+/**
+ * 列出教練日曆一段期間的事件（後台日曆視圖用）
+ *
+ * 回 null = 尚未連結 Google。API 失敗會 throw —— 後台管理要看得到錯誤，
+ * 與 freebusy 的「靜默回空」策略刻意不同。
+ */
+export async function listCoachEvents(
+  coach: CoachGoogleContext,
+  from: Date,
+  to: Date,
+): Promise<AdminCalendarEvent[] | null> {
+  if (!coach.googleRefreshToken) return null;
+  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
+  const cal = google.calendar({ version: "v3", auth });
+  const res = await cal.events.list({
+    calendarId: coach.googleCalendarId,
+    timeMin: from.toISOString(),
+    timeMax: to.toISOString(),
+    singleEvents: true, // 週期事件展開成單一實例，配合日曆視圖
+    orderBy: "startTime",
+    maxResults: 500,
+    timeZone: coach.timezone,
+  });
+  return (res.data.items || [])
+    .filter((e) => !!e.id && e.status !== "cancelled")
+    .map(toAdminEvent);
+}
+
+/** 後台建立/編輯事件的輸入（時間欄位：全天給 'YYYY-MM-DD'，一般給 RFC3339） */
+export interface AdminEventInput {
+  summary: string;
+  description?: string;
+  location?: string;
+  start: string;
+  end: string;
+  allDay?: boolean;
+  addMeet?: boolean;
+}
+
+function toEventTimes(
+  input: Pick<AdminEventInput, "start" | "end" | "allDay">,
+  tz: string,
+): Pick<calendar_v3.Schema$Event, "start" | "end"> {
+  if (input.allDay) {
+    // Google 全天事件的 end.date 為「排他」日期（隔天）
+    return { start: { date: input.start }, end: { date: input.end } };
+  }
+  return {
+    start: { dateTime: input.start, timeZone: tz },
+    end: { dateTime: input.end, timeZone: tz },
+  };
+}
+
+/** 後台建立一般活動（無 attendee；可選 Meet）。回 null = 未連結。失敗 throw。 */
+export async function createAdminEvent(
+  coach: CoachGoogleContext,
+  input: AdminEventInput,
+): Promise<AdminCalendarEvent | null> {
+  if (!coach.googleRefreshToken) return null;
+  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
+  const cal = google.calendar({ version: "v3", auth });
+  const res = await cal.events.insert({
+    calendarId: coach.googleCalendarId,
+    requestBody: {
+      summary: input.summary,
+      description: input.description || "",
+      location: input.location || "",
+      ...toEventTimes(input, coach.timezone),
+      conferenceData: input.addMeet
+        ? {
+            createRequest: {
+              requestId: `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          }
+        : undefined,
+    },
+    conferenceDataVersion: input.addMeet ? 1 : 0,
+  });
+  return toAdminEvent(res.data);
+}
+
+/**
+ * 後台編輯事件（部分更新；start/end 需成對提供）。
+ *
+ * sendUpdates: "all" —— 預約事件改期時會員（attendee）會收到 Google 更新通知，
+ * 一般活動無 attendee 不受影響。回 null = 未連結。失敗 throw。
+ */
+export async function patchAdminEvent(
+  coach: CoachGoogleContext,
+  eventId: string,
+  patch: Partial<AdminEventInput>,
+): Promise<AdminCalendarEvent | null> {
+  if (!coach.googleRefreshToken) return null;
+  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
+  const cal = google.calendar({ version: "v3", auth });
+  const body: calendar_v3.Schema$Event = {};
+  if (patch.summary !== undefined) body.summary = patch.summary;
+  if (patch.description !== undefined) body.description = patch.description;
+  if (patch.location !== undefined) body.location = patch.location;
+  if (patch.start && patch.end) {
+    Object.assign(
+      body,
+      toEventTimes(
+        { start: patch.start, end: patch.end, allDay: patch.allDay },
+        coach.timezone,
+      ),
+    );
+  }
+  const res = await cal.events.patch({
+    calendarId: coach.googleCalendarId,
+    eventId,
+    requestBody: body,
+    sendUpdates: "all",
+  });
+  return toAdminEvent(res.data);
+}
+
+/**
+ * 後台刪除事件。404/410（已不存在）視為成功，其他失敗 throw。
+ * 回 null = 未連結。sendUpdates: "all" —— 預約事件的會員會收到取消通知。
+ */
+export async function deleteAdminEvent(
+  coach: CoachGoogleContext,
+  eventId: string,
+): Promise<boolean | null> {
+  if (!coach.googleRefreshToken) return null;
+  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
+  const cal = google.calendar({ version: "v3", auth });
+  try {
+    await cal.events.delete({
+      calendarId: coach.googleCalendarId,
+      eventId,
+      sendUpdates: "all",
+    });
+  } catch (err) {
+    const e = err as { code?: unknown; response?: { status?: unknown } };
+    const status = Number(e.code ?? e.response?.status);
+    if (status !== 404 && status !== 410) throw err;
+  }
+  return true;
+}
+
 /** 單純測試 refresh_token 是否仍有效 */
 export async function verifyCoachToken(
   refreshToken: string,

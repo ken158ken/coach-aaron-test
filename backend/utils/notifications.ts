@@ -27,6 +27,7 @@ export type NotificationType =
   | "booking_approved"
   | "booking_rejected"
   | "booking_cancelled"
+  | "booking_rescheduled"
   | "feedback_new"
   | "feedback_reply";
 

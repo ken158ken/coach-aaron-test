@@ -22,9 +22,17 @@ import {
   buildCoachConsentUrl,
   exchangeCoachCode,
   verifyCoachToken,
+  listCoachEvents,
+  createAdminEvent,
+  patchAdminEvent,
+  deleteAdminEvent,
+  type CoachGoogleContext,
+  type AdminEventInput,
 } from "../utils/googleCalendar.js";
 import { getFrontendUrl } from "../config/oauth.js";
 import { logger } from "../utils/logger.js";
+import { createNotification } from "../utils/notifications.js";
+import { formatInTimeZone } from "date-fns-tz";
 
 const router: Router = express.Router();
 
@@ -509,6 +517,316 @@ router.post(
     } catch (err) {
       console.error("Disconnect Google error:", err);
       res.status(500).json({ error: "解除連結失敗" });
+    }
+  },
+);
+
+// =======================================================
+// 後台日曆完整管理（升級版 /admin/google-calendar 使用）
+//
+// 教練/管理員可像操作 Google 日曆一樣對「任何事件」CRUD。
+// 特殊處理：會員預約產生的事件（extendedProperties.private.booking_id）
+//   - 拖拉/編輯時間 → 同步 bookings.start_at/end_at + 站內通知會員（改期）
+//   - 刪除 → 連動取消該預約 + 站內通知會員（業主 2026-08-31 拍板）
+// =======================================================
+
+/** 載入 Google 操作 context（refresh token 存 DB，非環境變數） */
+async function loadGoogleContext(
+  coachId: number,
+): Promise<CoachGoogleContext | null> {
+  const { data: profile } = await supabaseAdmin
+    .from("coach_profile")
+    .select("google_calendar_id, google_refresh_token, timezone")
+    .eq("id", coachId)
+    .single();
+  if (!profile) return null;
+  return {
+    googleCalendarId: profile.google_calendar_id,
+    googleRefreshToken: profile.google_refresh_token,
+    timezone: profile.timezone,
+  };
+}
+
+const EVENT_LIMITS = { summary: 200, description: 5000, location: 300 };
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Google event id：base32hex + 週期實例後綴（保守放行常見字元） */
+const EVENT_ID_RE = /^[A-Za-z0-9_-]{5,300}$/;
+
+/** 驗證/正規化事件輸入。partial=true 時所有欄位可省略（PATCH 用） */
+function parseEventInput(
+  body: unknown,
+  partial: boolean,
+):
+  | { ok: true; value: Partial<AdminEventInput> }
+  | { ok: false; error: string } {
+  const b = (body || {}) as Record<string, unknown>;
+  const out: Partial<AdminEventInput> = {};
+
+  if (b.summary !== undefined || !partial) {
+    if (typeof b.summary !== "string" || !b.summary.trim()) {
+      return { ok: false, error: "標題必填" };
+    }
+    if (b.summary.trim().length > EVENT_LIMITS.summary) {
+      return { ok: false, error: `標題上限 ${EVENT_LIMITS.summary} 字` };
+    }
+    out.summary = b.summary.trim();
+  }
+  if (b.description !== undefined) {
+    if (
+      typeof b.description !== "string" ||
+      b.description.length > EVENT_LIMITS.description
+    ) {
+      return { ok: false, error: "描述格式錯誤或過長" };
+    }
+    out.description = b.description;
+  }
+  if (b.location !== undefined) {
+    if (
+      typeof b.location !== "string" ||
+      b.location.length > EVENT_LIMITS.location
+    ) {
+      return { ok: false, error: "地點格式錯誤或過長" };
+    }
+    out.location = b.location;
+  }
+
+  if (b.start !== undefined || b.end !== undefined || !partial) {
+    if (typeof b.start !== "string" || typeof b.end !== "string") {
+      return { ok: false, error: "start/end 需成對提供" };
+    }
+    const isAllDay = b.allDay === true;
+    if (isAllDay) {
+      if (!DATE_ONLY_RE.test(b.start) || !DATE_ONLY_RE.test(b.end)) {
+        return { ok: false, error: "全天事件日期格式需為 YYYY-MM-DD" };
+      }
+      if (b.end <= b.start) {
+        // Google 全天 end 為排他日期：單日事件請送 start 隔天
+        return { ok: false, error: "全天事件的結束日需晚於開始日" };
+      }
+    } else {
+      const s = new Date(b.start);
+      const e = new Date(b.end);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+        return { ok: false, error: "時間格式錯誤" };
+      }
+      if (e.getTime() <= s.getTime()) {
+        return { ok: false, error: "結束需晚於開始" };
+      }
+      if (e.getTime() - s.getTime() > 14 * 24 * 3_600_000) {
+        return { ok: false, error: "單一事件長度上限 14 天" };
+      }
+    }
+    out.start = b.start;
+    out.end = b.end;
+    out.allDay = isAllDay;
+  }
+  if (b.addMeet !== undefined) out.addMeet = b.addMeet === true;
+  return { ok: true, value: out };
+}
+
+/** 查此 Google 事件是否對應仍有效（pending/confirmed）的會員預約 */
+async function findLinkedBooking(
+  coachId: number,
+  eventId: string,
+): Promise<{ id: number; user_id: number; start_at: string } | null> {
+  const { data } = await supabaseAdmin
+    .from("bookings")
+    .select("id, user_id, start_at")
+    .eq("google_event_id", eventId)
+    .eq("coach_id", coachId)
+    .in("status", ["pending", "confirmed"])
+    .maybeSingle();
+  return (data as { id: number; user_id: number; start_at: string } | null) || null;
+}
+
+const fmtEventTime = (iso: string, tz: string): string =>
+  formatInTimeZone(new Date(iso), tz, "yyyy/MM/dd HH:mm");
+
+/** GET /api/coach/google/events?from=ISO&to=ISO — 期間內事件列表 */
+router.get(
+  "/google/events",
+  authenticateToken,
+  requireCoachOrAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const from = new Date(String(req.query.from || ""));
+      const to = new Date(String(req.query.to || ""));
+      if (isNaN(from.getTime()) || isNaN(to.getTime()) || to <= from) {
+        res.status(400).json({ error: "需指定有效的 from/to 區間" });
+        return;
+      }
+      if (to.getTime() - from.getTime() > 93 * 24 * 3_600_000) {
+        res.status(400).json({ error: "查詢區間上限 93 天" });
+        return;
+      }
+      const ctx = await loadGoogleContext(req.coach!.id);
+      if (!ctx) {
+        res.status(404).json({ error: "教練資料不存在" });
+        return;
+      }
+      const events = await listCoachEvents(ctx, from, to);
+      if (events === null) {
+        res.status(409).json({ error: "尚未連結 Google 日曆", notConnected: true });
+        return;
+      }
+      res.json(events);
+    } catch (err) {
+      logger.error("讀取 Google 日曆事件失敗", err as Error);
+      res.status(502).json({ error: "讀取 Google 日曆失敗，請稍後再試" });
+    }
+  },
+);
+
+/** POST /api/coach/google/events — 建立活動 */
+router.post(
+  "/google/events",
+  authenticateToken,
+  requireCoachOrAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const parsed = parseEventInput(req.body, false);
+      if (!parsed.ok) {
+        res.status(400).json({ error: parsed.error });
+        return;
+      }
+      const ctx = await loadGoogleContext(req.coach!.id);
+      if (!ctx) {
+        res.status(404).json({ error: "教練資料不存在" });
+        return;
+      }
+      const event = await createAdminEvent(ctx, parsed.value as AdminEventInput);
+      if (event === null) {
+        res.status(409).json({ error: "尚未連結 Google 日曆", notConnected: true });
+        return;
+      }
+      res.status(201).json(event);
+    } catch (err) {
+      logger.error("建立日曆活動失敗", err as Error);
+      res.status(502).json({ error: "建立活動失敗，請稍後再試" });
+    }
+  },
+);
+
+/** PATCH /api/coach/google/events/:eventId — 編輯活動（預約事件改期會同步 DB） */
+router.patch(
+  "/google/events/:eventId",
+  authenticateToken,
+  requireCoachOrAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const eventId = String(req.params.eventId ?? "");
+      if (!EVENT_ID_RE.test(eventId)) {
+        res.status(400).json({ error: "事件 id 格式錯誤" });
+        return;
+      }
+      const parsed = parseEventInput(req.body, true);
+      if (!parsed.ok) {
+        res.status(400).json({ error: parsed.error });
+        return;
+      }
+      if (Object.keys(parsed.value).length === 0) {
+        res.status(400).json({ error: "沒有要更新的欄位" });
+        return;
+      }
+      const coachId = req.coach!.id;
+      const ctx = await loadGoogleContext(coachId);
+      if (!ctx) {
+        res.status(404).json({ error: "教練資料不存在" });
+        return;
+      }
+
+      // 預約事件：改時間 → 連動改期；不可改為全天
+      const changesTime = !!(parsed.value.start && parsed.value.end);
+      const linked = changesTime ? await findLinkedBooking(coachId, eventId) : null;
+      if (linked && parsed.value.allDay) {
+        res.status(400).json({ error: "會員預約事件不可改為全天活動" });
+        return;
+      }
+
+      const event = await patchAdminEvent(ctx, eventId, parsed.value);
+      if (event === null) {
+        res.status(409).json({ error: "尚未連結 Google 日曆", notConnected: true });
+        return;
+      }
+
+      if (linked && changesTime) {
+        const newStart = new Date(parsed.value.start!).toISOString();
+        const newEnd = new Date(parsed.value.end!).toISOString();
+        await supabaseAdmin
+          .from("bookings")
+          .update({ start_at: newStart, end_at: newEnd })
+          .eq("id", linked.id);
+        void createNotification({
+          userId: linked.user_id,
+          type: "booking_rescheduled",
+          title: "🕒 預約時間已調整",
+          body: `新時間：${fmtEventTime(newStart, ctx.timezone)}（原：${fmtEventTime(linked.start_at, ctx.timezone)}）`,
+          link: "/my-bookings",
+          metadata: { booking_id: linked.id },
+        }).catch(() => {});
+      }
+
+      res.json({ ...event, rescheduledBookingId: linked ? linked.id : null });
+    } catch (err) {
+      logger.error("更新日曆活動失敗", err as Error);
+      res.status(502).json({ error: "更新活動失敗，請稍後再試" });
+    }
+  },
+);
+
+/** DELETE /api/coach/google/events/:eventId — 刪除活動（預約事件連動取消） */
+router.delete(
+  "/google/events/:eventId",
+  authenticateToken,
+  requireCoachOrAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const eventId = String(req.params.eventId ?? "");
+      if (!EVENT_ID_RE.test(eventId)) {
+        res.status(400).json({ error: "事件 id 格式錯誤" });
+        return;
+      }
+      const coachId = req.coach!.id;
+      const ctx = await loadGoogleContext(coachId);
+      if (!ctx) {
+        res.status(404).json({ error: "教練資料不存在" });
+        return;
+      }
+
+      const linked = await findLinkedBooking(coachId, eventId);
+
+      // 先刪 Google（404/410 容忍），再改 DB —— 失敗可安全重試
+      const deleted = await deleteAdminEvent(ctx, eventId);
+      if (deleted === null) {
+        res.status(409).json({ error: "尚未連結 Google 日曆", notConnected: true });
+        return;
+      }
+
+      if (linked) {
+        await supabaseAdmin
+          .from("bookings")
+          .update({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            cancelled_by: req.isAdmin ? "admin" : "coach",
+            coach_note: "教練自後台日曆移除此排程",
+            google_event_id: null,
+          })
+          .eq("id", linked.id);
+        void createNotification({
+          userId: linked.user_id,
+          type: "booking_cancelled",
+          title: "⚠️ 預約被教練取消",
+          body: `原本時間：${fmtEventTime(linked.start_at, ctx.timezone)}`,
+          link: "/my-bookings",
+          metadata: { booking_id: linked.id, cancelled_by: "coach" },
+        }).catch(() => {});
+      }
+
+      res.json({ ok: true, cancelledBookingId: linked ? linked.id : null });
+    } catch (err) {
+      logger.error("刪除日曆活動失敗", err as Error);
+      res.status(502).json({ error: "刪除活動失敗，請稍後再試" });
     }
   },
 );
