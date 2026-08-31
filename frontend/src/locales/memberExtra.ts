@@ -758,12 +758,64 @@ export interface MemberExtraTranslations {
     /** 樂觀鎖撞寫（對方先存了）的橫幅 */
     conflictBody: string;
     conflictReload: string;
-    /** root database 頁的佔位畫面（下一批換成看板） */
-    dbComingSoon: string;
     dbAddCard: string;
     dbEmpty: string;
     typePage: string;
     typeDatabase: string;
+    /** root database 頁的分類看板（欄＝分類、卡＝子頁） */
+    board: {
+      /** 最後一欄：category_id 為 null 或懸空的卡片都在這 */
+      uncategorized: string;
+      addCard: string;
+      columnEmpty: string;
+      manageCategories: string;
+      dragHint: string;
+      /** 手機沒有 HTML5 拖曳，改指路到卡片的「⋯」選單 */
+      dragHintMobile: string;
+      /** 卡片「⋯」選單（手機取代拖曳） */
+      moveTo: string;
+      /** 插值 `{name}` = 卡片標題 */
+      moveHint: string;
+      moveFailed: string;
+      updatedAt: string;
+    };
+    /** 分類管理彈窗 */
+    cat: {
+      title: string;
+      hint: string;
+      namePlaceholder: string;
+      unnamed: string;
+      add: string;
+      color: string;
+      moveLeft: string;
+      moveRight: string;
+      remove: string;
+      removeConfirmTitle: string;
+      /** 插值 `{name}` = 分類名稱；務必講明卡片會歸入未分類 */
+      removeConfirmMessage: string;
+      removeConfirmText: string;
+      save: string;
+      saving: string;
+      cancel: string;
+      empty: string;
+      nameRequired: string;
+      saveFailed: string;
+      limitReached: string;
+    };
+    /** 編輯器 slash 選單的筆記本自訂項 */
+    slash: {
+      group: string;
+      subPageTitle: string;
+      subPageSubtext: string;
+      databaseTitle: string;
+      databaseSubtext: string;
+    };
+    /** 內文裡的頁面連結卡片（自訂 pageLink block） */
+    pageLink: {
+      open: string;
+      deleted: string;
+      badgeDatabase: string;
+    };
   };
 }
 
@@ -1476,11 +1528,56 @@ const zhTW: MemberExtraTranslations = {
     saveConflict: "內容衝突",
     conflictBody: "內容已被對方更新，請重新載入後再編輯（你剛才的變更尚未存檔）。",
     conflictReload: "重新載入",
-    dbComingSoon: "分類看板即將推出；目前先以子頁清單呈現。",
     dbAddCard: "新增子頁",
-    dbEmpty: "還沒有任何子頁。",
+    dbEmpty: "還沒有任何子頁。按任一欄下方的「＋ 新增」開始。",
     typePage: "頁面",
     typeDatabase: "看板",
+    board: {
+      uncategorized: "未分類",
+      addCard: "新增",
+      columnEmpty: "這一欄還沒有卡片",
+      manageCategories: "管理分類",
+      dragHint: "拖曳卡片就能換分類",
+      dragHintMobile: "用卡片上的「⋯」換分類",
+      moveTo: "移到分類…",
+      moveHint: "把「{name}」移到哪一個分類？",
+      moveFailed: "移動卡片失敗，請稍後再試",
+      updatedAt: "更新於 ",
+    },
+    cat: {
+      title: "管理分類",
+      hint: "分類就是看板上的欄位，由左到右排列。改完按「儲存」才會生效。",
+      namePlaceholder: "分類名稱，例如：第 1 期",
+      unnamed: "未命名分類",
+      add: "新增分類",
+      color: "選擇顏色",
+      moveLeft: "往左移",
+      moveRight: "往右移",
+      remove: "刪除分類",
+      removeConfirmTitle: "刪除分類",
+      removeConfirmMessage:
+        "確定要刪除分類「{name}」嗎？原本在這一欄的卡片不會消失，會全部歸入「未分類」。",
+      removeConfirmText: "刪除",
+      save: "儲存",
+      saving: "儲存中…",
+      cancel: "取消",
+      empty: "還沒有任何分類，所有卡片都會放在「未分類」。",
+      nameRequired: "分類名稱不能空白。",
+      saveFailed: "儲存分類失敗，請稍後再試",
+      limitReached: "分類數量已達上限",
+    },
+    slash: {
+      group: "筆記本",
+      subPageTitle: "子頁面",
+      subPageSubtext: "建立一頁並在這裡插入連結",
+      databaseTitle: "資料庫",
+      databaseSubtext: "建立一個分類看板並插入連結",
+    },
+    pageLink: {
+      open: "開啟頁面",
+      deleted: "已刪除的頁面",
+      badgeDatabase: "資料庫",
+    },
   },
 };
 
@@ -2213,11 +2310,56 @@ const en: MemberExtraTranslations = {
     conflictBody:
       "The other side updated this page, so your latest edits weren't saved. Reload to continue from their version.",
     conflictReload: "Reload",
-    dbComingSoon: "The category board is coming soon — sub-pages are listed for now.",
     dbAddCard: "Add sub-page",
-    dbEmpty: "No sub-pages yet.",
+    dbEmpty: "No sub-pages yet — use \"+ New\" at the bottom of any column.",
     typePage: "Page",
     typeDatabase: "Board",
+    board: {
+      uncategorized: "No category",
+      addCard: "New",
+      columnEmpty: "No cards in this column",
+      manageCategories: "Categories",
+      dragHint: "Drag a card to change its category",
+      dragHintMobile: "Use ⋯ on a card to change category",
+      moveTo: "Move to category…",
+      moveHint: "Which category should \"{name}\" go to?",
+      moveFailed: "Couldn't move the card, please try again",
+      updatedAt: "Updated ",
+    },
+    cat: {
+      title: "Manage categories",
+      hint: "Categories are the board's columns, left to right. Changes apply once you hit Save.",
+      namePlaceholder: "Category name, e.g. Block 1",
+      unnamed: "Untitled category",
+      add: "Add category",
+      color: "Pick a colour",
+      moveLeft: "Move left",
+      moveRight: "Move right",
+      remove: "Delete category",
+      removeConfirmTitle: "Delete category",
+      removeConfirmMessage:
+        "Delete the category \"{name}\"? Its cards aren't deleted — they all move to \"No category\".",
+      removeConfirmText: "Delete",
+      save: "Save",
+      saving: "Saving…",
+      cancel: "Cancel",
+      empty: "No categories yet — every card sits in \"No category\".",
+      nameRequired: "Category names can't be blank.",
+      saveFailed: "Couldn't save the categories, please try again",
+      limitReached: "Category limit reached",
+    },
+    slash: {
+      group: "Notebook",
+      subPageTitle: "Sub-page",
+      subPageSubtext: "Create a page and link to it here",
+      databaseTitle: "Database",
+      databaseSubtext: "Create a category board and link to it",
+    },
+    pageLink: {
+      open: "Open page",
+      deleted: "Deleted page",
+      badgeDatabase: "Database",
+    },
   },
 };
 

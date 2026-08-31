@@ -112,3 +112,87 @@
   opacity: 0.72;
   filter: saturate(0.85);
 }
+
+/*
+ * ── pageLink：內文裡的頁面連結卡片 ─────────────────────
+ *
+ * 自訂 block（見 NoteBlockEditor.tsx 的 `pageLink`）。長得像 Notion 的
+ * 子頁面列：一行、可點、hover 有底色，與段落等寬。
+ *
+ * ⚠️ 顏色全部走 `--bn-colors-*`，跟編輯器其他部分同一組變數 —— 這樣它在
+ *    深淺主題與唯讀狀態下都會自動跟著紙面走，不必再寫一份 dark 覆寫。
+ */
+.notes-page-link {
+  /* ProseMirror 的 node view 是 contentEditable=false，游標不會掉進來 */
+  user-select: none;
+  width: 100%;
+}
+
+.notes-page-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--bn-border-radius, 6px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.notes-page-link-btn:hover:not(:disabled) {
+  background-color: var(--bn-colors-hovered-background);
+  border-color: var(--bn-colors-border);
+}
+
+.notes-page-link-btn:focus-visible {
+  outline: 2px solid var(--bn-colors-selected-background);
+  outline-offset: 1px;
+}
+
+.notes-page-link-icon {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.notes-page-link-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 底線讓它一眼看得出是連結，而不是被縮排的一行字 */
+  text-decoration: underline;
+  /* 邊框色在深色主題下幾乎看不見，改用文字色調淡 —— 兩種主題都留得住 */
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+/* 資料庫（看板）徽章 */
+.notes-page-link-badge {
+  flex: none;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--bn-colors-border);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--bn-colors-disabled-text);
+}
+
+/* 目標頁已被刪除：灰態、不可點，但仍留在文件裡（不擅自刪使用者的內容） */
+.notes-page-link-btn[data-deleted="true"] {
+  cursor: default;
+  color: var(--bn-colors-disabled-text);
+}
+
+.notes-page-link-btn[data-deleted="true"] .notes-page-link-title {
+  text-decoration: line-through;
+  text-decoration-color: currentColor;
+}

@@ -44,13 +44,23 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      el: '[data-tour="notes-database-board"]',
+      title: "看板：一欄一個階段",
+      desc: "第一頁是<b>看板</b>。一欄是教練分的一個<b>分類</b>（例如第 1 期、飲食），一張卡就是<b>一頁筆記</b> —— 點卡片就打開。你也可以按每欄下面的「<b>＋ 新增</b>」開自己的一頁，或<b>把卡片拖到別欄</b>（手機請按卡片上的「⋯」→「移到分類…」）。",
+      titleEn: "The board: one column per stage",
+      descEn:
+        "The first page is a <b>board</b>. Each column is a <b>category</b> your coach set up (Block 1, Nutrition…), and each card is <b>one page</b> — tap to open it. You can add your own with <b>+ New</b> at the foot of a column, or <b>drag a card to another column</b> (on a phone, tap <b>⋯</b> on the card → \"Move to category…\").",
+      side: "top",
+      align: "center",
+    },
+    {
       el: '[data-tour="notes-editor-canvas"]',
       elMobile: '[data-tour="notes-page-title"]',
       title: "直接開始寫",
-      desc: "點一下就能打字。按 <code>/</code> 會跳出區塊選單（標題、清單、<b>待辦事項</b>、引言…），選取文字則會出現粗體／底線等格式工具列。",
+      desc: "點一下就能打字。按 <code>/</code> 會跳出區塊選單（標題、清單、<b>待辦事項</b>、引言…），最下面的「<b>子頁面</b>」還能在文章中間直接開一頁新的並留下連結卡片。選取文字則會出現粗體／底線等格式工具列。",
       titleEn: "Just start writing",
       descEn:
-        "Click anywhere and type. Press <code>/</code> for the block menu (headings, lists, <b>to-dos</b>, quotes…), or select text for bold / underline and the rest of the toolbar.",
+        "Click anywhere and type. Press <code>/</code> for the block menu (headings, lists, <b>to-dos</b>, quotes…) — the <b>Sub-page</b> item at the bottom spins up a fresh page mid-sentence and leaves a link card behind. Select text for bold / underline and the rest of the toolbar.",
       side: "top",
       align: "center",
     },

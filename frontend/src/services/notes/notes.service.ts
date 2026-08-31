@@ -34,7 +34,13 @@ export type NotePageType = "page" | "database";
  */
 export type NoteBlock = Record<string, unknown>;
 
-/** database 頁的分類定義（本批未用，下一批看板會用） */
+/**
+ * database 頁的分類定義（看板的「欄」，有序）。
+ *
+ * 只存在 database 頁自己的 `categories` 欄位；子頁用 `category_id` 對應。
+ * **刪除分類不做資料遷移** —— 子頁的 category_id 會變成懸空 id，
+ * 看板一律把「null 或對不到任何分類」的卡片歸到最後一欄「未分類」。
+ */
 export interface NoteCategory {
   id: string;
   name: string;
@@ -118,6 +124,8 @@ export interface CreatePageInput {
   type?: NotePageType;
   title?: string;
   sortOrder?: number;
+  /** 看板「＋ 新增」時直接落在該欄（database 子頁專用） */
+  categoryId?: string | null;
 }
 
 /** 可自由更新的 metadata（不動 version） */
@@ -126,6 +134,11 @@ export interface UpdatePageMetaInput {
   icon?: string | null;
   categoryId?: string | null;
   sortOrder?: number;
+  /**
+   * 看板欄位定義。**只有 `type === "database"` 的頁能設**
+   * （後端對一般頁回 400「只有 database 頁可設定 categories」）。
+   */
+  categories?: NoteCategory[];
 }
 
 /** axios 錯誤的最小形狀（避免在服務層 import axios 型別） */

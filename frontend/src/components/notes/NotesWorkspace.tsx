@@ -22,7 +22,7 @@ import {
   type NoteTreeResponse,
 } from "@/services/notes/notes.service";
 import PageTree from "./PageTree";
-import PageEditor from "./PageEditor";
+import PageEditor, { type CreatePageOptions } from "./PageEditor";
 import MovePageModal from "./MovePageModal";
 
 export interface NotesWorkspaceProps {
@@ -91,27 +91,99 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
     setDrawerOpen(false);
   }, []);
 
-  const handleAddChild = useCallback(
-    async (parentId: number) => {
+  /**
+   * 建立子頁 —— 頁面樹的「＋」、看板每欄的「＋ 新增」、編輯器 slash 選單的
+   * 「子頁面／資料庫」全走這一支，**樹的資料源只有這裡一個**。
+   *
+   * 建完一律 `loadTree()` 再回傳：slash 插入的 `pageLink` block 需要樹裡已經
+   * 有這一頁，才不會在掛上的瞬間顯示成「已刪除的頁面」。
+   *
+   * @returns 建立好的節點；失敗回 null（已彈訊息，呼叫端不必再報一次）
+   */
+  const createPage = useCallback(
+    async (
+      parentId: number,
+      opts: CreatePageOptions = {},
+    ): Promise<NotePageNode | null> => {
       setBusyId(parentId);
       try {
         const created = await notesService.createPage({
           notebookId,
           parentId,
-          title: "",
+          title: opts.title ?? "",
+          ...(opts.type ? { type: opts.type } : {}),
+          ...(opts.categoryId !== undefined
+            ? { categoryId: opts.categoryId }
+            : {}),
         });
-        await loadTree({ select: created.id });
-        setDrawerOpen(false);
+        await loadTree(opts.select ? { select: created.id } : {});
+        if (opts.select) setDrawerOpen(false);
+        return created;
       } catch (err) {
         await dialog.alert({
           title: t.notes.addChildFailed,
           message: serverMessageOf(err) || "",
         });
+        return null;
       } finally {
         setBusyId(null);
       }
     },
     [notebookId, loadTree, dialog, t],
+  );
+
+  /** 頁面樹的「＋」：建完直接切過去 */
+  const handleAddChild = useCallback(
+    (parentId: number) => {
+      void createPage(parentId, { select: true });
+    },
+    [createPage],
+  );
+
+  /**
+   * 看板卡片換分類／換位置。
+   *
+   * `category_id` 與 `sort_order` 都在頁面樹節點上，所以成功後就地改本地狀態
+   * 即可（不必重抓整棵樹）—— 拖曳要即時回饋，多一次往返會看到卡片彈回去。
+   */
+  const handleMoveCard = useCallback(
+    async (
+      cardId: number,
+      categoryId: string | null,
+      sortOrder?: number,
+    ): Promise<void> => {
+      try {
+        await notesService.updatePageMeta(cardId, {
+          categoryId,
+          ...(sortOrder === undefined ? {} : { sortOrder }),
+        });
+        setTree((prev) =>
+          prev
+            ? {
+                ...prev,
+                pages: prev.pages
+                  .map((p) =>
+                    p.id === cardId
+                      ? {
+                          ...p,
+                          category_id: categoryId,
+                          sort_order: sortOrder ?? p.sort_order,
+                        }
+                      : p,
+                  )
+                  // 樹與看板都吃 API 的 sort_order 升冪順序，改完要補排
+                  .sort((a, b) => a.sort_order - b.sort_order),
+              }
+            : prev,
+        );
+      } catch (err) {
+        await dialog.alert({
+          title: t.notes.board.moveFailed,
+          message: serverMessageOf(err) || "",
+        });
+      }
+    },
+    [dialog, t],
   );
 
   const handleRename = useCallback(
@@ -243,7 +315,7 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
           type="button"
           data-tour="notes-add-root-child"
           onClick={() =>
-            void handleAddChild(tree.notebook.rootPageId ?? pages[0]?.id ?? 0)
+            handleAddChild(tree.notebook.rootPageId ?? pages[0]?.id ?? 0)
           }
           className="rounded p-1 text-muted transition-colors hover:text-gold"
           title={t.notes.addChild}
@@ -270,7 +342,7 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
         rootId={tree.notebook.rootPageId}
         selectedId={selectedId}
         onSelect={handleSelect}
-        onAddChild={(id) => void handleAddChild(id)}
+        onAddChild={handleAddChild}
         onRename={(p) => void handleRename(p)}
         onMove={(p) => setMovingPage(p)}
         onDelete={(p) => void handleDelete(p)}
@@ -333,9 +405,11 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
               key={selectedId}
               pageId={selectedId}
               childPages={childPages}
+              allPages={pages}
               onTitleSaved={handleTitleSaved}
               onOpenPage={handleSelect}
-              onAddChild={(id) => void handleAddChild(id)}
+              onCreatePage={createPage}
+              onMoveCard={handleMoveCard}
             />
           ) : (
             <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted">

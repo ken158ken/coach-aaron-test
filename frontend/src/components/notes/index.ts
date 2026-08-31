@@ -14,4 +14,5 @@ export { default as NotesWorkspace } from "./NotesWorkspace";
 export { default as PageTree } from "./PageTree";
 export { default as PageEditor } from "./PageEditor";
 export { default as MovePageModal } from "./MovePageModal";
-export { default as DatabasePagePlaceholder } from "./DatabasePagePlaceholder";
+export { default as DatabaseBoard } from "./DatabaseBoard";
+export { default as CategoryManagerModal } from "./CategoryManagerModal";

@@ -53,13 +53,33 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      el: '[data-tour="notes-database-board"]',
+      title: "封面頁＝分類看板",
+      desc: "每本筆記本的第一頁是<b>看板</b>：一欄就是一個<b>分類</b>（第 1 期、飲食、體態紀錄…），一張卡就是<b>一頁筆記</b>，點卡片就開那一頁。<b>把卡片拖到別欄</b>即可換分類（手機請用卡片右上角的「⋯」→「移到分類…」）。每欄下面的「<b>＋ 新增</b>」會直接在那一欄開一頁新的。",
+      titleEn: "The cover page is a board",
+      descEn:
+        "Every notebook opens on a <b>board</b>: each column is a <b>category</b> (Block 1, Nutrition, Check-ins…) and each card is <b>one page</b> — tap a card to open it. <b>Drag a card to another column</b> to recategorise it (on a phone use the card's <b>⋯</b> → \"Move to category…\"). <b>+ New</b> at the foot of a column creates a page right in that column.",
+      side: "top",
+      align: "center",
+    },
+    {
+      el: '[data-tour="notes-board-categories"]',
+      title: "管理分類",
+      desc: "新增／改名／換顏色／用箭頭調整<b>欄位左右順序</b>，改完按「儲存」。刪除分類<em>不會刪掉卡片</em> —— 那一欄的卡片會全部歸到最後的「<b>未分類</b>」欄，你隨時能再拖回去。",
+      titleEn: "Manage categories",
+      descEn:
+        "Add, rename, recolour, and use the arrows to <b>reorder the columns</b> — then hit Save. Deleting a category <em>never deletes cards</em>: they all fall into the trailing <b>No category</b> column, ready to be dragged back.",
+      side: "left",
+      align: "start",
+    },
+    {
       el: '[data-tour="notes-editor-canvas"]',
       elMobile: '[data-tour="notes-page-title"]',
       title: "編輯器",
-      desc: "直接開始打字就好。按 <code>/</code> 叫出區塊選單（標題、清單、待辦、引言、程式碼…），或選取文字叫出格式工具列。<b>不用按儲存</b> —— 停下來約 1.5 秒就會自動存檔。",
+      desc: "直接開始打字就好。按 <code>/</code> 叫出區塊選單（標題、清單、待辦、引言、程式碼…），最下面還有筆記本專屬的「<b>子頁面</b>」與「<b>資料庫</b>」—— 選了會馬上開一頁新的，並在游標處放一張<b>可點的頁面卡片</b>（資料庫就是再開一個看板）。<b>不用按儲存</b> —— 停下來約 1.5 秒就會自動存檔。",
       titleEn: "The editor",
       descEn:
-        "Just start typing. Press <code>/</code> for the block menu (headings, lists, to-dos, quotes, code…), or select text for the formatting toolbar. <b>There's no save button</b> — it saves itself about 1.5 seconds after you stop.",
+        "Just start typing. Press <code>/</code> for the block menu (headings, lists, to-dos, quotes, code…). At the bottom sit two notebook-only items: <b>Sub-page</b> and <b>Database</b> — either creates a new page on the spot and drops a <b>clickable page card</b> at your cursor (a database is just another board). <b>There's no save button</b> — it saves itself about 1.5 seconds after you stop.",
       side: "top",
       align: "center",
     },
@@ -75,10 +95,10 @@ const tour: TourDefinition = {
     },
     {
       title: "就這樣！",
-      desc: "封面頁目前先以<b>子頁清單</b>呈現，<em>分類看板</em>是下一批要做的功能。<br>需要再看一次教學，按右下角的「<b>?</b>」。",
+      desc: "看板管方案的<b>結構</b>，編輯器寫每一頁的<b>內容</b>，兩邊都跟客戶即時共用。<br>需要再看一次教學，按右下角的「<b>?</b>」。",
       titleEn: "That's it",
       descEn:
-        "The cover page currently lists its <b>sub-pages</b>; the <em>category board</em> is coming in the next batch.<br>Need this tour again? The <b>?</b> in the bottom right.",
+        "The board holds the <b>structure</b> of a programme, the editor holds the <b>content</b> of each page — and your client sees both live.<br>Need this tour again? The <b>?</b> in the bottom right.",
     },
   ],
 };

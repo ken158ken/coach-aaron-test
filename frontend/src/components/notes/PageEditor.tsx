@@ -1,6 +1,12 @@
 /**
- * 單頁編輯器（標題 + BlockNote 畫布 + 自動儲存 + 樂觀鎖衝突處理）
+ * 單頁編輯器（標題 + BlockNote 畫布 / 分類看板 + 自動儲存 + 樂觀鎖衝突處理）
  * @module components/notes/PageEditor
+ *
+ * ## 兩種頁
+ * `type === "database"` 走 `DatabaseBoard`（分類看板），其餘走 BlockNote。
+ * 兩者共用同一個標題列與衝突橫幅 —— 對使用者來說它們都只是「一頁」。
+ * 看板的分類定義存在**這一頁自己**的 `categories`，所以由這裡直接 PATCH；
+ * 卡片（＝子頁）的搬動會動到左側樹，交給工作區處理。
  *
  * ## SSR
  * BlockNote 只能在瀏覽器跑（module scope 就會摸 document），所以：
@@ -25,6 +31,7 @@ import React, {
   lazy,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -36,10 +43,12 @@ import {
   isNotesUnavailable,
   serverMessageOf,
   type NoteBlock,
+  type NoteCategory,
   type NotePageDetail,
   type NotePageNode,
+  type NotePageType,
 } from "@/services/notes/notes.service";
-import DatabasePagePlaceholder from "./DatabasePagePlaceholder";
+import DatabaseBoard from "./DatabaseBoard";
 
 /** BlockNote 本體：只有走到這行才會下載 vendor-notes chunk */
 const NoteBlockEditor = lazy(() => import("./NoteBlockEditor"));
@@ -51,16 +60,39 @@ const TITLE_DEBOUNCE_MS = 800;
 
 export type SaveState = "idle" | "dirty" | "saving" | "saved" | "error" | "conflict";
 
+/** 建立子頁的選項（看板「＋」與 slash 選單共用同一支呼叫端實作） */
+export interface CreatePageOptions {
+  type?: NotePageType;
+  categoryId?: string | null;
+  title?: string;
+  /** 建好之後是否直接切過去（看板「＋」要、slash 插入不要） */
+  select?: boolean;
+}
+
 export interface PageEditorProps {
   pageId: number;
-  /** 這一頁的直屬子頁（database 佔位卡片牆用；一般頁不需要） */
+  /** 這一頁的直屬子頁（database 看板的卡片；一般頁不需要） */
   childPages: NotePageNode[];
+  /**
+   * 整本筆記本的所有頁（**不含 content**）。
+   * 只給 `pageLink` block 解析最新標題／判斷頁是否已被刪除用。
+   */
+  allPages: NotePageNode[];
   /** 標題存檔成功 → 讓左側樹同步 */
   onTitleSaved: (pageId: number, title: string) => void;
-  /** 開啟另一頁（database 卡片點擊） */
+  /** 開啟另一頁（看板卡片、pageLink block 點擊） */
   onOpenPage: (pageId: number) => void;
-  /** 新增子頁（database 卡片牆的「＋」） */
-  onAddChild: (parentId: number) => void;
+  /** 建立子頁 → 由工作區打 API 並刷新左側樹；失敗回 null */
+  onCreatePage: (
+    parentId: number,
+    opts?: CreatePageOptions,
+  ) => Promise<NotePageNode | null>;
+  /** 看板卡片換分類／換位置 → 由工作區打 API 並同步樹 */
+  onMoveCard: (
+    cardId: number,
+    categoryId: string | null,
+    sortOrder?: number,
+  ) => Promise<void>;
 }
 
 /** 儲存狀態指示燈 */
@@ -90,9 +122,11 @@ const SaveIndicator: React.FC<{ state: SaveState }> = ({ state }) => {
 const PageEditor: React.FC<PageEditorProps> = ({
   pageId,
   childPages,
+  allPages,
   onTitleSaved,
   onOpenPage,
-  onAddChild,
+  onCreatePage,
+  onMoveCard,
 }) => {
   const { t, language } = useLanguage();
   const { isDark } = useTheme();
@@ -253,6 +287,58 @@ const PageEditor: React.FC<PageEditorProps> = ({
     };
   }, [pageId]);
 
+  // ── 看板（database 頁）───────────────────────────────
+
+  /**
+   * 分類定義存檔。
+   *
+   * categories 屬於 metadata（後端 last-write-wins、不動 version），
+   * 所以這裡不必也不能帶 version —— 帶了反而會把對方正在編輯的內容撞成 409。
+   */
+  const handleSaveCategories = useCallback(
+    async (next: NoteCategory[]) => {
+      await notesService.updatePageMeta(pageId, { categories: next });
+      setPage((prev) => (prev ? { ...prev, categories: next } : prev));
+    },
+    [pageId],
+  );
+
+  /** 看板某一欄的「＋ 新增」→ 建一般子頁並直接切過去 */
+  const handleAddCard = useCallback(
+    (categoryId: string | null) => {
+      void onCreatePage(pageId, { categoryId, type: "page", select: true });
+    },
+    [onCreatePage, pageId],
+  );
+
+  // ── 編輯器 slash 選單「子頁面 / 資料庫」──────────────
+
+  /**
+   * 建一頁並把它交還給編輯器插 `pageLink` block。
+   *
+   * `select: false` —— 使用者正在打字，不能把畫面切走。
+   * 呼叫端（工作區）會在建立後刷新左側樹，因此回到這裡時 `allPages` 已含新頁，
+   * pageLink 卡片一掛上就能解析到正確標題（不會閃「已刪除的頁面」）。
+   */
+  const handleCreateChildPage = useCallback(
+    async (type: NotePageType) => {
+      try {
+        const created = await onCreatePage(pageId, { type, select: false });
+        if (!created) return null;
+        return { id: created.id, title: created.title ?? "" };
+      } catch {
+        return null;
+      }
+    },
+    [onCreatePage, pageId],
+  );
+
+  /** pageId → 最新標題（pageLink block 用；不在裡面 = 已刪除） */
+  const pageTitles = useMemo(
+    () => new Map(allPages.map((p) => [p.id, p.title ?? ""])),
+    [allPages],
+  );
+
   // ── 畫面 ──────────────────────────────────────────────
   if (loading && !page) {
     return (
@@ -317,11 +403,15 @@ const PageEditor: React.FC<PageEditorProps> = ({
       )}
 
       {isDatabase ? (
-        <DatabasePagePlaceholder
+        <DatabaseBoard
           pageId={page.id}
+          categories={page.categories}
           childPages={childPages}
+          readOnly={conflictVersion !== null}
           onOpenPage={onOpenPage}
-          onAddChild={onAddChild}
+          onAddCard={handleAddCard}
+          onMoveCard={onMoveCard}
+          onSaveCategories={handleSaveCategories}
         />
       ) : (
         /*
@@ -351,6 +441,9 @@ const PageEditor: React.FC<PageEditorProps> = ({
                 dark={isDark}
                 lang={language === "en" ? "en" : "zh-TW"}
                 onChange={handleContentChange}
+                onCreateChildPage={handleCreateChildPage}
+                onOpenPage={onOpenPage}
+                pageTitles={pageTitles}
               />
             </Suspense>
           ) : (
