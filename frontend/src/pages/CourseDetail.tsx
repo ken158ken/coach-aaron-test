@@ -15,6 +15,7 @@ import {
 } from "@/hooks";
 import { useLanguage } from "@/context/LanguageContext";
 import { courseService } from "@/services";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
 import { getInitialData } from "@/ssr/initialData";
@@ -288,7 +289,7 @@ const CourseDetail: React.FC = () => {
                 <h2 className="text-xl sm:text-2xl font-light text-white mb-4 pb-3 border-b border-white/10">{t.course.courseContent}</h2>
                 <div
                   className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: loc(course as unknown as Record<string, unknown>, "course_content") || course.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(loc(course as unknown as Record<string, unknown>, "course_content") || course.content) }}
                 />
               </section>
             )}

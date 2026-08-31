@@ -10,6 +10,7 @@ import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { articleService } from "@/services/content/article.service";
 import { useAuth } from "@/context";
 import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 import { useLocalize } from "@/hooks/useLocalize";
 import { useLanguage } from "@/context/LanguageContext";
 import { Loading } from "@/components/ui";
@@ -414,7 +415,7 @@ const ArticleDetail: React.FC = () => {
               <div
                 className="prose max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: loc(articleObj, "article_content") || `<p>${t.article.noContent}</p>`,
+                  __html: sanitizeHtml(loc(articleObj, "article_content")) || `<p>${t.article.noContent}</p>`,
                 }}
               />
 

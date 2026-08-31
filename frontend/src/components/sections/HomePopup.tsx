@@ -11,6 +11,7 @@ import { useScrollLock } from "@/hooks/useScrollLock";
 import { useLanguage } from "@/context/LanguageContext";
 import { useLocalize } from "@/hooks/useLocalize";
 import { LogoMark } from "@/components/brand";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
 /** 日誌工具 */
 const logger = {
@@ -150,7 +151,7 @@ const HomePopup: React.FC = () => {
               [&_li]:text-muted [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3
               [&_strong]:text-gold [&_strong]:font-semibold
               [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-3 [&_blockquote]:text-muted"
-            dangerouslySetInnerHTML={{ __html: popupContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupContent) }}
           />
         </div>
 

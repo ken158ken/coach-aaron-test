@@ -8,6 +8,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
 interface ArticlePreviewModalProps {
   isOpen: boolean;
@@ -149,7 +150,7 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
                 className="prose prose-invert max-w-none text-luxe-text/80"
                 dangerouslySetInnerHTML={{
                   __html:
-                    article.content ||
+                    sanitizeHtml(article.content) ||
                     `<p class='text-gray-500'>${a.previewNoContent}</p>`,
                 }}
               />

@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
 // 搜尋結果類型
 interface SearchResult {
@@ -287,7 +288,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                     {result.highlight && (
                       <p
                         className="text-sm text-gray-500 mt-1"
-                        dangerouslySetInnerHTML={{ __html: result.highlight }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(result.highlight) }}
                       />
                     )}
                   </div>

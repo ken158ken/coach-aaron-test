@@ -18,6 +18,7 @@ import {
   ImageUploadTargetProvider,
 } from '@/components/ui';
 import { Toggle, TagInput } from '@/components/ui/form';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 // 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
 import { RichTextEditor } from '@/components/ui/editor';
 import {
@@ -1312,7 +1313,7 @@ const AdminContent: React.FC = () => {
                         className="text-luxe-text/60 text-sm line-clamp-2 [&>*]:m-0"
                         dangerouslySetInnerHTML={{
                           __html:
-                            popup.popup_content.slice(0, 200) ||
+                            sanitizeHtml(popup.popup_content.slice(0, 200)) ||
                             tp.fallback.noContent,
                         }}
                       />

@@ -10,6 +10,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import type { TextBlock } from "../types";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface TextBlockComponentProps {
@@ -222,7 +223,7 @@ const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
       ) : (
         <div
           className="prose prose-invert max-w-none h-full overflow-hidden"
-          dangerouslySetInnerHTML={{ __html: block.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
         />
       )}
 
