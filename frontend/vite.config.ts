@@ -110,6 +110,25 @@ export default defineConfig(({ command, isSsrBuild }) => {
                 if (/[\\/]node_modules[\\/]driver\.js[\\/]/.test(id))
                   return "vendor-tour";
 
+                /*
+                 * FullCalendar：只有 /admin/google-calendar 這一頁用得到，
+                 * 但約 250 KB。理由同 driver.js —— 落進 vendor-misc 就等於
+                 * 讓每位前台訪客 preload 一份完全用不到的日曆引擎。
+                 * 切開後只會被 AdminGoogleCalendar 的 async chunk 引用。
+                 *
+                 * ⚠️ preact 也要一起切：`@fullcalendar/core` 內部是用 preact
+                 *    渲染的（`dependencies: { preact }`），它的模組 id 不含
+                 *    "@fullcalendar"，漏掉就會有 ~18 KB 掉進 vendor-misc ——
+                 *    而 vendor-misc 是 index.html 直接 preload 的共用 chunk。
+                 *    全站只有 FullCalendar 依賴 preact（`npm ls preact` 可驗），
+                 *    所以整包歸到這裡是安全的。
+                 */
+                if (
+                  id.includes("@fullcalendar") ||
+                  /[\\/]node_modules[\\/]preact[\\/]/.test(id)
+                )
+                  return "vendor-calendar";
+
                 return "vendor-misc";
               },
             },

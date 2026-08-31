@@ -15,7 +15,7 @@
  */
 
 // Core HTTP client
-export { default as apiClient, get, post, put, del, getAuthToken, setAuthToken } from "./api";
+export { default as apiClient, get, post, put, patch, del, getAuthToken, setAuthToken } from "./api";
 
 // Auth & User
 export { authService } from "./auth/auth.service";

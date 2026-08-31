@@ -140,6 +140,20 @@ export const put = <T = unknown, D = unknown>(
 };
 
 /**
+ * PATCH 請求（部分更新）
+ *
+ * 與 PUT 的差別純粹是語意：PUT 送整份資源，PATCH 只送有變動的欄位。
+ * 後台 Google 日曆的事件編輯走 PATCH（`/api/coach/google/events/:id`）。
+ */
+export const patch = <T = unknown, D = unknown>(
+  url: string,
+  data?: D,
+  config?: AxiosRequestConfig,
+): Promise<T> => {
+  return apiClient.patch<T, T, D>(url, data, config);
+};
+
+/**
  * DELETE 請求
  */
 export const del = <T = unknown>(

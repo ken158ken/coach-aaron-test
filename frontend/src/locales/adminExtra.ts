@@ -1139,6 +1139,98 @@ const zhTW = {
     ],
   },
   /**
+   * /admin/google-calendar 的**完整日曆**（月／週／日視圖、自由 CRUD、拖拉改期）。
+   *
+   * 與 `adminGoogleCalendarPage` 分成兩個 namespace 是刻意的：那一個是「帳號連結
+   * 設定」（現在收在頁頂的摺疊卡裡），這一個是日曆操作本身。兩者的生命週期完全
+   * 不同 —— 連結設定接近一次性，日曆是天天在用。
+   *
+   * ⚠️ 這裡**沒有**「今天／月／週／日／列表」等工具列按鈕字串：那些由
+   * FullCalendar 的 locale（`@fullcalendar/core/locales/zh-tw`）提供，
+   * 自己再抄一份只會兩邊不同步。
+   */
+  adminCalendar: {
+    // ── 頁頂連結狀態摺疊卡 ──
+    connectionHeading: "Google 帳號連結",
+    connectionExpand: "展開設定",
+    connectionCollapse: "收合設定",
+    connectionConnected: "已連結",
+    connectionDisconnected: "未連結",
+    connectionExpired: "連結已失效",
+
+    // ── 日曆動作列 ──
+    newEventBtn: "新增活動",
+    refreshBtn: "重新整理",
+    loadingEvents: "讀取日曆中…",
+    legendBooking: "會員預約",
+    legendGeneral: "一般活動",
+    legendHint: "金框是會員預約：改時間會連動改期、刪除會連動取消，兩者都會通知會員。",
+    eventCount: "本區間 {n} 筆",
+
+    // ── 未連結 / 錯誤 ──
+    notConnectedTitle: "尚未連結 Google 日曆",
+    notConnectedBody: "連結 Google 帳號之後，這裡就會變成完整日曆：可以直接新增活動、編輯、拖拉改時間，跟你平常開 Google 日曆一樣。",
+    notConnectedCta: "立即連結 Google 帳號",
+    loadFailedTitle: "無法讀取日曆",
+    loadFailedBody: "可能是 Google 服務暫時不穩，稍等一下再試一次。",
+    retryBtn: "重試",
+
+    // ── 新增／編輯表單 ──
+    createTitle: "新增活動",
+    editTitle: "編輯活動",
+    fieldSummary: "標題",
+    summaryPlaceholder: "例如：私人訓練、會議、休假",
+    fieldAllDay: "全天活動",
+    fieldStart: "開始",
+    fieldEnd: "結束",
+    fieldStartDate: "開始日",
+    fieldEndDate: "結束日",
+    endDateHint: "結束日包含當天；單日活動請把兩邊填成同一天。",
+    fieldLocation: "地點",
+    locationPlaceholder: "地址、教室，或線上會議連結",
+    fieldDescription: "描述",
+    descriptionPlaceholder: "備註、課表、注意事項…",
+    fieldAddMeet: "附加 Google Meet 視訊連結",
+    addMeetHint: "只有新增時能加。已建立的活動要加 Meet，請到 Google 日曆本體操作。",
+    saveBtn: "儲存",
+    errSummaryRequired: "請填寫標題",
+    errTimeInvalid: "請填寫有效的開始與結束時間",
+    errEndBeforeStart: "結束必須晚於開始",
+    errEndDateBeforeStart: "結束日不能早於開始日",
+    bookingLockedAllDay: "會員預約不能改成全天活動，因此鎖住這個選項。",
+
+    // ── 詳情 ──
+    detailTitle: "活動詳情",
+    detailTime: "時間",
+    detailLocation: "地點",
+    detailDescription: "描述",
+    joinMeetBtn: "加入 Google Meet",
+    openInGoogleBtn: "在 Google 日曆開啟",
+    bookingBadge: "會員預約",
+    bookingNoticeTitle: "這是會員的預約時段",
+    bookingNoticeBody: "改時間會自動更新該筆預約並通知會員；刪除則等同幫會員取消預約。",
+    bookingIdLabel: "預約編號",
+    untitled: "（無標題）",
+
+    // ── 確認對話框 ──
+    confirmRescheduleTitle: "調整會員預約時間？",
+    confirmRescheduleBody: "這是會員的預約時段。確認後系統會一併把預約時間改成新時段，並發送通知給會員。",
+    confirmRescheduleOk: "確認改期並通知",
+    confirmDeleteBookingTitle: "取消這筆會員預約？",
+    confirmDeleteBookingBody: "刪除這個事件等同取消會員的預約：預約會被標記為已取消，並立即發送取消通知給會員。此動作無法復原。",
+    confirmDeleteBookingOk: "取消預約並刪除",
+    confirmDeleteTitle: "刪除這個活動？",
+    confirmDeleteBody: "活動會從 Google 日曆移除，無法復原。",
+
+    // ── 結果提示 ──
+    createdToast: "已新增活動",
+    updatedToast: "已更新活動",
+    deletedToast: "已刪除活動",
+    rescheduledToast: "已改期，並通知會員（預約 #{id}）",
+    cancelledBookingToast: "已取消會員預約 #{id}，通知已寄出",
+    actionFailed: "操作失敗",
+  },
+  /**
    * Landing Page 專案列表 /admin/landing-pages
    * `status` 取代 landing.service 的 STATUS_LABELS（該檔是服務層，不改）。
    */
@@ -2577,6 +2669,80 @@ const en: AdminExtraTranslations = {
       "A Google Meet link is attached to every event",
       "Busy blocks on this calendar are skipped when availability is calculated (freebusy)",
     ],
+  },
+  adminCalendar: {
+    connectionHeading: "Google account connection",
+    connectionExpand: "Show settings",
+    connectionCollapse: "Hide settings",
+    connectionConnected: "Connected",
+    connectionDisconnected: "Not connected",
+    connectionExpired: "Connection expired",
+
+    newEventBtn: "New event",
+    refreshBtn: "Refresh",
+    loadingEvents: "Loading calendar…",
+    legendBooking: "Member booking",
+    legendGeneral: "Regular event",
+    legendHint: "Gold-outlined entries are member bookings: moving one reschedules the booking, deleting one cancels it — the member is notified either way.",
+    eventCount: "{n} in view",
+
+    notConnectedTitle: "No Google Calendar connected yet",
+    notConnectedBody: "Connect a Google account and this turns into a full calendar — add events, edit them, drag them to a new time, just like opening Google Calendar itself.",
+    notConnectedCta: "Connect a Google account",
+    loadFailedTitle: "Couldn't load the calendar",
+    loadFailedBody: "Google may be having a wobble. Give it a moment and try again.",
+    retryBtn: "Try again",
+
+    createTitle: "New event",
+    editTitle: "Edit event",
+    fieldSummary: "Title",
+    summaryPlaceholder: "e.g. Personal training, meeting, time off",
+    fieldAllDay: "All-day event",
+    fieldStart: "Starts",
+    fieldEnd: "Ends",
+    fieldStartDate: "Start date",
+    fieldEndDate: "End date",
+    endDateHint: "The end date is included. For a single day, set both to the same date.",
+    fieldLocation: "Location",
+    locationPlaceholder: "Address, studio, or a meeting link",
+    fieldDescription: "Description",
+    descriptionPlaceholder: "Notes, session plan, things to remember…",
+    fieldAddMeet: "Add a Google Meet link",
+    addMeetHint: "Only available when creating. To add Meet to an existing event, do it in Google Calendar.",
+    saveBtn: "Save",
+    errSummaryRequired: "Give the event a title",
+    errTimeInvalid: "Enter a valid start and end time",
+    errEndBeforeStart: "The end must be after the start",
+    errEndDateBeforeStart: "The end date can't be before the start date",
+    bookingLockedAllDay: "Member bookings can't become all-day events, so this is locked.",
+
+    detailTitle: "Event details",
+    detailTime: "When",
+    detailLocation: "Where",
+    detailDescription: "Description",
+    joinMeetBtn: "Join Google Meet",
+    openInGoogleBtn: "Open in Google Calendar",
+    bookingBadge: "Member booking",
+    bookingNoticeTitle: "This slot belongs to a member",
+    bookingNoticeBody: "Changing the time reschedules their booking and notifies them; deleting it cancels the booking on their behalf.",
+    bookingIdLabel: "Booking",
+    untitled: "(untitled)",
+
+    confirmRescheduleTitle: "Move this member's booking?",
+    confirmRescheduleBody: "This slot is a member's booking. Confirming moves the booking to the new time and sends them a notification.",
+    confirmRescheduleOk: "Reschedule and notify",
+    confirmDeleteBookingTitle: "Cancel this member's booking?",
+    confirmDeleteBookingBody: "Deleting this event cancels the member's booking: it is marked cancelled and a cancellation notice goes out to them immediately. This can't be undone.",
+    confirmDeleteBookingOk: "Cancel booking and delete",
+    confirmDeleteTitle: "Delete this event?",
+    confirmDeleteBody: "The event is removed from Google Calendar. This can't be undone.",
+
+    createdToast: "Event created",
+    updatedToast: "Event updated",
+    deletedToast: "Event deleted",
+    rescheduledToast: "Rescheduled — member notified (booking #{id})",
+    cancelledBookingToast: "Booking #{id} cancelled, notification sent",
+    actionFailed: "Something went wrong",
   },
   adminLandingPagesPage: {
     pageTitle: "Landing pages",

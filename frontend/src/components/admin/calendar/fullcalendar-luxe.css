@@ -1,0 +1,265 @@
+/**
+ * FullCalendar → luxe 主題覆蓋
+ *
+ * 為什麼是獨立的 .css 而不是寫進 src/index.css：
+ *   index.css 是 Tailwind v4 的 token 來源（@theme），全站每一頁都會載；
+ *   把只有 /admin/google-calendar 用得到的日曆樣式塞進去，等於讓前台訪客
+ *   也下載一份。這個檔由 CalendarSurface.tsx import，跟著該頁的 async chunk
+ *   一起切出去（vite 的 cssCodeSplit）。
+ *
+ * FullCalendar v6 會在 runtime 把自己的樣式 inject 成 <style data-fullcalendar>，
+ * 並且刻意插在 <head> 最前面（第一個 script/link 之前），所以後載入的這份
+ * 覆蓋在同權重下一定贏，不需要 !important 疊加。
+ *
+ * 顏色一律走站上的語意 token（--color-surface / --color-gold / --color-muted），
+ * 這些 token 在 [data-theme="studio-light"] 已有覆寫，深淺主題自動跟著換。
+ * 淺色下金色（#c5a059）對白底對比不足的地方改用 --color-gold-dim。
+ */
+
+.gcal-shell {
+  /* ── FullCalendar 官方變數 ── */
+  --fc-page-bg-color: transparent;
+  --fc-border-color: color-mix(in srgb, var(--color-gold) 14%, transparent);
+  --fc-neutral-bg-color: color-mix(in srgb, var(--color-gold) 6%, transparent);
+  --fc-neutral-text-color: var(--color-muted);
+  --fc-small-font-size: 0.78em;
+
+  --fc-button-text-color: var(--color-gold);
+  --fc-button-bg-color: color-mix(in srgb, var(--color-gold) 10%, transparent);
+  --fc-button-border-color: color-mix(in srgb, var(--color-gold) 28%, transparent);
+  --fc-button-hover-bg-color: color-mix(in srgb, var(--color-gold) 22%, transparent);
+  --fc-button-hover-border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  --fc-button-active-bg-color: color-mix(in srgb, var(--color-gold) 30%, transparent);
+  --fc-button-active-border-color: var(--color-gold);
+
+  --fc-event-bg-color: color-mix(in srgb, var(--color-gold) 18%, transparent);
+  --fc-event-border-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
+  --fc-event-text-color: inherit;
+  --fc-event-selected-overlay-color: color-mix(in srgb, var(--color-gold) 20%, transparent);
+
+  --fc-today-bg-color: color-mix(in srgb, var(--color-gold) 8%, transparent);
+  --fc-highlight-color: color-mix(in srgb, var(--color-gold) 18%, transparent);
+  --fc-now-indicator-color: #f87171;
+  --fc-non-business-color: color-mix(in srgb, var(--color-gold) 4%, transparent);
+  --fc-more-link-bg-color: color-mix(in srgb, var(--color-gold) 16%, transparent);
+  --fc-more-link-text-color: var(--color-gold);
+  --fc-list-event-hover-bg-color: color-mix(in srgb, var(--color-gold) 10%, transparent);
+
+  color: inherit;
+  font-family: var(--font-body);
+}
+
+/* ── 工具列 ───────────────────────────────────────────── */
+.gcal-shell .fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+.gcal-shell .fc .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--color-gold);
+}
+.gcal-shell .fc .fc-button {
+  border-radius: 0.5rem;
+  padding: 0.38em 0.8em;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  box-shadow: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.gcal-shell .fc .fc-button:focus,
+.gcal-shell .fc .fc-button:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-gold) 30%, transparent);
+  outline: none;
+}
+.gcal-shell .fc .fc-button-primary:disabled {
+  opacity: 0.4;
+  background-color: var(--fc-button-bg-color);
+  border-color: var(--fc-button-border-color);
+  color: var(--fc-button-text-color);
+}
+.gcal-shell .fc .fc-button-group > .fc-button:not(:first-child) {
+  margin-left: -1px;
+}
+
+/* ── 格線與表頭 ───────────────────────────────────────── */
+.gcal-shell .fc .fc-col-header-cell {
+  background: color-mix(in srgb, var(--color-gold) 5%, transparent);
+  font-weight: 500;
+}
+.gcal-shell .fc .fc-col-header-cell-cushion,
+.gcal-shell .fc .fc-daygrid-day-number,
+.gcal-shell .fc .fc-timegrid-axis-cushion,
+.gcal-shell .fc .fc-timegrid-slot-label-cushion {
+  color: var(--color-muted);
+  text-decoration: none;
+  font-size: 0.78rem;
+}
+.gcal-shell .fc .fc-day-today .fc-daygrid-day-number,
+.gcal-shell .fc .fc-day-today .fc-col-header-cell-cushion {
+  color: var(--color-gold);
+  font-weight: 600;
+}
+.gcal-shell .fc .fc-day-other .fc-daygrid-day-number {
+  opacity: 0.4;
+}
+/* 週末稍微壓暗，一眼分得出工作日 */
+.gcal-shell .fc .fc-day-sat,
+.gcal-shell .fc .fc-day-sun {
+  background: color-mix(in srgb, var(--color-gold) 3%, transparent);
+}
+.gcal-shell .fc .fc-scrollgrid,
+.gcal-shell .fc .fc-scrollgrid-section > * {
+  border-color: var(--fc-border-color);
+}
+.gcal-shell .fc .fc-daygrid-day-frame {
+  min-height: 5.5rem;
+}
+
+/* ── 事件本體 ─────────────────────────────────────────── */
+.gcal-shell .fc .fc-event {
+  border-radius: 0.35rem;
+  border-width: 1px;
+  padding: 1px 2px;
+  cursor: pointer;
+  font-size: 0.76rem;
+}
+.gcal-shell .fc .fc-event:hover {
+  background-color: color-mix(in srgb, var(--color-gold) 28%, transparent);
+}
+.gcal-shell .fc .fc-daygrid-dot-event {
+  background: color-mix(in srgb, var(--color-gold) 10%, transparent);
+}
+.gcal-shell .fc .fc-daygrid-event-dot {
+  border-color: var(--color-gold);
+}
+.gcal-shell .fc .fc-event-title,
+.gcal-shell .fc .fc-event-time {
+  font-weight: 400;
+}
+
+/* 會員預約：金色實線外框 + 左側粗邊，跟一般活動一眼分得開 */
+.gcal-shell .fc .gcal-booking-event {
+  background-color: color-mix(in srgb, var(--color-gold) 26%, transparent);
+  border-color: var(--color-gold);
+  border-left-width: 3px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-gold) 35%, transparent);
+}
+.gcal-shell .fc .gcal-booking-event:hover {
+  background-color: color-mix(in srgb, var(--color-gold) 38%, transparent);
+}
+
+/* 事件內容排版（eventContent 自訂渲染用） */
+.gcal-event-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.gcal-event-inner .gcal-event-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gcal-event-badge {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: var(--color-gold);
+  color: #14100a;
+  font-weight: 600;
+}
+
+/* ── 週/日視圖 ────────────────────────────────────────── */
+.gcal-shell .fc .fc-timegrid-slot {
+  height: 2.1em;
+}
+.gcal-shell .fc .fc-timegrid-now-indicator-arrow,
+.gcal-shell .fc .fc-timegrid-now-indicator-line {
+  border-color: var(--fc-now-indicator-color);
+}
+
+/* ── 列表視圖（手機預設） ─────────────────────────────── */
+.gcal-shell .fc .fc-list {
+  border-color: var(--fc-border-color);
+}
+.gcal-shell .fc .fc-list-day-cushion {
+  background: color-mix(in srgb, var(--color-gold) 8%, transparent);
+}
+.gcal-shell .fc .fc-list-day-text,
+.gcal-shell .fc .fc-list-day-side-text {
+  color: var(--color-gold);
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+.gcal-shell .fc .fc-list-event td {
+  cursor: pointer;
+  font-size: 0.84rem;
+}
+.gcal-shell .fc .fc-list-event-dot {
+  border-color: var(--color-gold);
+}
+.gcal-shell .fc .fc-list-empty {
+  background: transparent;
+  color: var(--color-muted);
+}
+
+/* ── 載入遮罩 ─────────────────────────────────────────
+   刻意不用 Tailwind 的 `bg-luxe-surface/70`：luxe 的透明度變體是
+   index.css 手列的白名單（gold 才有 /5…/30），surface 沒有 /70，
+   寫了會靜默失效變成透明。這裡直接用 token 做 color-mix，
+   深淺主題都跟著 --color-surface 走。 */
+.gcal-loading-overlay {
+  /* 每次換月都會重抓，遮罩太重會一直閃 —— 壓到剛好蓋住舊資料又看得見版面 */
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  backdrop-filter: blur(1px);
+}
+
+/* ── 手機 ─────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .gcal-shell .fc .fc-toolbar {
+    justify-content: center;
+    row-gap: 0.5rem;
+  }
+  .gcal-shell .fc .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    flex: 1 1 auto;
+  }
+  .gcal-shell .fc .fc-toolbar-title {
+    font-size: 0.95rem;
+  }
+  .gcal-shell .fc .fc-button {
+    padding: 0.32em 0.6em;
+    font-size: 0.72rem;
+  }
+  .gcal-shell .fc .fc-daygrid-day-frame {
+    min-height: 3.6rem;
+  }
+}
+
+/* ── 淺色主題：金色對白底對比不足，字改用 gold-dim ────── */
+[data-theme="studio-light"] .gcal-shell {
+  --fc-button-text-color: var(--color-gold-dim);
+  --fc-button-border-color: color-mix(in srgb, var(--color-gold-dim) 30%, transparent);
+  --fc-button-hover-border-color: color-mix(in srgb, var(--color-gold-dim) 55%, transparent);
+  --fc-button-active-border-color: var(--color-gold-dim);
+  --fc-border-color: rgba(0, 0, 0, 0.12);
+  --fc-more-link-text-color: var(--color-gold-dim);
+}
+[data-theme="studio-light"] .gcal-shell .fc .fc-toolbar-title,
+[data-theme="studio-light"] .gcal-shell .fc .fc-list-day-text,
+[data-theme="studio-light"] .gcal-shell .fc .fc-list-day-side-text,
+[data-theme="studio-light"] .gcal-shell .fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--color-gold-dim);
+}
+[data-theme="studio-light"] .gcal-event-badge {
+  background: var(--color-gold-dim);
+  color: #fff;
+}
