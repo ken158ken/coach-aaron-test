@@ -211,6 +211,34 @@
   }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+  /**
+   * 後台側邊欄選單的細捲軸。
+   *
+   * 側邊欄項目 14 條約需 865px，1280×800 這種常見視窗只給得起 634px，
+   * 末端幾條（意見反饋／表單報名／匯出／Google 日曆）一定被截掉。
+   * 系統預設的 overlay 捲軸在深色 surface 上幾乎看不見，使用者根本
+   * 不知道「這裡可以捲」——所以給它一條低調但看得到的金色捲軸。
+   *
+   * ⚠️ 不要在這裡加 `overscroll-behavior: contain`。
+   *    Lenis（allowNestedScroll）靠 overscroll-behavior:auto 判斷
+   *    「捲到底了就把捲動權交還給頁面」；改成 contain 會切斷捲動鏈，
+   *    變成滑鼠停在側邊欄時整頁捲不動。
+   */
+  /* 只用標準屬性，不寫 ::-webkit-scrollbar：
+     daisyUI 已經在 root 設了會繼承的 scrollbar-color，只要元素上有
+     scrollbar-color / scrollbar-width，Chromium 就整組忽略 ::-webkit-scrollbar
+     （實測 chromium 133：webkit 那組完全不生效）。標準屬性 Chromium 121+ /
+     Firefox / Safari 18.2+ 都吃，一份就夠。 */
+  .admin-nav-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(197, 160, 89, 0.55) transparent;
+  }
+  /* 淺色後台：surface 是 #ece9e4，#c5a059 幾乎看不見，
+     沿用 tour-fab 的做法改用 --color-gold-dim (#8a6030)。 */
+  [data-theme="studio-light"] .admin-nav-scroll {
+    scrollbar-color: rgba(138, 96, 48, 0.55) transparent;
+  }
 }
 
 @layer components {

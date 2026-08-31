@@ -41,6 +41,31 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           wheelMultiplier: 1,
           touchMultiplier: 2,
           infinite: false,
+          /*
+           * ⚠️ 內層捲動容器（必開）
+           *
+           * Lenis 是掛在 window 上的 `wheel` 監聽（passive:false）：預設它會對
+           * 「頁面上任何位置」的滾輪事件 preventDefault()，然後改捲 window。
+           * 結果是全站所有 `overflow-y:auto` 的內層容器 —— 後台側邊欄選單、
+           * modal 內容區、聊天訊息列 —— 通通吃不到滾輪，等於那些 CSS 是死的。
+           *
+           * 實測（2026-08-31，正式站 /admin）：側邊欄 nav 需要 865px 但只有
+           * 634px（1280×800），末端 4 個項目（意見反饋／表單報名／匯出／
+           * Google 日曆）滾輪完全捲不到 —— 這就是業主回報的「滑鼠在左邊
+           * 滑不下來」。commit 1912234 把 nav 改成正規 flex 捲動區是對的，
+           * 但只要 Lenis 還在攔截滾輪，那個 CSS 就永遠不會生效。
+           *
+           * allowNestedScroll 讓 Lenis 每次滾輪都先問 hasNestedScroll()：
+           *   - 游標下的容器「這個方向還捲得動」→ Lenis 放手，交給瀏覽器原生捲
+           *   - 已經到底／根本不能捲        → Lenis 接手捲頁面
+           * 所以側邊欄捲到底之後，繼續滾仍然會帶動整頁，兩種行為都保住。
+           *
+           * ⚠️ 內層容器若設 `overscroll-behavior: contain`（例如 .modal-scroll），
+           *    到底時 Lenis 會刻意「不」接手 —— 那是 contain 的語意（切斷捲動鏈），
+           *    modal 要的正是這個。但一般的內層容器請維持 overscroll-behavior:auto，
+           *    否則捲到底就再也交不回頁面，會重演這次的 bug。
+           */
+          allowNestedScroll: true,
         });
 
         lenisRef.current = lenis;

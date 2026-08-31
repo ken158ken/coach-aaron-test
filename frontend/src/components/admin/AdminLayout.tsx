@@ -57,13 +57,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ className = "" }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, [handleResize]);
 
-  // Top Bar scroll glow — 偵測主內容區捲動
+  /*
+   * Top Bar scroll glow
+   *
+   * 後台沒有內層捲動容器：<main> 是 overflow:visible，真正在捲的是文件本身
+   * （root div 只有 min-h-screen，內容撐高就由 body/html 捲）。原本這裡監聽
+   * `main` 的 scroll 事件、讀 `main.scrollTop` —— 那個值恆為 0，事件也永遠
+   * 不會觸發，等於整個發光邊框從來沒亮過。改監聽 window。
+   *
+   * 註：Lenis 是用 window.scrollTo 實作平滑捲動，原生 scroll 事件照常發出，
+   * 所以這個監聽在 Lenis 環境下也收得到。
+   */
   useEffect(() => {
-    const mainEl = document.querySelector("main");
-    if (!mainEl) return;
-    const handleScroll = () => setScrolled(mainEl.scrollTop > 8);
-    mainEl.addEventListener("scroll", handleScroll, { passive: true });
-    return () => mainEl.removeEventListener("scroll", handleScroll);
+    const handleScroll = () =>
+      setScrolled((window.scrollY || document.documentElement.scrollTop) > 8);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   /**

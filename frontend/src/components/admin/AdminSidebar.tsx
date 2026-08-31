@@ -428,8 +428,20 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         )}
       </div>
 
-      {/* Navigation — 中間彈性區，只有這裡在項目過多時才捲動（不再用魔術數字 max-h） */}
-      <nav className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-3">
+      {/*
+        Navigation — 中間彈性區，只有這裡在項目過多時才捲動（不再用魔術數字 max-h）
+
+        ⚠️ 這塊的滾輪能不能動，不是只看這裡的 CSS：
+        全站掛著 Lenis 平滑捲動（components/layout/SmoothScroll.tsx），它是 window
+        上的 wheel 監聽，預設會把整頁的滾輪事件全部 preventDefault 掉。所以在
+        `allowNestedScroll: true` 之前，這個 overflow-y-auto 是死的 —— 側邊欄
+        永遠捲不動，末端項目（意見反饋／表單報名／匯出／Google 日曆）在 800px
+        高的視窗完全點不到。改這塊的捲動行為前請先看 SmoothScroll.tsx 的註解。
+
+        overscroll-behavior 維持預設 auto：Lenis 靠它判斷「側邊欄捲到底了 →
+        把捲動權交還給頁面」。設成 contain 會讓滑鼠停在側邊欄時整頁捲不動。
+      */}
+      <nav className="admin-nav-scroll flex-1 min-h-0 overflow-y-auto p-2 sm:p-3">
         <ul className="space-y-1">
           {navItems.map((item) => (
             <li key={item.path} className="relative">
