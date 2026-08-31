@@ -1,0 +1,114 @@
+/**
+ * 筆記本編輯器畫布 —— 紙面感
+ *
+ * 只被 `NoteBlockEditor.tsx`（client-only 的 lazy chunk）import，
+ * 所以 Vite 會把它切成跟著 vendor-notes 一起載入的 async CSS，
+ * 不會進 index.html 的首屏樣式。
+ *
+ * BlockNote 的顏色全走 CSS 變數，預設值定義在：
+ *   .bn-root                              → 淺色
+ *   .bn-root[data-color-scheme="dark"]    → 深色
+ * 這裡用 `.notes-canvas.bn-root`（兩個 class）提高特異性覆寫，
+ * 並改用站內 studio/luxe 的色票，讓深淺主題都跟頁面外框一致。
+ *
+ * ⚠️ 不要把顏色寫死在 `.bn-*` 的元素規則上 —— BlockNote 每次改版都可能換
+ *    class 名；改變數才是它公開的擴充點。
+ */
+
+/* ── 淺色：米白紙面 ───────────────────────────────────── */
+.notes-canvas.bn-root {
+  --bn-colors-editor-text: #2b2723;
+  --bn-colors-editor-background: #fdfbf7;
+  --bn-colors-menu-text: #2b2723;
+  --bn-colors-menu-background: #ffffff;
+  --bn-colors-tooltip-text: #2b2723;
+  --bn-colors-tooltip-background: #f1ece3;
+  --bn-colors-hovered-text: #2b2723;
+  --bn-colors-hovered-background: #f1ece3;
+  --bn-colors-selected-text: #ffffff;
+  --bn-colors-selected-background: #8a6030; /* --color-gold-dim：淺底對比足夠 */
+  --bn-colors-disabled-text: #b3aca3;
+  --bn-colors-disabled-background: #f4f1ec;
+  --bn-colors-shadow: rgba(40, 32, 22, 0.16);
+  --bn-colors-border: #e6dfd4;
+  --bn-colors-side-menu: #b9b0a3;
+  --bn-border-radius: 6px;
+  --bn-font-family: var(--font-body, "Noto Sans TC", sans-serif);
+}
+
+/* ── 深色：墨色紙面（比頁面 surface 再暗一階，做出「紙」的層次）── */
+.notes-canvas.bn-root[data-color-scheme="dark"] {
+  --bn-colors-editor-text: #e8e4dc;
+  --bn-colors-editor-background: #16150f;
+  --bn-colors-menu-text: #e8e4dc;
+  --bn-colors-menu-background: #1e1e1e;
+  --bn-colors-tooltip-text: #e8e4dc;
+  --bn-colors-tooltip-background: #262523;
+  --bn-colors-hovered-text: #ffffff;
+  --bn-colors-hovered-background: #2a2724;
+  --bn-colors-selected-text: #14110c;
+  --bn-colors-selected-background: #c5a059; /* --color-gold */
+  --bn-colors-disabled-text: #6b665e;
+  --bn-colors-disabled-background: #232220;
+  --bn-colors-shadow: rgba(0, 0, 0, 0.6);
+  --bn-colors-border: rgba(197, 160, 89, 0.18);
+  --bn-colors-side-menu: #6f6a61;
+  --bn-border-radius: 6px;
+  --bn-font-family: var(--font-body, "Noto Sans TC", sans-serif);
+}
+
+/*
+ * ── 紙張本體 ──────────────────────────────────────────
+ *
+ * ⚠️ 一定要加 `.bn-container`：`@blocknote/mantine` 會把我們給的 className
+ *    同時掛到「編輯器容器」與「選單用的 portal 容器」兩個節點上
+ *    （兩者都有 .bn-root .bn-mantine，只有前者有 .bn-container）。
+ *    少了這個限定詞，portal 也會長出一張同樣大小的空白紙，畫面上會出現
+ *    第二個看起來像壞掉的空白方框 —— 實測踩過。
+ *    上面的 CSS 變數區塊則刻意**不**限定，因為浮出的工具列／選單是在
+ *    portal 裡渲染的，配色變數兩邊都要拿得到。
+ */
+.notes-canvas.bn-container {
+  background-color: var(--bn-colors-editor-background);
+  border: 1px solid var(--bn-colors-border);
+  border-radius: 4px;
+  /* 「紙墊在桌面上」的柔和投影，深淺主題共用（陰影色走變數） */
+  box-shadow: 0 1px 2px var(--bn-colors-shadow);
+  min-height: 60vh;
+  padding: 1.5rem 0.25rem 4rem;
+}
+
+@media (min-width: 640px) {
+  .notes-canvas.bn-container {
+    padding: 2.5rem 0.5rem 5rem;
+  }
+}
+
+/*
+ * BlockNote 預設把整份文件寬度撐滿容器。長行不好讀，這裡收成一欄書頁寬
+ * （約 42em），左右留白給 side menu（拖曳點／＋號）站位——留白不夠時
+ * 那兩顆鈕會被裁掉，手機上尤其明顯。
+ */
+.notes-canvas .bn-editor {
+  max-width: 42rem;
+  margin-inline: auto;
+  padding-inline: 3rem;
+}
+
+@media (max-width: 640px) {
+  .notes-canvas .bn-editor {
+    padding-inline: 2.25rem;
+  }
+}
+
+/* 標題用站內 display 字體，與整站標題一致 */
+.notes-canvas [data-content-type="heading"] {
+  font-family: var(--font-display, serif);
+  letter-spacing: 0.01em;
+}
+
+/* 唯讀（衝突／載入中）狀態：整張紙降飽和，明確表達「現在不能打字」 */
+.notes-canvas.bn-container[data-readonly="true"] {
+  opacity: 0.72;
+  filter: saturate(0.85);
+}

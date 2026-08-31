@@ -1,13 +1,53 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+
+/**
+ * SSR 建置時把 BlockNote 編輯器換成空殼。
+ *
+ * SSR 分支用 `inlineDynamicImports: true`，會把
+ * `React.lazy(() => import("./NoteBlockEditor"))` 攤平成靜態 import ——
+ * 於是 @blocknote + @mantine + emoji-mart（未壓縮約 3 MB）會在
+ * `require("entry-server.cjs")` 當下就執行，即使訪客根本沒去 /notes。
+ * 除了體積與冷啟動，更麻煩的是風險面：BlockNote 只要有一版開始在
+ * module scope 摸 `document`，掛掉的就是**整站 SSR** 而不只是筆記本頁。
+ *
+ * 換成空殼不影響行為 —— `PageEditor` 有 `mounted` gate，伺服器端本來就
+ * 只會吐 Suspense fallback，編輯器一律等到瀏覽器 hydrate 後才載入。
+ *
+ * ⚠️ 只在 SSR 建置掛這顆 plugin；client 建置必須拿到真的編輯器。
+ */
+function ssrStubNoteEditor(rootDir: string): Plugin {
+  const stub = path.resolve(
+    rootDir,
+    "src/components/notes/NoteBlockEditor.ssr-stub.tsx",
+  );
+  return {
+    name: "ssr-stub-note-editor",
+    enforce: "pre",
+    resolveId(source, importer) {
+      if (
+        source === "./NoteBlockEditor" &&
+        importer &&
+        importer.includes(`components${path.sep}notes${path.sep}`)
+      ) {
+        return stub;
+      }
+      return null;
+    },
+  };
+}
 
 export default defineConfig(({ command, isSsrBuild }) => {
   const isDevServer = command === "serve";
 
   return {
-    plugins: [tailwindcss(), react()],
+    plugins: [
+      tailwindcss(),
+      react(),
+      ...(isSsrBuild ? [ssrStubNoteEditor(__dirname)] : []),
+    ],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -59,6 +99,23 @@ export default defineConfig(({ command, isSsrBuild }) => {
                * 兩者要一起做：只切 lazy 不分組，vendor 會被重複打進多個 chunk。
                */
               manualChunks(id: string) {
+                /*
+                 * Vite 的執行期 helper（虛擬模組，id 開頭是 \0，不含
+                 * node_modules）—— 必須明確釘在共用 chunk。
+                 *
+                 * ⚠️ 這條看似多餘，其實是踩過的坑：不釘的話它由 rollup 的
+                 *    預設分組決定落點，而落點會隨「有幾個 manual chunk」浮動。
+                 *    加入 vendor-notes 之後，`preload-helper` 就被丟進
+                 *    vendor-notes —— 而 main 需要這顆 helper，於是 main 變成
+                 *    **靜態** import vendor-notes，index.html 直接 preload 了
+                 *    整包 BlockNote（500 KB）給每一位前台訪客，連帶把
+                 *    vendor-editor 也拖成首屏 preload。釘死在 vendor-misc
+                 *    （本來就是 preload 的共用 chunk）才不會再飄。
+                 */
+                if (id.includes("vite/preload-helper") ||
+                    id.includes("vite/modulepreload-polyfill"))
+                  return "vendor-misc";
+
                 if (!id.includes("node_modules")) return;
 
                 // React 核心：版本最穩定，快取命中率最高
@@ -66,6 +123,45 @@ export default defineConfig(({ command, isSsrBuild }) => {
                   return "vendor-react";
                 if (id.includes("react-router") || id.includes("@remix-run"))
                   return "vendor-router";
+
+                /*
+                 * 客戶筆記本編輯器（BlockNote + Mantine）：只有 /admin/notes
+                 * 與 /notes 用得到，約 1 MB，由 PageEditor 的 React.lazy
+                 * 動態載入 → 純 async chunk，前台訪客不會下載。
+                 *
+                 * ⚠️ 這條**必須排在下面 `@tiptap` 那條之前**：
+                 *    @blocknote/core 依賴 @tiptap/core ^3.29，npm 有可能把它
+                 *    巢狀裝在 `node_modules/@blocknote/core/node_modules/@tiptap/…`
+                 *    ——那種模組 id 同時含 "@blocknote" 與 "@tiptap"。順序反過來
+                 *    的話整包 BlockNote 會被吸進 vendor-editor（後台富文本用的
+                 *    chunk），把它從 ~660 KB 撐成 1.6 MB，而且會被 AdminCourses /
+                 *    ArticleEditor 這些頁面一起拉下來。
+                 *
+                 * ⚠️ @mantine/* 也要一起切：`@blocknote/mantine` 把 Mantine 列為
+                 *    peerDependency（模組 id 不含 "@blocknote"），漏掉的話約
+                 *    400 KB 會掉進 vendor-misc —— 那是 index.html 直接 preload
+                 *    的共用 chunk。全站只有 BlockNote 依賴 Mantine
+                 *    （`npm ls @mantine/core` 可驗）。
+                 *
+                 * ⚠️ 下面那串「間接相依」同理，而且是實測抓出來的：只切兩個
+                 *    scope 的話，emoji-mart 的表情資料（約 500 KB！）等
+                 *    傳遞相依會落進 vendor-misc，等於每位前台訪客都下載一份
+                 *    emoji 資料庫。名單全部用 `npm ls <pkg>` 驗過「只有
+                 *    @blocknote/* 或 @mantine/* 依賴它」——
+                 *    刻意排除 use-sync-external-store / fast-equals /
+                 *    orderedmap / w3c-keyname 等，那些 @tiptap 也在用，
+                 *    移走會把後台富文本編輯器的相依也一起拖進來。
+                 *    日後升級 BlockNote 若又長出新的傳遞相依，用
+                 *    `vite.config` 同款分析（比對 vendor-misc 大小）再補。
+                 */
+                if (
+                  id.includes("@blocknote") ||
+                  id.includes("@mantine") ||
+                  /[\\/]node_modules[\\/](@emoji-mart[\\/]data|emoji-mart|lib0|fast-deep-equal|tabbable|clsx|@floating-ui[\\/]react|@floating-ui[\\/]react-dom|react-remove-scroll|react-remove-scroll-bar|react-style-singleton|use-sidecar|use-callback-ref|get-nonce|detect-node-es|react-number-format|react-textarea-autosize|use-latest|use-composed-ref|use-isomorphic-layout-effect)[\\/]/.test(
+                    id,
+                  )
+                )
+                  return "vendor-notes";
 
                 // 富文本編輯器：純後台，必須與前台隔離
                 if (

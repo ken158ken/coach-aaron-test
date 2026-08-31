@@ -68,6 +68,7 @@ const MyBookingsPage = lazy(() => import("@/pages/MyBookingsPage"));
 const CoachDashboard = lazy(() => import("@/pages/coach/CoachDashboard"));
 const ChatPage = lazy(() => import("@/pages/Chat"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const Notes = lazy(() => import("@/pages/Notes")); // → BlockNote（再往下一層 lazy）
 
 // 後台（訪客 100% 用不到）
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
@@ -84,6 +85,7 @@ const AdminLeads = lazy(() => import("@/pages/admin/AdminLeads"));
 const AdminArticles = lazy(() => import("@/pages/admin/AdminArticles")); // → tiptap
 const AdminExport = lazy(() => import("@/pages/admin/AdminExport"));
 const AdminGoogleCalendar = lazy(() => import("@/pages/admin/AdminGoogleCalendar"));
+const AdminNotes = lazy(() => import("@/pages/admin/AdminNotes")); // → BlockNote（再往下一層 lazy）
 const LandingPageManager = lazy(() => import("@/pages/admin/LandingPageManager"));
 const LandingPageNew = lazy(() => import("@/pages/admin/LandingPageNew"));
 
@@ -272,6 +274,14 @@ function App(): JSX.Element {
                       </RequireAuth>
                     }
                   />
+                  <Route
+                    path="notes"
+                    element={
+                      <RequireAuth>
+                        <Notes />
+                      </RequireAuth>
+                    }
+                  />
                 </Route>
 
                 {/* Landing Page 公開預覽（不套 Layout，獨立全頁） */}
@@ -300,6 +310,7 @@ function App(): JSX.Element {
                   <Route path="leads" element={<AdminLeads />} />
                   <Route path="export" element={<AdminExport />} />
                   <Route path="google-calendar" element={<AdminGoogleCalendar />} />
+                  <Route path="notes" element={<AdminNotes />} />
                 </Route>
 
                 {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}

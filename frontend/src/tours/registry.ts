@@ -51,6 +51,7 @@ const ENTRIES: TourEntry[] = [
     pattern: "/admin/google-calendar",
     load: () => import("./pages/adminGoogleCalendar.tour"),
   },
+  { pattern: "/admin/notes", load: () => import("./pages/adminNotes.tour") },
 
   // ── 管理後台（獨立全頁編輯器） ────────────────────────
   {
@@ -89,6 +90,7 @@ const ENTRIES: TourEntry[] = [
     pattern: "/notifications",
     load: () => import("./pages/memberNotifications.tour"),
   },
+  { pattern: "/notes", load: () => import("./pages/memberNotes.tour") },
   { pattern: "/coach", load: () => import("./pages/coachDashboard.tour") },
 ];
 

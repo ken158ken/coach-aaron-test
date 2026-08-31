@@ -669,6 +669,102 @@ export interface MemberExtraTranslations {
       deleteFailed: string;
     };
   };
+  /**
+   * 客戶筆記本（`/notes` 與 `/admin/notes` 共用）。
+   *
+   * 收在 memberExtra 而不是 adminExtra，是因為 `components/notes/*` 是
+   * **兩邊共用的元件**：教練與客戶看到的是同一套樹與同一顆編輯器，
+   * 只有角色（owner / client）不同。字典若拆兩份，共用元件就得跨 namespace
+   * 取字，改一邊必忘另一邊。adminExtra 只留 admin 專屬的頁面外框文案。
+   */
+  notes: {
+    /** 會員頁 `<title>`（noindex，純粹給瀏覽器分頁看） */
+    seoTitle: string;
+    heading: string;
+    subtitle: string;
+    loadFailed: string;
+    retry: string;
+    /** 039 migration 未貼時的「尚未啟用」畫面 */
+    unavailableTitle: string;
+    unavailableBody: string;
+    listEmptyOwner: string;
+    listEmptyClient: string;
+    cardCourse: string;
+    cardClient: string;
+    cardUpdated: string;
+    /** owner 專屬：建立筆記本彈窗 */
+    create: {
+      button: string;
+      title: string;
+      clientLabel: string;
+      clientSearch: string;
+      clientEmpty: string;
+      courseLabel: string;
+      coursePlaceholder: string;
+      titleLabel: string;
+      titlePlaceholder: string;
+      grantLabel: string;
+      grantHint: string;
+      submit: string;
+      submitting: string;
+      errRequired: string;
+      errFailed: string;
+    };
+    /** owner 專屬：刪除整本筆記本 */
+    del: {
+      button: string;
+      confirmTitle: string;
+      /** 插值 `{name}` = 筆記本標題 */
+      confirmMessage: string;
+      confirmText: string;
+      failed: string;
+    };
+    backToList: string;
+    pagesHeading: string;
+    openTree: string;
+    closeTree: string;
+    noSelection: string;
+    treeEmpty: string;
+    untitled: string;
+    expand: string;
+    collapse: string;
+    addChild: string;
+    addChildFailed: string;
+    rename: string;
+    renameTitle: string;
+    renameMessage: string;
+    renameFailed: string;
+    moveTo: string;
+    moveTitle: string;
+    /** 插值 `{name}` = 被搬移的頁標題 */
+    moveHint: string;
+    moveCurrentParent: string;
+    moveNoTarget: string;
+    moveFailed: string;
+    deletePage: string;
+    deleteTitle: string;
+    /** 插值 `{name}` = 頁標題 */
+    deleteMessage: string;
+    deleteConfirm: string;
+    deleteFailed: string;
+    titlePlaceholder: string;
+    editorLoading: string;
+    /** 自動儲存狀態指示燈 */
+    saveDirty: string;
+    saving: string;
+    saved: string;
+    saveFailed: string;
+    saveConflict: string;
+    /** 樂觀鎖撞寫（對方先存了）的橫幅 */
+    conflictBody: string;
+    conflictReload: string;
+    /** root database 頁的佔位畫面（下一批換成看板） */
+    dbComingSoon: string;
+    dbAddCard: string;
+    dbEmpty: string;
+    typePage: string;
+    typeDatabase: string;
+  };
 }
 
 const zhTW: MemberExtraTranslations = {
@@ -1306,6 +1402,85 @@ const zhTW: MemberExtraTranslations = {
       editFailed: "編輯失敗，請稍後再試",
       deleteFailed: "刪除失敗，請稍後再試",
     },
+  },
+  notes: {
+    seoTitle: "課程筆記本 | 阿倫教官",
+    heading: "課程筆記本",
+    subtitle: "你和教練共同維護的課程筆記，兩邊都能編輯",
+    loadFailed: "載入失敗，請稍後再試",
+    retry: "重試",
+    unavailableTitle: "筆記本尚未啟用",
+    unavailableBody:
+      "資料表還沒建立。請先到 Supabase Dashboard 執行 database/migrations/039_client_notes.sql，再回來重新整理。",
+    listEmptyOwner: "還沒有任何筆記本，按右上角「建立筆記本」開始。",
+    listEmptyClient: "教練還沒為你建立筆記本。",
+    cardCourse: "課程",
+    cardClient: "客戶",
+    cardUpdated: "更新於 ",
+    create: {
+      button: "建立筆記本",
+      title: "建立客戶筆記本",
+      clientLabel: "客戶",
+      clientSearch: "搜尋姓名或 Email…",
+      clientEmpty: "找不到符合的會員",
+      courseLabel: "課程",
+      coursePlaceholder: "請選擇課程",
+      titleLabel: "筆記本名稱",
+      titlePlaceholder: "例如：2026 春季增肌計畫",
+      grantLabel: "順便開通這門課的授權",
+      grantHint: "沒有課程授權的話，客戶在自己的頁面看不到這本筆記本。",
+      submit: "建立",
+      submitting: "建立中…",
+      errRequired: "客戶、課程與名稱都要填。",
+      errFailed: "建立失敗，請稍後再試",
+    },
+    del: {
+      button: "刪除",
+      confirmTitle: "刪除筆記本",
+      confirmMessage: "確定要刪除「{name}」嗎？客戶將立刻看不到這本筆記本。",
+      confirmText: "刪除",
+      failed: "刪除失敗，請稍後再試",
+    },
+    backToList: "回到筆記本列表",
+    pagesHeading: "頁面",
+    openTree: "目錄",
+    closeTree: "關閉目錄",
+    noSelection: "請從左側選一頁開始。",
+    treeEmpty: "這本筆記本還沒有任何頁面。",
+    untitled: "未命名頁面",
+    expand: "展開",
+    collapse: "收合",
+    addChild: "新增子頁",
+    addChildFailed: "新增子頁失敗",
+    rename: "重新命名",
+    renameTitle: "重新命名頁面",
+    renameMessage: "輸入新的頁面名稱",
+    renameFailed: "重新命名失敗",
+    moveTo: "移動到…",
+    moveTitle: "移動頁面",
+    moveHint: "選一個新的上層頁面來放「{name}」（它的子頁會一起搬過去）。",
+    moveCurrentParent: "目前位置",
+    moveNoTarget: "沒有可以搬過去的頁面。",
+    moveFailed: "搬移失敗",
+    deletePage: "刪除頁面",
+    deleteTitle: "刪除頁面",
+    deleteMessage: "確定要刪除「{name}」嗎？它底下的所有子頁也會一起刪除。",
+    deleteConfirm: "刪除",
+    deleteFailed: "刪除失敗",
+    titlePlaceholder: "未命名頁面",
+    editorLoading: "編輯器載入中…",
+    saveDirty: "尚未儲存",
+    saving: "儲存中…",
+    saved: "已儲存",
+    saveFailed: "儲存失敗",
+    saveConflict: "內容衝突",
+    conflictBody: "內容已被對方更新，請重新載入後再編輯（你剛才的變更尚未存檔）。",
+    conflictReload: "重新載入",
+    dbComingSoon: "分類看板即將推出；目前先以子頁清單呈現。",
+    dbAddCard: "新增子頁",
+    dbEmpty: "還沒有任何子頁。",
+    typePage: "頁面",
+    typeDatabase: "看板",
   },
 };
 
@@ -1961,6 +2136,88 @@ const en: MemberExtraTranslations = {
       editFailed: "Couldn't edit, please try again",
       deleteFailed: "Couldn't delete, please try again",
     },
+  },
+  notes: {
+    seoTitle: "Course notebook | Coach Aaron",
+    heading: "Course notebook",
+    subtitle: "Notes you and your coach keep together — both of you can edit",
+    loadFailed: "Couldn't load, please try again",
+    retry: "Retry",
+    unavailableTitle: "Notebooks aren't set up yet",
+    unavailableBody:
+      "The tables don't exist yet. Run database/migrations/039_client_notes.sql in the Supabase Dashboard, then reload this page.",
+    listEmptyOwner: "No notebooks yet — hit \"New notebook\" to create the first one.",
+    listEmptyClient: "Your coach hasn't set up a notebook for you yet.",
+    cardCourse: "Course",
+    cardClient: "Client",
+    cardUpdated: "Updated ",
+    create: {
+      button: "New notebook",
+      title: "New client notebook",
+      clientLabel: "Client",
+      clientSearch: "Search by name or email…",
+      clientEmpty: "No matching members",
+      courseLabel: "Course",
+      coursePlaceholder: "Pick a course",
+      titleLabel: "Notebook name",
+      titlePlaceholder: "e.g. Spring 2026 hypertrophy block",
+      grantLabel: "Also grant access to this course",
+      grantHint:
+        "Without course access, the client won't see this notebook on their side.",
+      submit: "Create",
+      submitting: "Creating…",
+      errRequired: "Client, course and name are all required.",
+      errFailed: "Couldn't create it, please try again",
+    },
+    del: {
+      button: "Delete",
+      confirmTitle: "Delete notebook",
+      confirmMessage:
+        "Delete \"{name}\"? The client will lose access to it immediately.",
+      confirmText: "Delete",
+      failed: "Couldn't delete, please try again",
+    },
+    backToList: "Back to notebooks",
+    pagesHeading: "Pages",
+    openTree: "Pages",
+    closeTree: "Close pages",
+    noSelection: "Pick a page on the left to start.",
+    treeEmpty: "This notebook has no pages yet.",
+    untitled: "Untitled page",
+    expand: "Expand",
+    collapse: "Collapse",
+    addChild: "Add sub-page",
+    addChildFailed: "Couldn't add the sub-page",
+    rename: "Rename",
+    renameTitle: "Rename page",
+    renameMessage: "Enter a new page name",
+    renameFailed: "Couldn't rename it",
+    moveTo: "Move to…",
+    moveTitle: "Move page",
+    moveHint: "Pick a new parent for \"{name}\" — its sub-pages move with it.",
+    moveCurrentParent: "Current",
+    moveNoTarget: "Nowhere to move it to.",
+    moveFailed: "Couldn't move it",
+    deletePage: "Delete page",
+    deleteTitle: "Delete page",
+    deleteMessage: "Delete \"{name}\"? Every sub-page under it goes too.",
+    deleteConfirm: "Delete",
+    deleteFailed: "Couldn't delete it",
+    titlePlaceholder: "Untitled page",
+    editorLoading: "Loading editor…",
+    saveDirty: "Unsaved",
+    saving: "Saving…",
+    saved: "Saved",
+    saveFailed: "Save failed",
+    saveConflict: "Conflict",
+    conflictBody:
+      "The other side updated this page, so your latest edits weren't saved. Reload to continue from their version.",
+    conflictReload: "Reload",
+    dbComingSoon: "The category board is coming soon — sub-pages are listed for now.",
+    dbAddCard: "Add sub-page",
+    dbEmpty: "No sub-pages yet.",
+    typePage: "Page",
+    typeDatabase: "Board",
   },
 };
 

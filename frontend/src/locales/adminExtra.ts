@@ -1313,6 +1313,7 @@ const zhTW = {
     navContent: "內容管理",
     navWhispers: "悄悄話",
     navGoogleCalendar: "Google 日曆",
+    navNotes: "客戶筆記本",
     previewTitle: "預覽文章",
     previewSubtitle: "確認排版後再發布",
     previewUntitled: "未輸入標題",
@@ -1612,6 +1613,16 @@ const zhTW = {
       noteFailed: "儲存備註失敗，請稍後再試",
       deleteFailed: "刪除失敗，請稍後再試",
     },
+  },
+  /**
+   * 客戶筆記本後台 `/admin/notes` 的**頁面外框**文案。
+   *
+   * 工作區本身（樹、編輯器、彈窗）與 `/notes` 共用元件，那些字在
+   * `memberExtra.notes`；這裡只有教練視角才看得到的標題與說明。
+   */
+  adminNotesPage: {
+    heading: "客戶筆記本",
+    subtitle: "與買了課程的客戶共同編輯的筆記；你和客戶看到的是同一本。",
   },
 };
 
@@ -2813,6 +2824,7 @@ const en: AdminExtraTranslations = {
     navContent: "Content",
     navWhispers: "Whispers",
     navGoogleCalendar: "Google Calendar",
+    navNotes: "Client notebooks",
     previewTitle: "Preview article",
     previewSubtitle: "Check the layout before you publish",
     previewUntitled: "Untitled",
@@ -3098,6 +3110,11 @@ const en: AdminExtraTranslations = {
       noteFailed: "Couldn't save note, please try again",
       deleteFailed: "Couldn't delete, please try again",
     },
+  },
+  adminNotesPage: {
+    heading: "Client notebooks",
+    subtitle:
+      "Notes you edit together with clients who bought a course — you both see the same notebook.",
   },
 };
 
