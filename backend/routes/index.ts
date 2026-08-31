@@ -33,6 +33,7 @@ import exportRoutes      from "./export.js";
 import adminExportRoutes from "./adminExport.js";
 import whispersRoutes    from "./whispers.js";
 import feedbackRoutes    from "./feedback.js";
+import notesRoutes       from "./notes.js";
 
 export function registerRoutes(app: Express): void {
   // ── 認證 ──────────────────────────────────────────────
@@ -59,6 +60,9 @@ export function registerRoutes(app: Express): void {
   // ── 預約系統 ──────────────────────────────────────────
   app.use("/api/coach",       coachRoutes);
   app.use("/api/bookings",    bookingRoutes);
+
+  // ── 客戶筆記本（教練×客戶雙人共筆） ──────────────────
+  app.use("/api/notes",       notesRoutes);
 
   // ── 聊天 & 在線狀態 ───────────────────────────────────
   app.use("/api/chat",        chatRoutes);

@@ -28,6 +28,7 @@ export type NotificationType =
   | "booking_rejected"
   | "booking_cancelled"
   | "booking_rescheduled"
+  | "note_shared"
   | "feedback_new"
   | "feedback_reply";
 

@@ -43,8 +43,8 @@ function getRequesterEmail(req: Request): string | null {
   return req.user?.email || null;
 }
 
-/** 檢查該 email 是否為 admin */
-async function isAdminEmail(email: string): Promise<boolean> {
+/** 檢查該 email 是否為 admin（notes 等模組的混合權限判斷也重用） */
+export async function isAdminEmail(email: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from("admin_whitelist")
     .select("email")
