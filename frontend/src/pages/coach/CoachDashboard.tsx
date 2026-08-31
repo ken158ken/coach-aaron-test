@@ -308,6 +308,15 @@ const CoachDashboard: React.FC = () => {
     return null;
   }
 
+  // 權限確認完成前不渲染內容（route 只有 RequireAuth，避免未授權內容閃現）
+  if (accessLoading || !canAccess) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-gold/30 border-t-gold rounded-full animate-spin" aria-label="loading" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 sm:py-12">
       {/* Header */}

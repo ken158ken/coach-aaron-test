@@ -126,10 +126,13 @@ const BookingPage: React.FC = () => {
   }, [user]);
 
   // 有 slot 的天數（醒目顯示）
+  // 刻意用「瀏覽器本地時區的午夜」建 Date：下方比對一律走
+  // format(d, "yyyy-MM-dd")（同為本地時區），字串可無損往返；
+  // 若帶 +08:00 固定時區，非 UTC+8 裝置會整體偏移一天。
   const daysWithSlots = useMemo(() => {
     const set = new Set<string>();
     for (const s of allSlots) set.add(s.localDate);
-    return Array.from(set).map((d) => new Date(`${d}T00:00:00+08:00`));
+    return Array.from(set).map((d) => new Date(`${d}T00:00:00`));
   }, [allSlots]);
 
   // 選中日的時段

@@ -16,6 +16,7 @@
  */
 
 import express, { Request, Response, Router } from "express";
+import { startOfDay, addDays } from "date-fns";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireCoachOrAdmin, getActiveCoach } from "../middleware/coachAuth.js";
@@ -230,8 +231,13 @@ router.post(
         return;
       }
 
-      // 重新驗證 slot 真的可預約（避免前端繞過）
-      const busy = await loadBusyIntervals(ctx.coachId, ctx.google, start, end);
+      // 重新驗證 slot 真的可預約（避免前端繞過）。
+      // busy 撈「整天 ±1 小時」而非只撈該 slot 區間：isSlotAvailable 內部會
+      // 重算整天的 slot，且 buffer 需要看到 slot 邊界外的相鄰忙碌區間——
+      // 只撈 slot 區間會漏掉「結束於 slot 開始前幾分鐘」的既有預約。
+      const dayFrom = new Date(startOfDay(start).getTime() - 3_600_000);
+      const dayTo = new Date(addDays(startOfDay(start), 1).getTime() + 3_600_000);
+      const busy = await loadBusyIntervals(ctx.coachId, ctx.google, dayFrom, dayTo);
       if (!isSlotAvailable(ctx.settings, ctx.rules, busy, start, end)) {
         res.status(409).json({ error: "該時段已不可預約" });
         return;
