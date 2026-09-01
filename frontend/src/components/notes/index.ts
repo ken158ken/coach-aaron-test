@@ -9,8 +9,14 @@
  */
 
 export { default as NotesHome } from "./NotesHome";
+export { default as AdminNotesHome } from "./AdminNotesHome";
+export { default as AdminNotesTree } from "./AdminNotesTree";
 export { default as NotebookList } from "./NotebookList";
+export { default as CreateNotebookModal } from "./CreateNotebookModal";
 export { default as NotesWorkspace } from "./NotesWorkspace";
+export { useNotebookTree } from "./useNotebookTree";
+export type { NotebookTreeController } from "./useNotebookTree";
+export { sortOrderForIndex } from "./sortOrder";
 export { default as PageTree } from "./PageTree";
 export { default as PageEditor } from "./PageEditor";
 export { default as MovePageModal } from "./MovePageModal";

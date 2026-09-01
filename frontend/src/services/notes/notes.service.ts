@@ -56,6 +56,13 @@ export interface NotebookSummary {
   courseTitle: string;
   clientUserId: number;
   clientName: string;
+  /**
+   * 後台樹「同會員內」的排序值（040 欄位）。
+   *
+   * **040_notebook_sort.sql 未貼時為 null** —— 此時後端整段退回 `updated_at`
+   * 排序，前端就照 API 回傳順序渲染即可，不要自己再排一次。
+   */
+  sortOrder: number | null;
   updatedAt: string;
 }
 
@@ -117,6 +124,23 @@ export interface CreateNotebookInput {
   title: string;
 }
 
+/**
+ * 更新筆記本 metadata（僅 owner；`PATCH /api/notes/notebooks/:id`）。
+ *
+ * 三種用途各自對應後台統一樹的一個手勢，可任意組合：
+ *   - `title` —— 節點「改名」
+ *   - `clientUserId` —— **跨會員拖曳＝轉移歸屬**（原會員即刻失去存取）；
+ *     撞 (client, course) 部分唯一索引 → 409「目標會員已有此課程的筆記本」
+ *   - `grantCourse` —— 轉移時順便開通目標會員的課程授權（沒開通就看不到）
+ *   - `sortOrder` —— **同會員內拖曳＝交換排序**；040 未貼時後端回 503
+ */
+export interface UpdateNotebookInput {
+  title?: string;
+  clientUserId?: number;
+  grantCourse?: boolean;
+  sortOrder?: number;
+}
+
 /** 建立子頁的 payload */
 export interface CreatePageInput {
   notebookId: number;
@@ -164,6 +188,17 @@ export const isNotesUnavailable = (err: unknown): boolean =>
   httpStatusOf(err) === 503;
 
 /**
+ * 是不是「筆記本排序欄位還沒建立」（040 migration 未貼）。
+ *
+ * 後端對缺表／缺欄位一律回同一顆 503，訊息裡帶「039/040」字樣；
+ * 排序拖曳是唯一會踩到 040 的路徑，所以只在那裡用這支判斷 ——
+ * UI 要提示「請先執行 040 migration」並把樂觀更新的順序還原。
+ */
+export const isNotebookSortUnavailable = (err: unknown): boolean =>
+  httpStatusOf(err) === 503 &&
+  /040/.test(asHttpError(err).response?.data?.error || "");
+
+/**
  * 是不是樂觀鎖撞寫（對方先存了）。
  * @returns 撞寫時回 `{ currentVersion }`；否則 null
  */
@@ -190,6 +225,25 @@ export const notesService = {
 
   deleteNotebook: (id: number): Promise<{ ok: boolean }> =>
     del<{ ok: boolean }>(`/api/notes/notebooks/${id}`),
+
+  /** 改名／轉移歸屬／同會員內排序（僅 owner）—— 見 `UpdateNotebookInput` */
+  updateNotebook: (
+    id: number,
+    input: UpdateNotebookInput,
+  ): Promise<{
+    id: number;
+    client_user_id: number;
+    course_id: number;
+    title: string;
+    root_page_id: number | null;
+  }> =>
+    patch<{
+      id: number;
+      client_user_id: number;
+      course_id: number;
+      title: string;
+      root_page_id: number | null;
+    }>(`/api/notes/notebooks/${id}`, input),
 
   getTree: (notebookId: number): Promise<NoteTreeResponse> =>
     get<NoteTreeResponse>(`/api/notes/notebooks/${notebookId}/tree`),

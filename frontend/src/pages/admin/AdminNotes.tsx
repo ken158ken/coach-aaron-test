@@ -7,14 +7,18 @@
  * 維護頁面樹與內容；客戶在 `/notes` 看到同一本、同一套編輯器。
  *
  * 頁面本身只負責 luxe 外框與標題，資料與互動都在
- * `components/notes/NotesHome`（與 `/notes` 共用同一支）。
+ * `components/notes/AdminNotesHome`：左側「會員 → 筆記本 → 頁面」三層統一樹
+ * （筆記本可拖曳：跨會員＝轉移歸屬、同會員內＝交換排序），右側工作區。
+ * 會員端 `/notes` 走的是另一支 `NotesHome`（卡片牆），沒有「會員」這一層。
  *
- * 透明度白名單：luxe-gold 只用 index.css 已定義的 /5 /10 /15 /20 /25 /30。
+ * 樹與編輯器沿用 studio 色票（`text-muted`/`border-gold/*`）而非 luxe 專用類，
+ * 因為右側編輯器（BlockNote）本來就吃那組 token，兩邊混用會色差；
+ * 這些 token 在 luxe 版面下同樣有定義，深淺主題都跟著切。
  */
 
 import React from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import NotesHome from "@/components/notes/NotesHome";
+import AdminNotesHome from "@/components/notes/AdminNotesHome";
 
 const AdminNotes: React.FC = () => {
   const { t } = useLanguage();
@@ -30,7 +34,7 @@ const AdminNotes: React.FC = () => {
         </p>
       </header>
 
-      <NotesHome />
+      <AdminNotesHome />
     </div>
   );
 };

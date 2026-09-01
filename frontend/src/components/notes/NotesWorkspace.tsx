@@ -2,284 +2,64 @@
  * 筆記本工作區：左頁面樹 + 右編輯器
  * @module components/notes/NotesWorkspace
  *
- * 教練（/admin/notes）與客戶（/notes）用的是同一支元件 —— 角色由 API 回傳的
- * `role` 決定，不由路由決定。雙人共筆的前提就是兩邊編輯權對等，因此樹的操作
- * （新增／改名／搬移／刪除）兩種角色都給；只有「建立／刪除整本筆記本」是
- * owner 專屬，那些留在 NotebookList。
+ * 教練與客戶用的是同一支元件 —— 角色由 API 回傳的 `role` 決定，不由路由決定。
+ * 雙人共筆的前提就是兩邊編輯權對等，因此樹的操作（新增／改名／搬移／刪除）
+ * 兩種角色都給；只有「建立／刪除整本筆記本」是 owner 專屬。
  *
- * RWD：≥lg 左樹常駐；<lg 收成遮罩抽屜（點頁面後自動收起）。
+ * ## 兩種版面
+ * - **獨立版**（會員端 `/notes`，預設）：自己抓樹、左側常駐頁面樹、
+ *   `<lg` 收成遮罩抽屜、標頭有「返回列表」。行為與重構前完全相同。
+ * - **內嵌版**（後台 `/admin/notes`，`embedded`）：頁面樹已經是外層
+ *   `AdminNotesTree` 統一樹的第三層，這裡**不再畫第二棵樹**，只留標頭與編輯器；
+ *   樹的狀態由外部 `controller` 傳進來，兩邊共用同一份資料源。
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useDialog } from "@/components/ui";
+import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
-import {
-  notesService,
-  isNotesUnavailable,
-  serverMessageOf,
-  type NotePageNode,
-  type NoteTreeResponse,
-} from "@/services/notes/notes.service";
 import PageTree from "./PageTree";
-import PageEditor, { type CreatePageOptions } from "./PageEditor";
+import PageEditor from "./PageEditor";
 import MovePageModal from "./MovePageModal";
+import { useNotebookTree, type NotebookTreeController } from "./useNotebookTree";
 
 export interface NotesWorkspaceProps {
   notebookId: number;
-  /** 回到筆記本列表 */
-  onBack: () => void;
+  /** 回到筆記本列表（獨立版）；內嵌版不給，標頭就不顯示返回鈕 */
+  onBack?: () => void;
+  /**
+   * 內嵌版：頁面樹交給外層統一樹顯示，這裡只留標頭 + 編輯器。
+   * 一定要同時給 `controller`，否則會多抓一次樹。
+   */
+  embedded?: boolean;
+  /** 內嵌版的樹狀態（由 `AdminNotesHome` 的 `useNotebookTree` 提供） */
+  controller?: NotebookTreeController;
+  /** 內嵌版 `<lg` 的「目錄」鈕 → 開外層抽屜 */
+  onOpenTree?: () => void;
 }
 
-const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) => {
+const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({
+  notebookId,
+  onBack,
+  embedded = false,
+  controller,
+  onOpenTree,
+}) => {
   const { t } = useLanguage();
-  const dialog = useDialog();
-
-  const [tree, setTree] = useState<NoteTreeResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [movingPage, setMovingPage] = useState<NotePageNode | null>(null);
-  const [busyId, setBusyId] = useState<number | null>(null);
+
+  /*
+   * hook 不能條件式呼叫：有外部 controller 時傳 null 讓自己這份待命
+   * （不抓、不報錯），再一律用外部那份。
+   */
+  const own = useNotebookTree(controller ? null : notebookId, {
+    onSelect: () => setDrawerOpen(false),
+  });
+  const c = controller ?? own;
 
   /* 手機抽屜：開著時鎖背景捲動 + 吃 Escape（與 admin 側欄同一套行為） */
   useModalBehavior(drawerOpen, () => setDrawerOpen(false));
 
-  // ── 載入頁面樹 ────────────────────────────────────────
-  const loadTree = useCallback(
-    async (opts: { select?: number } = {}) => {
-      setError(null);
-      try {
-        const res = await notesService.getTree(notebookId);
-        setTree(res);
-        setSelectedId((prev) => {
-          if (opts.select) return opts.select;
-          // 原本選的頁還在 → 保持；不在（被刪了）→ 回 root
-          if (prev && res.pages.some((p) => p.id === prev)) return prev;
-          return res.notebook.rootPageId ?? res.pages[0]?.id ?? null;
-        });
-      } catch (err) {
-        setError(
-          isNotesUnavailable(err)
-            ? t.notes.unavailableBody
-            : serverMessageOf(err) || t.notes.loadFailed,
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [notebookId, t],
-  );
-
-  useEffect(() => {
-    setLoading(true);
-    void loadTree();
-  }, [loadTree]);
-
-  const pages = tree?.pages ?? [];
-
-  /** 目前選取頁的直屬子頁（database 佔位卡片牆用） */
-  const childPages = useMemo(
-    () => pages.filter((p) => p.parent_id === selectedId),
-    [pages, selectedId],
-  );
-
-  // ── 樹操作 ────────────────────────────────────────────
-  const handleSelect = useCallback((id: number) => {
-    setSelectedId(id);
-    setDrawerOpen(false);
-  }, []);
-
-  /**
-   * 建立子頁 —— 頁面樹的「＋」、看板每欄的「＋ 新增」、編輯器 slash 選單的
-   * 「子頁面／資料庫」全走這一支，**樹的資料源只有這裡一個**。
-   *
-   * 建完一律 `loadTree()` 再回傳：slash 插入的 `pageLink` block 需要樹裡已經
-   * 有這一頁，才不會在掛上的瞬間顯示成「已刪除的頁面」。
-   *
-   * @returns 建立好的節點；失敗回 null（已彈訊息，呼叫端不必再報一次）
-   */
-  const createPage = useCallback(
-    async (
-      parentId: number,
-      opts: CreatePageOptions = {},
-    ): Promise<NotePageNode | null> => {
-      setBusyId(parentId);
-      try {
-        const created = await notesService.createPage({
-          notebookId,
-          parentId,
-          title: opts.title ?? "",
-          ...(opts.type ? { type: opts.type } : {}),
-          ...(opts.categoryId !== undefined
-            ? { categoryId: opts.categoryId }
-            : {}),
-        });
-        await loadTree(opts.select ? { select: created.id } : {});
-        if (opts.select) setDrawerOpen(false);
-        return created;
-      } catch (err) {
-        await dialog.alert({
-          title: t.notes.addChildFailed,
-          message: serverMessageOf(err) || "",
-        });
-        return null;
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [notebookId, loadTree, dialog, t],
-  );
-
-  /** 頁面樹的「＋」：建完直接切過去 */
-  const handleAddChild = useCallback(
-    (parentId: number) => {
-      void createPage(parentId, { select: true });
-    },
-    [createPage],
-  );
-
-  /**
-   * 看板卡片換分類／換位置。
-   *
-   * `category_id` 與 `sort_order` 都在頁面樹節點上，所以成功後就地改本地狀態
-   * 即可（不必重抓整棵樹）—— 拖曳要即時回饋，多一次往返會看到卡片彈回去。
-   */
-  const handleMoveCard = useCallback(
-    async (
-      cardId: number,
-      categoryId: string | null,
-      sortOrder?: number,
-    ): Promise<void> => {
-      try {
-        await notesService.updatePageMeta(cardId, {
-          categoryId,
-          ...(sortOrder === undefined ? {} : { sortOrder }),
-        });
-        setTree((prev) =>
-          prev
-            ? {
-                ...prev,
-                pages: prev.pages
-                  .map((p) =>
-                    p.id === cardId
-                      ? {
-                          ...p,
-                          category_id: categoryId,
-                          sort_order: sortOrder ?? p.sort_order,
-                        }
-                      : p,
-                  )
-                  // 樹與看板都吃 API 的 sort_order 升冪順序，改完要補排
-                  .sort((a, b) => a.sort_order - b.sort_order),
-              }
-            : prev,
-        );
-      } catch (err) {
-        await dialog.alert({
-          title: t.notes.board.moveFailed,
-          message: serverMessageOf(err) || "",
-        });
-      }
-    },
-    [dialog, t],
-  );
-
-  const handleRename = useCallback(
-    async (page: NotePageNode) => {
-      const next = await dialog.prompt({
-        title: t.notes.renameTitle,
-        message: t.notes.renameMessage,
-        defaultValue: page.title || "",
-        placeholder: t.notes.titlePlaceholder,
-      });
-      if (next === null) return;
-      setBusyId(page.id);
-      try {
-        await notesService.updatePageMeta(page.id, { title: next });
-        setTree((prev) =>
-          prev
-            ? {
-                ...prev,
-                pages: prev.pages.map((p) =>
-                  p.id === page.id ? { ...p, title: next } : p,
-                ),
-              }
-            : prev,
-        );
-      } catch (err) {
-        await dialog.alert({
-          title: t.notes.renameFailed,
-          message: serverMessageOf(err) || "",
-        });
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [dialog, t],
-  );
-
-  const handleMovePick = useCallback(
-    async (parentId: number) => {
-      if (!movingPage) return;
-      setBusyId(movingPage.id);
-      try {
-        await notesService.movePage(movingPage.id, parentId);
-        setMovingPage(null);
-        await loadTree();
-      } catch (err) {
-        await dialog.alert({
-          title: t.notes.moveFailed,
-          message: serverMessageOf(err) || "",
-        });
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [movingPage, loadTree, dialog, t],
-  );
-
-  const handleDelete = useCallback(
-    async (page: NotePageNode) => {
-      const ok = await dialog.confirm({
-        title: t.notes.deleteTitle,
-        message: t.notes.deleteMessage.replace(
-          "{name}",
-          page.title?.trim() || t.notes.untitled,
-        ),
-        confirmText: t.notes.deleteConfirm,
-        variant: "danger",
-      });
-      if (!ok) return;
-      setBusyId(page.id);
-      try {
-        await notesService.deletePage(page.id);
-        if (selectedId === page.id) setSelectedId(null);
-        await loadTree();
-      } catch (err) {
-        await dialog.alert({
-          title: t.notes.deleteFailed,
-          message: serverMessageOf(err) || "",
-        });
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [dialog, t, selectedId, loadTree],
-  );
-
-  /** 標題在編輯器裡改完 → 同步左側樹，不必重抓整棵樹 */
-  const handleTitleSaved = useCallback((pageId: number, title: string) => {
-    setTree((prev) =>
-      prev
-        ? {
-            ...prev,
-            pages: prev.pages.map((p) => (p.id === pageId ? { ...p, title } : p)),
-          }
-        : prev,
-    );
-  }, []);
+  const { tree, pages, childPages, loading, error, selectedId, busyId } = c;
 
   // ── 畫面 ──────────────────────────────────────────────
   if (loading) {
@@ -294,16 +74,27 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-sm text-muted">
         <p>{error || t.notes.loadFailed}</p>
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded border border-gold/40 px-3 py-1.5 text-gold transition-colors hover:bg-gold/10"
-        >
-          {t.notes.backToList}
-        </button>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded border border-gold/40 px-3 py-1.5 text-gold transition-colors hover:bg-gold/10"
+          >
+            {t.notes.backToList}
+          </button>
+        )}
       </div>
     );
   }
+
+  /*
+   * 標頭與 root 看板頁的標題重複：root 頁的標題就是筆記本名（後端建立時同名
+   * 寫入），所以選在 root 時上下兩行是一模一樣的字 —— 手機最明顯，桌機也有。
+   * 兩顆留哪一顆：編輯器那顆是**可編輯的輸入框**（改名就在那裡改），標頭這顆
+   * 只是靜態文字，所以收掉標頭這顆。選到子頁時標頭會回來，提供「現在在哪一本」
+   * 的脈絡。
+   */
+  const titleDuplicated = selectedId !== null && selectedId === tree.notebook.rootPageId;
 
   const treePanel = (
     <>
@@ -315,7 +106,9 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
           type="button"
           data-tour="notes-add-root-child"
           onClick={() =>
-            handleAddChild(tree.notebook.rootPageId ?? pages[0]?.id ?? 0)
+            void c.createPage(tree.notebook.rootPageId ?? pages[0]?.id ?? 0, {
+              select: true,
+            })
           }
           className="rounded p-1 text-muted transition-colors hover:text-gold"
           title={t.notes.addChild}
@@ -341,86 +134,98 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
         pages={pages}
         rootId={tree.notebook.rootPageId}
         selectedId={selectedId}
-        onSelect={handleSelect}
-        onAddChild={handleAddChild}
-        onRename={(p) => void handleRename(p)}
-        onMove={(p) => setMovingPage(p)}
-        onDelete={(p) => void handleDelete(p)}
+        onSelect={c.select}
+        onAddChild={(parentId) => void c.createPage(parentId, { select: true })}
+        onRename={(p) => void c.renamePage(p)}
+        onMove={(p) => c.setMovingPage(p)}
+        onDelete={(p) => void c.deletePage(p)}
         busyId={busyId}
       />
     </>
+  );
+
+  const editor = selectedId ? (
+    <PageEditor
+      key={selectedId}
+      pageId={selectedId}
+      childPages={childPages}
+      allPages={pages}
+      onTitleSaved={c.applyTitle}
+      onOpenPage={c.select}
+      onCreatePage={c.createPage}
+      onMoveCard={c.moveCard}
+    />
+  ) : (
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted">
+      {t.notes.noSelection}
+    </div>
   );
 
   return (
     <div data-tour="notes-workspace" className="flex min-h-0 flex-col">
       {/* 工作區標頭：返回 + 筆記本名 + 手機版目錄鈕 */}
       <div className="mb-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="shrink-0 rounded p-1.5 text-muted transition-colors hover:text-gold"
-          aria-label={t.notes.backToList}
-          title={t.notes.backToList}
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="shrink-0 rounded p-1.5 text-muted transition-colors hover:text-gold"
+            aria-label={t.notes.backToList}
+            title={t.notes.backToList}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 17l-5-5m0 0l5-5m-5 5h12"
-            />
-          </svg>
-        </button>
-        <h2 className="min-w-0 flex-1 truncate font-display text-lg font-light tracking-wide">
-          {tree.notebook.title}
-        </h2>
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 17l-5-5m0 0l5-5m-5 5h12"
+              />
+            </svg>
+          </button>
+        )}
+        {titleDuplicated ? (
+          /* 收掉標頭那顆時補一格彈性空白，右邊的目錄鈕才不會被拉到左邊 */
+          <span className="flex-1" aria-hidden="true" />
+        ) : (
+          <h2 className="min-w-0 flex-1 truncate font-display text-lg font-light tracking-wide">
+            {tree.notebook.title}
+          </h2>
+        )}
         <button
           type="button"
           data-tour="notes-tree-toggle"
-          onClick={() => setDrawerOpen(true)}
+          onClick={() => (embedded ? onOpenTree?.() : setDrawerOpen(true))}
           className="shrink-0 rounded border border-gold/25 px-2.5 py-1 text-xs text-muted transition-colors hover:text-gold lg:hidden"
         >
           {t.notes.openTree}
         </button>
       </div>
 
-      <div className="flex min-h-0 gap-4">
-        {/* 桌機常駐樹 */}
-        <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-20 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
-            {treePanel}
-          </div>
-        </aside>
-
-        {/* 編輯器 */}
-        <div className="min-w-0 flex-1">
-          {selectedId ? (
-            <PageEditor
-              key={selectedId}
-              pageId={selectedId}
-              childPages={childPages}
-              allPages={pages}
-              onTitleSaved={handleTitleSaved}
-              onOpenPage={handleSelect}
-              onCreatePage={createPage}
-              onMoveCard={handleMoveCard}
-            />
-          ) : (
-            <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted">
-              {t.notes.noSelection}
+      {embedded ? (
+        /* 內嵌版：樹在外層統一樹裡，這裡只有編輯器 */
+        <div className="min-w-0">{editor}</div>
+      ) : (
+        <div className="flex min-h-0 gap-4">
+          {/* 桌機常駐樹 */}
+          <aside className="hidden w-64 shrink-0 lg:block">
+            <div className="sticky top-20 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
+              {treePanel}
             </div>
-          )}
-        </div>
-      </div>
+          </aside>
 
-      {/* 手機抽屜 */}
-      {drawerOpen && (
+          {/* 編輯器 */}
+          <div className="min-w-0 flex-1">{editor}</div>
+        </div>
+      )}
+
+      {/* 手機抽屜（獨立版才有；內嵌版的抽屜屬於外層統一樹） */}
+      {!embedded && drawerOpen && (
         <div className="fixed inset-0 modal-layer lg:hidden">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -455,11 +260,15 @@ const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({ notebookId, onBack }) =
         </div>
       )}
 
+      {/*
+        「移動到…」彈窗一律由這裡渲染（內嵌版也是）—— 統一樹只負責把要搬的
+        頁丟進 controller，彈窗只有一個擁有者，不會疊出兩層。
+      */}
       <MovePageModal
-        page={movingPage}
+        page={c.movingPage}
         pages={pages}
-        onClose={() => setMovingPage(null)}
-        onPick={(parentId) => void handleMovePick(parentId)}
+        onClose={() => c.setMovingPage(null)}
+        onPick={(parentId) => void c.movePageTo(parentId)}
         busy={busyId !== null}
       />
     </div>

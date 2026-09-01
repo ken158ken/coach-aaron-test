@@ -1623,6 +1623,43 @@ const zhTW = {
   adminNotesPage: {
     heading: "客戶筆記本",
     subtitle: "與買了課程的客戶共同編輯的筆記；你和客戶看到的是同一本。",
+    /** 左側三層統一樹：會員 → 筆記本 → 頁面 */
+    tree: {
+      heading: "會員 · 筆記本 · 頁面",
+      empty: "還沒有任何筆記本。按上方「建立筆記本」為會員開一本。",
+      noSelection: "從左邊選一本筆記本開始編輯。",
+      /** 插值 `{n}` = 該會員的筆記本數 */
+      notebookCount: "{n} 本",
+      dragHint: "拖曳筆記本：放到別的會員＝轉移歸屬，同一位會員內＝調整順序。",
+      /** 手機沒有 HTML5 拖曳，改指路到筆記本的「⋯」選單 */
+      dragHintMobile: "用筆記本右側的「⋯」轉移歸屬或調整順序。",
+      menu: "更多動作",
+      menuTitle: "筆記本動作",
+      moveUp: "上移",
+      moveDown: "下移",
+      rename: "重新命名",
+      renameTitle: "重新命名筆記本",
+      renameMessage: "輸入新的筆記本名稱。",
+      renameFailed: "改名失敗",
+      reorderFailed: "排序失敗",
+      /** 040_notebook_sort.sql 未貼時（後端回 503），順序已還原 */
+      reorderMigration:
+        "尚未執行 040 migration，筆記本順序無法儲存（已還原）。請先到 Supabase Dashboard 貼上 040_notebook_sort.sql。",
+      transferTo: "轉移給…",
+      transferPick: "選擇要接手這本筆記本的會員：",
+      transferNoTarget: "目前沒有其他建立過筆記本的會員可以轉移。",
+      transferTitle: "轉移筆記本",
+      /** 插值 `{name}` = 筆記本標題、`{client}` = 目標會員 */
+      transferConfirm: "將「{name}」轉移給 {client}？原會員將立刻失去存取。",
+      /** 插值 `{course}` = 課程名 */
+      transferGrant: "順便開通「{course}」授權",
+      transferGrantHint: "沒有課程授權的話，對方在自己的頁面看不到這本筆記本。",
+      transferSubmit: "確認轉移",
+      transferring: "轉移中…",
+      /** 插值 `{name}` = 筆記本標題、`{client}` = 目標會員 */
+      transferred: "已把「{name}」轉移給 {client}",
+      transferFailed: "轉移失敗",
+    },
   },
 };
 
@@ -3115,6 +3152,40 @@ const en: AdminExtraTranslations = {
     heading: "Client notebooks",
     subtitle:
       "Notes you edit together with clients who bought a course — you both see the same notebook.",
+    tree: {
+      heading: "Clients · Notebooks · Pages",
+      empty: "No notebooks yet. Use “New notebook” above to open one for a client.",
+      noSelection: "Pick a notebook on the left to start editing.",
+      notebookCount: "{n}",
+      dragHint:
+        "Drag a notebook: drop it on another client to hand it over, or move it within a client to reorder.",
+      dragHintMobile:
+        "Use the “⋯” beside a notebook to hand it over or reorder it.",
+      menu: "More actions",
+      menuTitle: "Notebook actions",
+      moveUp: "Move up",
+      moveDown: "Move down",
+      rename: "Rename",
+      renameTitle: "Rename notebook",
+      renameMessage: "Enter a new name for this notebook.",
+      renameFailed: "Rename failed",
+      reorderFailed: "Reordering failed",
+      reorderMigration:
+        "The 040 migration hasn't been run, so notebook order can't be saved (order restored). Paste 040_notebook_sort.sql in the Supabase dashboard first.",
+      transferTo: "Hand over to…",
+      transferPick: "Choose the client who takes this notebook over:",
+      transferNoTarget: "No other client with notebooks to hand this over to.",
+      transferTitle: "Hand over notebook",
+      transferConfirm:
+        "Hand “{name}” over to {client}? The current client loses access immediately.",
+      transferGrant: "Also grant access to “{course}”",
+      transferGrantHint:
+        "Without course access they won't see this notebook on their own page.",
+      transferSubmit: "Hand over",
+      transferring: "Handing over…",
+      transferred: "“{name}” now belongs to {client}",
+      transferFailed: "Hand-over failed",
+    },
   },
 };
 

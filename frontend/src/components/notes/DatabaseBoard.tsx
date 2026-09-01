@@ -19,6 +19,7 @@
  * ## 排序
  * `sort_order` 是 DOUBLE PRECISION（039 SQL），所以欄內插入位置可以直接取
  * 前後鄰居的中點，一次 PATCH 就搞定，不必把整欄重新編號。
+ * 算法抽在 `./sortOrder`，與後台筆記本樹的拖曳排序共用同一份。
  */
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -27,6 +28,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import type { NoteCategory, NotePageNode } from "@/services/notes/notes.service";
 import CategoryManagerModal from "./CategoryManagerModal";
 import { safeCategoryColor, tintCategoryColor } from "./categoryColors";
+import { sortOrderForIndex } from "./sortOrder";
 
 /** 「未分類」欄的 key（不是真的分類 id，只用於 UI 比對） */
 const UNCATEGORIZED = "__uncategorized__";
@@ -90,20 +92,15 @@ const ICON_DOC =
   "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z";
 
 /**
- * 落點的新 sort_order：取前後鄰居的中點。
+ * 落點的新 sort_order：取前後鄰居的中點（算法見 `./sortOrder`）。
  * @param list 目標欄的卡片（**已排除被拖曳的那張**）
  * @param index 要插進 list 的哪個位置
  */
-function sortOrderForSlot(list: NotePageNode[], index: number): number {
-  const prev = list[index - 1];
-  const next = list[index];
-  if (!prev && !next) return Date.now();
-  if (!prev) return next.sort_order - 1;
-  if (!next) return prev.sort_order + 1;
-  const mid = (prev.sort_order + next.sort_order) / 2;
-  // double precision 用盡（前後值已經相鄰到無法再切）時退回「放在 prev 之後」
-  return mid > prev.sort_order && mid < next.sort_order ? mid : prev.sort_order + 1;
-}
+const sortOrderForSlot = (list: NotePageNode[], index: number): number =>
+  sortOrderForIndex(
+    list.map((c) => c.sort_order),
+    index,
+  );
 
 const DatabaseBoard: React.FC<DatabaseBoardProps> = ({
   pageId,
