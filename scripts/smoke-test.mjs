@@ -9,7 +9,7 @@
  * 3. GET /api/cron/smoke：後端真實跑「註冊 INSERT→回讀→硬刪」關鍵路徑
  */
 
-const SITE = (process.env.SITE_URL || "https://coach-aaron-test.vercel.app").replace(/\/$/, "");
+const SITE = (process.env.SITE_URL || "https://aaron-coach.com").replace(/\/$/, "");
 const SECRET = process.env.CRON_SECRET;
 const WAIT_SHA = (process.env.WAIT_SHA || "").slice(0, 7);
 
