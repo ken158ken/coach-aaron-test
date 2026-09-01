@@ -81,7 +81,7 @@ function isMissingTable(err: unknown): boolean {
 
 function missingTableRes(res: Response): void {
   res.status(503).json({
-    error: "筆記本資料表尚未建立，請先在 Supabase Dashboard 執行 database/migrations/039_client_notes.sql",
+    error: "筆記本資料表或欄位尚未同步，請在 Supabase Dashboard 執行 database/migrations 內最新的 039/040 SQL",
   });
 }
 
@@ -208,6 +208,37 @@ const toId = (v: unknown): number | null => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+/** 開通課程授權（= fake 購買）：已有列就重新啟用，否則插入（order_id 留 null） */
+async function grantCourseAccess(
+  userId: number,
+  courseId: number,
+): Promise<{ reactivated: boolean }> {
+  const { data: existing, error: exErr } = await supabaseAdmin
+    .from("user_courses")
+    .select("user_course_id")
+    .eq("user_id", userId)
+    .eq("course_id", courseId)
+    .limit(1)
+    .maybeSingle();
+  if (exErr) throw exErr;
+  if (existing) {
+    const { error } = await supabaseAdmin
+      .from("user_courses")
+      .update({ is_active: true, access_expires_at: null })
+      .eq("user_course_id", existing.user_course_id);
+    if (error) throw error;
+    return { reactivated: true };
+  }
+  const { error } = await supabaseAdmin.from("user_courses").insert({
+    user_id: userId,
+    course_id: courseId,
+    order_id: null,
+    is_active: true,
+  });
+  if (error) throw error;
+  return { reactivated: false };
+}
+
 // =======================================================
 // 筆記本
 // =======================================================
@@ -221,16 +252,36 @@ router.get(
       const owner = await isOwnerRequester(req);
       const userId = Number(req.user?.userId);
 
-      let query = supabaseAdmin
-        .from("notebooks")
-        .select("id, client_user_id, course_id, title, root_page_id, updated_at, created_at")
-        .is("deleted_at", null)
-        .order("updated_at", { ascending: false });
-      if (!owner) query = query.eq("client_user_id", userId);
-
-      const { data: notebooks, error } = await query;
+      // sort_order 為 040 新欄位：未貼時整段退回 updated_at 排序（容錯，不 503）
+      const buildQuery = (withSort: boolean) => {
+        let q = supabaseAdmin
+          .from("notebooks")
+          .select(
+            withSort
+              ? "id, client_user_id, course_id, title, root_page_id, sort_order, updated_at, created_at"
+              : "id, client_user_id, course_id, title, root_page_id, updated_at, created_at",
+          )
+          .is("deleted_at", null);
+        q = withSort
+          ? q.order("sort_order", { ascending: true }).order("id", { ascending: true })
+          : q.order("updated_at", { ascending: false });
+        if (!owner) q = q.eq("client_user_id", userId);
+        return q;
+      };
+      let { data: notebooks, error } = await buildQuery(true);
+      if (error && isMissingTable(error)) {
+        ({ data: notebooks, error } = await buildQuery(false));
+      }
       if (error) throw error;
-      let rows = notebooks || [];
+      let rows = (notebooks || []) as unknown as Array<{
+        id: number;
+        client_user_id: number;
+        course_id: number;
+        title: string;
+        root_page_id: number | null;
+        sort_order?: number;
+        updated_at: string;
+      }>;
 
       // 客戶：過濾掉沒有有效課程授權的
       if (!owner && rows.length > 0) {
@@ -291,6 +342,7 @@ router.get(
             userMap.get(n.client_user_id)?.display_name ||
             userMap.get(n.client_user_id)?.email ||
             "",
+          sortOrder: n.sort_order ?? null,
           updatedAt: n.updated_at,
         })),
       });
@@ -330,11 +382,20 @@ router.post(
         return;
       }
 
-      const { data: nb, error: nbErr } = await supabaseAdmin
+      // sort_order 為 040 新欄位：未貼時退回不帶該欄位的插入（容錯）
+      let ins = await supabaseAdmin
         .from("notebooks")
-        .insert({ client_user_id: clientUserId, course_id: courseId, title })
+        .insert({ client_user_id: clientUserId, course_id: courseId, title, sort_order: Date.now() })
         .select("id, client_user_id, course_id, title, root_page_id")
         .single();
+      if (ins.error && isMissingTable(ins.error)) {
+        ins = await supabaseAdmin
+          .from("notebooks")
+          .insert({ client_user_id: clientUserId, course_id: courseId, title })
+          .select("id, client_user_id, course_id, title, root_page_id")
+          .single();
+      }
+      const { data: nb, error: nbErr } = ins;
       if (nbErr) {
         if (nbErr.code === "23505") {
           res.status(409).json({ error: "該客戶 × 課程的筆記本已存在" });
@@ -418,6 +479,124 @@ router.delete(
       if (isMissingTable(err)) return missingTableRes(res);
       logger.error("刪除筆記本失敗", err as Error);
       res.status(500).json({ error: "刪除筆記本失敗" });
+    }
+  },
+);
+
+/**
+ * PATCH /api/notes/notebooks/:id — 改標題／轉移給另一個會員（僅 owner）
+ *
+ * 轉移（clientUserId）＝後台樹把整本筆記本拖到另一個會員底下：
+ * 舊會員即刻失去存取、新會員取得（仍需其對該課程有有效授權才看得到；
+ * grantCourse=true 順便開通）。撞 (client, course) 部分唯一索引 → 409。
+ */
+router.patch(
+  "/notebooks/:id",
+  authenticateToken,
+  requireCoachOrAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = toId(req.params.id);
+      if (!id) {
+        res.status(400).json({ error: "id 格式錯誤" });
+        return;
+      }
+      const { data: nb, error: nbErr } = await supabaseAdmin
+        .from("notebooks")
+        .select("id, client_user_id, course_id, title")
+        .eq("id", id)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (nbErr) throw nbErr;
+      if (!nb) {
+        res.status(404).json({ error: "筆記本不存在" });
+        return;
+      }
+
+      const b = req.body || {};
+      const patch: Record<string, unknown> = {};
+
+      if (b.title !== undefined) {
+        if (
+          typeof b.title !== "string" ||
+          !b.title.trim() ||
+          b.title.trim().length > LIMITS.title
+        ) {
+          res.status(400).json({ error: "標題格式錯誤或過長" });
+          return;
+        }
+        patch.title = b.title.trim();
+      }
+
+      let newClientId: number | null = null;
+      if (b.clientUserId !== undefined) {
+        const cid = toId(b.clientUserId);
+        if (!cid) {
+          res.status(400).json({ error: "clientUserId 格式錯誤" });
+          return;
+        }
+        if (cid !== Number(nb.client_user_id)) {
+          const { data: user } = await supabaseAdmin
+            .from("users")
+            .select("user_id")
+            .eq("user_id", cid)
+            .maybeSingle();
+          if (!user) {
+            res.status(400).json({ error: "目標會員不存在" });
+            return;
+          }
+          newClientId = cid;
+          patch.client_user_id = cid;
+        }
+      }
+
+      if (b.sortOrder !== undefined) {
+        if (typeof b.sortOrder !== "number" || !Number.isFinite(b.sortOrder)) {
+          res.status(400).json({ error: "sortOrder 格式錯誤" });
+          return;
+        }
+        patch.sort_order = b.sortOrder; // 040 欄位；未貼時 update 會落入 503 容錯訊息
+      }
+
+      if (Object.keys(patch).length === 0) {
+        res.status(400).json({ error: "沒有要更新的欄位" });
+        return;
+      }
+      patch.updated_at = new Date().toISOString();
+
+      const { data: updated, error } = await supabaseAdmin
+        .from("notebooks")
+        .update(patch)
+        .eq("id", id)
+        .select("id, client_user_id, course_id, title, root_page_id")
+        .single();
+      if (error) {
+        if (error.code === "23505") {
+          res.status(409).json({ error: "目標會員已有此課程的筆記本" });
+          return;
+        }
+        throw error;
+      }
+
+      if (newClientId) {
+        if (b.grantCourse === true) {
+          await grantCourseAccess(newClientId, nb.course_id);
+        }
+        void createNotification({
+          userId: newClientId,
+          type: "note_shared",
+          title: "📓 教練為你建立了課程筆記本",
+          body: updated.title,
+          link: "/notes",
+          metadata: { notebook_id: id },
+        }).catch(() => {});
+      }
+
+      res.json(updated);
+    } catch (err) {
+      if (isMissingTable(err)) return missingTableRes(res);
+      logger.error("更新筆記本失敗", err as Error);
+      res.status(500).json({ error: "更新筆記本失敗" });
     }
   },
 );
