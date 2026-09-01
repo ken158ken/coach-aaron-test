@@ -406,6 +406,13 @@ router.delete(
         res.status(404).json({ error: "筆記本不存在" });
         return;
       }
+      // 連帶軟刪整本的頁面——否則子頁的 deleted_at 恆為 null，
+      // 讀取雖然都經過 notebook 過濾看不到，但資料會無人回收地累積
+      await supabaseAdmin
+        .from("note_pages")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("notebook_id", id)
+        .is("deleted_at", null);
       res.json({ ok: true });
     } catch (err) {
       if (isMissingTable(err)) return missingTableRes(res);

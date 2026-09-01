@@ -38,6 +38,7 @@ export interface PublicExtraTranslations {
     myBookings: string;
     messages: string;
     coachDashboard: string;
+    courseNotes: string;
     loginRegister: string;
     feedback: string;
   };
@@ -428,6 +429,7 @@ export const publicExtra: {
     myBookings: "我的預約",
     messages: "訊息",
     coachDashboard: "教練儀表板",
+    courseNotes: "課程筆記本",
     loginRegister: "登入 / 註冊",
     feedback: "意見反饋",
   },
@@ -939,6 +941,7 @@ export const publicExtra: {
     myBookings: "My bookings",
     messages: "Messages",
     coachDashboard: "Coach dashboard",
+    courseNotes: "Course notebook",
     loginRegister: "Log in / Sign up",
     feedback: "Feedback",
   },

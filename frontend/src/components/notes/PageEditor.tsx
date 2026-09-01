@@ -303,11 +303,13 @@ const PageEditor: React.FC<PageEditorProps> = ({
     [pageId],
   );
 
-  /** 看板某一欄的「＋ 新增」→ 建一般子頁並直接切過去 */
+  /**
+   * 看板某一欄的「＋ 新增」→ 建一般子頁並直接切過去。
+   * 回傳 Promise 讓看板能鎖按鈕防連點（serverless 冷啟動時建頁可能要數秒）。
+   */
   const handleAddCard = useCallback(
-    (categoryId: string | null) => {
-      void onCreatePage(pageId, { categoryId, type: "page", select: true });
-    },
+    (categoryId: string | null) =>
+      onCreatePage(pageId, { categoryId, type: "page", select: true }),
     [onCreatePage, pageId],
   );
 

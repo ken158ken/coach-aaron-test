@@ -54,8 +54,8 @@ export interface DatabaseBoardProps {
   /** 唯讀（衝突橫幅出現時鎖住，避免一邊改一邊撞） */
   readOnly?: boolean;
   onOpenPage: (pageId: number) => void;
-  /** 該欄底部「＋ 新增」→ 建子頁（type page，帶 categoryId） */
-  onAddCard: (categoryId: string | null) => void;
+  /** 該欄底部「＋ 新增」→ 建子頁（type page，帶 categoryId）；回傳 Promise 供鎖按鈕 */
+  onAddCard: (categoryId: string | null) => void | Promise<unknown>;
   /** 卡片換分類／換位置 */
   onMoveCard: (
     cardId: number,
@@ -118,6 +118,8 @@ const DatabaseBoard: React.FC<DatabaseBoardProps> = ({
   const { t, language } = useLanguage();
 
   const [dragCardId, setDragCardId] = useState<number | null>(null);
+  /** 「＋ 新增」進行中的欄 key —— serverless 冷啟動建頁可達數秒，鎖全部新增鈕防連點 */
+  const [addingColKey, setAddingColKey] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [menuCard, setMenuCard] = useState<NotePageNode | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
@@ -420,9 +422,15 @@ const DatabaseBoard: React.FC<DatabaseBoardProps> = ({
 
               <button
                 type="button"
-                disabled={readOnly}
+                disabled={readOnly || addingColKey !== null}
                 data-tour={col.key === columns[0]?.key ? "notes-database-add" : undefined}
-                onClick={() => onAddCard(col.category ? col.category.id : null)}
+                onClick={() => {
+                  if (addingColKey !== null) return;
+                  setAddingColKey(col.key);
+                  void Promise.resolve(
+                    onAddCard(col.category ? col.category.id : null),
+                  ).finally(() => setAddingColKey(null));
+                }}
                 className="m-2 mt-0 flex items-center justify-center gap-1.5 rounded border border-dashed border-gold/25 py-2 text-xs text-muted transition-colors hover:border-gold/50 hover:text-gold disabled:opacity-40"
               >
                 <Icon path={ICON_PLUS} className="h-3.5 w-3.5" />
