@@ -66,7 +66,7 @@ jobs:
 
       - name: 等待部署並執行煙霧測試
         env:
-          SITE_URL: https://coach-aaron-test.vercel.app
+          SITE_URL: https://aaron-coach.com
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           WAIT_SHA: ${{ github.sha }}
         run: node scripts/smoke-test.mjs
