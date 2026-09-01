@@ -42,6 +42,11 @@ export interface PublicExtraTranslations {
     loginRegister: string;
     feedback: string;
   };
+  /** /pages 已發布自訂頁面總覽（SEO 用） */
+  publishedPagesExtra: {
+    seoTitle: string;
+    seoDescription: string;
+  };
   /**
    * 教練公開資訊的文字部分。
    * constants/app.ts 的 COACH_INFO 仍是 EMAIL / LINE_ID 等非文字資料的來源，
@@ -432,6 +437,10 @@ export const publicExtra: {
     courseNotes: "課程筆記本",
     loginRegister: "登入 / 註冊",
     feedback: "意見反饋",
+  },
+  publishedPagesExtra: {
+    seoTitle: "自訂活動頁面",
+    seoDescription: "阿倫教官的行銷活動與專題頁面總覽：課程方案、企業合作、限時活動一次瀏覽。",
   },
   coachInfo: {
     name: "阿倫教官",
@@ -944,6 +953,10 @@ export const publicExtra: {
     courseNotes: "Course notebook",
     loginRegister: "Log in / Sign up",
     feedback: "Feedback",
+  },
+  publishedPagesExtra: {
+    seoTitle: "Campaign Pages",
+    seoDescription: "All published campaign and feature pages from Coach Aaron: course plans, corporate programs, and limited-time events.",
   },
   coachInfo: {
     name: "Coach Aaron",

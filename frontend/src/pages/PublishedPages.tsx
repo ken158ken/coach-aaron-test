@@ -8,6 +8,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { landingService } from "../services/site/landing.service";
+import { SEOHead } from "@/components/seo";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface PublishedPage {
   id: number;
@@ -20,6 +22,7 @@ interface PublishedPage {
 }
 
 const PublishedPages: React.FC = () => {
+  const { t } = useLanguage();
   const [pages, setPages] = useState<PublishedPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +50,11 @@ const PublishedPages: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent relative">
+      <SEOHead
+        title={t.publishedPagesExtra.seoTitle}
+        description={t.publishedPagesExtra.seoDescription}
+        url="/pages"
+      />
       <div className="relative z-10 pt-20 sm:pt-24 pb-16 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

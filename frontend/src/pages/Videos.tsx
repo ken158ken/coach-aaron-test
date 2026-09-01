@@ -29,8 +29,15 @@ const Videos: React.FC = () => {
   const fetchingRef = useRef(false);
 
   // Initial load — restore previously loaded count if returning from external link
+  // ⚠️ useRef 初始值在 render 期執行：SSR 沒有 sessionStorage，直接讀會 throw，
+  //    整頁被 Suspense 錯誤邊界吃掉只剩 spinner（SEO 空殼），必須守衛。
   const initialCount = useRef(
-    Math.max(PAGE_SIZE, parseInt(sessionStorage.getItem(STORAGE_KEY_COUNT) || "0", 10))
+    Math.max(
+      PAGE_SIZE,
+      typeof sessionStorage === "undefined"
+        ? 0
+        : parseInt(sessionStorage.getItem(STORAGE_KEY_COUNT) || "0", 10),
+    )
   );
 
   // Fetch a page of videos
