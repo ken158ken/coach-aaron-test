@@ -71,12 +71,25 @@ interface PageCore {
   title: string;
 }
 
-/** PostgREST「資料表不存在」→ 給清楚的 503 而不是含糊 500（039 未貼時） */
+/**
+ * PostgREST「資料表／欄位不存在」→ 給清楚的 503 而不是含糊 500（039/040 未貼時）。
+ * ⚠️ 缺「欄位」時 PostgREST 回 42703（不是 42P01）——040 剛上線時漏了這個碼，
+ *    導致 fallback 分支全部沒接到、列表直接 500（agent E2E 抓到）。
+ */
 function isMissingTable(err: unknown): boolean {
   const e = err as { code?: string; message?: string } | null;
   if (!e) return false;
-  if (e.code === "42P01" || e.code === "PGRST205") return true;
-  return /could not find the table|relation .* does not exist/i.test(e.message || "");
+  if (
+    e.code === "42P01" ||
+    e.code === "42703" ||
+    e.code === "PGRST205" ||
+    e.code === "PGRST204"
+  ) {
+    return true;
+  }
+  return /could not find the table|relation .* does not exist|column .* does not exist/i.test(
+    e.message || "",
+  );
 }
 
 function missingTableRes(res: Response): void {

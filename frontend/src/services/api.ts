@@ -32,7 +32,26 @@ export function getAuthToken(): string | null {
  * - 開發環境 → http://localhost:5000
  */
 export const getBaseURL = (): string => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  const configured = import.meta.env.VITE_API_URL as string | undefined;
+  if (configured) {
+    /*
+     * 換網域防呆（2026-09-01 aaron-coach.com 切換時實際炸過）：
+     * Vercel 環境變數殘留 VITE_API_URL=舊網域，被烤進 bundle 後所有瀏覽器端
+     * API 都變成「跨網域 → 打到已 308 轉址的舊站 → preflight 失敗」全滅，
+     * 而伺服器端煙霧測試直打 API 完全抓不到。Production 下只要設定值是
+     * 舊網域或本站自己，一律改走 same-origin（Vercel rewrites）。
+     * 真要把 API 拆到別的網域時，明確設一個非本站的新值即可。
+     */
+    if (
+      import.meta.env.PROD &&
+      (configured.includes("coach-aaron-test.vercel.app") ||
+        (typeof window !== "undefined" &&
+          configured.replace(/\/$/, "") === window.location.origin))
+    ) {
+      return "";
+    }
+    return configured;
+  }
   if (import.meta.env.PROD) return "";
   return "http://localhost:5000";
 };
