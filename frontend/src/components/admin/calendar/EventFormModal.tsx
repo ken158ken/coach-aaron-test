@@ -16,7 +16,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
 import type { AdminEventCreateInput } from "@/services/booking/coach.service";
-import { fromInput, shiftDateString } from "./datetime";
+import { fromInput, shiftDateString, toDateTimeInput } from "./datetime";
 
 /** 表單的原始輸入值（皆為 input 元素直接吃的字串格式） */
 export interface EventFormValues {
@@ -72,6 +72,48 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
     key: K,
     value: EventFormValues[K],
   ): void => setValues((v) => ({ ...v, [key]: value }));
+
+  /**
+   * 改「開始」時讓「結束」跟著平移、維持原時長——對齊 Google 日曆行為。
+   * 也是為了避開原生 datetime-local 在 12 小時制語系的陷阱：使用者心裡想
+   * 13:00 卻輸入 01:00（上午），結束反而早於開始（2026-09-01 業主實際踩到）。
+   * 開始設對後結束自動跟上，就不會出現這種狀態。
+   */
+  const setStartAtKeepDuration = (next: string): void =>
+    setValues((v) => {
+      const oldS = fromInput(v.startAt);
+      const oldE = fromInput(v.endAt);
+      const newS = fromInput(next);
+      if (oldS && oldE && newS) {
+        const duration = oldE.getTime() - oldS.getTime();
+        if (duration > 0) {
+          return {
+            ...v,
+            startAt: next,
+            endAt: toDateTimeInput(new Date(newS.getTime() + duration)),
+          };
+        }
+      }
+      return { ...v, startAt: next };
+    });
+
+  /** 全天版同理：開始日平移幾天，結束日跟著平移幾天 */
+  const setStartDateKeepDuration = (next: string): void =>
+    setValues((v) => {
+      const parse = (s: string): number | null => {
+        const [y, m, d] = s.split("-").map(Number);
+        return y && m && d ? Date.UTC(y, m - 1, d) : null;
+      };
+      const oldS = parse(v.startDate);
+      const newS = parse(next);
+      if (oldS !== null && newS !== null && v.endDate) {
+        const days = Math.round((newS - oldS) / 86_400_000);
+        if (days !== 0) {
+          return { ...v, startDate: next, endDate: shiftDateString(v.endDate, days) };
+        }
+      }
+      return { ...v, startDate: next };
+    });
 
   const title = mode === "create" ? c.createTitle : c.editTitle;
 
@@ -223,7 +265,7 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
                 type="date"
                 className="studio-input w-full"
                 value={values.startDate}
-                onChange={(e) => set("startDate", e.target.value)}
+                onChange={(e) => setStartDateKeepDuration(e.target.value)}
               />
             </div>
             <div>
@@ -257,7 +299,7 @@ const EventFormModal: React.FC<EventFormModalProps> = ({
                 type="datetime-local"
                 className="studio-input w-full"
                 value={values.startAt}
-                onChange={(e) => set("startAt", e.target.value)}
+                onChange={(e) => setStartAtKeepDuration(e.target.value)}
               />
             </div>
             <div>
