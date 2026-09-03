@@ -367,6 +367,42 @@
     font-family: var(--font-body);
   }
   .studio-input::placeholder { color: var(--color-text-muted); }
+
+  /* ── 詳情頁卡片／面板／色塊（深色基底；淺色覆寫在檔尾 studio-light 區） ──
+     原本這些是內聯 style 或 bg-black/xx 寫死深色，淺色模式翻不過來
+     （inline style 連覆寫都打不贏——2026-09-03 業主回報的灰塊低對比）。 */
+  .detail-card {
+    background: linear-gradient(145deg, rgba(30,30,30,0.4) 0%, rgba(10,10,10,0.85) 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-top: 2px solid rgba(255,255,255,0.5);
+  }
+  .detail-card--elevated {
+    border-top-color: rgba(255,255,255,0.6);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  }
+  .panel-glass {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .tile-tint {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(197,160,89,0.15);
+  }
+  .buy-btn { background: #ffffff; color: #000000; }
+  .buy-btn:hover { background: rgba(255,255,255,0.9); }
+  .buy-btn--ghost {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.30);
+    color: #ffffff;
+  }
+  .buy-btn--ghost:hover { background: rgba(255,255,255,0.15); }
+  .whisper-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: #ffffff;
+  }
+  .whisper-input::placeholder { color: rgba(255,255,255,0.30); }
+  .whisper-input:focus { outline: none; border-color: rgba(197,160,89,0.40); }
   .studio-input:focus {
     border-color: rgba(255,255,255,0.4);
     box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
@@ -677,6 +713,56 @@
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
+
+/* ── 5b. 深色卡片類的淺色版（2026-09-03 對比度修正，放在 5. 之後才能蓋過通用側欄規則） ──
+   設計語彙：暖白紙面 + 金色頂線提神；重點卡（價格）換品牌酒紅頂線；
+   資訊小卡走「彩色透明 tint」（同 LINE 綠卡的成功作法），鮮豔但不離淺色主題。 */
+[data-theme="studio-light"] .detail-card {
+  background: linear-gradient(160deg, #fffdf9 0%, #f6f1e8 100%);
+  border: 1px solid rgba(197,160,89,0.30);
+  border-top: 2px solid #c5a059;
+  box-shadow: 0 8px 24px rgba(122,88,40,0.10);
+}
+[data-theme="studio-light"] .detail-card--elevated {
+  border-top-color: #8a2a26;
+  box-shadow: 0 16px 36px rgba(138,42,38,0.13);
+}
+/* 側欄小標籤（原 text-white/30）給暖金棕，比灰字醒目又可讀 */
+[data-theme="studio-light"] .detail-card p[class*="text-white/3"] { color: #8a6030; }
+[data-theme="studio-light"] .panel-glass {
+  background: rgba(255,255,255,0.90);
+  border-color: rgba(138,42,38,0.16);
+  border-top: 2px solid rgba(138,42,38,0.55);
+  box-shadow: 0 8px 26px rgba(90,60,30,0.09);
+}
+[data-theme="studio-light"] .tile-tint { border-color: rgba(197,160,89,0.45); }
+[data-theme="studio-light"] .tile-tint--gold { background: rgba(197,160,89,0.14); }
+[data-theme="studio-light"] .tile-tint--wine {
+  background: rgba(138,42,38,0.07);
+  border-color: rgba(138,42,38,0.32);
+}
+[data-theme="studio-light"] .tile-tint--wine h3 { color: #8a2a26; }
+[data-theme="studio-light"] .buy-btn {
+  background: linear-gradient(135deg, #8a2a26 0%, #a8402f 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(138,42,38,0.25);
+}
+[data-theme="studio-light"] .buy-btn:hover {
+  background: linear-gradient(135deg, #7a2420 0%, #983a2a 100%);
+}
+[data-theme="studio-light"] .buy-btn--ghost {
+  background: rgba(138,42,38,0.06);
+  border-color: rgba(138,42,38,0.40);
+  color: #8a2a26;
+}
+[data-theme="studio-light"] .buy-btn--ghost:hover { background: rgba(138,42,38,0.12); }
+[data-theme="studio-light"] .whisper-input {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.15);
+  color: #1a1a1a;
+}
+[data-theme="studio-light"] .whisper-input::placeholder { color: rgba(0,0,0,0.35); }
+[data-theme="studio-light"] .whisper-input:focus { border-color: rgba(138,42,38,0.45); }
 
 /* ── 6. Article list card (.article-card-item) ── */
 [data-theme="studio-light"] .article-card-item {

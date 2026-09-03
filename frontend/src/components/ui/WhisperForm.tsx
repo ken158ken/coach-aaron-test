@@ -65,7 +65,7 @@ const WhisperForm: React.FC = () => {
   };
 
   return (
-    <div className="rounded-xl bg-black/60 border border-white/8 p-5 sm:p-6">
+    <div className="panel-glass rounded-xl p-5 sm:p-6">
       <h3 className="text-base font-medium text-white/90 mb-1">
         {t.whisperForm.heading}
       </h3>
@@ -95,7 +95,7 @@ const WhisperForm: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
             maxLength={50}
             placeholder={t.whisperForm.namePlaceholder}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-gold/40"
+            className="w-full whisper-input rounded-lg px-3 py-2 text-sm"
             required
           />
         </div>
@@ -111,7 +111,7 @@ const WhisperForm: React.FC = () => {
             onChange={(e) => setContact(e.target.value)}
             maxLength={100}
             placeholder={t.whisperForm.contactPlaceholder}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-gold/40"
+            className="w-full whisper-input rounded-lg px-3 py-2 text-sm"
             required
           />
         </div>
@@ -127,7 +127,7 @@ const WhisperForm: React.FC = () => {
             maxLength={100}
             rows={3}
             placeholder={t.whisperForm.messagePlaceholder}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-gold/40 resize-none"
+            className="w-full whisper-input rounded-lg px-3 py-2 text-sm resize-none"
             required
           />
         </div>

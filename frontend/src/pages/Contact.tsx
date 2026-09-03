@@ -259,7 +259,7 @@ const Contact: React.FC = () => {
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 {t.contact.formSection}
               </h2>
-              <div className="rounded-xl bg-black/60 border border-white/8 p-5 sm:p-6">
+              <div className="panel-glass rounded-xl p-5 sm:p-6">
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <Input
                   name="name"
@@ -356,7 +356,7 @@ const Contact: React.FC = () => {
 
                 {/* Email */}
                 <motion.div
-                  className="p-4 sm:p-5 bg-black/40 rounded-lg border border-gold/15"
+                  className="p-4 sm:p-5 tile-tint tile-tint--gold rounded-lg"
                   whileHover={{ y: -4, boxShadow: "0 8px 32px rgba(197,160,89,0.18)", borderColor: "rgba(197,160,89,0.45)" }}
                   transition={{ duration: 0.2 }}
                 >
@@ -370,7 +370,7 @@ const Contact: React.FC = () => {
 
                 {/* 營業時間 */}
                 <motion.div
-                  className="p-4 sm:p-5 bg-black/40 rounded-lg border border-gold/15"
+                  className="p-4 sm:p-5 tile-tint tile-tint--wine rounded-lg"
                   whileHover={{ y: -4, boxShadow: "0 8px 32px rgba(197,160,89,0.18)", borderColor: "rgba(197,160,89,0.45)" }}
                   transition={{ duration: 0.2 }}
                 >

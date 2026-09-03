@@ -512,14 +512,9 @@ const ArticleDetail: React.FC = () => {
           {/* ── Right: Sticky Info Card ── */}
           <div className="detail-sidebar lg:sticky lg:top-28 h-fit space-y-5">
 
-            {/* Author Card */}
+            {/* Author Card — 深/淺樣式見 index.css .detail-card（內聯 style 會蓋死淺色覆寫，勿改回） */}
             <div
-              className="rounded-lg p-6 sm:p-8"
-              style={{
-                background: "linear-gradient(145deg, rgba(30,30,30,0.4) 0%, rgba(10,10,10,0.85) 100%)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderTop: "2px solid rgba(255,255,255,0.5)",
-              }}
+              className="detail-card rounded-lg p-6 sm:p-8"
             >
               <p className="text-white/30 text-xs uppercase tracking-widest mb-3">{t.article.author}</p>
               <div className="flex items-center gap-3 mb-4">
@@ -535,13 +530,7 @@ const ArticleDetail: React.FC = () => {
             </div>
 
             {/* Popular Articles Card */}
-            <div
-              className="rounded-lg p-6"
-              style={{
-                background: "linear-gradient(145deg, rgba(30,30,30,0.4) 0%, rgba(10,10,10,0.85) 100%)",
-                border: "1px solid rgba(255,255,255,0.1)",
-              }}
-            >
+            <div className="detail-card rounded-lg p-6">
               <p className="text-white/30 text-xs uppercase tracking-widest mb-4">{t.article.popularArticles}</p>
               {popularArticles.length > 0 ? (
                 <div className="space-y-4">

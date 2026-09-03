@@ -436,15 +436,7 @@ const CourseDetail: React.FC = () => {
 
           {/* ── Right: Purchase Card (sticky) ── */}
           <div className="detail-sidebar lg:sticky lg:top-28 h-fit">
-            <div
-              className="rounded-lg p-6 sm:p-8 relative overflow-hidden"
-              style={{
-                background: "linear-gradient(145deg, rgba(30,30,30,0.4) 0%, rgba(10,10,10,0.85) 100%)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderTop: "2px solid rgba(255,255,255,0.6)",
-                boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-              }}
-            >
+            <div className="detail-card detail-card--elevated rounded-lg p-6 sm:p-8 relative overflow-hidden">
               {/* Price */}
               <span className="block text-3xl sm:text-4xl font-bold text-white mb-6 tracking-wider">
                 {formatPrice()}
@@ -454,14 +446,14 @@ const CourseDetail: React.FC = () => {
               {isAuthenticated ? (
                 <button
                   onClick={() => navigate(`/checkout?course=${course.course_id}`)}
-                  className="w-full py-4 bg-white text-black font-bold tracking-[3px] uppercase text-sm hover:bg-white/90 transition-colors relative overflow-hidden group"
+                  className="buy-btn w-full py-4 font-bold tracking-[3px] uppercase text-sm transition-colors relative overflow-hidden group"
                 >
                   <span className="relative z-10">{t.course.buyNow}</span>
                   <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-500 bg-linear-to-r from-transparent via-black/10 to-transparent skew-x-[-30deg]" />
                 </button>
               ) : (
                 <Link to="/login" className="block">
-                  <button className="w-full py-4 bg-white/10 border border-white/30 text-white font-bold tracking-[3px] uppercase text-sm hover:bg-white/15 transition-colors">
+                  <button className="buy-btn--ghost w-full py-4 font-bold tracking-[3px] uppercase text-sm transition-colors">
                     {t.course.loginToBuy}
                   </button>
                 </Link>
