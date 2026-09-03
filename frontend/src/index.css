@@ -866,6 +866,23 @@
 [data-theme="studio-light"] .text-white\/40  { color: rgba(14,11,8,0.40); }
 [data-theme="studio-light"] .text-white\/30  { color: rgba(14,11,8,0.32); }
 [data-theme="studio-light"] .text-white\/20  { color: rgba(14,11,8,0.22); }
+
+/* ── 照片 hero 豁免（.hero-has-photo 只在「真的有圖」時由頁面掛上）──
+   圖片上的文字不隨主題翻轉：淺色模式也維持亮字壓暗紗，否則深字疊照片
+   直接沒對比（2026-09-03 課程頁淺色標題消失）。無圖的 banner-fallback
+   底在淺色是淺的，走上面的深字翻轉，不掛此類。 */
+[data-theme="studio-light"] .hero-has-photo .silver-heading {
+  background: linear-gradient(90deg, #b0b0b0 0%, #fdfdfd 25%, #ffffff 50%, #fdfdfd 75%, #b0b0b0 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8));
+  color: inherit;
+}
+[data-theme="studio-light"] .hero-has-photo .text-white { color: #ffffff; }
+[data-theme="studio-light"] .hero-has-photo [class*="text-white/"] { color: rgba(255,255,255,0.82); }
+[data-theme="studio-light"] .hero-has-photo [class*="border-white"] { border-color: rgba(255,255,255,0.45); }
+/* 描邊感保險：亮部照片也讀得清（雙主題皆掛，深色視覺無感差異） */
+.hero-has-photo :is(a, span) { text-shadow: 0 1px 8px rgba(0,0,0,0.45); }
 [data-theme="studio-light"] .text-white\/10  { color: rgba(14,11,8,0.12); }
 [data-theme="studio-light"] .text-white\/5   { color: rgba(14,11,8,0.06); }
 [data-theme="studio-light"] .hover\:text-white:hover { color: rgba(14,11,8,0.92); }

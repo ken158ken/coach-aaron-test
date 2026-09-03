@@ -205,7 +205,7 @@ const CourseDetail: React.FC = () => {
 
       {/* ── Full-width Banner ── */}
       <div
-        className="banner-area relative w-full flex items-end pt-20"
+        className={`banner-area relative w-full flex items-end pt-20${(course.course_banner_url || course.thumbnail) ? " hero-has-photo" : ""}`}
         style={{
           height: "clamp(280px, 55vw, 580px)",
           maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
