@@ -21,6 +21,7 @@ import { Toggle, TagInput } from '@/components/ui/form';
 import { sanitizeHtml } from '@/utils/sanitizeHtml';
 // 直接具名 import：避免 tiptap 經由 ui barrel 汙染前台主 chunk
 import { RichTextEditor } from '@/components/ui/editor';
+import ContactInfoEditor from '@/components/admin/ContactInfoEditor';
 import {
   contentService,
   type SiteContent,
@@ -68,6 +69,7 @@ const logger = {
 
 type TabType =
   | 'content'
+  | 'contact'
   | 'popup'
   | 'testimonial'
   | 'gallery'
@@ -1059,6 +1061,17 @@ const AdminContent: React.FC = () => {
           {tp.tabs.content}
         </button>
         <button
+          data-tour="content-tab-contact"
+          onClick={() => setActiveTab('contact')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'contact'
+              ? 'bg-luxe-gold/20 text-luxe-gold border border-luxe-gold/30'
+              : 'text-luxe-muted hover:text-luxe-text hover:bg-luxe-surface'
+          }`}
+        >
+          {t.adminContact.tab}
+        </button>
+        <button
           onClick={() => setActiveTab('popup')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'popup'
@@ -1243,6 +1256,9 @@ const AdminContent: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* ===== 聯絡資訊分頁 ===== */}
+      {activeTab === 'contact' && <ContactInfoEditor />}
 
       {/* ===== 首頁彈窗分頁 ===== */}
       {activeTab === 'popup' && (

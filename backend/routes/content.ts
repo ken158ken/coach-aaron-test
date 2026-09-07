@@ -34,10 +34,13 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 
     if (error) throw error;
 
-    // 轉為 key-value 格式方便前端使用
+    // 轉為 key-value 格式方便前端使用；有英文值時同步以 `{key}_en` 提供
     const contentMap: Record<string, string> = {};
     for (const item of data || []) {
       contentMap[item.content_key] = item.content_value;
+      if (item.content_value_en) {
+        contentMap[`${item.content_key}_en`] = item.content_value_en;
+      }
     }
 
     res.json(contentMap);
@@ -116,7 +119,7 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const { contentValue, contentName, contentType, isActive } = req.body;
+      const { contentValue, contentValueEn, contentName, contentType, isActive } = req.body;
 
       // 取得現況：判斷 content_type、拿 content_key 組 storage 路徑、留舊值刪檔
       const { data: existing } = await supabaseAdmin
@@ -139,6 +142,7 @@ router.put(
 
       const updateData: Record<string, unknown> = {};
       if (contentValue !== undefined) updateData.content_value = contentValue;
+      if (contentValueEn !== undefined) updateData.content_value_en = contentValueEn;
       if (contentName !== undefined) updateData.content_name = contentName;
       if (contentType !== undefined) updateData.content_type = contentType;
       if (isActive !== undefined) updateData.is_active = isActive;
@@ -184,7 +188,7 @@ router.post(
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { contentKey, contentName, contentValue, contentType, sortOrder } =
+      const { contentKey, contentName, contentValue, contentValueEn, contentType, sortOrder } =
         req.body;
 
       if (contentType === "image" && !isAllowedImageUrl(contentValue)) {
@@ -209,6 +213,7 @@ router.post(
           content_key: contentKey,
           content_name: contentName,
           content_value: finalValue || "",
+          content_value_en: contentValueEn || null,
           content_type: contentType || "text",
           sort_order: sortOrder || 0,
           is_active: true,

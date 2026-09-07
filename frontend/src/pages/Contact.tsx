@@ -5,12 +5,12 @@
  * @description 包含聯絡表單（透過 Resend 發送郵件）、教練個人資訊與社群連結
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Input, Textarea, PillButton, Toast, PageHeader } from "@/components/ui";
 import { ImagesBadge, type BadgeItem } from "@/components/ui/ImagesBadge";
-import WhisperForm from "@/components/ui/WhisperForm";
 import { SOCIAL_LINKS, COACH_INFO, API_BASE_URL } from "@/constants";
+import { contentService } from "@/services/site/content.service";
 import SEOHead from "@/components/seo/SEOHead";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -38,8 +38,30 @@ const INITIAL_FORM_DATA: ContactFormData = {
  * @returns {JSX.Element} 聯絡頁面
  */
 const Contact: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const extra = t.contactExtra;
+
+  /**
+   * 聯絡資訊（後台「內容管理 → 聯絡資訊」可抽換）：
+   * site_content 的 contact_* keys，讀不到就 fallback 到 constants 的舊值，
+   * 後台沒填任何東西時頁面與改版前一模一樣。
+   */
+  const [siteContent, setSiteContent] = useState<Record<string, string>>({});
+  useEffect(() => {
+    contentService
+      .getPublicContent()
+      .then(setSiteContent)
+      .catch(() => {});
+  }, []);
+  /** 取 contact_{key}，英文介面優先吃 {key}_en */
+  const cc = (key: string, fallback = ""): string => {
+    if (language === "en") {
+      const en = siteContent[`contact_${key}_en`]?.trim();
+      if (en) return en;
+    }
+    return siteContent[`contact_${key}`]?.trim() || fallback;
+  };
+
   const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
 
   const [loading, setLoading] = useState(false);
@@ -147,8 +169,8 @@ const Contact: React.FC = () => {
     }
   };
 
-  /** 社群連結列表（BadgeItem 格式，供 ImagesBadge 使用） */
-  const socialItems: BadgeItem[] = [
+  /** 社群連結列表（BadgeItem 格式，供 ImagesBadge 使用）——後台 contact_socials JSON 可整組抽換 */
+  const defaultSocialItems: BadgeItem[] = [
     {
       name: "Instagram",
       href: SOCIAL_LINKS.INSTAGRAM,
@@ -199,6 +221,31 @@ const Contact: React.FC = () => {
       bg: "#191919",
     },
   ];
+
+  /** 後台有填 contact_socials（JSON 陣列）就用它；解析失敗一律退回預設，不讓頁面掛掉 */
+  const socialItems: BadgeItem[] = (() => {
+    const raw = siteContent["contact_socials"];
+    if (!raw) return defaultSocialItems;
+    try {
+      const arr = JSON.parse(raw) as Array<Partial<BadgeItem>>;
+      if (!Array.isArray(arr)) return defaultSocialItems;
+      const items = arr
+        .filter(
+          (s): s is BadgeItem =>
+            !!s && typeof s.name === "string" && typeof s.href === "string" && !!s.href,
+        )
+        .map((s) => ({
+          name: s.name,
+          href: s.href,
+          icon: s.icon || "🔗",
+          desc: s.desc || "",
+          bg: s.bg || "#444444",
+        }));
+      return items.length > 0 ? items : defaultSocialItems;
+    } catch {
+      return defaultSocialItems;
+    }
+  })();
 
   return (
     <div className="min-h-screen bg-transparent relative">
@@ -317,8 +364,8 @@ const Contact: React.FC = () => {
                 >
                   {loading ? extra.sending : t.contact.formSubmit}
                 </PillButton>
-                <p className="text-xs text-muted text-center">
-                  {t.contact.formNote}
+                <p className="text-xs text-muted text-center whitespace-pre-line">
+                  {cc("form_intro") || t.contact.formNote}
                 </p>
               </form>
               </div>
@@ -330,11 +377,38 @@ const Contact: React.FC = () => {
                 {t.contact.infoSection}
               </h2>
 
+              {/* 教練形象照（後台「聯絡資訊」可抽換；照片上文字走 hero-has-photo 豁免，雙主題皆亮字） */}
+              {cc("photo_url") && (
+                <motion.div
+                  className="hero-has-photo relative rounded-xl overflow-hidden border border-gold/25 mb-5 sm:mb-6"
+                  whileHover={{ y: -4, boxShadow: "0 12px 36px rgba(0,0,0,0.25)" }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <img
+                    src={cc("photo_url")}
+                    alt={cc("name", COACH_INFO.NAME)}
+                    className="w-full aspect-square object-cover object-top"
+                    loading="lazy"
+                  />
+                  <div
+                    className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-12"
+                    style={{ background: "linear-gradient(to top, rgba(8,8,8,0.75), transparent)" }}
+                  >
+                    <p className="text-white font-medium tracking-wide">
+                      {cc("name", COACH_INFO.NAME)}
+                    </p>
+                    <p className="text-white/75 text-xs mt-0.5">
+                      {cc("title", COACH_INFO.TITLE)}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Info Cards */}
               <div className="space-y-4 mb-6 sm:mb-8">
                 {/* LINE 快速聯繫 */}
                 <motion.a
-                  href={SOCIAL_LINKS.LINE_OFFICIAL}
+                  href={cc("line_url", SOCIAL_LINKS.LINE_OFFICIAL)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block p-4 sm:p-5 bg-[#06C755]/8 rounded-lg border border-[#06C755]/25"
@@ -348,7 +422,7 @@ const Contact: React.FC = () => {
                         {t.contact.lineQuickContact}
                       </h3>
                       <p className="text-sm text-white/90">
-                        ID: {COACH_INFO.LINE_ID}
+                        ID: {cc("line_id", COACH_INFO.LINE_ID)}
                       </p>
                     </div>
                   </div>
@@ -364,7 +438,7 @@ const Contact: React.FC = () => {
                     {t.contact.email}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90 break-all">
-                    {COACH_INFO.EMAIL}
+                    {cc("email", COACH_INFO.EMAIL)}
                   </p>
                 </motion.div>
 
@@ -378,7 +452,7 @@ const Contact: React.FC = () => {
                     {t.contact.businessHours}
                   </h3>
                   <p className="text-sm sm:text-base text-white/90">
-                    {t.coachInfo.businessHours}
+                    {cc("hours", t.coachInfo.businessHours)}
                   </p>
                 </motion.div>
               </div>
@@ -397,10 +471,7 @@ const Contact: React.FC = () => {
                 overlap={-14}
               />
 
-              {/* 悄悄話區塊 */}
-              <div className="mt-8" data-aos="fade-left" data-aos-delay="250">
-                <WhisperForm />
-              </div>
+              {/* 悄悄話區塊已於 2026-09-07 依業主要求移除（表單說明欄位改由後台聯絡資訊管理） */}
             </div>
           </div>
         </div>

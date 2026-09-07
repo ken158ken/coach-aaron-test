@@ -11,6 +11,7 @@ export interface SiteContent {
   content_key: string;
   content_name: string;
   content_value: string;
+  content_value_en?: string | null;
   content_type: 'text' | 'html' | 'json' | 'image';
   sort_order: number;
   is_active: boolean;
@@ -75,6 +76,7 @@ export const contentService = {
     id: number,
     data: Partial<{
       contentValue: string;
+      contentValueEn: string;
       contentName: string;
       contentType: string;
       isActive: boolean;
@@ -90,6 +92,7 @@ export const contentService = {
     contentKey: string;
     contentName: string;
     contentValue?: string;
+    contentValueEn?: string;
     contentType?: string;
     sortOrder?: number;
   }): Promise<SiteContent> => {
