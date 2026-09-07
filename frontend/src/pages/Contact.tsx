@@ -297,6 +297,15 @@ const Contact: React.FC = () => {
                   </span>
                 </div>
               </div>
+              {/* 教練形象照（後台「聯絡資訊」可抽換）：小幅直式、靠右補卡片留白；手機置中 */}
+              {cc("photo_url") && (
+                <img
+                  src={cc("photo_url")}
+                  alt={cc("name", COACH_INFO.NAME)}
+                  loading="lazy"
+                  className="h-36 sm:h-32 md:h-40 aspect-[4/5] object-cover object-[50%_15%] rounded-lg border border-gold/30 shadow-md self-center sm:self-auto sm:ml-auto"
+                />
+              )}
             </div>
           </div>
 
@@ -376,33 +385,6 @@ const Contact: React.FC = () => {
               <h2 className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6 font-light">
                 {t.contact.infoSection}
               </h2>
-
-              {/* 教練形象照（後台「聯絡資訊」可抽換；照片上文字走 hero-has-photo 豁免，雙主題皆亮字） */}
-              {cc("photo_url") && (
-                <motion.div
-                  className="hero-has-photo relative rounded-xl overflow-hidden border border-gold/25 mb-5 sm:mb-6"
-                  whileHover={{ y: -4, boxShadow: "0 12px 36px rgba(0,0,0,0.25)" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <img
-                    src={cc("photo_url")}
-                    alt={cc("name", COACH_INFO.NAME)}
-                    className="w-full aspect-square object-cover object-top"
-                    loading="lazy"
-                  />
-                  <div
-                    className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-12"
-                    style={{ background: "linear-gradient(to top, rgba(8,8,8,0.75), transparent)" }}
-                  >
-                    <p className="text-white font-medium tracking-wide">
-                      {cc("name", COACH_INFO.NAME)}
-                    </p>
-                    <p className="text-white/75 text-xs mt-0.5">
-                      {cc("title", COACH_INFO.TITLE)}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
 
               {/* Info Cards */}
               <div className="space-y-4 mb-6 sm:mb-8">
