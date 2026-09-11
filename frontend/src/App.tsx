@@ -97,7 +97,6 @@ const LandingPageEditor = lazy(() => import("@/pages/admin/LandingPageEditor"));
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import PageBlade from "@/components/layout/PageBlade";
 import ScrollToTop from "@/components/layout/ScrollToTop";
-import { Analytics } from "@vercel/analytics/react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -186,7 +185,6 @@ function App(): JSX.Element {
         <LanguageProvider>
           <DialogProvider>
             <SmoothScroll>
-              <Analytics />
               <ScrollToTop />
               <PageBlade />
               {/* Suspense 邊界：公開路由全為靜態 import，SSR 期間永不觸發（見檔首說明） */}

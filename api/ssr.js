@@ -156,11 +156,16 @@ module.exports = async function handler(req, res) {
       .setHeader("Content-Type", "text/html; charset=utf-8")
       .setHeader("X-Rendered-By", "ssr")
       .setHeader(
-        // s-maxage 由 10s 拉長到 60s：每次 MISS 都要付一次「SSR 呼叫後端 API」
-        // 的成本（實測 2~4s），10s 幾乎等於每個請求都重算。
-        // stale-while-revalidate 讓過期後仍先回舊頁再背景更新，使用者不會等。
+        // 2026-09-11 由 60s 拉長到 600s：每次 MISS = 1 次 SSR 冷啟動（載入 10MB
+        // bundle ≈ 300ms+ CPU）+ 6 次後端 API 呼叫；60s 在低流量站等於每位訪客
+        // 都是 MISS，是 Vercel Fluid Active CPU 額度爆表的主因之一。
+        // 代價：後台改內容後，公開訪客最多 10 分鐘看到舊 HTML（hydrate 後
+        // 客戶端仍會重抓 API 覆蓋畫面，所以實際只影響首屏與爬蟲看到的版本）。
+        // stale-while-revalidate=1 天：過期後先回舊頁、背景重算，訪客不用等。
+        // 急需立即生效：Vercel 專案設定 → Purge Cache。
+        // 注意：這份 HTML 對所有人一致、不含任何登入者資料，快取多久都不影響登入。
         "Cache-Control",
-        "public, s-maxage=60, stale-while-revalidate=600",
+        "public, s-maxage=600, stale-while-revalidate=86400",
       )
       .end(html);
   } catch (e) {

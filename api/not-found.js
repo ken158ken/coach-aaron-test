@@ -12,20 +12,16 @@
  *   本函式一律回傳 **HTTP 404**。正常的 SPA 路由完全不受影響，因為它們
  *   都在白名單內；只有真正不存在的路徑才會走到這裡。
  *
- *   渲染策略（向前相容）：
- *   目前 `App.tsx` 沒有定義 `*` catch-all 路由，所以 SSR 對未知路徑會渲染出
- *   空的 app。因此本函式會先嘗試 SSR：
- *     - 若 SSR 產出有意義的內容（代表日後有人在 App.tsx 加了 NotFound 路由），
- *       就使用它，只是把狀態碼改成 404 並補上 noindex。
- *     - 否則回退到一個自帶樣式的極簡 404 頁面（不載入 3.4 MB 的主 bundle）。
- *   如此一來，等 App.tsx 補上 NotFound 路由後，本檔不需要任何修改即會自動升級。
+ *   渲染策略：**一律回內建的極簡 404 頁**，不載入 SSR bundle。
+ *   （2026-09-11 前曾「先 require 10MB 的 _ssr_bundle.cjs 試渲染、空殼才退回
+ *   靜態頁」——但 App.tsx 從未定義 `*` 路由，那條分支從未成立，卻讓每一發
+ *   掃描器請求（/wp-admin/install.php 全天候每幾分鐘一次）與每頁一次的
+ *   /_vercel/insights/script.js 404 都白付一次 bundle 載入的 CPU，
+ *   是 Vercel Fluid Active CPU 額度爆表的主因之一。）
+ *   日後若真的要 SSR 一個 NotFound 頁，請把該路由加進 vercel.json 的
+ *   白名單走 api/ssr.js，而不是在這裡載 bundle。
  */
 
-const fs = require("node:fs");
-const path = require("node:path");
-
-/** SSR 產出低於此字元數即視為「空骨架」，改用內建 404 頁面 */
-const MEANINGFUL_HTML_THRESHOLD = 200;
 
 /**
  * 內建的極簡 404 頁面（不依賴前端 bundle，無 JS，無外部資源）
@@ -92,60 +88,17 @@ function fallbackHtml() {
 `;
 }
 
-/**
- * 嘗試以既有 SSR bundle 渲染頁面
- *
- * @param {string} url - 請求路徑
- * @returns {string|null} 完整 HTML；無法產出有意義內容時回傳 null
- */
-function trySsr(url) {
-  try {
-    const templatePath = path.resolve(__dirname, "_ssr_template.html");
-    if (!fs.existsSync(templatePath)) return null;
-
-    // 與 api/ssr.js 使用同一份 build artifact
-    const serverModule = require("./_ssr_bundle.cjs");
-    const render = serverModule.render || serverModule.default?.render;
-    if (typeof render !== "function") return null;
-
-    const result = render(url);
-    const appHtml = result?.html || "";
-    if (appHtml.replace(/<[^>]*>/g, "").trim().length < MEANINGFUL_HTML_THRESHOLD)
-      return null;
-
-    let html = fs.readFileSync(templatePath, "utf-8");
-    html = html.includes("<!--ssr-outlet-->")
-      ? html.replace("<!--ssr-outlet-->", appHtml)
-      : html.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
-
-    if (html.includes("<!--ssr-head-->")) {
-      // 補上 noindex，避免 404 頁面本身被索引
-      html = html.replace(
-        "<!--ssr-head-->",
-        `<meta name="robots" content="noindex, follow" />${result?.head || ""}`,
-      );
-    }
-
-    return html.replace(
-      '<script type="module" src="/src/entry-client.tsx"></script>',
-      "",
-    );
-  } catch (err) {
-    console.error("not-found: SSR attempt failed:", err.message);
-    return null;
-  }
-}
-
 module.exports = async function handler(req, res) {
   console.log(`🚫 404: ${req.url}`);
 
-  const html = trySsr(req.url) || fallbackHtml();
+  const html = fallbackHtml();
 
   res
     .status(404)
     .setHeader("Content-Type", "text/html; charset=utf-8")
     .setHeader("X-Robots-Tag", "noindex")
-    // 404 不做長時間邊緣快取，避免日後新增路由後仍被快取住
-    .setHeader("Cache-Control", "public, max-age=0, s-maxage=60")
+    // 邊緣快取 1 小時：掃描器反覆打同一組路徑（/wp-admin/…），命中快取就不會
+    // 叫醒 function。新部署會整批清掉 CDN 快取，所以日後新增路由不會被舊 404 卡住。
+    .setHeader("Cache-Control", "public, max-age=0, s-maxage=3600")
     .end(html);
 };

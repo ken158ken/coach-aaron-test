@@ -50,6 +50,15 @@ echo "=== 3/6 Copying SSR assets to api/ ==="
 cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs
 cp frontend/dist/client/index.html api/_ssr_template.html
 
+# 登入專屬路由（/admin/*、/member、/notes…）不走 SSR，改由 vercel.json rewrite
+# 到這個靜態 CSR 殼（零 function 呼叫）。內容 = 同一份 index.html，只把 SSR
+# 佔位符換掉：root 留空 → entry-client 走 createRoot；head 補 noindex。
+# （index.html 本身仍必須移出 outputDirectory，否則靜態檔優先會蓋掉 SSR。）
+sed -e 's|<!--ssr-outlet-->||' \
+    -e 's|<!--ssr-head-->|<meta name="robots" content="noindex" />|' \
+    frontend/dist/client/index.html > frontend/dist/client/app-shell.html
+echo "    app-shell.html generated ($(wc -c < frontend/dist/client/app-shell.html) bytes)"
+
 echo "=== 4/6 Stamping service worker cache version ==="
 # sw.js 的 SW_VERSION 決定快取版本；SW 啟用時會刪除「非本版本」的所有舊快取。
 # 這裡把佔位符 __SW_BUILD_ID__ 換成本次 commit SHA（無則用時間戳），

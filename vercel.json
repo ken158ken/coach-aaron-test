@@ -8,17 +8,21 @@
 
     { "source": "/", "destination": "/api/ssr" },
     {
-      "source": "/(courses|videos|lessons|articles|contact|about|app|login|register|member|dashboard|checkout|pages|booking|my-bookings|coach|chat|notifications|notes)",
+      "source": "/(courses|videos|lessons|articles|contact|about|app|pages)",
       "destination": "/api/ssr"
     },
     { "source": "/courses/:id", "destination": "/api/ssr" },
     { "source": "/lessons/:id", "destination": "/api/ssr" },
     { "source": "/articles/:slug", "destination": "/api/ssr" },
     { "source": "/page/:slug", "destination": "/api/ssr" },
-    { "source": "/chat/:conversationId", "destination": "/api/ssr" },
-    { "source": "/checkout/success", "destination": "/api/ssr" },
-    { "source": "/admin", "destination": "/api/ssr" },
-    { "source": "/admin/:path*", "destination": "/api/ssr" },
+    {
+      "source": "/(login|register|member|dashboard|booking|my-bookings|coach|chat|notifications|notes|checkout)",
+      "destination": "/app-shell.html"
+    },
+    { "source": "/chat/:conversationId", "destination": "/app-shell.html" },
+    { "source": "/checkout/success", "destination": "/app-shell.html" },
+    { "source": "/admin", "destination": "/app-shell.html" },
+    { "source": "/admin/:path*", "destination": "/app-shell.html" },
 
     { "source": "/(.*)", "destination": "/api/not-found" }
   ],
@@ -32,8 +36,7 @@
       "includeFiles": "api/_ssr_template.html"
     },
     "api/not-found.js": {
-      "maxDuration": 10,
-      "includeFiles": "api/_ssr_template.html"
+      "maxDuration": 10
     },
     "api/sitemap.js": {
       "maxDuration": 10
@@ -58,6 +61,13 @@
     }
   ],
   "headers": [
+    {
+      "source": "/app-shell.html",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [
