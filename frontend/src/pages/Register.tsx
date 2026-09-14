@@ -154,7 +154,15 @@ const Register: React.FC = () => {
 
           {/* Terms */}
           <p className="text-center text-muted text-[10px] sm:text-xs mt-4 sm:mt-6 px-2">
-            {t.register.terms}
+            {t.legal.agreePrefix}
+            <Link to="/terms" className="text-gold hover:underline underline-offset-2">
+              {t.legal.terms}
+            </Link>
+            {t.legal.agreeAnd}
+            <Link to="/privacy" className="text-gold hover:underline underline-offset-2">
+              {t.legal.privacy}
+            </Link>
+            {t.legal.agreeSuffix}
           </p>
 
           {/* Divider */}

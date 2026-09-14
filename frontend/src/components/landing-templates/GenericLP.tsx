@@ -611,6 +611,11 @@ const GenericLP: React.FC<Props> = ({ project, fields }) => {
         <p className="text-white/20 text-xs">
           © {new Date().getFullYear()} {project.project_name} · Aaron 教練
         </p>
+        <p className="mt-2 text-white/30 text-[11px] flex items-center justify-center gap-3">
+          <Link to="/privacy" className="hover:text-white/60 transition-colors">隱私權政策</Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/terms" className="hover:text-white/60 transition-colors">服務條款</Link>
+        </p>
       </footer>
     </div>
   );

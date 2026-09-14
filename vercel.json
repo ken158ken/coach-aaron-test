@@ -8,7 +8,7 @@
 
     { "source": "/", "destination": "/api/ssr" },
     {
-      "source": "/(courses|videos|lessons|articles|contact|about|app|pages)",
+      "source": "/(courses|videos|lessons|articles|contact|about|app|pages|privacy|terms)",
       "destination": "/api/ssr"
     },
     { "source": "/courses/:id", "destination": "/api/ssr" },

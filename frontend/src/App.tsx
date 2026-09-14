@@ -40,6 +40,7 @@ import { useHeartbeat } from "@/hooks/usePresence";
 import Layout from "@/components/layout/Layout";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
+import LegalPage from "@/pages/LegalPage";
 import AppInstall from "@/pages/AppInstall";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
@@ -194,6 +195,9 @@ function App(): JSX.Element {
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
                   <Route path="about" element={<About />} />
+                  {/* 法律頁：Google OAuth / LINE Login 後台登記的公開網址，路徑不可改 */}
+                  <Route path="privacy" element={<LegalPage kind="privacy" />} />
+                  <Route path="terms" element={<LegalPage kind="terms" />} />
                   <Route path="app" element={<AppInstall />} />
                   <Route path="courses" element={<Courses />} />
                   <Route path="courses/:id" element={<CourseDetail />} />

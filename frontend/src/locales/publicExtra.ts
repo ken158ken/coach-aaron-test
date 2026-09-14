@@ -414,6 +414,19 @@ export interface PublicExtraTranslations {
     /** 留言者沒有暱稱時的預設稱呼 */
     defaultUser: string;
   };
+  /** 法律頁（/privacy、/terms）與各處法律連結 */
+  legal: {
+    privacy: string;
+    terms: string;
+    lastUpdated: string;
+    toc: string;
+    tocAria: string;
+    seeAlso: string;
+    /** 註冊頁：「建立帳號即表示同意」+ 條款連結 + 「與」+ 隱私連結 */
+    agreePrefix: string;
+    agreeAnd: string;
+    agreeSuffix: string;
+  };
 }
 
 export const publicExtra: {
@@ -934,6 +947,17 @@ export const publicExtra: {
     notFound: "找不到文章",
     loadFailed: "載入文章失敗",
     defaultUser: "使用者",
+  },
+  legal: {
+    privacy: "隱私權政策",
+    terms: "服務條款",
+    lastUpdated: "最後更新日期",
+    toc: "目錄",
+    tocAria: "文件目錄",
+    seeAlso: "另請參閱",
+    agreePrefix: "建立帳號即表示您同意",
+    agreeAnd: "與",
+    agreeSuffix: "",
   },
   },
   en: {
@@ -1503,6 +1527,17 @@ export const publicExtra: {
     notFound: "Article not found",
     loadFailed: "Failed to load the article",
     defaultUser: "Member",
+  },
+  legal: {
+    privacy: "Privacy Policy",
+    terms: "Terms of Service",
+    lastUpdated: "Last updated",
+    toc: "Contents",
+    tocAria: "Document contents",
+    seeAlso: "See also",
+    agreePrefix: "By creating an account you agree to the ",
+    agreeAnd: " and ",
+    agreeSuffix: ".",
   },
   },
 };

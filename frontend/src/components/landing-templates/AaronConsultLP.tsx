@@ -16,6 +16,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { pick, imgSrc, isPlaceholder, sectionVisible, collectIndexed, type LPProps } from "./lpUtils";
 import { useLpShell, LpChrome } from "./lpTheme";
 import { SEOHead } from "@/components/seo";
@@ -1233,6 +1234,11 @@ const AaronConsultLP: React.FC<LPProps> = ({ project, fields }) => {
       >
         <p className="text-xs" style={{ color: "var(--lp-faint)" }}>
           © {new Date().getFullYear()} {project.project_name || "阿倫教官"}
+        </p>
+        <p className="mt-2 text-[11px] flex items-center justify-center gap-3" style={{ color: "var(--lp-faint)" }}>
+          <Link to="/privacy" className="hover:underline underline-offset-2">隱私權政策</Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/terms" className="hover:underline underline-offset-2">服務條款</Link>
         </p>
       </footer>
 

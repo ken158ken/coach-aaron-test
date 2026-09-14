@@ -133,6 +133,16 @@ const Footer: React.FC = (): JSX.Element => {
           <p className="text-[9px] sm:text-[10px] tracking-widest">
             © 2026 {t.layoutExtra.brandName} - {t.layoutExtra.rightsReserved}
           </p>
+          {/* 法律連結：Google OAuth 品牌驗證要求隱私權政策需可自首頁到達 */}
+          <p className="mt-1.5 text-[9px] sm:text-[10px] tracking-widest flex items-center justify-center gap-3">
+            <Link to="/privacy" className="nav-link" data-tour="footer-privacy">
+              {t.legal.privacy}
+            </Link>
+            <span aria-hidden="true" className="opacity-40">·</span>
+            <Link to="/terms" className="nav-link" data-tour="footer-terms">
+              {t.legal.terms}
+            </Link>
+          </p>
         </div>
       </div>
     </footer>
