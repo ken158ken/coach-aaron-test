@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui";
 import SEOHead from "@/components/seo/SEOHead";
 import { useLanguage } from "@/context/LanguageContext";
+import { cloudinarySrcSet, cloudinaryUrl } from "@/lib/cloudinary";
 
 /**
  * 職涯時間軸的「非文字」資料。
@@ -24,22 +25,37 @@ interface TimelineMedia {
   image: string;
 }
 
+/**
+ * 時間軸圖片的響應式設定。
+ *
+ * 版面實測：`studio-container max-w-5xl mx-auto` + px-4，md↑ 兩欄
+ *   → 手機 ≈ 100vw 扣 px-4
+ *   → md（768px）(736 − gap-10) ÷ 2 ≈ 348px
+ *   → lg↑（容器封頂 64rem）(992 − gap-14) ÷ 2 ≈ 468px
+ * 高度由 CSS 固定（h-80 / sm:h-96 / md:h-120）＋ object-cover，只有寬度影響挑圖；
+ * 原圖 900px 寬，梯度封頂 900。
+ */
+const TIMELINE_WIDTHS = [480, 640, 768, 900] as const;
+const TIMELINE_SIZES = "(min-width: 1024px) 468px, (min-width: 768px) 348px, 92vw";
+/** 不支援 srcset 時的 fallback 寬度 */
+const TIMELINE_FALLBACK_W = 768;
+
 /** 職涯時間軸圖片（依時間正序：早 → 現在，需與字典 items 對齊） */
 const TIMELINE_MEDIA: TimelineMedia[] = [
   {
     id: "real-estate",
     image:
-      "https://res.cloudinary.com/daejq0zo9/image/upload/f_auto,q_auto,w_900/v1784556095/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_17_qsdcqo.jpg",
+      "https://res.cloudinary.com/daejq0zo9/image/upload/v1784556095/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_17_qsdcqo.jpg",
   },
   {
     id: "personal-trainer",
     image:
-      "https://res.cloudinary.com/daejq0zo9/image/upload/f_auto,q_auto,w_900/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_6_rhqnrz.jpg",
+      "https://res.cloudinary.com/daejq0zo9/image/upload/v1784556003/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_6_rhqnrz.jpg",
   },
   {
     id: "head-coach",
     image:
-      "https://res.cloudinary.com/daejq0zo9/image/upload/f_auto,q_auto,w_900/v1784556128/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_9_tp7sdh.jpg",
+      "https://res.cloudinary.com/daejq0zo9/image/upload/v1784556128/LINE_ALBUM_%E5%B8%A5%E7%85%A7_260720_9_tp7sdh.jpg",
   },
 ];
 
@@ -61,6 +77,8 @@ const About: React.FC = () => {
         url="/about"
         author={about.seo.author}
         breadcrumbs={[{ name: about.seo.breadcrumb, url: "/about" }]}
+        /* 教練本人的 Person 結構化資料（與首頁共用同一個 @id） */
+        person
       />
 
       <div className="relative z-10 pt-20 sm:pt-24 pb-16 sm:pb-24 px-4">
@@ -124,9 +142,17 @@ const About: React.FC = () => {
                       >
                         <div className="relative rounded-xl overflow-hidden border border-gold/15 bg-surface">
                           <img
-                            src={media.image}
+                            src={cloudinaryUrl(media.image, {
+                              w: TIMELINE_FALLBACK_W,
+                            })}
+                            srcSet={
+                              cloudinarySrcSet(media.image, TIMELINE_WIDTHS) ||
+                              undefined
+                            }
+                            sizes={TIMELINE_SIZES}
                             alt={item.imageAlt}
                             loading="lazy"
+                            decoding="async"
                             className="w-full h-80 sm:h-96 md:h-120 object-cover object-top"
                           />
                           <span className="absolute top-3 left-3 text-[10px] sm:text-xs uppercase tracking-widest text-white/90 bg-black/55 px-2.5 py-1 rounded-full">

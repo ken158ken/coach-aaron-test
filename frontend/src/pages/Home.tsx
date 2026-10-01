@@ -48,6 +48,8 @@ const Home: React.FC = () => {
         image="/images/og-default.jpg"
         url="/"
         author={t.homeSeo.author}
+        /* homeSeo.title 已含品牌名（業主定稿），不要再接「| 阿倫教官」 */
+        titleTemplate={false}
       />
 
       {/* 首頁自定義彈窗 */}

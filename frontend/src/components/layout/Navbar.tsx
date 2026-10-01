@@ -309,11 +309,18 @@ const Navbar: React.FC = (): JSX.Element => {
 key={glareKey}
             className="navbar-glare-strip"
             style={{
-              position: "absolute", top: 0, left: "-100%", width: "50%", height: "100%",
+              // 光帶寬 = 容器 50%，所以「容器寬 -100%」＝「自身寬 -200%」。
+              // 原本用 left 位移（layout 動畫，Lighthouse 列非合成動畫）→
+              // 2026-10-01 改成 translateX：left 固定 0，位移全交給 transform。
+              // keyframes（index.css navbarGlare / navbarGlareOnce）同步改寫；
+              // animation 有 2s delay 又沒 fill-mode，delay 期間吃的是這裡的
+              // 起始 transform，故必須先把光帶推到畫面外，否則會先靜止露出 2 秒。
+              position: "absolute", top: 0, left: 0, width: "50%", height: "100%",
               background: isDark
                 ? "linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.7) 50%,rgba(255,255,255,0) 100%)"
                 : "linear-gradient(90deg,rgba(0,0,0,0) 0%,rgba(38,36,33,0.20) 50%,rgba(0,0,0,0) 100%)",
-              transform: "skewX(-45deg)",
+              transform: "translateX(-200%) skewX(-45deg)",
+              willChange: "transform",
               animation: glareFast
                 ? "navbarGlareOnce 1.1s cubic-bezier(0.22,1,0.36,1) forwards"
                 : "navbarGlare 6s infinite 2s",

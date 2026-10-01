@@ -16,6 +16,15 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 /**
+ * 預抓資料裡的保留鍵（與 frontend/src/ssr/initialData.ts 的 NOT_FOUND_KEY 同值）
+ *
+ * prefetch 在「該路由的主實體 API 回 HTTP 404」時設定它（逾時/5xx 不會），
+ * 本函式據此回 HTTP 404 —— 修正軟 404：舊行為是 200 + 畫面寫「找不到」，
+ * Google 會判定為 soft 404 並照樣收錄。
+ */
+const NOT_FOUND_KEY = "__notFound";
+
+/**
  * 載入 SSR entry module（惰性載入，僅執行一次）
  *
  * @returns {{ render: Function }} SSR module
@@ -106,6 +115,15 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ===== 3.5 軟 404 判定 =====
+    // sentinel 只用來決定狀態碼，render / 序列化都不該看到它
+    let isNotFound = false;
+    if (initialData && initialData[NOT_FOUND_KEY]) {
+      isNotFound = true;
+      delete initialData[NOT_FOUND_KEY];
+      console.log(`🚫 Primary entity 404 for ${url} → responding 404`);
+    }
+
     // ===== 4. 渲染 HTML =====
     let appHtml = "";
     let headTags = "";
@@ -151,8 +169,12 @@ module.exports = async function handler(req, res) {
 
     console.log(`✅ SSR complete for: ${url} (${appHtml.length} chars)`);
 
+    // 404 時額外補 X-Robots-Tag（頁面本身也會輸出 noindex meta；
+    // 正常頁不設此標頭，避免與頁面層 noIndex 判斷互相干擾）
+    if (isNotFound) res.setHeader("X-Robots-Tag", "noindex");
+
     res
-      .status(200)
+      .status(isNotFound ? 404 : 200)
       .setHeader("Content-Type", "text/html; charset=utf-8")
       .setHeader("X-Rendered-By", "ssr")
       .setHeader(
@@ -165,7 +187,11 @@ module.exports = async function handler(req, res) {
         // 急需立即生效：Vercel 專案設定 → Purge Cache。
         // 注意：這份 HTML 對所有人一致、不含任何登入者資料，快取多久都不影響登入。
         "Cache-Control",
-        "public, s-maxage=600, stale-while-revalidate=86400",
+        // 404 不加 stale-while-revalidate：否則文章剛發布時，先前被爬到的
+        // 404 可能被當 stale 再回送最多一天，讓新頁面遲遲進不了索引。
+        isNotFound
+          ? "public, s-maxage=600"
+          : "public, s-maxage=600, stale-while-revalidate=86400",
       )
       .end(html);
   } catch (e) {

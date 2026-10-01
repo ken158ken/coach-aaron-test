@@ -128,23 +128,70 @@ function urlNode(siteUrl, entry) {
 }
 
 /**
+ * 取得一批資料列中「最新」的日期（YYYY-MM-DD），供列表頁的 <lastmod> 使用
+ *
+ * 用意：首頁與列表頁本身沒有 updated_at，但它們的內容會隨子項目變動；
+ * 以「該類最新內容的更新日」當 lastmod，Google 才知道何時值得重抓。
+ * 沒有任何有效日期時回傳 null（urlNode 會省略 <lastmod>）。
+ *
+ * @param {Array<Record<string, unknown>>} rows
+ * @param {string[]} fields - 要比較的欄位（任一有效者都納入比較）
+ * @returns {string|null} 例如 "2026-09-14"
+ */
+function newestLastmod(rows, fields) {
+  let newest = null;
+  for (const row of rows) {
+    for (const field of fields) {
+      const d = toLastmod(row[field]);
+      // YYYY-MM-DD 的字典順序 == 時間順序，可直接比較字串
+      if (d && (!newest || d > newest)) newest = d;
+    }
+  }
+  return newest;
+}
+
+/**
  * 靜態（非資料庫驅動）的公開頁面
  *
- * 註：站上目前沒有 /about 路由（App.tsx 未定義），刻意不列入——
- * 把一個會 404 的 URL 放進 sitemap 是明確的錯誤訊號。
- * 若日後新增關於頁，在此加一列即可。
+ * `lastmodFrom` 標示該頁的 lastmod 要取自哪一類內容的最新更新時間
+ * （首頁 "all" = 全部內容）；未標示者不輸出 <lastmod>
+ * （/contact、/privacy、/terms 等純程式碼頁的改動時間在 git 裡，
+ *   硬寫日期只會變成不準的雜訊）。
  *
+ * 註：/about 路由確實存在（App.tsx 的 `/about` → pages/About.tsx，頁面有
+ * SEOHead 與完整文案），故納入。此處只列「公開且有索引價值」的路由；
  * 登入後頁面（/member、/dashboard、/checkout、/booking、/my-bookings、
- * /chat、/notifications、/coach）與 /login、/register、/admin 皆不列入。
+ * /chat、/notifications、/coach、/notes）與 /login、/register、/admin 皆不列入。
  */
 const STATIC_PAGES = [
-  { path: "/", changefreq: "weekly", priority: "1.0" },
-  { path: "/courses", changefreq: "weekly", priority: "0.9" },
-  { path: "/articles", changefreq: "daily", priority: "0.9" },
-  { path: "/lessons", changefreq: "weekly", priority: "0.7" },
+  { path: "/", changefreq: "weekly", priority: "1.0", lastmodFrom: "all" },
+  {
+    path: "/courses",
+    changefreq: "weekly",
+    priority: "0.9",
+    lastmodFrom: "courses",
+  },
+  {
+    path: "/articles",
+    changefreq: "daily",
+    priority: "0.9",
+    lastmodFrom: "articles",
+  },
+  {
+    path: "/lessons",
+    changefreq: "weekly",
+    priority: "0.7",
+    lastmodFrom: "lessons",
+  },
   { path: "/videos", changefreq: "weekly", priority: "0.7" },
+  { path: "/about", changefreq: "monthly", priority: "0.8" },
   { path: "/contact", changefreq: "monthly", priority: "0.6" },
-  { path: "/pages", changefreq: "monthly", priority: "0.4" },
+  {
+    path: "/pages",
+    changefreq: "monthly",
+    priority: "0.4",
+    lastmodFrom: "landing",
+  },
   { path: "/privacy", changefreq: "yearly", priority: "0.3" },
   { path: "/terms", changefreq: "yearly", priority: "0.3" },
 ];
@@ -172,8 +219,28 @@ module.exports = async function handler(req, res) {
       ),
     ]);
 
+    // 各類內容的最新更新日 → 供首頁與列表頁的 <lastmod>
+    const latest = {
+      articles: newestLastmod(articles, ["updated_at", "published_at"]),
+      courses: newestLastmod(courses, ["updated_at", "created_at"]),
+      lessons: newestLastmod(lessons, ["updated_at", "created_at"]),
+      landing: newestLastmod(landingPages, ["updated_at", "published_at"]),
+    };
+    latest.all = newestLastmod(
+      [
+        { d: latest.articles },
+        { d: latest.courses },
+        { d: latest.lessons },
+        { d: latest.landing },
+      ],
+      ["d"],
+    );
+
     /** @type {Array<{path: string, lastmod?: string|null, changefreq?: string, priority?: string}>} */
-    const entries = [...STATIC_PAGES];
+    const entries = STATIC_PAGES.map(({ lastmodFrom, ...page }) => ({
+      ...page,
+      lastmod: lastmodFrom ? latest[lastmodFrom] || null : null,
+    }));
 
     // 文章：URL 使用 slug，缺 slug 時退回 id（與 Articles.tsx:163 的連結規則一致）
     for (const a of articles) {

@@ -17,6 +17,15 @@ export interface PrefetchSpec {
   /** 標註用途：此筆屬次要資料（目前 prefetch 對所有 spec 一視同仁——
    *  任何一筆失敗都只是該 key 缺席、不會擋 SSR；此欄位僅供閱讀者理解優先序） */
   optional?: boolean;
+  /**
+   * 此筆是「本路由的主實體」（詳情頁的文章 / 課程 / 影片 / LP 本體）。
+   *
+   * 只有 primary 的請求收到 **HTTP 404** 時，prefetch 才會標記
+   * `__notFound`，讓 `api/ssr.js` 回 HTTP 404（修正軟 404）。
+   * 逾時 / 5xx / 非 JSON 一律不標記 —— 維持優雅降級，絕不把暫時性故障
+   * 變成讓 Google 刪索引的 404。
+   */
+  primary?: boolean;
   /** 單筆逾時（毫秒）；未設定時用 prefetch options 的全域 timeoutMs */
   timeoutMs?: number;
 }
@@ -58,8 +67,31 @@ function normalizePath(url: string): string {
   return pathname || "/";
 }
 
-/** slug/id 只允許安全字元，避免把任意字串拼進 API URL */
-const SAFE_PARAM = /^[A-Za-z0-9._~-]{1,200}$/;
+/** 不得出現在單一 path segment 的字元（控制字元與路徑/查詢分隔符） */
+// eslint-disable-next-line no-control-regex
+const UNSAFE_PARAM_CHARS = /[\u0000-\u001f\u007f/?#&]/;
+
+/**
+ * 解碼並驗證單一路由參數（slug / id）
+ *
+ * req.url 的 segment 是百分比編碼過的（中文 slug 會是 `%E4%B8%AD`），
+ * 必須先 decode 再由呼叫端 `encodeURIComponent()` 重新編碼，否則會雙重編碼。
+ * 回傳 null 表示不安全/異常，呼叫端應放棄預抓（不等於 404）。
+ *
+ * @param raw 原始（可能已百分比編碼的）segment
+ * @returns 解碼後的參數，或 null
+ */
+function decodeParam(raw: string): string | null {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  if (!decoded || decoded.length > 200) return null;
+  if (UNSAFE_PARAM_CHARS.test(decoded)) return null;
+  return decoded;
+}
 
 /**
  * 依 URL 取得該路由需要預抓的資料清單
@@ -133,12 +165,13 @@ export function getPrefetchSpecs(url: string): PrefetchSpec[] {
 
   // /articles/:slug
   if (segments.length === 2 && segments[0] === "articles") {
-    const slug = segments[1];
-    if (!SAFE_PARAM.test(slug)) return [];
+    const slug = decodeParam(segments[1]);
+    if (!slug) return [];
     return [
       {
         key: dataKeys.article(slug),
         path: `/api/articles/${encodeURIComponent(slug)}`,
+        primary: true,
       },
       {
         key: dataKeys.articlesPopular(),
@@ -155,12 +188,13 @@ export function getPrefetchSpecs(url: string): PrefetchSpec[] {
 
   // /courses/:id
   if (segments.length === 2 && segments[0] === "courses") {
-    const id = segments[1];
-    if (!SAFE_PARAM.test(id)) return [];
+    const id = decodeParam(segments[1]);
+    if (!id) return [];
     return [
       {
         key: dataKeys.course(id),
         path: `/api/courses/${encodeURIComponent(id)}`,
+        primary: true,
       },
     ];
   }
@@ -172,24 +206,26 @@ export function getPrefetchSpecs(url: string): PrefetchSpec[] {
 
   // /lessons/:id
   if (segments.length === 2 && segments[0] === "lessons") {
-    const id = segments[1];
-    if (!SAFE_PARAM.test(id)) return [];
+    const id = decodeParam(segments[1]);
+    if (!id) return [];
     return [
       {
         key: dataKeys.lesson(id),
         path: `/api/lessons/${encodeURIComponent(id)}`,
+        primary: true,
       },
     ];
   }
 
   // /page/:slug（Landing Page）
   if (segments.length === 2 && segments[0] === "page") {
-    const slug = segments[1];
-    if (!SAFE_PARAM.test(slug)) return [];
+    const slug = decodeParam(segments[1]);
+    if (!slug) return [];
     return [
       {
         key: dataKeys.landing(slug),
         path: `/api/landing/projects/slug/${encodeURIComponent(slug)}`,
+        primary: true,
       },
     ];
   }

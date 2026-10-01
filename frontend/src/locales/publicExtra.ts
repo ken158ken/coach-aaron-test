@@ -28,6 +28,10 @@ export interface PublicExtraTranslations {
   layoutExtra: {
     brandName: string;
     brandTagline: string;
+    /** 頁尾導覽：指向 "/" 的連結文字（t.nav.home 的字面是「教練介紹」） */
+    footerHome: string;
+    /** 頁尾導覽：指向 /about 獨立教練介紹頁 */
+    footerAbout: string;
     rightsReserved: string;
     logoHomeAria: string;
     userMenuAria: string;
@@ -437,6 +441,8 @@ export const publicExtra: {
   layoutExtra: {
     brandName: "阿倫教官",
     brandTagline: "心理學 × 健身講師",
+    footerHome: "首頁",
+    footerAbout: "教練介紹",
     rightsReserved: "All rights reserved",
     logoHomeAria: "阿倫教官 Coach Aaron 首頁",
     userMenuAria: "使用者選單",
@@ -798,10 +804,17 @@ export const publicExtra: {
       "這是 PWA（漸進式網頁應用）技術：不經過 App Store、幾乎不佔手機空間，內容永遠和網站同步更新。移除方式與一般 APP 相同（長按 icon → 移除）。",
   },
   homeSeo: {
-    title: "私教變現專家 | 銷售心理學助健身教練月入8萬",
+    // 業主定稿（SEO_CONTENT_PLAN.md）：標題自帶品牌名，
+    // 所以 Home.tsx 的 <SEOHead titleTemplate={false}>，不再接品牌後綴
+    title: "阿倫教官 - 私教變現專家 | 銷售心理學助健身教練月入8萬",
     description:
       "10年健身產業經驗，整合銷售心理學與實戰技巧。專為私人教練打造的業績突破系統，已協助130+教練年收破百萬。不擅長銷售？學生續約卡關？讓阿倫教官幫你把專業換成穩定收入，100天月入8萬起。",
     keywords: [
+      // ⚠️ 前三個是教練本人指定的主打 tag（SEO_CONTENT_PLAN.md 開頭重複強調五次），
+      //    請保持在最前面
+      "私人教練銷售",
+      "健身教練銷售",
+      "皮拉提斯銷售",
       "阿倫教官",
       "私人教練變現",
       "銷售心理學",
@@ -815,9 +828,6 @@ export const publicExtra: {
       "健身教練行銷",
       "私教經營",
       "教練職涯發展",
-      "私人教練銷售",
-      "健身教練銷售",
-      "皮拉提斯銷售",
       "私教變現陪跑",
       "教練變現線上課程",
       "教練一對一顧問",
@@ -964,6 +974,8 @@ export const publicExtra: {
   layoutExtra: {
     brandName: "Coach Aaron",
     brandTagline: "Psychology × Fitness Education",
+    footerHome: "Home",
+    footerAbout: "About Coach",
     rightsReserved: "All rights reserved",
     logoHomeAria: "Coach Aaron — home",
     userMenuAria: "User menu",
@@ -1352,11 +1364,16 @@ export const publicExtra: {
       "This uses PWA (Progressive Web App) technology: no App Store, almost no storage used, and the content always stays in sync with the website. Remove it the same way as any app (press and hold the icon → Remove).",
   },
   homeSeo: {
-    title:
-      "Turn Coaching Skill Into Steady Income | Sales Training for Personal Trainers",
+    // 與中文版同樣自帶品牌名（titleTemplate={false}），控制在 60 字元內
+    title: "Coach Aaron - Sales Psychology for Personal Trainers",
     description:
       "Ten years in the fitness industry, combining sales psychology with what actually works on the gym floor. A revenue system built for personal trainers — 130+ coaches already helped past NT$1M in annual income. Not a natural at selling? Clients not renewing? Coach Aaron helps you turn your expertise into stable income, starting at NT$80,000 a month within 100 days.",
     keywords: [
+      // ⚠️ 前三個對應教練本人指定的主打 tag（私人教練銷售／健身教練銷售／
+      //    皮拉提斯銷售），請保持在最前面
+      "personal trainer sales",
+      "fitness coach sales",
+      "pilates instructor sales",
       "Coach Aaron",
       "personal trainer sales training",
       "fitness coach business growth",

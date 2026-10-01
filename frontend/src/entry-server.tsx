@@ -12,6 +12,7 @@ import {
   setServerInitialData,
   clearServerInitialData,
   serializeInitialData,
+  stripReservedKeys,
   type InitialDataMap,
 } from "./ssr/initialData";
 import { prefetchRouteData, type PrefetchOptions } from "./ssr/prefetch";
@@ -53,7 +54,10 @@ export async function prefetch(
  */
 export function render(url: string, initialData?: InitialDataMap): RenderResult {
   const data = initialData && typeof initialData === "object" ? initialData : {};
-  const hasData = Object.keys(data).length > 0;
+  // 交給客戶端的資料不含保留鍵（例如 __notFound 只服務 api/ssr.js 的狀態碼判斷），
+  // 否則 window.__INITIAL_DATA__ 會多出一個對頁面毫無意義的欄位。
+  const clientData = stripReservedKeys(data);
+  const hasData = Object.keys(clientData).length > 0;
 
   try {
     // 將預抓資料放進伺服器端 store，頁面元件的 useState 初值會讀取它
@@ -87,7 +91,7 @@ export function render(url: string, initialData?: InitialDataMap): RenderResult 
     return {
       html,
       head,
-      initialDataScript: hasData ? serializeInitialData(data) : "",
+      initialDataScript: hasData ? serializeInitialData(clientData) : "",
     };
   } catch (error) {
     console.error("❌ [entry-server] SSR render error:", error);

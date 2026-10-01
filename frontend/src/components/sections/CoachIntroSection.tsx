@@ -4,8 +4,10 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { cloudinarySrcSet, cloudinaryUrl } from '@/lib/cloudinary';
 import { TextButton } from '@/components/ui';
 import { useLanguage } from '@/context/LanguageContext';
 import { contentService } from '@/services/site/content.service';
@@ -65,16 +67,29 @@ const COACH_IMAGES: string[] = [
 const IMAGE_ROTATE_MS = 3000;
 
 /**
- * 為 Cloudinary 圖片網址插入優化參數（自動格式/品質、限寬），大幅降低傳輸量。
- * 只處理 res.cloudinary.com 的 /image/upload/ 網址；已含轉換參數者原樣返回。
+ * 響應式圖片設定（取代原本寫死的 `f_auto,q_auto,w_900`）。
+ *
+ * 版面實測：容器 `max-w-sm mx-auto md:max-w-[26rem]`
+ *   → 手機 ≈ 100vw 扣掉 px-4（上限 24rem / 384px）
+ *   → 桌機（md↑）固定 26rem / 416px
+ * 原圖為 900×1199，再往上的寬度沒有意義，所以梯度封頂 900。
+ * 實際挑哪一支由瀏覽器依 `sizes` × devicePixelRatio 決定。
  */
-function optimizeCloudinary(url: string): string {
-  if (!url.includes('res.cloudinary.com') || !url.includes('/image/upload/')) {
-    return url;
-  }
-  if (/\/image\/upload\/[a-z]_[^/]+\//.test(url)) return url; // 已有轉換參數
-  return url.replace('/image/upload/', '/image/upload/f_auto,q_auto,w_900/');
-}
+const IMAGE_WIDTHS = [384, 480, 640, 768, 900] as const;
+const IMAGE_SIZES = '(min-width: 768px) 26rem, 92vw';
+/** 原圖寬高（原始素材 1537×2048，w_900 輸出 900×1199）— 填 width/height 占位消除 CLS */
+const IMAGE_W = 900;
+const IMAGE_H = 1199;
+
+/**
+ * `fetchpriority="high"` 用小寫 + spread。
+ * @types/react 18.3 雖然認得 camelCase `fetchPriority`，但 react-dom 18.3.1
+ * 的 DOM 屬性表還沒有它 —— 直接寫 camelCase 雖然「會」輸出成屬性（HTML
+ * 屬性名大小寫不敏感），但每次 SSR 都會噴一行 dev warning。
+ * 用 spread 傳小寫自訂屬性即可：行為相同、零警告，TS 也不會對 spread
+ * 做多餘屬性檢查。
+ */
+const FETCH_PRIORITY_HIGH = { fetchpriority: 'high' } as const;
 
 /**
  * 交叉淡入輪播圖（每 IMAGE_ROTATE_MS 換一張）。
@@ -113,9 +128,15 @@ const RotatingImage: React.FC<{ images: string[]; alt: string }> = ({ images, al
           // 仍保留在流內（opacity-0）以維持容器尺寸。
           <img
             key={src}
-            src={optimizeCloudinary(src)}
+            src={cloudinaryUrl(src, { w: IMAGE_W })}
+            srcSet={cloudinarySrcSet(src, IMAGE_WIDTHS) || undefined}
+            sizes={IMAGE_SIZES}
+            width={IMAGE_W}
+            height={IMAGE_H}
             alt={alt}
             loading="eager"
+            {...FETCH_PRIORITY_HIGH}
+            decoding="async"
             className={`block w-full h-auto object-cover transition-opacity duration-700 ease-in-out ${
               idx === 0 ? 'opacity-100' : 'opacity-0'
             }`}
@@ -124,9 +145,14 @@ const RotatingImage: React.FC<{ images: string[]; alt: string }> = ({ images, al
           // 其餘疊在第一張上方做交叉淡入
           <img
             key={src}
-            src={optimizeCloudinary(src)}
+            src={cloudinaryUrl(src, { w: IMAGE_W })}
+            srcSet={cloudinarySrcSet(src, IMAGE_WIDTHS) || undefined}
+            sizes={IMAGE_SIZES}
+            width={IMAGE_W}
+            height={IMAGE_H}
             alt={alt}
             loading="lazy"
+            decoding="async"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
               i === idx ? 'opacity-100' : 'opacity-0'
             }`}
@@ -234,6 +260,29 @@ const CoachIntroSection: React.FC<CoachIntroSectionProps> = ({
     <section
       className={`relative py-16 sm:py-20 md:py-24 px-4 overflow-hidden ${className}`}
     >
+      {/*
+        首屏 LCP 候選：輪播第一張照片。
+        用 Helmet 輸出 <link rel="preload" as="image">，讓瀏覽器在解析完 head
+        就開始抓圖（SSR 時 entry-server 會把它收進 head，不必等 JS）。
+        imageSrcSet / imageSizes 必須與 <img> 的 srcSet / sizes 完全一致，
+        否則瀏覽器會判定成另一張圖而重複下載。只對第一張做。
+        屬性刻意用 React 的 camelCase（TS 型別認得）；Helmet 是逐字把
+        key 當 HTML 屬性名輸出／setAttribute，而 HTML 屬性名大小寫不敏感，
+        兩端都會正規化成 imagesrcset / imagesizes / fetchpriority。
+      */}
+      {images[0] && (
+        <Helmet>
+          <link
+            rel="preload"
+            as="image"
+            href={cloudinaryUrl(images[0], { w: IMAGE_W })}
+            imageSrcSet={cloudinarySrcSet(images[0], IMAGE_WIDTHS) || undefined}
+            imageSizes={IMAGE_SIZES}
+            fetchPriority="high"
+          />
+        </Helmet>
+      )}
+
       {/* Aceternity Background Gradient — 緩慢軌道式環境光暈 */}
       <motion.div
         aria-hidden="true"

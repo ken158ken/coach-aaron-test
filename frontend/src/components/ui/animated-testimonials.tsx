@@ -23,6 +23,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLanguage } from "@/context/LanguageContext";
+import { cloudinarySrcSet, cloudinaryUrl } from '@/lib/cloudinary';
 
 export interface AnimatedTestimonialItem {
   /** 主要文字（見證引言 / 經歷簡述） */
@@ -41,19 +42,18 @@ export interface AnimatedTestimonialItem {
 }
 
 /**
- * Cloudinary 傳輸優化：在 `/image/upload/` 之後插入 `f_auto,q_auto,w_900`，
- * 讓 Cloudinary 自動選格式／壓縮並限制寬度，降低傳輸量。
- * 非 Cloudinary（或找不到 upload 段）的網址原樣返回；已含相同轉換則不重複插入。
+ * 響應式圖片設定（取代原本寫死的 `f_auto,q_auto,w_900`）。
+ *
+ * 版面實測：外層 `max-w-sm px-4 md:max-w-4xl md:px-8` + 2 欄 `md:gap-20`
+ *   → 手機 ≈ 100vw 扣 px-4（上限 24rem → 約 352px）
+ *   → 桌機（md↑）(56rem − px-8 − gap-20) ÷ 2 ≈ 376px
+ * 圖片容器高度固定（h-72 / sm:h-80）＋ object-cover，所以只有寬度影響挑圖。
+ * 由瀏覽器依 sizes × devicePixelRatio 決定實際抓哪一支（封頂 900＝原圖寬）。
  */
-const optimizeCloudinary = (url: string): string => {
-  const marker = '/image/upload/';
-  const at = url.indexOf(marker);
-  if (at === -1) return url;
-  const after = at + marker.length;
-  const rest = url.slice(after);
-  if (rest.startsWith('f_auto,q_auto,w_900/')) return url;
-  return `${url.slice(0, after)}f_auto,q_auto,w_900/${rest}`;
-};
+const PHOTO_WIDTHS = [384, 480, 640, 768, 900] as const;
+const PHOTO_SIZES = '(min-width: 768px) 376px, 92vw';
+/** 不支援 srcset 時的 fallback 寬度 */
+const PHOTO_FALLBACK_W = 768;
 
 interface AnimatedTestimonialsProps {
   testimonials: AnimatedTestimonialItem[];
@@ -131,16 +131,17 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
 
   const current = testimonials[active];
 
-  // 計算某項目「當前該顯示的圖片 URL」：
+  // 計算某項目「當前該顯示的圖片原始 URL」：
   //   有 images → active 用 images[imageIndex]、非 active 用 images[0]；
-  //   否則 fallback 到 src；再否則 undefined（顯示佔位面板）。皆套 Cloudinary 優化。
+  //   否則 fallback 到 src；再否則 undefined（顯示佔位面板）。
+  //   Cloudinary 的尺寸轉換 / srcset 交給 PhotoOrPlaceholder 統一處理。
   const resolveSrc = (item: AnimatedTestimonialItem, itemActive: boolean): string | undefined => {
     const imgs = item.images;
     if (imgs && imgs.length > 0) {
       const idx = itemActive ? imageIndex % imgs.length : 0;
-      return optimizeCloudinary(imgs[idx]);
+      return imgs[idx];
     }
-    return item.src ? optimizeCloudinary(item.src) : undefined;
+    return item.src || undefined;
   };
 
   return (
@@ -287,8 +288,8 @@ export const AnimatedTestimonials: React.FC<AnimatedTestimonialsProps> = ({
 
 /**
  * 有圖顯示圖，無圖顯示主題色佔位面板（首字/徽章）。
- * `displaySrc` 為呼叫端算好的「當前該顯示的圖片 URL」
- * （已處理 images 輪播索引與 Cloudinary 優化）。
+ * `displaySrc` 為呼叫端算好的「當前該顯示的圖片原始 URL」
+ * （已處理 images 輪播索引）；這裡再套 Cloudinary 響應式尺寸。
  */
 const PhotoOrPlaceholder: React.FC<{
   item: AnimatedTestimonialItem;
@@ -298,10 +299,13 @@ const PhotoOrPlaceholder: React.FC<{
   <div className="relative h-full w-full rounded-3xl overflow-hidden">
     {displaySrc ? (
       <img
-        src={displaySrc}
+        src={cloudinaryUrl(displaySrc, { w: PHOTO_FALLBACK_W })}
+        srcSet={cloudinarySrcSet(displaySrc, PHOTO_WIDTHS) || undefined}
+        sizes={PHOTO_SIZES}
         alt={item.name}
         draggable={false}
         loading="lazy"
+        decoding="async"
         className="h-full w-full object-cover object-center"
       />
     ) : (

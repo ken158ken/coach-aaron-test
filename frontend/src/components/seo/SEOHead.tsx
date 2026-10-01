@@ -50,6 +50,16 @@ interface SEOHeadProps {
   category?: string;
   /** 不要被搜尋引擎索引 */
   noIndex?: boolean;
+  /**
+   * 是否把品牌後綴接在 title 後面（`標題 | 阿倫教官`）。
+   * 首頁等「title 本身已含品牌名」的頁面傳 false，避免標題被 Google 截斷。
+   */
+  titleTemplate?: boolean;
+  /**
+   * 是否輸出教練本人的 `Person` 結構化資料（/about 用；首頁會自動輸出）。
+   * 全站共用同一個 `@id`，Google 才會把各頁的描述歸到同一個人。
+   */
+  person?: boolean;
   /** 商品價格（用於 Course schema 的 offers；未提供則不輸出 offers） */
   price?: number;
   /** 是否公開顯示價格（false 時不輸出 offers，避免與頁面「請洽詢」不一致） */
@@ -79,6 +89,13 @@ const DEFAULT_IMAGE = "/images/og-default.jpg";
  */
 const BRAND_LOGO_PATH = "/icons/icon-512.png";
 const BRAND_LOGO_SIZE = 512;
+
+/** 教練本人的職稱（Person.jobTitle） */
+const JOB_TITLE_ZH = "私教變現顧問・銷售心理學講師";
+const JOB_TITLE_EN =
+  "Business coach for personal trainers & sales psychology trainer";
+/** 教練的社群（Person / Organization 的 sameAs） */
+const SAME_AS = ["https://www.instagram.com/coach.luen/"];
 
 /**
  * 網站根 URL — 優先使用環境變數 VITE_SITE_URL
@@ -113,6 +130,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   isArticle = false,
   category,
   noIndex = false,
+  titleTemplate = true,
+  person = false,
   price,
   showPrice = true,
   breadcrumbs,
@@ -128,8 +147,13 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   const homeCrumb = isEn ? "Home" : "首頁";
 
   // 組合完整標題
+  // 後綴只放單一品牌名（中文「阿倫教官」／英文「Coach Aaron」）——
+  // 舊版接的是 `阿倫教官 | Coach Aaron`，首頁標題會長到被搜尋結果截斷。
+  // titleTemplate=false：頁面自備完整標題（首頁），原樣輸出。
   const fullTitle = title
-    ? `${title} | ${DEFAULT_SITE_NAME}`
+    ? titleTemplate
+      ? `${title} | ${BRAND_NAME}`
+      : title
     : DEFAULT_SITE_NAME;
 
   // 確保圖片是完整 URL（處理 null/undefined）
@@ -148,12 +172,35 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const graph: Record<string, any>[] = [];
 
-    // Organization：只在首頁輸出一次，作為全站的品牌實體
+    // 全站共用 @id：首頁與 /about 指向同一個 Person / Organization 實體，
+    // Google 才會把兩頁的資訊合併成同一個知識圖譜節點（而非兩個同名的人）
+    const ORGANIZATION_ID = `${DEFAULT_URL}/#organization`;
+    const PERSON_ID = `${DEFAULT_URL}/about#person`;
+    const WEBSITE_ID = `${DEFAULT_URL}/#website`;
+
+    /** 教練本人（首頁與 /about 共用同一份資料） */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const personEntity = (withImage: boolean): Record<string, any> => ({
+      "@type": "Person",
+      "@id": PERSON_ID,
+      name: BRAND_NAME,
+      alternateName: isEn ? BRAND_NAME_ZH : BRAND_NAME_EN,
+      url: `${DEFAULT_URL}/about`,
+      jobTitle: isEn ? JOB_TITLE_EN : JOB_TITLE_ZH,
+      sameAs: SAME_AS,
+      // 只有頁面明確給了圖片才當人物照（否則會把通用 OG 圖當成本人照片）
+      ...(withImage ? { image: fullImage } : {}),
+    });
+
+    // Organization / WebSite / Person：只在首頁輸出一次，作為全站的品牌實體
     // （用 url prop 顯式判斷，不能只看 fullUrl —— 沒傳 url 的頁面
     //   其 fullUrl 也會等於站台根，會誤判成首頁）
-    if (url === "/" || url === DEFAULT_URL || url === `${DEFAULT_URL}/`) {
+    const isHome =
+      url === "/" || url === DEFAULT_URL || url === `${DEFAULT_URL}/`;
+    if (isHome) {
       graph.push({
         "@type": "Organization",
+        "@id": ORGANIZATION_ID,
         name: BRAND_NAME,
         alternateName: isEn ? BRAND_NAME_ZH : BRAND_NAME_EN,
         url: DEFAULT_URL,
@@ -164,8 +211,22 @@ const SEOHead: React.FC<SEOHeadProps> = ({
           height: BRAND_LOGO_SIZE,
         },
         description,
-        sameAs: ["https://www.instagram.com/coach.luen/"],
+        sameAs: SAME_AS,
+        // 一人公司：創辦人即教練本人（同 @graph 內的 Person）
+        founder: { "@id": PERSON_ID },
       });
+      graph.push({
+        "@type": "WebSite",
+        "@id": WEBSITE_ID,
+        name: DEFAULT_SITE_NAME,
+        url: DEFAULT_URL,
+        inLanguage: htmlLang,
+        publisher: { "@id": ORGANIZATION_ID },
+      });
+      graph.push(personEntity(false));
+    } else if (person) {
+      // /about：同一份 Person（同 @id），頁面若有給 image 就一併輸出
+      graph.push(personEntity(Boolean(image) && image !== DEFAULT_IMAGE));
     }
 
     if (isArticle) {

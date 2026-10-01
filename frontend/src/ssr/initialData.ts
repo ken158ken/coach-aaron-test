@@ -18,7 +18,42 @@
 /** 序列化到 window 的全域變數名稱 */
 export const INITIAL_DATA_GLOBAL = "__INITIAL_DATA__";
 
-export type InitialDataMap = Record<string, unknown>;
+/**
+ * 保留鍵：主實體 API 回 404（例如 `/articles/不存在的slug`）時由
+ * `ssr/prefetch.ts` 標記，供 `api/ssr.js` 決定回 HTTP 404（修正軟 404）。
+ *
+ * ⚠️ 這**不是**頁面資料，不得序列化給客戶端（`serializeInitialData` 會濾掉），
+ *    也不得與任何 `dataKeys.*` 產生的鍵相撞（`dataKeys` 一律是 `名稱:參數` 格式）。
+ */
+export const NOT_FOUND_KEY = "__notFound";
+
+/** 所有保留鍵（只存在於伺服器端，序列化時剔除） */
+const RESERVED_KEYS: ReadonlySet<string> = new Set([NOT_FOUND_KEY]);
+
+/** 預抓資料裡的保留欄位（非頁面資料） */
+export interface ReservedInitialData {
+  /** 該路由的主實體 API 回 404 → `api/ssr.js` 應回 HTTP 404 */
+  [NOT_FOUND_KEY]?: true;
+}
+
+export type InitialDataMap = Record<string, unknown> & ReservedInitialData;
+
+/**
+ * 剔除保留鍵，得到「可以交給客戶端」的純資料
+ *
+ * @param data 預抓資料（可能含保留鍵）
+ * @returns 只含頁面資料的新物件
+ */
+export function stripReservedKeys(
+  data: InitialDataMap | null | undefined,
+): InitialDataMap {
+  const out: InitialDataMap = {};
+  for (const [key, value] of Object.entries(data || {})) {
+    if (RESERVED_KEYS.has(key)) continue;
+    out[key] = value;
+  }
+  return out;
+}
 
 /** 伺服器端暫存（單次 render 期間有效；Vercel 函式為單一請求單執行緒，安全） */
 let serverStore: InitialDataMap = {};
@@ -73,7 +108,8 @@ const UNSAFE_MAP: Record<string, string> = {
 export function serializeInitialData(data: InitialDataMap): string {
   let json: string;
   try {
-    json = JSON.stringify(data ?? {});
+    // 保留鍵（__notFound 等）只服務 SSR 流程，絕不外洩給客戶端
+    json = JSON.stringify(stripReservedKeys(data));
   } catch {
     json = "{}";
   }

@@ -65,23 +65,45 @@ export function useNotificationsHook(): {
   }, [refresh]);
 
   // Realtime 訂閱
+  // ⚠️ supabase-js 是動態 import（見 services/social/supabase.client.ts）：
+  //    未登入訪客（首頁）完全不會下載那支 50KB 的 vendor chunk。
+  //    因為載入是非同步的，cleanup 用 `cancelled` 旗標處理
+  //    「還沒載好就先 unmount / 換使用者」的情況，避免殭屍訂閱。
   useEffect(() => {
     if (!user) return;
-    const client = getSupabaseClient();
-    const channel = client.channel(`user-${user.user_id}`, {
-      config: { broadcast: { self: false } },
-    });
-    channel.on("broadcast", { event: "new_notification" }, ({ payload }) => {
-      const n = payload as Notification;
-      if (!n || typeof n.id !== "number") return;
-      if (seenIds.current.has(n.id)) return;
-      seenIds.current.add(n.id);
-      setNotifications((prev) => [n, ...prev].slice(0, 30));
-      if (!n.is_read) setUnreadCount((c) => c + 1);
-    });
-    channel.subscribe();
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+
+    void getSupabaseClient()
+      .then((client) => {
+        const channel = client.channel(`user-${user.user_id}`, {
+          config: { broadcast: { self: false } },
+        });
+        cleanup = () => {
+          void client.removeChannel(channel);
+        };
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        channel.on("broadcast", { event: "new_notification" }, ({ payload }) => {
+          const n = payload as Notification;
+          if (!n || typeof n.id !== "number") return;
+          if (seenIds.current.has(n.id)) return;
+          seenIds.current.add(n.id);
+          setNotifications((prev) => [n, ...prev].slice(0, 30));
+          if (!n.is_read) setUnreadCount((c) => c + 1);
+        });
+        channel.subscribe();
+      })
+      .catch((err) => {
+        console.warn("[notifications] Supabase client 載入失敗", err);
+      });
+
     return () => {
-      void client.removeChannel(channel);
+      cancelled = true;
+      cleanup?.();
+      cleanup = null;
     };
   }, [user]);
 

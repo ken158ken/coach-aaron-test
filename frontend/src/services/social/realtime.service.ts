@@ -21,30 +21,58 @@ interface SubscribeOptions {
   onMembersChanged?: MembersChangedHandler;
 }
 
-/** 訂閱單一對話 channel；回傳 unsubscribe function */
+/**
+ * 訂閱單一對話 channel；回傳 unsubscribe function。
+ *
+ * ⚠️ supabase-js 現在是動態 import（見 supabase.client.ts 的註解），
+ *    所以訂閱本身是非同步的。對外仍保持「同步回傳 cleanup」的介面，
+ *    讓 useEffect 的 return 不用改成 async：
+ *      - 若在 client 還沒載好就先 unsubscribe（React 18 StrictMode
+ *        的 mount→unmount→mount、或使用者快速切換對話），以 `cancelled`
+ *        旗標讓 channel 建立後立刻被移除，不會留下殭屍訂閱。
+ */
 export function subscribeConversation(
   conversationId: string,
   opts: SubscribeOptions,
 ): () => void {
-  const client = getSupabaseClient();
-  const channel: RealtimeChannel = client.channel(`conv-${conversationId}`, {
-    config: { broadcast: { self: false } },
-  });
-  if (opts.onNewMessage) {
-    channel.on("broadcast", { event: "new_message" }, ({ payload }) => {
-      opts.onNewMessage!(payload as ChatMessage);
-    });
-  }
-  if (opts.onMembersChanged) {
-    channel.on("broadcast", { event: "members_changed" }, ({ payload }) => {
-      opts.onMembersChanged!(
-        payload as { type: "added" | "removed"; userIds: number[] },
+  let cancelled = false;
+  let cleanup: (() => void) | null = null;
+
+  void getSupabaseClient()
+    .then((client) => {
+      const channel: RealtimeChannel = client.channel(
+        `conv-${conversationId}`,
+        { config: { broadcast: { self: false } } },
       );
+      cleanup = () => {
+        void client.removeChannel(channel);
+      };
+      if (cancelled) {
+        cleanup();
+        return;
+      }
+      if (opts.onNewMessage) {
+        channel.on("broadcast", { event: "new_message" }, ({ payload }) => {
+          opts.onNewMessage!(payload as ChatMessage);
+        });
+      }
+      if (opts.onMembersChanged) {
+        channel.on("broadcast", { event: "members_changed" }, ({ payload }) => {
+          opts.onMembersChanged!(
+            payload as { type: "added" | "removed"; userIds: number[] },
+          );
+        });
+      }
+      channel.subscribe();
+    })
+    .catch((err) => {
+      console.warn("[realtime] Supabase client 載入失敗", err);
     });
-  }
-  channel.subscribe();
+
   return () => {
-    void client.removeChannel(channel);
+    cancelled = true;
+    cleanup?.();
+    cleanup = null;
   };
 }
 

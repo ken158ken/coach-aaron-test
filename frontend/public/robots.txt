@@ -21,6 +21,12 @@ Disallow: /booking
 Disallow: /my-bookings
 Disallow: /notifications
 Disallow: /chat
+Disallow: /coach
+Disallow: /notes
+
+# 登入專屬路由的靜態殼（vercel.json 把 /admin、/member… rewrite 到它，
+# 內容是空的 <div id="root">，被收錄只會是薄頁面；已另有 X-Robots-Tag: noindex）
+Disallow: /app-shell.html
 
 # API 端點
 Disallow: /api/

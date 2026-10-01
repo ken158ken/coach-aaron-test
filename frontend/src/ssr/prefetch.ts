@@ -11,7 +11,7 @@
  */
 
 import { getPrefetchSpecs } from "./routeData";
-import type { InitialDataMap } from "./initialData";
+import { NOT_FOUND_KEY, type InitialDataMap } from "./initialData";
 
 export interface PrefetchOptions {
   /** API 根位址，例如 `https://example.com` 或 `http://localhost:5000` */
@@ -25,11 +25,22 @@ export interface PrefetchOptions {
 const DEFAULT_TIMEOUT_MS = 3500;
 const DEFAULT_BUDGET_MS = 5000;
 
-/** 單筆 fetch，逾時或失敗一律回傳 undefined（不 throw） */
+/**
+ * 單筆 fetch 的結果
+ *   - ok       ：成功取得 JSON
+ *   - notFound ：API 明確回 HTTP 404（實體不存在）
+ *   - fail     ：逾時 / 網路錯誤 / 5xx / 非 JSON ——「不確定」，一律當暫時性故障
+ */
+type FetchOutcome =
+  | { kind: "ok"; value: unknown }
+  | { kind: "notFound" }
+  | { kind: "fail" };
+
+/** 單筆 fetch，絕不 throw；只有 HTTP 404 會回報 notFound */
 async function fetchOne(
   url: string,
   timeoutMs: number,
-): Promise<unknown | undefined> {
+): Promise<FetchOutcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -40,12 +51,14 @@ async function fetchOne(
         "User-Agent": "coach-aaron-ssr/1.0",
       },
     });
-    if (!res.ok) return undefined;
+    // 404 = 實體確定不存在（軟 404 修正的唯一依據）；其餘非 2xx 視為暫時性故障
+    if (res.status === 404) return { kind: "notFound" };
+    if (!res.ok) return { kind: "fail" };
     const ct = res.headers.get("content-type") || "";
-    if (!ct.includes("json")) return undefined;
-    return await res.json();
+    if (!ct.includes("json")) return { kind: "fail" };
+    return { kind: "ok", value: await res.json() };
   } catch {
-    return undefined;
+    return { kind: "fail" };
   } finally {
     clearTimeout(timer);
   }
@@ -91,19 +104,32 @@ export async function prefetchRouteData(
     const work = Promise.allSettled(
       specs.map(async (spec) => ({
         key: spec.key,
+        primary: spec.primary === true,
         // spec 可自帶較短逾時（例如首頁的次要區塊），避免拖長整頁 TTFB
-        value: await fetchOne(`${apiBase}${spec.path}`, spec.timeoutMs ?? timeoutMs),
+        outcome: await fetchOne(
+          `${apiBase}${spec.path}`,
+          spec.timeoutMs ?? timeoutMs,
+        ),
       })),
     );
 
     const settled = await withBudget(work, budgetMs, []);
 
     const result: InitialDataMap = {};
+    let primaryNotFound = false;
     for (const item of settled) {
-      if (item.status === "fulfilled" && item.value.value !== undefined) {
-        result[item.value.key] = item.value.value;
+      if (item.status !== "fulfilled") continue;
+      const { key, primary, outcome } = item.value;
+      if (outcome.kind === "ok") {
+        result[key] = outcome.value;
+      } else if (outcome.kind === "notFound" && primary) {
+        // 只有「主實體」的 404 才算整頁不存在；列表類次要資料 404 不算
+        primaryNotFound = true;
       }
     }
+    // sentinel：api/ssr.js 讀到就回 HTTP 404（頁面仍照常渲染「找不到」＋noindex）。
+    // serializeInitialData 會把它濾掉，不會外洩到 window.__INITIAL_DATA__。
+    if (primaryNotFound) result[NOT_FOUND_KEY] = true;
     return result;
   } catch (err) {
     console.error(

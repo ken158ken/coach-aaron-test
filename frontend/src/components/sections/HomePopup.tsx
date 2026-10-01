@@ -141,7 +141,7 @@ const HomePopup: React.FC = () => {
         {/* 內容 (HTML 渲染) */}
         <div className="px-6 pb-4 overflow-y-auto max-h-[50vh] overscroll-contain">
           <div
-            className="max-w-none text-sm sm:text-base leading-relaxed
+            className="popup-prose max-w-none text-sm sm:text-base leading-relaxed
               [&_a]:text-gold [&_a]:underline [&_a]:underline-offset-2
               [&_img]:rounded-lg [&_img]:max-w-full
               [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:mb-2
@@ -159,7 +159,7 @@ const HomePopup: React.FC = () => {
         <div className="px-6 pb-5 flex justify-end border-t border-gold/10 pt-4">
           <button
             onClick={handleClose}
-            className="px-7 py-2.5 bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 rounded-lg text-sm tracking-widest transition-all duration-200 hover:shadow-lg hover:shadow-gold/10"
+            className="popup-cta px-7 py-2.5 bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 rounded-lg text-sm tracking-widest transition-all duration-200 hover:shadow-lg hover:shadow-gold/10"
           >
             {copy.cta}
           </button>

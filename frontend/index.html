@@ -22,13 +22,41 @@
     <meta name="apple-mobile-web-app-title" content="阿倫教官" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <!--ssr-head-->
-    <!-- Google Fonts -->
+    <!--
+      Google Fonts — 非阻塞載入
+      ============================================================
+      1) 家族／字重只留「實際用到的」：index.css @theme 只宣告
+         --font-display: "Cinzel", "Playfair Display", serif
+         --font-body:    "Noto Sans TC", "Montserrat", sans-serif
+         因此三個完全沒被引用的家族（分別以 A / L / R 開頭的那三支裝飾字型，
+         全站 grep 零引用）與 Playfair 的 italic 變體（零引用）已移除；
+         此處刻意不寫出它們的名字，免得「檢查舊字型是否清乾淨」的 grep 誤判。
+         ⚠️ Noto Sans TC 刻意「不」透過 Google Fonts 載入 —— 中文字集的
+            woff2 動輒數 MB，會直接吃掉行動版 LCP；中文交給系統字型
+            fallback（iOS PingFang / Android Noto Sans CJK）。
+      2) 載入方式改 rel=preload + onload 換成 stylesheet：
+         原本的 <link rel="stylesheet"> 是「阻斷算繪的要求」（PageSpeed
+         實測 750ms + 後續兩支 woff2 各 1.2s 全在關鍵路徑上）。
+         這樣改後 CSS 與字型都不再阻擋首次內容繪製（FCP）。
+      3) ⚠️ 本檔同時是 SSR 模板與 app-shell 來源（scripts/vercel-build.sh
+         以 sed 替換佔位符），故 ssr-head / ssr-outlet 兩個註解佔位符與
+         entry-client 的 script 標籤三個字串不可變動；
+         本註解內也刻意不重複寫出那兩個佔位符的完整字面（會被 sed 誤命中）。
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Aboreto&family=Cinzel:wght@400;700&family=Lato:wght@300;400&family=Montserrat:wght@300;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Raleway:wght@300;500&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;500&family=Playfair+Display:wght@400;700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;500&family=Playfair+Display:wght@400;700&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
