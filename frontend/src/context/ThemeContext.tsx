@@ -41,6 +41,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [colorMode, setColorModeState] = useState<ColorMode>("dark");
 
   useEffect(() => {
+    // index.html 的同步啟動腳本已在首次繪製前依同一套規則（localStorage →
+    // prefers-color-scheme）把 data-color-mode 設在 <html> 上，這裡優先沿用，
+    // 確保 React 狀態與首屏實際顏色一致、不再二次翻轉。
+    // 初始 useState 仍固定 "dark" 是為了與 SSR 輸出一致（hydration 不可 mismatch）。
+    const bootstrapped = document.documentElement.getAttribute("data-color-mode");
+    if (bootstrapped === "light" || bootstrapped === "dark") {
+      setColorModeState(bootstrapped);
+      return;
+    }
     const saved = localStorage.getItem(COLOR_MODE_KEY);
     if (saved === "light" || saved === "dark") {
       setColorModeState(saved);

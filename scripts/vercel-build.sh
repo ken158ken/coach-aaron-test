@@ -46,6 +46,11 @@ cd backend && npm install && npm run build && cd ..
 echo "=== 2/6 Building frontend ==="
 cd frontend && npm install && npm run build && cd ..
 
+echo "=== 2.5/6 Inlining render-blocking CSS into index.html ==="
+# 公開頁 SSR 首屏只需要 CSS；把 main-*.css 內嵌進模板省掉一次阻斷算繪的往返
+# （PSI 行動版實測 770ms）。必須在複製成 SSR 模板 / app-shell 之前執行。
+node scripts/inline-css.mjs frontend/dist/client/index.html
+
 echo "=== 3/6 Copying SSR assets to api/ ==="
 cp frontend/dist/server/entry-server.cjs api/_ssr_bundle.cjs
 cp frontend/dist/client/index.html api/_ssr_template.html

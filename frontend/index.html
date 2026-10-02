@@ -2,6 +2,29 @@
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      主題啟動腳本（必須排在所有 stylesheet 之前、同步執行）
+      SSR HTML 對所有人一致、不帶 data-theme（CSS 預設 = 深色）。原本要等 React
+      hydrate 後 ThemeContext 的 effect 才依 localStorage / prefers-color-scheme
+      切成淺色 → 淺色裝置（Lighthouse 與多數手機預設）會先看到整頁深色再整頁重繪：
+      PSI 行動版 LCP 被拖到 4.4s、Speed Index 10.1s，真人也看得到閃一下。
+      這裡在首次繪製前就把 data-theme / data-color-mode / .dark 設好，
+      ThemeContext 的 effect 會優先讀取這些屬性（鍵名 app_color_mode 兩邊必須一致）。
+    -->
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem("app_color_mode");
+          if (m !== "light" && m !== "dark") {
+            m = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+          }
+          var d = document.documentElement;
+          d.setAttribute("data-theme", m === "light" ? "studio-light" : "studio");
+          d.setAttribute("data-color-mode", m);
+          if (m === "dark") d.classList.add("dark"); else d.classList.remove("dark");
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- 舊瀏覽器 / 部分爬蟲不吃 SVG favicon，補一份 ICO fallback（16+32+48） -->
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
