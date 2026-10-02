@@ -23,7 +23,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <!--ssr-head-->
     <!--
-      Google Fonts — 非阻塞載入
+      字型 — 自架同源 woff2（2026-10-02 自 Google 字型服務搬下來）
       ============================================================
       1) 家族／字重只留「實際用到的」：index.css @theme 只宣告
          --font-display: "Cinzel", "Playfair Display", serif
@@ -31,32 +31,35 @@
          因此三個完全沒被引用的家族（分別以 A / L / R 開頭的那三支裝飾字型，
          全站 grep 零引用）與 Playfair 的 italic 變體（零引用）已移除；
          此處刻意不寫出它們的名字，免得「檢查舊字型是否清乾淨」的 grep 誤判。
-         ⚠️ Noto Sans TC 刻意「不」透過 Google Fonts 載入 —— 中文字集的
-            woff2 動輒數 MB，會直接吃掉行動版 LCP；中文交給系統字型
-            fallback（iOS PingFang / Android Noto Sans CJK）。
-      2) 載入方式改 rel=preload + onload 換成 stylesheet：
-         原本的 <link rel="stylesheet"> 是「阻斷算繪的要求」（PageSpeed
-         實測 750ms + 後續兩支 woff2 各 1.2s 全在關鍵路徑上）。
-         這樣改後 CSS 與字型都不再阻擋首次內容繪製（FCP）。
-      3) ⚠️ 本檔同時是 SSR 模板與 app-shell 來源（scripts/vercel-build.sh
+         ⚠️ Noto Sans TC 刻意「不」自架 —— 中文字集的 woff2 動輒數 MB，
+            會直接吃掉行動版 LCP；中文交給系統字型 fallback
+            （iOS PingFang / Android Noto Sans CJK）。
+      2) 不再連 Google 的字型 CDN（CSS API 與靜態字型檔兩個網域）：
+         那是兩次跨域 TLS + 兩段串接延遲（CSS 一趟 → 才知道要抓哪支 woff2
+         → 再一趟），行動版慢速 4G 上就是看得見的 FOUT。
+         @font-face 現在直接寫在 index.css（與主 CSS 同一個檔，零額外往返），
+         字型檔放 public/fonts/，與 HTML 同源共用同一條 HTTP/2 連線。
+         來源 URL 與 SIL OFL 授權見 public/fonts/LICENSE.md。
+      3) 這裡只 preload「首屏標題真正會用到的那一支」：
+         Hero 的 <h1> 吃 .font-display（Cinzel）且 font-black(900)
+         → 字型匹配落在宣告的 700 那條 @font-face。Cinzel 是可變字型，
+         400/700 共用同一個檔，所以 preload 這一支就同時涵蓋兩個字重。
+         ⚠️ 字型 preload 必須帶 crossorigin（字型一律以 CORS 模式取得），
+            漏掉會變成「preload 一份 + 真正用時再抓一份」下載兩次。
+         ⚠️ 其餘兩支（Montserrat / Playfair Display）刻意不 preload：
+            首屏標題用不到，讓它們跟著 CSS 之後再抓就好，別跟主 CSS 搶頻寬。
+      4) ⚠️ 本檔同時是 SSR 模板與 app-shell 來源（scripts/vercel-build.sh
          以 sed 替換佔位符），故 ssr-head / ssr-outlet 兩個註解佔位符與
          entry-client 的 script 標籤三個字串不可變動；
          本註解內也刻意不重複寫出那兩個佔位符的完整字面（會被 sed 誤命中）。
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;500&family=Playfair+Display:wght@400;700&display=swap"
-      onload="this.onload=null;this.rel='stylesheet'"
+      as="font"
+      type="font/woff2"
+      href="/fonts/cinzel-latin.woff2"
+      crossorigin
     />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;500&family=Playfair+Display:wght@400;700&display=swap"
-      />
-    </noscript>
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>

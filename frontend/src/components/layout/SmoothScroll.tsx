@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import AOS from "aos";
 import { setLenisInstance } from "@/lib/lenisInstance";
+import { loadScrollTrigger } from "@/lib/gsapLoader";
+import type { Gsap, ScrollTriggerType } from "@/lib/gsapLoader";
 
 /**
  * SmoothScroll 元件 - 提供全站 Lenis 平滑捲動
@@ -14,6 +14,9 @@ import { setLenisInstance } from "@/lib/lenisInstance";
  *     節流呼叫 AOS.refresh()（50ms throttle，約 20fps）
  *   - 使用 ResizeObserver 監聽 body 高度變化（LazySection 渲染後頁面撐高），
  *     自動呼叫 ScrollTrigger.refresh() 修正觸發位置
+ *   - gsap 改為動態載入（見 lib/gsapLoader.ts）：Lenis 先用原生
+ *     requestAnimationFrame 驅動，等 gsap 到位才換手到 gsap.ticker，
+ *     所以**捲動永遠不用等 gsap 下載完**。
  */
 const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -22,8 +25,13 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   useEffect(() => {
     let lenis: any;
     let aosThrottle: ReturnType<typeof setTimeout> | null = null;
+    let roThrottle: ReturnType<typeof setTimeout> | null = null;
     let ro: ResizeObserver | null = null;
+    // 兩種 raf 驅動來源，同一時間只會有一個活著（避免 lenis.raf 被呼叫兩次）
+    let rafId: number | null = null;
     let tick: ((time: number) => void) | null = null;
+    let gsapRef: Gsap | null = null;
+    let stUpdate: ScrollTriggerType["update"] | null = null;
     // cleanup 可能在 dynamic import 完成前就執行（StrictMode / 快速換頁），
     // 屆時什麼都還沒建立；用 cancelled 讓 initLenis 中止，避免洩漏整組實例
     let cancelled = false;
@@ -71,18 +79,19 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         lenisRef.current = lenis;
         setLenisInstance(lenis);
 
-        // ── GSAP ScrollTrigger 整合 ──────────────────────────
-        lenis.on("scroll", ScrollTrigger.update);
-
-        tick = (time: number) => {
-          lenis.raf(time * 1000);
+        // ── 原生 rAF 驅動（過渡期）────────────────────────────
+        // gsap 是 async chunk，可能要幾十～幾百 ms 才到；這段時間若沒人呼叫
+        // lenis.raf()，整頁滾輪會完全沒反應。先用瀏覽器原生 rAF 頂著，
+        // gsap 到位後再換手（下方會 cancelAnimationFrame，不會雙驅動）。
+        const rafLoop = (time: number) => {
+          lenis.raf(time);
+          rafId = requestAnimationFrame(rafLoop);
         };
-        gsap.ticker.add(tick);
-        gsap.ticker.lagSmoothing(0);
+        rafId = requestAnimationFrame(rafLoop);
 
         // ── AOS 整合：throttle 50ms，避免每 RAF 都 refresh ──
         // 因為 Lenis 攔截原生 scroll，AOS 的 scroll listener 不會觸發，
-        // 必須在此手動通知 AOS 更新。
+        // 必須在此手動通知 AOS 更新。（與 gsap 無關，立刻接上）
         lenis.on("scroll", () => {
           if (aosThrottle !== null) return;
           aosThrottle = setTimeout(() => {
@@ -91,9 +100,26 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           }, 50);
         });
 
+        // ── GSAP ScrollTrigger 整合（動態載入後才接）───────────
+        const { gsap, ScrollTrigger } = await loadScrollTrigger();
+        if (cancelled || !lenis) return;
+        gsapRef = gsap;
+        stUpdate = ScrollTrigger.update;
+        lenis.on("scroll", stUpdate);
+
+        // 換手：停掉原生 rAF，交給 gsap.ticker（單一時間軸，避免 lag 疊加）
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        tick = (time: number) => {
+          lenis.raf(time * 1000);
+        };
+        gsap.ticker.add(tick);
+        gsap.ticker.lagSmoothing(0);
+
         // ── ResizeObserver：LazySection 渲染後頁面高度改變時，
         //    自動刷新 ScrollTrigger 的觸發位置 ──────────────────
-        let roThrottle: ReturnType<typeof setTimeout> | null = null;
         ro = new ResizeObserver(() => {
           if (roThrottle !== null) return;
           roThrottle = setTimeout(() => {
@@ -113,10 +139,13 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return () => {
       cancelled = true;
       if (aosThrottle !== null) clearTimeout(aosThrottle);
+      if (roThrottle !== null) clearTimeout(roThrottle);
+      if (rafId !== null) cancelAnimationFrame(rafId);
       if (lenis) {
+        if (stUpdate) lenis.off("scroll", stUpdate);
         lenis.destroy();
       }
-      if (tick) gsap.ticker.remove(tick);
+      if (tick && gsapRef) gsapRef.ticker.remove(tick);
       setLenisInstance(null);
       if (ro) ro.disconnect();
     };

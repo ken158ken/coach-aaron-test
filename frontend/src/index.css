@@ -8,6 +8,80 @@
 @plugin "@tailwindcss/typography";
 
 /**
+ * 自架字型（取代 Google Fonts）
+ * ============================================================
+ * 原本走 fonts.googleapis.com：preconnect×2 + CSS 一趟 + woff2 一趟，
+ * 行動版慢速 4G 上是兩次跨域 TLS + 兩段串接延遲（PageSpeed 實測 CSS 750ms
+ * 之後才開始抓字型），且 CSS 到位前字型完全不會開始下載 → 明顯 FOUT。
+ * 改成自架同源 /fonts/*.woff2 後：
+ *   1) 字型檔與主 CSS 同一條 HTTP/2 連線，省掉兩次跨域往返；
+ *   2) index.html 可以直接 <link rel=preload as=font> 首屏那一支
+ *      （不必等 CSS 解析完才發現要抓字型），FOUT 大幅縮短。
+ *
+ * 檔案來源：fonts.gstatic.com 的 **latin 子集**（unicode-range 見下方），
+ * 授權 SIL OFL 1.1，可自由自架 —— 來源 URL 與版本見 public/fonts/LICENSE.md。
+ *
+ * ⚠️ 三支都是「可變字型」（wght 軸），所以一個家族只有一個檔案，
+ *    400/700（Montserrat 是 300/500）兩條 @font-face 共用同一個 URL ——
+ *    這正是 Google Fonts 自己的做法：同 URL 只會下載一次，瀏覽器依各條
+ *    宣告的 font-weight 把 wght 軸鎖在該值。**不要**為了「一個字重一個檔」
+ *    而複製檔案，那會讓同時用到兩個字重的頁面下載兩份。
+ * ⚠️ 中文刻意不自架（Noto Sans TC 全字集數 MB），交給系統字型 fallback；
+ *    這些子集檔內沒有任何 CJK 字符。
+ * ⚠️ 只保留 latin 子集：latin-ext / cyrillic / vietnamese 全站用不到。
+ *    若日後要支援歐語重音字母，回 LICENSE.md 的來源 URL 補 latin-ext。
+ * ⚠️ 改檔名／新增字重時，index.html 的 preload href 要同步改（否則會多抓一份）。
+ */
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/cinzel-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/cinzel-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/montserrat-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/montserrat-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Playfair Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/playfair-display-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Playfair Display";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/playfair-display-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/**
  * AOS 尚未初始化前（含整段 SSR 首屏、JS 還在下載時）保持元素可見。
  * aos.css 預設對 [data-aos^=fade] 直接設 opacity:0，AOS.init() 又在
  * useEffect 才跑 → hydration 前所有 data-aos 內容（教練介紹整區、

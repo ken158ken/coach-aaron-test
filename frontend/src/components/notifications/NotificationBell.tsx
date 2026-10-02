@@ -5,8 +5,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { format, isToday, isYesterday } from "date-fns";
-import { zhTW } from "date-fns/locale";
 import { useNotificationContext } from "@/context/NotificationContext";
 import type { Notification } from "@/services/notifications/notification.service";
 import { useLanguage } from "@/context/LanguageContext";
@@ -26,11 +24,28 @@ const TYPE_ICON: Record<string, string> = {
   booking_cancelled: "⚠️",
 };
 
+/**
+ * 通知時間顯示：今天 → HH:mm、昨天 → 「昨天」、其餘 → MM/dd。
+ *
+ * 刻意不用 date-fns：本元件掛在 Navbar（全站初始載入），原本只為這三個
+ * 格式就把 vendor-date（date-fns + zhTW locale，22KB gzip）拖進首頁首載；
+ * 改成原生 Date 後 vendor-date 只剩預約頁（react-day-picker）等 lazy 頁面用。
+ */
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const sameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  if (isToday(d)) return format(d, "HH:mm", { locale: zhTW });
-  if (isYesterday(d)) return "昨天";
-  return format(d, "MM/dd", { locale: zhTW });
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  if (sameDay(d, now)) return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (sameDay(d, yesterday)) return "昨天";
+  return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
 }
 
 const NotificationBell: React.FC<NotificationBellProps> = ({

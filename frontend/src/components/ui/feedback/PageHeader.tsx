@@ -4,7 +4,8 @@
  */
 
 import React, { useRef, useEffect } from "react";
-import { gsap } from "gsap";
+import { loadGsap } from "@/lib/gsapLoader";
+import type { GsapContext } from "@/lib/gsapLoader";
 
 interface PageHeaderProps {
   title: string;
@@ -17,6 +18,10 @@ interface PageHeaderProps {
 /**
  * PageHeader - 頁面標題元件（統一樣式：英文小標 → h1 → 副標題）
  * 掛載時自動播放 GSAP 入場動畫，子元素依序滑入。
+ *
+ * ⚠️ gsap 是動態載入（見 lib/gsapLoader.ts），所以動畫會比以前晚幾十 ms 起跑。
+ *    標題在 SSR / 首次 render 時是**正常可見**的（opacity 由 fromTo 在
+ *    client 端才設成 0），chunk 若載入失敗頁面也只是沒動畫、不會空白。
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
@@ -29,14 +34,25 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   useEffect(() => {
     if (!ref.current) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ref.current!.children,
-        { y: 28, opacity: 0, skewX: -3 },
-        { y: 0, opacity: 1, skewX: 0, duration: 0.9, ease: "expo.out", stagger: 0.12 },
-      );
-    }, ref);
-    return () => ctx.revert();
+    let cancelled = false;
+    let ctx: GsapContext | null = null;
+
+    loadGsap().then((gsap) => {
+      // unmount 後才 resolve：不要再碰 DOM
+      if (cancelled || !ref.current) return;
+      ctx = gsap.context(() => {
+        gsap.fromTo(
+          ref.current!.children,
+          { y: 28, opacity: 0, skewX: -3 },
+          { y: 0, opacity: 1, skewX: 0, duration: 0.9, ease: "expo.out", stagger: 0.12 },
+        );
+      }, ref);
+    });
+
+    return () => {
+      cancelled = true;
+      if (ctx) ctx.revert();
+    };
   }, []);
 
   return (

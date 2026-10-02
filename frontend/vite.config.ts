@@ -39,6 +39,67 @@ function ssrStubNoteEditor(rootDir: string): Plugin {
   };
 }
 
+/**
+ * 把 JS 的預載降成低優先權，讓 render-blocking 的主 CSS 先拿到頻寬。
+ *
+ * 背景（PageSpeed 行動版，慢速 4G + 4x CPU，FCP 4.8s / LCP 5.4s）：
+ * Vite 會在 <head> 自動插入 entry 的 <script type="module"> 與一串
+ * <link rel="modulepreload">（vendor-misc / vendor-react / vendor-motion /
+ * vendor-gsap / vendor-date，連 entry 約 500 KB gzip）。瀏覽器給
+ * modulepreload 的預設優先權是 High，於是它們跟 <link rel=stylesheet>
+ * （唯一真正阻擋算繪的資源）平起平坐搶頻寬 —— 實測 42 KB 的主 CSS
+ * 花了 1,870 ms 才下載完，不是因為它大，是因為被 JS 擠住。
+ *
+ * 本站是 SSR：HTML 送達時首屏內容已經齊了，要畫出第一屏只差 CSS（與 LCP
+ * 圖）；JS 只負責 hydrate，晚幾百毫秒到完全沒差。所以讓 JS 讓路。
+ *
+ * 做法：給所有 modulepreload 與 entry script 加上 `fetchpriority="low"`。
+ *   - module script 本來就隱含 defer，加這個屬性**不改變執行順序**，
+ *     只改下載排程；hydration 正確性不受影響。
+ *   - 不碰 <link rel="stylesheet">（要它維持高優先權，它才是關鍵路徑），
+ *     也不碰 <link rel="preload" as="image">（LCP 圖由 Helmet 在 runtime
+ *     注入，根本不在這份模板裡）。
+ *   - 只對 src 指向 /assets/ 的 script 動手，所以模板裡那行
+ *     `/src/entry-client.tsx`（api/ssr.js 靠整行字面比對來移除它）永遠
+ *     不會被改到 —— build 後 Vite 早已把它改寫成 /assets/main-*.js，
+ *     那個 replace 本來就是 no-op，但仍維持零風險。
+ *
+ * ⚠️ `order: "post"` 不可省：Vite 自己的 vite:build-html 要先把資產標籤
+ *    插進 HTML，我們才看得到那些 modulepreload。
+ * ⚠️ 只在 client build 掛（`apply: "build"` + 呼叫處的 isSsrBuild 分岔）。
+ *    SSR build 的 input 是 entry-server.tsx，不產出 HTML，掛了也不會跑。
+ */
+function lowPriorityJsPreload(): Plugin {
+  // 已有 fetchpriority 就不重複加；結尾 `>` 或 `/>` 都吃
+  const addLowPriority = (tag: string) =>
+    /\bfetchpriority\s*=/i.test(tag)
+      ? tag
+      : tag.replace(/\s*\/?>$/, ' fetchpriority="low">');
+
+  return {
+    name: "low-priority-js-preload",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        return (
+          html
+            // <link rel="modulepreload" crossorigin href="/assets/vendor-*.js">
+            .replace(
+              /<link\b[^>]*\brel=["']modulepreload["'][^>]*>/gi,
+              addLowPriority,
+            )
+            // <script type="module" crossorigin src="/assets/main-*.js"></script>
+            .replace(
+              /<script\b[^>]*\bsrc=["']\/assets\/[^"']+["'][^>]*>/gi,
+              (tag) => (/\btype=["']module["']/i.test(tag) ? addLowPriority(tag) : tag),
+            )
+        );
+      },
+    },
+  };
+}
+
 export default defineConfig(({ command, isSsrBuild }) => {
   const isDevServer = command === "serve";
 
@@ -46,7 +107,9 @@ export default defineConfig(({ command, isSsrBuild }) => {
     plugins: [
       tailwindcss(),
       react(),
-      ...(isSsrBuild ? [ssrStubNoteEditor(__dirname)] : []),
+      ...(isSsrBuild
+        ? [ssrStubNoteEditor(__dirname)]
+        : [lowPriorityJsPreload()]),
     ],
     resolve: {
       alias: {

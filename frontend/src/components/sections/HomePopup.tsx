@@ -5,7 +5,7 @@
  * @module components/sections/HomePopup
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { contentService, type ActivePopup } from "@/services/site/content.service";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useLanguage } from "@/context/LanguageContext";
@@ -24,6 +24,19 @@ const logger = {
 const POPUP_STORAGE_PREFIX = "coach_popup_seen_";
 
 /**
+ * 彈窗「等使用者有互動意圖」的保底秒數。
+ *
+ * 2026-10-02 由「hydrate 後 600ms 自動跳出」改成「使用者捲動／觸控／按鍵
+ * 後才跳出，最多等 10 秒」：
+ *   - Google 對手機從搜尋結果進站就被全版插頁蓋住的頁面有明確扣分
+ *     （intrusive interstitial），而 PageSpeed 的 Speed Index 也因為
+ *     「最後一格是彈窗」把它前面所有畫格都算成未完成（行動版 13.7s）。
+ *   - 等互動再出現，對真人體驗也較不突兀；10 秒保底讓完全不動的訪客仍會看到。
+ */
+const POPUP_INTENT_FALLBACK_MS = 10_000;
+const POPUP_INTENT_EVENTS = ["scroll", "wheel", "touchstart", "pointerdown", "keydown"] as const;
+
+/**
  * HomePopup - 首頁自定義彈窗
  * 管理員可在後台設定內容，用戶開啟首頁時自動顯示
  */
@@ -34,6 +47,29 @@ const HomePopup: React.FC = () => {
   const [popup, setPopup] = useState<ActivePopup | null>(null);
   const [visible, setVisible] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
+  /** 解除「互動意圖」監聽與保底計時器（unmount 或已顯示時呼叫） */
+  const disarmIntentRef = useRef<(() => void) | null>(null);
+
+  /** 等使用者有互動意圖（或保底逾時）後才真正顯示彈窗 */
+  const revealOnIntent = useCallback(() => {
+    const reveal = () => {
+      disarmIntentRef.current?.();
+      disarmIntentRef.current = null;
+      setVisible(true);
+      // 觸發入場動畫
+      requestAnimationFrame(() => {
+        setTimeout(() => setAnimateIn(true), 30);
+      });
+    };
+    const timer = window.setTimeout(reveal, POPUP_INTENT_FALLBACK_MS);
+    POPUP_INTENT_EVENTS.forEach((evt) =>
+      window.addEventListener(evt, reveal, { passive: true, once: true }),
+    );
+    disarmIntentRef.current = () => {
+      window.clearTimeout(timer);
+      POPUP_INTENT_EVENTS.forEach((evt) => window.removeEventListener(evt, reveal));
+    };
+  }, []);
 
   const fetchPopup = useCallback(async () => {
     try {
@@ -51,21 +87,19 @@ const HomePopup: React.FC = () => {
       }
 
       setPopup(data);
-      // 延遲顯示，讓頁面先完成載入動畫
-      setTimeout(() => {
-        setVisible(true);
-        // 觸發入場動畫
-        requestAnimationFrame(() => {
-          setTimeout(() => setAnimateIn(true), 30);
-        });
-      }, 600);
+      // 不再固定延遲 600ms 自動跳出；改等互動意圖（見 POPUP_INTENT_FALLBACK_MS 註解）
+      revealOnIntent();
     } catch (err) {
       logger.error("Failed to fetch popup", err);
     }
-  }, []);
+  }, [revealOnIntent]);
 
   useEffect(() => {
     fetchPopup();
+    return () => {
+      disarmIntentRef.current?.();
+      disarmIntentRef.current = null;
+    };
   }, [fetchPopup]);
 
   const handleClose = () => {

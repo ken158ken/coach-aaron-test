@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
+import { loadGsap } from '@/lib/gsapLoader';
+import type { Gsap, GsapContext } from '@/lib/gsapLoader';
 import {
   motion,
   AnimatePresence,
@@ -167,10 +168,30 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   }, []);
 
   // 滑鼠視差邏輯
+  //
+  // gsap 改為動態載入（見 lib/gsapLoader.ts）：listener 立刻掛上，但**第一次
+  // mousemove 才去抓 vendor-gsap chunk**，載入完成前的事件直接忽略。
+  // 純裝飾性視差，前幾幀不動無感；完全不動滑鼠的訪客（含手機）不會下載 gsap。
   useEffect(() => {
     if (!containerRef.current) return;
 
+    let cancelled = false;
+    let gsapRef: Gsap | null = null;
+    let requested = false;
+
+    const ensureGsap = () => {
+      if (gsapRef || requested) return;
+      requested = true;
+      loadGsap().then((g) => {
+        if (!cancelled) gsapRef = g;
+      });
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
+      ensureGsap();
+      if (!gsapRef) return; // gsap 還在路上
+      const gsap = gsapRef;
+
       const { clientX, clientY } = e;
       const { innerWidth, innerHeight } = window;
 
@@ -205,42 +226,68 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   // 原始登場動畫
+  //
+  // ⚠️ SSR / 首次 render 的 HTML 必須是「已可見」狀態（不可輸出 opacity:0），
+  //    opacity:0 的起始值由 gsap 在 client 端才寫入 —— 這點在 gsap 改成
+  //    動態載入後依然成立。代價是 chunk 到位前 hero 會先以最終狀態亮著幾十 ms，
+  //    因此下面用 `elapsed` 把 delay 扣掉已經過去的載入時間，讓整條時間軸
+  //    盡量貼回原本的節奏（載太久就直接 delay 0，等於淡化成瞬間就位）。
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Title — 快速切入，小位移，略帶斜角
-      gsap.fromTo(
-        titleRef.current,
-        { y: 40, opacity: 0, skewX: -4 },
-        {
-          y: 0,
-          opacity: 1,
-          skewX: 0,
-          duration: 1.2,
-          ease: 'expo.out',
-          delay: 0.2,
-        }
-      );
+    let cancelled = false;
+    let ctx: GsapContext | null = null;
+    const startedAt =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
 
-      // Subtitle — 接連切入
-      gsap.fromTo(
-        subtitleRef.current,
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 1, ease: 'expo.out', delay: 0.4 }
-      );
+    loadGsap().then((gsap) => {
+      if (cancelled || !containerRef.current) return;
+      const now =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const elapsed = (now - startedAt) / 1000;
+      /** 扣掉 gsap 載入耗時後的實際 delay（不小於 0） */
+      const d = (base: number) => Math.max(0, base - elapsed);
 
-      // CTA — 最後收尾
-      gsap.fromTo(
-        ctaRef.current,
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.8, ease: 'expo.out', delay: 0.6 }
-      );
-    }, containerRef);
+      ctx = gsap.context(() => {
+        // Title — 快速切入，小位移，略帶斜角
+        gsap.fromTo(
+          titleRef.current,
+          { y: 40, opacity: 0, skewX: -4 },
+          {
+            y: 0,
+            opacity: 1,
+            skewX: 0,
+            duration: 1.2,
+            ease: 'expo.out',
+            delay: d(0.2),
+          }
+        );
 
-    return () => ctx.revert();
+        // Subtitle — 接連切入
+        gsap.fromTo(
+          subtitleRef.current,
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 1, ease: 'expo.out', delay: d(0.4) }
+        );
+
+        // CTA — 最後收尾
+        gsap.fromTo(
+          ctaRef.current,
+          { y: 20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, ease: 'expo.out', delay: d(0.6) }
+        );
+      }, containerRef);
+    });
+
+    return () => {
+      cancelled = true;
+      if (ctx) ctx.revert();
+    };
   }, []);
 
   return (
