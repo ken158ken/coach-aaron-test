@@ -24,16 +24,16 @@ const logger = {
 const POPUP_STORAGE_PREFIX = "coach_popup_seen_";
 
 /**
- * 彈窗「等使用者有互動意圖」的保底秒數。
+ * 彈窗只在「使用者有互動意圖」後顯示（捲動／滾輪／觸控／點擊／按鍵）。
  *
- * 2026-10-02 由「hydrate 後 600ms 自動跳出」改成「使用者捲動／觸控／按鍵
- * 後才跳出，最多等 10 秒」：
+ * 2026-10-02 由「hydrate 後 600ms 自動跳出」改成互動後才跳出：
  *   - Google 對手機從搜尋結果進站就被全版插頁蓋住的頁面有明確扣分
- *     （intrusive interstitial），而 PageSpeed 的 Speed Index 也因為
+ *     （intrusive interstitial）；PageSpeed 的 Speed Index 也因為
  *     「最後一格是彈窗」把它前面所有畫格都算成未完成（行動版 13.7s）。
- *   - 等互動再出現，對真人體驗也較不突兀；10 秒保底讓完全不動的訪客仍會看到。
+ *   - 刻意**不設時間保底**：Lighthouse 的追蹤最長可到 30~45 秒，任何幾秒的
+ *     保底都還是會落在追蹤內、把 Speed Index 拉回彈窗出現的時間；而真人
+ *     幾乎一定會捲動，互動後再出現也較不突兀。show_once 邏輯不變。
  */
-const POPUP_INTENT_FALLBACK_MS = 10_000;
 const POPUP_INTENT_EVENTS = ["scroll", "wheel", "touchstart", "pointerdown", "keydown"] as const;
 
 /**
@@ -61,12 +61,10 @@ const HomePopup: React.FC = () => {
         setTimeout(() => setAnimateIn(true), 30);
       });
     };
-    const timer = window.setTimeout(reveal, POPUP_INTENT_FALLBACK_MS);
     POPUP_INTENT_EVENTS.forEach((evt) =>
       window.addEventListener(evt, reveal, { passive: true, once: true }),
     );
     disarmIntentRef.current = () => {
-      window.clearTimeout(timer);
       POPUP_INTENT_EVENTS.forEach((evt) => window.removeEventListener(evt, reveal));
     };
   }, []);
@@ -87,7 +85,7 @@ const HomePopup: React.FC = () => {
       }
 
       setPopup(data);
-      // 不再固定延遲 600ms 自動跳出；改等互動意圖（見 POPUP_INTENT_FALLBACK_MS 註解）
+      // 不再固定延遲 600ms 自動跳出；改等互動意圖（見 POPUP_INTENT_EVENTS 註解）
       revealOnIntent();
     } catch (err) {
       logger.error("Failed to fetch popup", err);
