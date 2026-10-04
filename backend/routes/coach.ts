@@ -32,7 +32,8 @@ import {
 import { getFrontendUrl } from "../config/oauth.js";
 import { logger } from "../utils/logger.js";
 import { createNotification } from "../utils/notifications.js";
-import { formatInTimeZone } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz/toZonedTime";
+import { format } from "date-fns/format";
 
 const router: Router = express.Router();
 
@@ -641,7 +642,7 @@ async function findLinkedBooking(
 }
 
 const fmtEventTime = (iso: string, tz: string): string =>
-  formatInTimeZone(new Date(iso), tz, "yyyy/MM/dd HH:mm");
+  format(toZonedTime(new Date(iso), tz), "yyyy/MM/dd HH:mm");
 
 /** GET /api/coach/google/events?from=ISO&to=ISO — 期間內事件列表 */
 router.get(

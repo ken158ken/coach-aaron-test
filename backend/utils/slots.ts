@@ -19,14 +19,14 @@
  * @module utils/slots
  */
 
-import {
-  addDays,
-  addMinutes,
-  differenceInMinutes,
-  isBefore,
-  startOfDay,
-} from "date-fns";
-import { fromZonedTime, toZonedTime, format as formatTz } from "date-fns-tz";
+import { addDays } from "date-fns/addDays";
+import { addMinutes } from "date-fns/addMinutes";
+import { differenceInMinutes } from "date-fns/differenceInMinutes";
+import { isBefore } from "date-fns/isBefore";
+import { startOfDay } from "date-fns/startOfDay";
+import { fromZonedTime } from "date-fns-tz/fromZonedTime";
+import { toZonedTime } from "date-fns-tz/toZonedTime";
+import { format } from "date-fns/format";
 
 /** 教練設定（只取算 slot 需要的欄位） */
 export interface CoachSettings {
@@ -96,7 +96,7 @@ export function computeAvailableSlots(
     // 把這天（以教練時區）的 weekday 取出
     const dayInTz = toZonedTime(dayCursor, tz);
     const weekday = dayInTz.getDay(); // 0-6
-    const dateStr = formatTz(dayInTz, "yyyy-MM-dd", { timeZone: tz });
+    const dateStr = format(dayInTz, "yyyy-MM-dd");
 
     const todaysRules = rules.filter((r) => r.weekday === weekday);
     if (todaysRules.length === 0) continue;
@@ -134,8 +134,8 @@ export function computeAvailableSlots(
         slots.push({
           startIso: slotStart.toISOString(),
           endIso: slotEnd.toISOString(),
-          localDate: formatTz(slotZoned, "yyyy-MM-dd", { timeZone: tz }),
-          localTime: formatTz(slotZoned, "HH:mm", { timeZone: tz }),
+          localDate: format(slotZoned, "yyyy-MM-dd"),
+          localTime: format(slotZoned, "HH:mm"),
         });
       }
     }

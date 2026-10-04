@@ -334,11 +334,14 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         datePublished: publishedTime,
         dateModified: modifiedTime || publishedTime,
         // author 用全站共用的 Person @id（而非每頁一個同名的新實體），
-        // 文章的作者署名才會累積到教練本人這個節點上
+        // 文章的作者署名才會累積到教練本人這個節點上。
+        // name 固定用品牌名：本站是單一作者站，DB 的作者顯示名（例如後台帳號暱稱）
+        // 與 @id 指向的實體不一致時，會讓結構化資料自相矛盾（正式站實測出現「恩123」）。
+        // 頁面上的署名仍照 author prop 顯示，不受影響。
         author: {
           "@type": "Person",
           "@id": PERSON_ID,
-          name: author || BRAND_NAME,
+          name: BRAND_NAME,
         },
         publisher: {
           "@type": "Organization",

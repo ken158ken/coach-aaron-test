@@ -16,7 +16,8 @@
  */
 
 import express, { Request, Response, Router } from "express";
-import { startOfDay, addDays } from "date-fns";
+import { startOfDay } from "date-fns/startOfDay";
+import { addDays } from "date-fns/addDays";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireCoachOrAdmin, getActiveCoach } from "../middleware/coachAuth.js";

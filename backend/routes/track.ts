@@ -19,7 +19,8 @@
 
 import express, { Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
-import { formatInTimeZone } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz/toZonedTime";
+import { format } from "date-fns/format";
 import { supabaseAdmin } from "../config/supabase.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 import { logger } from "../utils/logger.js";
@@ -86,7 +87,7 @@ router.post(
       const { host, sourceClass } = classifyReferrer(referrerRaw);
 
       const { error } = await supabaseAdmin.from("traffic_events").insert({
-        day: formatInTimeZone(new Date(), TAIPEI, "yyyy-MM-dd"),
+        day: format(toZonedTime(new Date(), TAIPEI), "yyyy-MM-dd"),
         path,
         referrer_host: host,
         source_class: sourceClass,
@@ -156,7 +157,7 @@ trafficAdminRouter.get(
 
       // 起始日（含當天）以 Asia/Taipei 計算
       const start = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000);
-      const startDay = formatInTimeZone(start, TAIPEI, "yyyy-MM-dd");
+      const startDay = format(toZonedTime(start, TAIPEI), "yyyy-MM-dd");
 
       const rows: TrafficRow[] = [];
       let truncated = false;

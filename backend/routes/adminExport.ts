@@ -27,8 +27,8 @@ import {
   type ExportRow,
   type ModuleExport,
 } from "../utils/exportHelpers.js";
-import { format as dateFmt } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { format as dateFmt } from "date-fns/format";
+import { toZonedTime } from "date-fns-tz/toZonedTime";
 
 const router: Router = express.Router();
 const TZ = "Asia/Taipei";
