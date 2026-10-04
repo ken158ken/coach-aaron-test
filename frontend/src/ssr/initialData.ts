@@ -26,14 +26,22 @@ export const INITIAL_DATA_GLOBAL = "__INITIAL_DATA__";
  *    也不得與任何 `dataKeys.*` 產生的鍵相撞（`dataKeys` 一律是 `名稱:參數` 格式）。
  */
 export const NOT_FOUND_KEY = "__notFound";
+/**
+ * 保留鍵：該路由「主實體」預抓失敗（逾時 / 5xx / 超出總預算），不是 404。
+ * api/ssr.js 讀到它會把這次回應標成不可快取 —— 否則一份沒有本文、沒有
+ * Article JSON-LD 的空殼 HTML 會被邊緣快取 10 分鐘、stale 再撐一天，
+ * 爬蟲（Googlebot / GPTBot / ClaudeBot…）拿到的就是空頁（2026-10-04 正式站實測抓到）。
+ */
+export const PREFETCH_FAILED_KEY = "__prefetchFailed";
 
 /** 所有保留鍵（只存在於伺服器端，序列化時剔除） */
-const RESERVED_KEYS: ReadonlySet<string> = new Set([NOT_FOUND_KEY]);
+const RESERVED_KEYS: ReadonlySet<string> = new Set([NOT_FOUND_KEY, PREFETCH_FAILED_KEY]);
 
 /** 預抓資料裡的保留欄位（非頁面資料） */
 export interface ReservedInitialData {
   /** 該路由的主實體 API 回 404 → `api/ssr.js` 應回 HTTP 404 */
   [NOT_FOUND_KEY]?: true;
+  [PREFETCH_FAILED_KEY]?: true;
 }
 
 export type InitialDataMap = Record<string, unknown> & ReservedInitialData;

@@ -11,7 +11,7 @@
  */
 
 import { getPrefetchSpecs } from "./routeData";
-import { NOT_FOUND_KEY, type InitialDataMap } from "./initialData";
+import { NOT_FOUND_KEY, PREFETCH_FAILED_KEY, type InitialDataMap } from "./initialData";
 
 export interface PrefetchOptions {
   /** API 根位址，例如 `https://example.com` 或 `http://localhost:5000` */
@@ -117,11 +117,13 @@ export async function prefetchRouteData(
 
     const result: InitialDataMap = {};
     let primaryNotFound = false;
+    let primaryOk = false;
     for (const item of settled) {
       if (item.status !== "fulfilled") continue;
       const { key, primary, outcome } = item.value;
       if (outcome.kind === "ok") {
         result[key] = outcome.value;
+        if (primary) primaryOk = true;
       } else if (outcome.kind === "notFound" && primary) {
         // 只有「主實體」的 404 才算整頁不存在；列表類次要資料 404 不算
         primaryNotFound = true;
@@ -130,6 +132,12 @@ export async function prefetchRouteData(
     // sentinel：api/ssr.js 讀到就回 HTTP 404（頁面仍照常渲染「找不到」＋noindex）。
     // serializeInitialData 會把它濾掉，不會外洩到 window.__INITIAL_DATA__。
     if (primaryNotFound) result[NOT_FOUND_KEY] = true;
+    // 主實體既非 ok 也非 404（逾時 / 5xx / 超出 budget 整批被放棄）→ 標記預抓失敗，
+    // api/ssr.js 會讓這次「空殼」回應不可快取，下一個請求重新渲染。
+    const hasPrimary = specs.some((spec) => spec.primary === true);
+    if (hasPrimary && !primaryOk && !primaryNotFound) {
+      result[PREFETCH_FAILED_KEY] = true;
+    }
     return result;
   } catch (err) {
     console.error(

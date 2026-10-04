@@ -23,6 +23,12 @@ const path = require("node:path");
  * Google 會判定為 soft 404 並照樣收錄。
  */
 const NOT_FOUND_KEY = "__notFound";
+/**
+ * 主實體預抓失敗（逾時 / 5xx / 超出預算）的保留鍵（與 initialData.ts 同值）。
+ * 這種情況頁面仍會渲染（客戶端 hydrate 後自行抓資料），但 HTML 沒有本文、
+ * 沒有 Article/Course JSON-LD —— 絕不能讓這份空殼進邊緣快取。
+ */
+const PREFETCH_FAILED_KEY = "__prefetchFailed";
 
 /**
  * 載入 SSR entry module（惰性載入，僅執行一次）
@@ -124,6 +130,14 @@ module.exports = async function handler(req, res) {
       console.log(`🚫 Primary entity 404 for ${url} → responding 404`);
     }
 
+    // ===== 3.6 主實體預抓失敗 → 本次回應不可快取 =====
+    let prefetchFailed = false;
+    if (initialData && initialData[PREFETCH_FAILED_KEY]) {
+      prefetchFailed = true;
+      delete initialData[PREFETCH_FAILED_KEY];
+      console.warn(`⚠️ Primary prefetch failed for ${url} → serving uncached shell`);
+    }
+
     // ===== 4. 渲染 HTML =====
     let appHtml = "";
     let headTags = "";
@@ -172,6 +186,7 @@ module.exports = async function handler(req, res) {
     // 404 時額外補 X-Robots-Tag（頁面本身也會輸出 noindex meta；
     // 正常頁不設此標頭，避免與頁面層 noIndex 判斷互相干擾）
     if (isNotFound) res.setHeader("X-Robots-Tag", "noindex");
+    if (prefetchFailed) res.setHeader("X-SSR-Prefetch", "failed");
 
     res
       .status(isNotFound ? 404 : 200)
@@ -189,9 +204,12 @@ module.exports = async function handler(req, res) {
         "Cache-Control",
         // 404 不加 stale-while-revalidate：否則文章剛發布時，先前被爬到的
         // 404 可能被當 stale 再回送最多一天，讓新頁面遲遲進不了索引。
-        isNotFound
-          ? "public, s-maxage=600"
-          : "public, s-maxage=600, stale-while-revalidate=86400",
+        prefetchFailed
+          ? // 空殼：禁止 CDN 與瀏覽器快取，下一個請求（或爬蟲重抓）會拿到完整渲染
+            "no-store"
+          : isNotFound
+            ? "public, s-maxage=600"
+            : "public, s-maxage=600, stale-while-revalidate=86400",
       )
       .end(html);
   } catch (e) {
