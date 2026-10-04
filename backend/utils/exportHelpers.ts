@@ -4,7 +4,10 @@
  * 用於會員聊天匯出 + 後台管理模組匯出
  */
 
-import ExcelJS from "exceljs";
+// ⚠️ 冷啟動：exceljs 單獨 import ≈ 0.15~0.25 秒，而匯出端點極少被呼叫。
+// 改成在真正要產 xlsx 時才動態 import，並用模組層 Promise 快取。
+// 型別走 import type（純編譯期，零 runtime 成本）。
+import type ExcelJSType from "exceljs";
 import {
   Document,
   Packer,
@@ -20,6 +23,21 @@ import {
   PageBreak,
 } from "docx";
 import { Response } from "express";
+
+/** exceljs 模組快取；失敗時清掉快取，讓下一次呼叫可以重試 */
+let excelJsPromise: Promise<typeof ExcelJSType> | null = null;
+
+function getExcelJs(): Promise<typeof ExcelJSType> {
+  if (!excelJsPromise) {
+    excelJsPromise = import("exceljs")
+      .then((m) => (m.default ?? m) as unknown as typeof ExcelJSType)
+      .catch((err) => {
+        excelJsPromise = null;
+        throw err;
+      });
+  }
+  return excelJsPromise;
+}
 
 // ===== 型別 =====
 
@@ -138,6 +156,7 @@ export function toHtml(rows: ExportRow[], title: string): Buffer {
 // ===== 表格資料：XLSX =====
 
 export async function toXlsx(rows: ExportRow[], title: string): Promise<Buffer> {
+  const ExcelJS = await getExcelJs();
   const wb = new ExcelJS.Workbook();
   wb.creator = "Aaron 教練系統";
   const sheetName = title.slice(0, 31);
@@ -253,6 +272,7 @@ export async function toDocx(rows: ExportRow[], title: string): Promise<Buffer> 
 // ===== 全站匯出：多 Sheet Excel =====
 
 export async function toFullXlsx(modules: ModuleExport[]): Promise<Buffer> {
+  const ExcelJS = await getExcelJs();
   const wb = new ExcelJS.Workbook();
   wb.creator = "Aaron 教練系統";
   wb.created = new Date();

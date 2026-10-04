@@ -43,7 +43,7 @@ function extractCategories(list: Article[]): CategoryOption[] {
  */
 const Articles: React.FC = () => {
   const { t, language } = useLanguage();
-  const { loc } = useLocalize();
+  const { loc, catLabel } = useLocalize();
   // ── SSR 預抓資料（僅第一頁、未篩選分類） ──
   const ssrList = getInitialData<ArticlesResponse>(dataKeys.articlesList());
   const ssrArticles = Array.isArray(ssrList?.articles) ? ssrList.articles : [];
@@ -155,8 +155,26 @@ const Articles: React.FC = () => {
                   onClick={() => { setSelectedCategory(cat.article_category); setCurrentPage(1); }}
                   className={`page-filter-pill shrink-0 ${selectedCategory === cat.article_category ? "active" : ""}`}
                 >
-                  {loc(cat as unknown as Record<string, unknown>, "article_category")}
+                  {catLabel(cat.article_category)}
                 </button>
+              ))}
+            </div>
+          )}
+
+          {/* 主題頁連結列 —— 篩選 chips 是純前端 state（不會換 URL、爬蟲看不到），
+              所以另外給每個分類一條真正的連結到 /articles/topic/:category，
+              讓主題叢集可被索引。刻意不動上面 chips 的既有篩選行為。 */}
+          {categories.length > 0 && (
+            <div className="mb-6 sm:mb-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs sm:text-sm">
+              <span className="text-muted">{t.articleTopic.allTopics}</span>
+              {categories.map((cat) => (
+                <Link
+                  key={cat.article_category}
+                  to={`/articles/topic/${encodeURIComponent(cat.article_category)}`}
+                  className="text-gold/80 hover:text-gold underline decoration-gold/30 underline-offset-4 transition-colors"
+                >
+                  {catLabel(cat.article_category)}
+                </Link>
               ))}
             </div>
           )}
@@ -220,7 +238,7 @@ const Articles: React.FC = () => {
                       <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                         {article.article_category && (
                           <span className="cat-label text-[10px] sm:text-xs text-gold">
-                            {loc(article as unknown as Record<string, unknown>, "article_category")}
+                            {catLabel(article.article_category)}
                           </span>
                         )}
                         {article.is_featured && (

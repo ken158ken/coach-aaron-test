@@ -38,6 +38,12 @@ export const dataKeys = {
   articlesPopular: () => "articles:popular",
   /** 文章列表頁第一頁、未篩選分類 */
   articlesList: () => "articles:list:p1",
+  /**
+   * 分類主題頁 /articles/topic/:category
+   * key 帶「解碼後」的原始分類 slug（sales / mindset / retention），
+   * 與頁面端 useParams + decodeURIComponent 的結果一致。
+   */
+  articlesByCategory: (category: string) => `articles:category:${category}`,
   course: (id: string | number) => `course:${id}`,
   coursesList: () => "courses:list",
   lesson: (id: string | number) => `lesson:${id}`,
@@ -160,6 +166,26 @@ export function getPrefetchSpecs(url: string): PrefetchSpec[] {
   if (segments.length === 1 && segments[0] === "articles") {
     return [
       { key: dataKeys.articlesList(), path: "/api/articles?page=1&limit=9" },
+    ];
+  }
+
+  // /articles/topic/:category（分類主題頁；category 是 DB 的 article_category
+  // 原值 —— 目前是英文 slug sales / mindset / retention，顯示名稱由前端字典查表）
+  if (
+    segments.length === 3 &&
+    segments[0] === "articles" &&
+    segments[1] === "topic"
+  ) {
+    const category = decodeParam(segments[2]);
+    if (!category) return [];
+    return [
+      {
+        // 不標 primary：空分類不該回 HTTP 404（頁面自己 noIndex 即可），
+        // 而且分類是使用者可拼出的任意字串，不宜當成「主實體不存在」。
+        key: dataKeys.articlesByCategory(category),
+        path: `/api/articles?category=${encodeURIComponent(category)}&limit=50`,
+        optional: true,
+      },
     ];
   }
 

@@ -29,6 +29,23 @@ import {
   replaceCleanup,
   replaceHtmlCleanup,
 } from "../utils/imageStorage.js";
+import {
+  AEO_MIGRATION_HINT,
+  ARTICLE_AEO_FIELDS,
+  ARTICLE_LIST_COLUMNS,
+  ARTICLE_LIST_LEGACY_COLUMNS,
+  parseAeoFields,
+} from "../utils/aeoFields.js";
+import {
+  fillMissingFields,
+  isUndefinedColumn,
+  selectWithFallback,
+} from "../utils/selectWithFallback.js";
+import {
+  articleUrl,
+  pingIndexNowBounded,
+  sitemapUrl,
+} from "../utils/indexNow.js";
 
 const router: Router = express.Router();
 
@@ -43,51 +60,59 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
     const { page = 1, limit = 10, category, featured } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
+    // 分類過濾：中文或英文分類名皆可精確比對（/articles/topic/:category 用）
+    // 進 .or() 前必過 sanitizeSearchQuery（資安紅線：PostgREST filter 注入）
+    const safeCategory = sanitizeSearchQuery(category, 120);
+
     // 先嘗試簡單查詢，不使用 join（避免外鍵關係問題）
-    let query = supabaseAdmin
-      .from("articles")
-      .select(
-        `
-        article_id,
-        author_id,
-        article_title,
-        article_title_en,
-        article_slug,
-        article_description,
-        article_description_en,
-        article_thumbnail_url,
-        article_category,
-        article_category_en,
-        view_count,
-        rating_average,
-        rating_count,
-        comment_count,
-        is_featured,
-        published_at,
-        created_at
-      `,
-        { count: "exact" },
-      )
-      .eq("status", "published")
-      .is("deleted_at", null)
-      .order("published_at", { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
+    const buildQuery = (columns: string) => {
+      let query = supabaseAdmin
+        .from("articles")
+        .select(columns, { count: "exact" })
+        .eq("status", "published")
+        .is("deleted_at", null)
+        .order("published_at", { ascending: false })
+        .range(offset, offset + Number(limit) - 1);
 
-    if (category) {
-      query = query.eq("article_category", category);
+      if (safeCategory) {
+        query = query.or(
+          `article_category.eq."${safeCategory}",article_category_en.eq."${safeCategory}"`,
+        );
+      }
+
+      if (featured === "true") {
+        query = query.eq("is_featured", true);
+      }
+
+      return query;
+    };
+
+    // 041 還沒貼時 PostgREST 回 42703 → 退回舊欄位並把新欄位補 null，
+    // 整支 API 不能因為「SQL 還沒貼」而 500（見 utils/selectWithFallback）
+    const { data, error, count, degraded } = await selectWithFallback<
+      Record<string, unknown>[]
+    >({
+      fullColumns: ARTICLE_LIST_COLUMNS,
+      legacyColumns: ARTICLE_LIST_LEGACY_COLUMNS,
+      nullFields: ARTICLE_AEO_FIELDS,
+      run: (columns) =>
+        buildQuery(columns) as unknown as PromiseLike<{
+          data: Record<string, unknown>[] | null;
+          error: { code?: string; message?: string } | null;
+          count?: number | null;
+        }>,
+    });
+
+    if (degraded) {
+      logger.warn("articles 列表退回舊欄位（AEO 欄位尚未建立）", {
+        hint: AEO_MIGRATION_HINT,
+      });
     }
-
-    if (featured === "true") {
-      query = query.eq("is_featured", true);
-    }
-
-    const { data, error, count } = await query;
 
     if (error) {
       logger.error("Articles query error:", {
         code: error.code,
         message: error.message,
-        details: error.details,
       });
       throw error;
     }
@@ -146,6 +171,9 @@ router.get(
         .from("articles")
         .update({ view_count: (data.view_count || 0) + 1 })
         .eq("article_id", data.article_id);
+
+      // 041 未貼時 select * 不會有 AEO 欄位 → 補 null，回應形狀固定
+      fillMissingFields(data as Record<string, unknown>, ARTICLE_AEO_FIELDS);
 
       res.json(data);
     } catch (err) {
@@ -530,6 +558,12 @@ router.get(
         throw error;
       }
 
+      // select * 在 041 未貼時不會有 AEO 欄位 → 補 null（編輯器可直接綁定）
+      fillMissingFields(
+        (data || []) as Record<string, unknown>[],
+        ARTICLE_AEO_FIELDS,
+      );
+
       res.json({
         articles: data || [],
         total: count || 0,
@@ -576,6 +610,13 @@ router.post(
         res.status(400).json({ error: "標題為必填" });
         return;
       }
+
+      // AEO 答案區塊（041 欄位）：驗證型別/長度並 strip HTML
+      const aeo = parseAeoFields(req.body, "article");
+      if (aeo.error) {
+        res.status(400).json({ error: aeo.error });
+        return;
+      }
       if (!isAllowedImageUrl(thumbnailUrl)) {
         res.status(400).json({ error: imageUrlErrorMessage("文章封面") });
         return;
@@ -601,10 +642,16 @@ router.post(
           is_featured: isFeatured || false,
           published_at:
             status === "published" ? new Date().toISOString() : null,
+          ...aeo.updates,
         })
         .select()
         .single();
 
+      // 041 還沒貼就送了 AEO 欄位 → 明確 503，不要讓業主看到「建立失敗」卻不知原因
+      if (error && aeo.touched && isUndefinedColumn(error)) {
+        res.status(503).json({ error: AEO_MIGRATION_HINT });
+        return;
+      }
       if (error) throw error;
 
       // 拿到 article_id 後，把封面／橫幅／內文插圖從 temp 搬到 `{article_id}/`
@@ -653,6 +700,16 @@ router.post(
         }
       }
 
+      fillMissingFields(data as Record<string, unknown>, ARTICLE_AEO_FIELDS);
+
+      // 新發布 → 通知 IndexNow（最多等 1.5 秒，失敗不影響結果）
+      if (data?.status === "published") {
+        await pingIndexNowBounded([
+          articleUrl(data.article_slug, data.article_id),
+          sitemapUrl(),
+        ]);
+      }
+
       res.json(data);
     } catch (err) {
       logger.error("Create article error:", err);
@@ -694,11 +751,18 @@ router.put(
         return;
       }
 
+      // AEO 答案區塊（041 欄位）
+      const aeo = parseAeoFields(req.body, "article");
+      if (aeo.error) {
+        res.status(400).json({ error: aeo.error });
+        return;
+      }
+
       // 取得現有文章狀態 + 舊圖片值（更新成功後才拿來刪舊檔）
       const { data: existing } = await supabaseAdmin
         .from("articles")
         .select(
-          "status, published_at, article_thumbnail_url, article_banner_url, article_content",
+          "status, published_at, article_slug, article_thumbnail_url, article_banner_url, article_content",
         )
         .eq("article_id", id)
         .single();
@@ -736,6 +800,7 @@ router.put(
       if (category !== undefined) updateData.article_category = category;
       if (status !== undefined) updateData.status = status;
       if (isFeatured !== undefined) updateData.is_featured = isFeatured;
+      Object.assign(updateData, aeo.updates);
 
       // 如果狀態從非發布變為發布，設定發布時間
       if (
@@ -753,6 +818,11 @@ router.put(
         .select()
         .single();
 
+      // 041 還沒貼就送了 AEO 欄位 → 明確 503（其餘欄位未寫入，業主貼完 SQL 再存一次即可）
+      if (error && aeo.touched && isUndefinedColumn(error)) {
+        res.status(503).json({ error: AEO_MIGRATION_HINT });
+        return;
+      }
       if (error) throw error;
 
       // DB 更新成功才刪舊檔（含內文被移除的插圖）
@@ -780,6 +850,21 @@ router.put(
         logger.error("文章舊圖清理失敗", imgErr, { articleId: id });
       }
 
+      fillMissingFields(data as Record<string, unknown>, ARTICLE_AEO_FIELDS);
+
+      // 發布 / 更新已發布 / 下架 都要通知 IndexNow（下架也要讓引擎回頭重抓）
+      const wasPublished = existing?.status === "published";
+      const nowPublished = (data?.status ?? existing?.status) === "published";
+      if (wasPublished || nowPublished) {
+        await pingIndexNowBounded([
+          articleUrl(
+            data?.article_slug ?? existing?.article_slug,
+            data?.article_id ?? id,
+          ),
+          sitemapUrl(),
+        ]);
+      }
+
       res.json(data);
     } catch (err) {
       logger.error("Update article error:", err);
@@ -800,12 +885,28 @@ router.delete(
     try {
       const { id } = req.params;
 
+      // 先取 slug/status：刪掉後就查不到，IndexNow 需要知道要讓引擎重抓哪個 URL
+      const { data: existing } = await supabaseAdmin
+        .from("articles")
+        .select("article_slug, status")
+        .eq("article_id", id)
+        .single();
+
       const { error } = await supabaseAdmin
         .from("articles")
         .update({ deleted_at: new Date().toISOString() })
         .eq("article_id", id);
 
       if (error) throw error;
+
+      // 下架：通知引擎回頭重抓（會抓到 404 而移除索引）
+      if (existing?.status === "published") {
+        await pingIndexNowBounded([
+          articleUrl(existing.article_slug, id),
+          sitemapUrl(),
+        ]);
+      }
+
       res.json({ message: "文章已刪除" });
     } catch (err) {
       logger.error("Delete article error:", err);

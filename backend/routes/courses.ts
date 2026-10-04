@@ -33,6 +33,20 @@ import {
   replaceCleanup,
 } from "../utils/imageStorage.js";
 import { uploadBase64AsTemp } from "./uploads.js";
+import {
+  AEO_MIGRATION_HINT,
+  COURSE_AEO_FIELDS,
+  parseAeoFields,
+} from "../utils/aeoFields.js";
+import {
+  fillMissingFields,
+  isUndefinedColumn,
+} from "../utils/selectWithFallback.js";
+import {
+  courseUrl,
+  pingIndexNowBounded,
+  sitemapUrl,
+} from "../utils/indexNow.js";
 
 const router: Router = express.Router();
 
@@ -62,6 +76,9 @@ router.get(
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // select * 在 041 未貼時不含 AEO 欄位 → 補 null，回應形狀固定
+      fillMissingFields((data || []) as Record<string, unknown>[], COURSE_AEO_FIELDS);
 
       // 若已登入，附加該使用者的售價可見性
       const userId = req.user?.userId ? Number(req.user.userId) : null;
@@ -117,6 +134,8 @@ router.get(
         res.status(404).json({ error: "課程不存在" });
         return;
       }
+
+      fillMissingFields(data as Record<string, unknown>, COURSE_AEO_FIELDS);
 
       // 若已登入，附加售價可見性
       const userId = req.user?.userId ? Number(req.user.userId) : null;
@@ -402,6 +421,9 @@ router.get(
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      fillMissingFields((data || []) as Record<string, unknown>[], COURSE_AEO_FIELDS);
+
       res.json(data);
     } catch (err) {
       console.error("Get all courses error:", err);
@@ -448,6 +470,13 @@ router.post(
         }
       }
 
+      // AEO 答案區塊（041 欄位）：驗證型別/長度並 strip HTML
+      const aeo = parseAeoFields(req.body, "course");
+      if (aeo.error) {
+        res.status(400).json({ error: aeo.error });
+        return;
+      }
+
       const { data, error } = await supabaseAdmin
         .from("courses")
         .insert({
@@ -465,10 +494,16 @@ router.post(
           currency: currency || "TWD",
           access_duration_days,
           status: status || "draft",
+          ...aeo.updates,
         })
         .select()
         .single();
 
+      // 041 還沒貼就送了 AEO 欄位 → 明確 503，而不是籠統的「新增課程失敗」
+      if (error && aeo.touched && isUndefinedColumn(error)) {
+        res.status(503).json({ error: AEO_MIGRATION_HINT });
+        return;
+      }
       if (error) throw error;
 
       // 拿到 course_id 後，把暫存圖片搬到 `{course_id}/` 正式路徑並回寫欄位
@@ -529,6 +564,13 @@ router.post(
         logger.error("建立課程售價可見性記錄失敗", visErr as Error);
       }
 
+      fillMissingFields(data as Record<string, unknown>, COURSE_AEO_FIELDS);
+
+      // 新發布 → 通知 IndexNow（最多等 1.5 秒，失敗不影響結果）
+      if (data?.status === "published" && data?.course_id) {
+        await pingIndexNowBounded([courseUrl(data.course_id), sitemapUrl()]);
+      }
+
       res.json(data);
     } catch (err) {
       console.error("Create course error:", err);
@@ -549,6 +591,13 @@ router.put(
     try {
       const { id } = req.params;
       const updateData: Partial<Record<string, unknown>> = {};
+
+      // AEO 答案區塊（041 欄位）
+      const aeo = parseAeoFields(req.body, "course");
+      if (aeo.error) {
+        res.status(400).json({ error: aeo.error });
+        return;
+      }
 
       // 直接使用資料庫欄位名稱
       const allowedFields = [
@@ -590,6 +639,8 @@ router.put(
         }
       });
 
+      Object.assign(updateData, aeo.updates);
+
       // ── 圖片欄位：驗證 → finalize 暫存檔 → 更新後刪舊檔 ──
       for (const field of COURSE_IMAGE_FIELDS) {
         if (updateData[field.column] === undefined) continue;
@@ -598,6 +649,14 @@ router.put(
           return;
         }
       }
+
+      // 撈舊狀態：用來判斷「更新已發布 / 下架」是否要通知 IndexNow
+      const { data: prevRow } = await supabaseAdmin
+        .from("courses")
+        .select("status")
+        .eq("course_id", id)
+        .single();
+      const prevStatus = (prevRow as { status?: string } | null)?.status;
 
       // 撈舊值，等 DB 更新成功後才刪舊檔（先刪會在更新失敗時留下壞連結）
       const changedImageFields = COURSE_IMAGE_FIELDS.filter(
@@ -638,10 +697,22 @@ router.put(
         .select()
         .single();
 
+      // 041 還沒貼就送了 AEO 欄位 → 明確 503（貼完 SQL 再存一次即可）
+      if (error && aeo.touched && isUndefinedColumn(error)) {
+        res.status(503).json({ error: AEO_MIGRATION_HINT });
+        return;
+      }
       if (error) throw error;
 
       for (const field of changedImageFields) {
         await replaceCleanup(previous[field.column], updateData[field.column]);
+      }
+
+      fillMissingFields(data as Record<string, unknown>, COURSE_AEO_FIELDS);
+
+      // 發布 / 更新已發布 / 下架 都要通知 IndexNow
+      if (data?.status === "published" || prevStatus === "published") {
+        await pingIndexNowBounded([courseUrl(id), sitemapUrl()]);
       }
 
       res.json(data);
@@ -702,12 +773,24 @@ router.delete(
     try {
       const { id } = req.params;
 
+      // 先取 status：下架後要通知引擎回頭重抓
+      const { data: existing } = await supabaseAdmin
+        .from("courses")
+        .select("status")
+        .eq("course_id", id)
+        .single();
+
       const { error } = await supabaseAdmin
         .from("courses")
         .update({ deleted_at: new Date().toISOString() })
         .eq("course_id", id);
 
       if (error) throw error;
+
+      if ((existing as { status?: string } | null)?.status === "published") {
+        await pingIndexNowBounded([courseUrl(id), sitemapUrl()]);
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error("Delete course error:", err);

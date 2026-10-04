@@ -34,6 +34,7 @@ import adminExportRoutes from "./adminExport.js";
 import whispersRoutes    from "./whispers.js";
 import feedbackRoutes    from "./feedback.js";
 import notesRoutes       from "./notes.js";
+import trackRoutes, { trafficAdminRouter } from "./track.js";
 
 export function registerRoutes(app: Express): void {
   // ── 認證 ──────────────────────────────────────────────
@@ -74,7 +75,13 @@ export function registerRoutes(app: Express): void {
   // ── 圖片上傳（統一入口） ──────────────────────────────
   app.use("/api/uploads",     uploadsRoutes);
 
+  // ── 流量量測（AEO/GEO 來源分類；公開、無 cookie 無 PII） ──
+  app.use("/api/track",       trackRoutes);
+
   // ── 後台管理 ──────────────────────────────────────────
+  // trafficAdminRouter 先掛：它自帶 authenticateToken+requireAdmin，
+  // 放在 adminRoutes 前面可避免 admin.ts 的 router 層守衛重跑一次
+  app.use("/api/admin",         trafficAdminRouter);
   app.use("/api/admin",         adminRoutes);
   app.use("/api/admin/export",  adminExportRoutes);
 

@@ -5,6 +5,8 @@
     { "source": "/api/(.*)", "destination": "/api/server" },
 
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/llms.txt", "destination": "/api/llms" },
+    { "source": "/llms-full.txt", "destination": "/api/llms" },
 
     { "source": "/", "destination": "/api/ssr" },
     {
@@ -13,6 +15,7 @@
     },
     { "source": "/courses/:id", "destination": "/api/ssr" },
     { "source": "/lessons/:id", "destination": "/api/ssr" },
+    { "source": "/articles/topic/:category", "destination": "/api/ssr" },
     { "source": "/articles/:slug", "destination": "/api/ssr" },
     { "source": "/page/:slug", "destination": "/api/ssr" },
     {
@@ -39,6 +42,9 @@
       "maxDuration": 10
     },
     "api/sitemap.js": {
+      "maxDuration": 10
+    },
+    "api/llms.js": {
       "maxDuration": 10
     }
   },

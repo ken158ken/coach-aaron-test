@@ -10,6 +10,12 @@ export type CourseStatus = "draft" | "published" | "archived";
 export type CourseLevel = "beginner" | "intermediate" | "advanced";
 
 /** 課程資料 */
+/** AEO 常見問題一題（答案為純文字，不接受 HTML） */
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
 export interface Course {
   // 資料庫欄位 (snake_case)
   course_id: number;
@@ -26,6 +32,17 @@ export interface Course {
   course_description_en?: string | null;
   course_content_en?: string | null;
   course_keywords_en?: string | null;
+  /** AEO/GEO 答案塊（migration 041）：60 字內直接回答「這篇在講什麼／怎麼做」 */
+  answer_summary?: string | null;
+  answer_summary_en?: string | null;
+  /** 重點整理（純文字陣列） */
+  key_points?: string[] | null;
+  key_points_en?: string[] | null;
+  /** 常見問題（FAQPage JSON-LD 來源） */
+  faq?: FaqItem[] | null;
+  faq_en?: FaqItem[] | null;
+  /** 手動指定的相關文章 article_id（空則前端依分類/關鍵字自動推） */
+  related_article_ids?: number[] | null;
   course_category_en?: string | null;
   course_level?: CourseLevel;
   lessons_count?: number;
@@ -132,6 +149,19 @@ export interface Article {
   article_description_en?: string | null;
   article_content_en?: string | null;
   article_keywords_en?: string | null;
+  /** AEO/GEO 答案塊（migration 041）：60 字內直接回答「這篇在講什麼／怎麼做」 */
+  answer_summary?: string | null;
+  answer_summary_en?: string | null;
+  /** 重點整理（純文字陣列） */
+  key_points?: string[] | null;
+  key_points_en?: string[] | null;
+  /** 常見問題（FAQPage JSON-LD 來源） */
+  faq?: FaqItem[] | null;
+  faq_en?: FaqItem[] | null;
+  /** 手動指定的相關文章 article_id（空則前端依分類/關鍵字自動推） */
+  related_article_ids?: number[] | null;
+  /** 文章對應的課程（文末 CTA，可空） */
+  related_course_id?: number | null;
   article_category_en?: string | null;
   status: ArticleStatus;
   view_count: number;

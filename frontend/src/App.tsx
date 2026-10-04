@@ -48,6 +48,7 @@ import Videos from "@/pages/Videos";
 import Lessons from "@/pages/Lessons";
 import LessonDetail from "@/pages/LessonDetail";
 import Articles from "@/pages/Articles";
+import ArticleTopic from "@/pages/ArticleTopic";
 import ArticleDetail from "@/pages/ArticleDetail";
 import Contact from "@/pages/Contact";
 import PublishedPages from "@/pages/PublishedPages";
@@ -87,6 +88,7 @@ const AdminArticles = lazy(() => import("@/pages/admin/AdminArticles")); // → 
 const AdminExport = lazy(() => import("@/pages/admin/AdminExport"));
 const AdminGoogleCalendar = lazy(() => import("@/pages/admin/AdminGoogleCalendar"));
 const AdminNotes = lazy(() => import("@/pages/admin/AdminNotes")); // → BlockNote（再往下一層 lazy）
+const AdminTraffic = lazy(() => import("@/pages/admin/AdminTraffic"));
 const LandingPageManager = lazy(() => import("@/pages/admin/LandingPageManager"));
 const LandingPageNew = lazy(() => import("@/pages/admin/LandingPageNew"));
 
@@ -205,6 +207,11 @@ function App(): JSX.Element {
                   <Route path="lessons" element={<Lessons />} />
                   <Route path="lessons/:id" element={<LessonDetail />} />
                   <Route path="articles" element={<Articles />} />
+                  {/* 分類主題頁必須排在 :slug 之前（否則 "topic" 會被當成 slug） */}
+                  <Route
+                    path="articles/topic/:category"
+                    element={<ArticleTopic />}
+                  />
                   <Route path="articles/:slug" element={<ArticleDetail />} />
                   <Route path="contact" element={<Contact />} />
                   <Route path="login" element={<Login />} />
@@ -313,6 +320,7 @@ function App(): JSX.Element {
                   <Route path="export" element={<AdminExport />} />
                   <Route path="google-calendar" element={<AdminGoogleCalendar />} />
                   <Route path="notes" element={<AdminNotes />} />
+                  <Route path="traffic" element={<AdminTraffic />} />
                 </Route>
 
                 {/* 獨立編輯器路由 (全螢幕，不含 AdminLayout) */}

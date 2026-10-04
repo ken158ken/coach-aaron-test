@@ -108,6 +108,15 @@ const tour: TourDefinition = {
       align: "start",
     },
     {
+      el: '[data-tour="aeo-block"]',
+      title: "AEO 答案區",
+      desc: "點開這一區可以填<b>快速回答、重點整理、常見問題</b>（中英各一份）。這三塊會變成課程頁上的對應段落，常見問題還會輸出成 <b>FAQ 結構化資料</b>給 Google 與 ChatGPT 這類 AI 引用。<br>訣竅：<b>用一句話直接回答</b>學員心裡的問題，別鋪陳。最下面還能挑最多 6 篇相關文章互相導流。",
+      titleEn: "The answer block",
+      descEn: "Open this section to fill in a <b>quick answer, key points and an FAQ</b> (one set per language). The three become matching sections on the course page, and the FAQ is also emitted as <b>structured data</b> for Google and AI assistants like ChatGPT to quote.<br>The trick: <b>answer the question in one sentence</b>, no build-up. At the bottom you can also pick up to 6 related articles to cross-link.",
+      side: "top",
+      align: "start",
+    },
+    {
       el: '[data-tour="course-editor-actions"]',
       title: "存檔與發布",
       desc: "<b>儲存草稿</b>只存進你這台瀏覽器（換電腦看不到）；按<b>發布課程</b>才會真的寫進資料庫並上架到前台。<br>導覽結束——右下角的<b>「?」</b>隨時可以再看一次。",

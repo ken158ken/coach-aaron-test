@@ -24,6 +24,8 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import { useLanguage } from "@/context/LanguageContext";
+import { SOCIAL_LINKS } from "@/constants";
+import type { FaqItem } from "@/types/content";
 
 interface SEOHeadProps {
   /** 頁面標題 */
@@ -66,6 +68,24 @@ interface SEOHeadProps {
   showPrice?: boolean;
   /** 麵包屑（依序由淺到深，不含站台首頁；首頁會自動加在最前） */
   breadcrumbs?: Array<{ name: string; url: string }>;
+  /**
+   * AEO 常見問題（→ @graph 的 `FAQPage`）。
+   * answer 必須是「純文字」：本元件會剝除標籤再做 HTML 跳脫，
+   * 避免 `</script>` 之類的字串把 JSON-LD 的 <script> 提前關閉。
+   */
+  faq?: FaqItem[];
+  /**
+   * 答案摘要（DB 的 answer_summary）→ `Article.abstract` / `Course.abstract`。
+   * 未提供時退回 description，讓生成式搜尋引擎至少有一句可引用的摘要。
+   */
+  abstract?: string;
+  /** 課程適用程度（→ `Course.educationalLevel`，例如「初階」/「進階」） */
+  educationalLevel?: string;
+  /**
+   * 教練證照名稱（→ `Person.hasCredential`，每項包成
+   * `EducationalOccupationalCredential`）。由 /about 的證照清單傳入。
+   */
+  credentials?: string[];
 }
 
 /** 預設網站資訊（依語言切換） */
@@ -94,8 +114,70 @@ const BRAND_LOGO_SIZE = 512;
 const JOB_TITLE_ZH = "私教變現顧問・銷售心理學講師";
 const JOB_TITLE_EN =
   "Business coach for personal trainers & sales psychology trainer";
-/** 教練的社群（Person / Organization 的 sameAs） */
-const SAME_AS = ["https://www.instagram.com/coach.luen/"];
+/**
+ * 教練的社群（Person / Organization 的 sameAs）
+ *
+ * 只列「同一個實體在其他平台的官方帳號」——Google 靠這組連結把本站的
+ * Person 與站外的頻道／節目收斂成同一個知識圖譜節點。
+ * 網址一律取自 `@/constants` 既有定義（勿在此另寫新網址，避免兩處不同步）。
+ */
+const SAME_AS = [
+  "https://www.instagram.com/coach.luen/",
+  SOCIAL_LINKS.YOUTUBE,
+  SOCIAL_LINKS.PODCAST,
+  SOCIAL_LINKS.NOTION,
+  SOCIAL_LINKS.LINE_OFFICIAL,
+];
+
+/**
+ * 教練的專業領域（Person.knowsAbout）
+ *
+ * AEO/GEO 用途：讓「私人教練怎麼續約」這類問句式查詢能把本站認成主題權威。
+ * 一律是 B2B 題目（服務對象是教練同業），不得出現 B2C 的訓練服務字眼。
+ */
+const KNOWS_ABOUT_ZH = [
+  "私人教練銷售",
+  "健身教練續約",
+  "銷售心理學",
+  "皮拉提斯銷售",
+  "教練個人品牌",
+];
+const KNOWS_ABOUT_EN = [
+  "Personal trainer sales",
+  "Client retention for fitness coaches",
+  "Sales psychology",
+  "Pilates sales",
+  "Personal branding for coaches",
+];
+
+/**
+ * 把可能含 HTML 的字串轉成「可安全放進 JSON-LD 的純文字」
+ *
+ * 兩段處理各有必要：
+ *   1. 剝標籤 + 還原常見實體 → FAQPage 的 Question/Answer 必須是純文字，
+ *      Google 的 rich result 測試會把殘留標籤當成無效內容。
+ *   2. 再次跳脫 `& < >` → JSON-LD 寫在 <script> 內，字串裡若出現
+ *      `</script>` 會被瀏覽器當成結束標籤，整段結構化資料連同後續 HTML
+ *      一起壞掉（JSON.stringify 不會處理這件事，它只管 JSON 合法）。
+ *
+ * @param value 原始字串（可能是後台編輯器產出的 HTML 片段）
+ * @returns 單行純文字；空字串表示無內容
+ */
+function toPlainText(value: string): string {
+  return String(value ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 
 /**
  * 網站根 URL — 優先使用環境變數 VITE_SITE_URL
@@ -135,6 +217,10 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   price,
   showPrice = true,
   breadcrumbs,
+  faq,
+  abstract: abstractProp,
+  educationalLevel,
+  credentials,
 }) => {
   // 依語言切換站台預設值（頁面未傳 description 時的 fallback、品牌名、og:locale）
   const { language } = useLanguage();
@@ -188,6 +274,16 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       url: `${DEFAULT_URL}/about`,
       jobTitle: isEn ? JOB_TITLE_EN : JOB_TITLE_ZH,
       sameAs: SAME_AS,
+      knowsAbout: isEn ? KNOWS_ABOUT_EN : KNOWS_ABOUT_ZH,
+      // 證照：頁面沒傳就整個欄位不輸出（空陣列會被 Google 當成無效值）
+      ...(credentials && credentials.length > 0
+        ? {
+            hasCredential: credentials.map((name) => ({
+              "@type": "EducationalOccupationalCredential",
+              name,
+            })),
+          }
+        : {}),
       // 只有頁面明確給了圖片才當人物照（否則會把通用 OG 圖當成本人照片）
       ...(withImage ? { image: fullImage } : {}),
     });
@@ -237,7 +333,13 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         image: fullImage,
         datePublished: publishedTime,
         dateModified: modifiedTime || publishedTime,
-        author: { "@type": "Person", name: author || BRAND_NAME },
+        // author 用全站共用的 Person @id（而非每頁一個同名的新實體），
+        // 文章的作者署名才會累積到教練本人這個節點上
+        author: {
+          "@type": "Person",
+          "@id": PERSON_ID,
+          name: author || BRAND_NAME,
+        },
         publisher: {
           "@type": "Organization",
           name: DEFAULT_SITE_NAME,
@@ -246,6 +348,12 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         url: fullUrl,
         articleSection: category,
         keywords: keywords.join(", "),
+        // AEO：abstract 給生成式引擎一句可直接引用的摘要（退回 description）
+        abstract: abstractProp || description,
+        inLanguage: htmlLang,
+        // 文章全文免費可讀，沒有付費牆（Google 會據此決定是否完整索引）
+        isAccessibleForFree: true,
+        mainEntityOfPage: fullUrl,
       });
     }
     // Course：只要是 product 型別就輸出（過去因額外要求 price 而永遠不成立）
@@ -257,12 +365,16 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         description,
         image: fullImage,
         url: fullUrl,
+        // provider 指向全站共用的 Person @id（與 /about、文章作者同一節點）
         provider: {
           "@type": "Person",
+          "@id": PERSON_ID,
           name: BRAND_NAME,
-          sameAs: "https://www.instagram.com/coach.luen/",
         },
+        abstract: abstractProp || description,
+        inLanguage: htmlLang,
       };
+      if (educationalLevel) course.educationalLevel = educationalLevel;
       // 價格公開且為有效數值時才輸出 offers，與頁面顯示保持一致
       if (showPrice && typeof price === "number" && Number.isFinite(price)) {
         course.offers = {
@@ -274,6 +386,29 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         };
       }
       graph.push(course);
+    }
+
+    // FAQPage：文章／課程的常見問答（AEO 的主力——問句式查詢直接命中）
+    // 同一頁最多一個 FAQPage 實體，`@id` 帶 #faq 以免與頁面主實體撞號。
+    if (faq && faq.length > 0) {
+      const questions = faq
+        .map((item) => ({
+          question: toPlainText(item?.question || ""),
+          answer: toPlainText(item?.answer || ""),
+        }))
+        .filter((item) => item.question && item.answer);
+      if (questions.length > 0) {
+        graph.push({
+          "@type": "FAQPage",
+          "@id": `${fullUrl}#faq`,
+          inLanguage: htmlLang,
+          mainEntity: questions.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: { "@type": "Answer", text: item.answer },
+          })),
+        });
+      }
     }
 
     // BreadcrumbList

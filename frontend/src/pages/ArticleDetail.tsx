@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { articleService } from "@/services/content/article.service";
+import { courseService } from "@/services/content/course.service";
 import { useAuth } from "@/context";
 import { useSafeInput, useRatingInput, renderSafeContent } from "@/hooks";
 import { sanitizeHtml } from "@/utils/sanitizeHtml";
@@ -15,15 +16,17 @@ import { useLocalize } from "@/hooks/useLocalize";
 import { useLanguage } from "@/context/LanguageContext";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { QuickAnswer, KeyPoints, FaqSection } from "@/components/seo/AnswerBlocks";
+import { RelatedArticles } from "@/components/articles/RelatedArticles";
 import { getInitialData } from "@/ssr/initialData";
 import { dataKeys } from "@/ssr/routeData";
-import type { Article, ArticleComment, ArticleRating } from "@/types";
+import type { Article, ArticleComment, ArticleRating, Course } from "@/types";
 
 const ArticleDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
-  const { loc } = useLocalize();
+  const { loc, pickList, catLabel } = useLocalize();
 
   // ── SSR 預抓資料 ──
   // 伺服器端與 hydrate 時讀到同一份資料 → 初始 render 樹一致，不會 mismatch。
@@ -45,6 +48,16 @@ const ArticleDetail: React.FC = () => {
       .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
       .slice(0, 5);
   });
+  /**
+   * 延伸閱讀的候選池 —— 和 popularArticles 同一份資料來源
+   * （SSR `articles:popular` / `/api/articles?limit=12`），但**不切 5 筆、
+   * 不排除自己**，交給 RelatedArticles 自己挑，SSR 期就能輸出延伸閱讀。
+   */
+  const [articlePool, setArticlePool] = useState<Article[]>(
+    () => ssrPopular?.articles ?? [],
+  );
+  /** 文末課程 CTA（article.related_course_id；client 端才抓，SSR 不要求） */
+  const [relatedCourse, setRelatedCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(!ssrArticle);
   /** 首次 fetch 時已有 SSR 資料 → 不要切回 loading，避免水合後閃一下骨架 */
   const skipFirstLoadingRef = useRef(Boolean(ssrArticle));
@@ -95,6 +108,7 @@ const ArticleDetail: React.FC = () => {
         ]);
         setRatings(ratingsData || []);
         setComments(commentsData || []);
+        setArticlePool(popularData.articles || []);
         setPopularArticles(
           (popularData.articles || [])
             .filter((a) => a.article_id !== data.article_id)
@@ -120,6 +134,27 @@ const ArticleDetail: React.FC = () => {
   }, [slug, user, t]);
 
   useEffect(() => { fetchArticle(); }, [fetchArticle]);
+
+  // 文末課程 CTA：只有文章掛了 related_course_id 才抓，失敗就不顯示
+  const relatedCourseId = article?.related_course_id ?? null;
+  useEffect(() => {
+    if (!relatedCourseId) {
+      setRelatedCourse(null);
+      return;
+    }
+    let cancelled = false;
+    courseService
+      .getById(Number(relatedCourseId))
+      .then((data) => {
+        if (!cancelled) setRelatedCourse(data ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setRelatedCourse(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [relatedCourseId]);
 
   const handleRate = async (rating: number) => {
     if (!isAuthenticated || !article) return;
@@ -259,6 +294,19 @@ const ArticleDetail: React.FC = () => {
     .map((k) => k.trim())
     .filter(Boolean);
 
+  // ── AEO 答案塊資料（全空時各元件自己 return null，不會留空區塊） ──
+  const answerSummary = loc(articleObj, "answer_summary");
+  const keyPointList = pickList(article?.key_points, article?.key_points_en);
+  const faqList = pickList(article?.faq, article?.faq_en);
+
+  /**
+   * 「更新於」只在與發佈日**不同天**時才顯示。
+   * 用 formatDate 後的字串比對（而非 ISO slice），避免 UTC 與 +08 的跨日誤判。
+   */
+  const publishedLabel = formatDate(article?.published_at || article?.created_at);
+  const updatedLabel = formatDate(article?.updated_at);
+  const showUpdated = Boolean(updatedLabel) && updatedLabel !== publishedLabel;
+
   // ── SEO ──
   // 必須在任何 early return 之前建立，否則 loading / error 狀態下
   // Helmet 收不到任何標籤，伺服器端就會輸出空 title（原本的 bug）。
@@ -282,7 +330,10 @@ const ArticleDetail: React.FC = () => {
       publishedTime={article?.published_at || article?.created_at}
       modifiedTime={article?.updated_at}
       author={authorName}
-      category={loc(articleObj, "article_category")}
+      category={catLabel(article?.article_category)}
+      // AEO：answer_summary → Article.abstract；faq → FAQPage JSON-LD
+      abstract={answerSummary || undefined}
+      faq={faqList.length > 0 ? faqList : undefined}
       breadcrumbs={[
         { name: t.article.pageLabel, url: "/articles" },
         {
@@ -357,9 +408,13 @@ const ArticleDetail: React.FC = () => {
             {/* Category Tag */}
             {article.article_category && (
               <div className="mb-3 sm:mb-4">
-                <span className="inline-block px-3 py-1 border border-white/40 text-white text-xs tracking-[2px] uppercase">
-                  {loc(articleObj, "article_category")}
-                </span>
+                {/* 分類 → 主題頁（AEO 主題叢集的內部連結） */}
+                <Link
+                  to={`/articles/topic/${encodeURIComponent(article.article_category)}`}
+                  className="inline-block px-3 py-1 border border-white/40 text-white text-xs tracking-[2px] uppercase hover:border-white transition-colors"
+                >
+                  {catLabel(article.article_category)}
+                </Link>
               </div>
             )}
 
@@ -371,7 +426,12 @@ const ArticleDetail: React.FC = () => {
             {/* Meta */}
             <div className="flex flex-wrap gap-4 sm:gap-6 text-white/55 text-sm">
               <span>{authorName}</span>
-              <span>{formatDate(article.published_at || article.created_at)}</span>
+              <span>{publishedLabel}</span>
+              {showUpdated && (
+                <span>
+                  {t.answerBlocks.updatedAt} {updatedLabel}
+                </span>
+              )}
               {article.view_count > 0 && <span>{article.view_count} {t.article.views}</span>}
               {article.rating_count > 0 && (
                 <span>★ {article.rating_average.toFixed(1)} ({article.rating_count} {t.article.ratings})</span>
@@ -410,6 +470,9 @@ const ArticleDetail: React.FC = () => {
               />
             </div>
 
+            {/* 快速回答（AEO）—— answer_summary 為空時完全不渲染 */}
+            <QuickAnswer summary={answerSummary} />
+
             {/* Article Body */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
               <div
@@ -430,6 +493,63 @@ const ArticleDetail: React.FC = () => {
                 </div>
               )}
             </section>
+
+            {/* 重點整理（AEO） */}
+            <KeyPoints points={keyPointList} />
+
+            {/* 常見問題（AEO；同一份資料也餵給 SEOHead 產 FAQPage JSON-LD） */}
+            <FaqSection items={faqList} />
+
+            {/* 延伸閱讀 —— 候選池沿用熱門文章清單，SSR 期就有輸出 */}
+            <RelatedArticles
+              relatedIds={article.related_article_ids}
+              keywords={article.article_keywords}
+              category={article.article_category}
+              excludeArticleId={article.article_id}
+              pool={articlePool}
+            />
+
+            {/* 文末課程 CTA（related_course_id） */}
+            {relatedCourse && (
+              <section className="detail-card rounded-lg p-6 sm:p-8">
+                <p className="text-white/30 text-xs uppercase tracking-widest mb-4">
+                  {t.answerBlocks.courseCtaLabel}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-5">
+                  {(relatedCourse.course_thumbnail_url || relatedCourse.thumbnail) && (
+                    <img
+                      src={relatedCourse.course_thumbnail_url || relatedCourse.thumbnail}
+                      alt={loc(
+                        relatedCourse as unknown as Record<string, unknown>,
+                        "course_title",
+                      )}
+                      loading="lazy"
+                      className="w-full sm:w-48 aspect-16/10 object-cover rounded-md shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl font-light text-white mb-2">
+                      {loc(
+                        relatedCourse as unknown as Record<string, unknown>,
+                        "course_title",
+                      )}
+                    </h2>
+                    <p className="text-white/60 text-sm leading-relaxed line-clamp-3 mb-4">
+                      {loc(
+                        relatedCourse as unknown as Record<string, unknown>,
+                        "course_description",
+                      )}
+                    </p>
+                    <Link
+                      to={`/courses/${relatedCourse.course_id}`}
+                      className="inline-block px-5 py-2 border border-white/30 text-white text-sm tracking-widest hover:border-white transition-colors"
+                    >
+                      {t.answerBlocks.courseCtaButton} →
+                    </Link>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Comments Section */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">

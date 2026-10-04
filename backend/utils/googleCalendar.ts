@@ -14,9 +14,26 @@
  * @module utils/googleCalendar
  */
 
-import { google, calendar_v3 } from "googleapis";
+// ⚠️ 冷啟動：googleapis 是極重的套件（本機實測單獨 import ≈ 0.5~1.0 秒）。
+// 頂層 import 會讓「每一次」serverless 冷啟動都付這筆帳，即使該請求根本不碰日曆。
+// 故改成在用到時才動態 import，並用模組層 Promise 快取 —— 同一個 serverless
+// 實例只真的載入一次。型別一律走 import type（純編譯期，零 runtime 成本）。
+import type { calendar_v3 } from "googleapis";
 import { getGoogleOAuthConfig } from "../config/oauth.js";
 import { logger } from "./logger.js";
+
+/** googleapis 模組快取；失敗時清掉快取，讓下一次呼叫可以重試 */
+let googleApisPromise: Promise<typeof import("googleapis")> | null = null;
+
+function getGoogleApis(): Promise<typeof import("googleapis")> {
+  if (!googleApisPromise) {
+    googleApisPromise = import("googleapis").catch((err) => {
+      googleApisPromise = null;
+      throw err;
+    });
+  }
+  return googleApisPromise;
+}
 
 /** 授權要求的 scope — 包含讀寫事件 */
 const CALENDAR_SCOPES = [
@@ -32,7 +49,8 @@ export interface CoachGoogleContext {
 }
 
 /** 建立 OAuth2 client（共用於授權流程與 token 交換） */
-function buildOAuth2Client() {
+async function buildOAuth2Client() {
+  const { google } = await getGoogleApis();
   const cfg = getGoogleOAuthConfig();
   return new google.auth.OAuth2({
     clientId: cfg.clientId,
@@ -52,8 +70,8 @@ function buildOAuth2Client() {
  *
  * @param state CSRF 用隨機字串，callback 時要驗證
  */
-export function buildCoachConsentUrl(state: string): string {
-  const oauth2 = buildOAuth2Client();
+export async function buildCoachConsentUrl(state: string): Promise<string> {
+  const oauth2 = await buildOAuth2Client();
   return oauth2.generateAuthUrl({
     access_type: "offline",
     prompt: "consent", // 強制 consent 才能拿到 refresh_token
@@ -69,7 +87,7 @@ export async function exchangeCoachCode(code: string): Promise<{
   refreshToken: string | null;
   accessToken: string;
 }> {
-  const oauth2 = buildOAuth2Client();
+  const oauth2 = await buildOAuth2Client();
   const { tokens } = await oauth2.getToken(code);
   return {
     refreshToken: tokens.refresh_token || null,
@@ -78,10 +96,21 @@ export async function exchangeCoachCode(code: string): Promise<{
 }
 
 /** 帶 refresh_token 的 OAuth client，可直接用來呼叫 API */
-function buildAuthenticatedClient(refreshToken: string) {
-  const oauth2 = buildOAuth2Client();
+async function buildAuthenticatedClient(refreshToken: string) {
+  const oauth2 = await buildOAuth2Client();
   oauth2.setCredentials({ refresh_token: refreshToken });
   return oauth2;
+}
+
+/** 帶 refresh_token 的 Calendar v3 client（下面每個 API 呼叫的共用入口） */
+async function buildCalendarClient(
+  refreshToken: string,
+): Promise<calendar_v3.Calendar> {
+  const [{ google }, auth] = await Promise.all([
+    getGoogleApis(),
+    buildAuthenticatedClient(refreshToken),
+  ]);
+  return google.calendar({ version: "v3", auth });
 }
 
 /** freebusy 單段 busy 區間（RFC3339 字串） */
@@ -103,8 +132,7 @@ export async function getCoachBusyIntervals(
   if (!coach.googleRefreshToken) return [];
 
   try {
-    const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-    const cal = google.calendar({ version: "v3", auth });
+    const cal = await buildCalendarClient(coach.googleRefreshToken);
     const res = await cal.freebusy.query({
       requestBody: {
         timeMin: from.toISOString(),
@@ -148,8 +176,7 @@ export async function createCoachEvent(
   if (!coach.googleRefreshToken) return null;
 
   try {
-    const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-    const cal = google.calendar({ version: "v3", auth });
+    const cal = await buildCalendarClient(coach.googleRefreshToken);
     const addMeet = input.addMeet !== false; // 預設自動加 Meet
     const event: calendar_v3.Schema$Event = {
       summary: input.summary,
@@ -214,8 +241,7 @@ export async function deleteCoachEvent(
   if (!coach.googleRefreshToken || !eventId) return false;
 
   try {
-    const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-    const cal = google.calendar({ version: "v3", auth });
+    const cal = await buildCalendarClient(coach.googleRefreshToken);
     await cal.events.delete({
       calendarId: coach.googleCalendarId,
       eventId,
@@ -283,8 +309,7 @@ export async function listCoachEvents(
   to: Date,
 ): Promise<AdminCalendarEvent[] | null> {
   if (!coach.googleRefreshToken) return null;
-  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-  const cal = google.calendar({ version: "v3", auth });
+  const cal = await buildCalendarClient(coach.googleRefreshToken);
   const res = await cal.events.list({
     calendarId: coach.googleCalendarId,
     timeMin: from.toISOString(),
@@ -330,8 +355,7 @@ export async function createAdminEvent(
   input: AdminEventInput,
 ): Promise<AdminCalendarEvent | null> {
   if (!coach.googleRefreshToken) return null;
-  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-  const cal = google.calendar({ version: "v3", auth });
+  const cal = await buildCalendarClient(coach.googleRefreshToken);
   const res = await cal.events.insert({
     calendarId: coach.googleCalendarId,
     requestBody: {
@@ -365,8 +389,7 @@ export async function patchAdminEvent(
   patch: Partial<AdminEventInput>,
 ): Promise<AdminCalendarEvent | null> {
   if (!coach.googleRefreshToken) return null;
-  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-  const cal = google.calendar({ version: "v3", auth });
+  const cal = await buildCalendarClient(coach.googleRefreshToken);
   const body: calendar_v3.Schema$Event = {};
   if (patch.summary !== undefined) body.summary = patch.summary;
   if (patch.description !== undefined) body.description = patch.description;
@@ -398,8 +421,7 @@ export async function deleteAdminEvent(
   eventId: string,
 ): Promise<boolean | null> {
   if (!coach.googleRefreshToken) return null;
-  const auth = buildAuthenticatedClient(coach.googleRefreshToken);
-  const cal = google.calendar({ version: "v3", auth });
+  const cal = await buildCalendarClient(coach.googleRefreshToken);
   try {
     await cal.events.delete({
       calendarId: coach.googleCalendarId,
@@ -419,7 +441,7 @@ export async function verifyCoachToken(
   refreshToken: string,
 ): Promise<boolean> {
   try {
-    const oauth2 = buildAuthenticatedClient(refreshToken);
+    const oauth2 = await buildAuthenticatedClient(refreshToken);
     const res = await oauth2.getAccessToken();
     return !!res.token;
   } catch {

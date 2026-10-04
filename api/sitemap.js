@@ -158,6 +158,10 @@ function newestLastmod(rows, fields) {
  * （/contact、/privacy、/terms 等純程式碼頁的改動時間在 git 裡，
  *   硬寫日期只會變成不準的雜訊）。
  *
+ * 註：`/llms.txt` 與 `/llms-full.txt`（api/llms.js）刻意**不**列入 sitemap——
+ * sitemap 是「可索引的 HTML 網頁」清單，放純文字檔只會讓 Search Console 報
+ * 「已擷取但未索引」的雜訊。那兩個檔的入口是 robots.txt 的註解與慣例路徑。
+ *
  * 註：/about 路由確實存在（App.tsx 的 `/about` → pages/About.tsx，頁面有
  * SEOHead 與完整文案），故納入。此處只列「公開且有索引價值」的路由；
  * 登入後頁面（/member、/dashboard、/checkout、/booking、/my-bookings、
@@ -202,7 +206,7 @@ module.exports = async function handler(req, res) {
   try {
     const [articles, courses, lessons, landingPages] = await Promise.all([
       query(
-        "articles?select=article_id,article_slug,updated_at,published_at" +
+        "articles?select=article_id,article_slug,article_category,updated_at,published_at" +
           "&status=eq.published&deleted_at=is.null",
       ),
       query(
@@ -251,6 +255,39 @@ module.exports = async function handler(req, res) {
         lastmod: toLastmod(a.updated_at, a.published_at),
         changefreq: "monthly",
         priority: "0.8",
+      });
+    }
+
+    // 主題分類頁：/articles/topic/{分類}
+    //
+    // 分類值是原始字串（正式站實際為英文 slug：sales / mindset / retention；
+    // 顯示名稱由前端對應表決定），路由參數一律 encodeURIComponent。
+    // 這裡用 Map 以原始值為 key 收集每個分類的「文章數」與「最新更新日」，
+    // 讓 <lastmod> 反映該分類底下任一篇文章被改過的時間。
+    // 只收 published 文章（上面的查詢已過濾）；且**至少 2 篇才列入** ——
+    // 單篇分類（例如測試文帶的「訓練計畫,居家訓練」）會形成薄弱主題頁，
+    // 頁面本身仍可開（不是 404），只是不主動送進索引。
+    const MIN_ARTICLES_PER_TOPIC = 2;
+    const categoryLatest = new Map();
+    for (const a of articles) {
+      const category = typeof a.article_category === "string" ? a.article_category.trim() : "";
+      if (!category) continue;
+      const d = toLastmod(a.updated_at, a.published_at);
+      const prev = categoryLatest.get(category);
+      if (!prev) {
+        categoryLatest.set(category, { count: 1, lastmod: d || null });
+      } else {
+        prev.count += 1;
+        if (d && (!prev.lastmod || d > prev.lastmod)) prev.lastmod = d;
+      }
+    }
+    for (const [category, { count, lastmod }] of categoryLatest) {
+      if (count < MIN_ARTICLES_PER_TOPIC) continue;
+      entries.push({
+        path: `/articles/topic/${encodeURIComponent(category)}`,
+        lastmod,
+        changefreq: "weekly",
+        priority: "0.6",
       });
     }
 

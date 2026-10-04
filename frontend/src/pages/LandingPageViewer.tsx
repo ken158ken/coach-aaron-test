@@ -22,6 +22,7 @@ import AaronConsultLP  from "../components/landing-templates/AaronConsultLP";
 import type { LPProps } from "../components/landing-templates/lpUtils";
 import { SEOHead } from "@/components/seo";
 import { getInitialData } from "@/ssr/initialData";
+import { usePageviewBeacon } from "@/hooks/usePageviewBeacon";
 import { dataKeys } from "@/ssr/routeData";
 
 // ── 元件路由表 ──────────────────────────────────────────────
@@ -70,6 +71,9 @@ interface LandingPayload {
 
 const LandingPageViewer: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+
+  // LP 不套 Layout，所以瀏覽量 beacon 要在這裡自己掛一次
+  usePageviewBeacon();
 
   // ── SSR 預抓資料（key 帶 slug） ──
   const ssrPayload = slug

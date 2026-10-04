@@ -79,6 +79,12 @@ const About: React.FC = () => {
         breadcrumbs={[{ name: about.seo.breadcrumb, url: "/about" }]}
         /* 教練本人的 Person 結構化資料（與首頁共用同一個 @id） */
         person
+        /*
+         * 證照 → Person.hasCredential（EducationalOccupationalCredential）。
+         * 直接沿用頁面上「專業證照」清單的同一份字串（`items` 已是 string[]，
+         * 依語言切換），避免 JSON-LD 與畫面顯示的證照兩處不同步。
+         */
+        credentials={about.certifications.items}
       />
 
       <div className="relative z-10 pt-20 sm:pt-24 pb-16 sm:pb-24 px-4">

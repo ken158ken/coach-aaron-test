@@ -18,6 +18,8 @@ import { courseService } from "@/services";
 import { sanitizeHtml } from "@/utils/sanitizeHtml";
 import { Loading } from "@/components/ui";
 import { SEOHead } from "@/components/seo";
+import { QuickAnswer, KeyPoints, FaqSection } from "@/components/seo/AnswerBlocks";
+import { RelatedArticles } from "@/components/articles/RelatedArticles";
 import { getInitialData } from "@/ssr/initialData";
 import { dataKeys } from "@/ssr/routeData";
 import type { Course, CourseReview } from "@/types";
@@ -28,7 +30,7 @@ const CourseDetail: React.FC = () => {
   const { hasPurchasedCourse, loadingPurchases } = useUser();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const { loc } = useLocalize();
+  const { loc, pickList } = useLocalize();
   // ── SSR 預抓資料（key 帶 :id，client-side 換課程時不會誤用） ──
   const ssrCourse = id ? getInitialData<Course>(dataKeys.course(id)) : undefined;
 
@@ -142,6 +144,14 @@ const CourseDetail: React.FC = () => {
     loc(courseObj, "course_title") ||
     (id ? `${t.course.pageLabel} #${id}` : t.course.pageLabel);
   const seoTitle = loc(courseObj, "seo_title") || courseName;
+  // ── AEO 答案塊（全空時各元件 return null） ──
+  const answerSummary = loc(courseObj, "answer_summary");
+  const keyPointList = pickList(course?.key_points, course?.key_points_en);
+  const faqList = pickList(course?.faq, course?.faq_en);
+  /** 課程難度的本地化標籤（→ Course.educationalLevel） */
+  const levelLabel = course?.course_level
+    ? levelLabels[course.course_level] || course.course_level
+    : undefined;
   const seoKeywordsRaw =
     loc(courseObj, "seo_keywords") || loc(courseObj, "course_keywords");
   const courseUrl = `/courses/${course?.id ?? course?.course_id ?? id ?? ""}`;
@@ -164,6 +174,10 @@ const CourseDetail: React.FC = () => {
       // 避免 fallback 狀態下產生 name 是「線上課程 #1」的假結構化資料
       type={course ? "product" : "website"}
       noIndex={Boolean(error) || (!loading && !course)}
+      // AEO：answer_summary → Course.abstract；faq → FAQPage；難度 → educationalLevel
+      abstract={answerSummary || undefined}
+      faq={faqList.length > 0 ? faqList : undefined}
+      educationalLevel={levelLabel}
       price={typeof course?.price === "number" ? course.price : undefined}
       showPrice={Boolean(course?.show_price)}
       breadcrumbs={[
@@ -273,6 +287,9 @@ const CourseDetail: React.FC = () => {
           {/* ── Left: Content ── */}
           <div className="space-y-10">
 
+            {/* 快速回答（AEO）—— answer_summary 為空時完全不渲染 */}
+            <QuickAnswer summary={answerSummary} />
+
             {/* Description */}
             {course.description && (
               <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">
@@ -313,6 +330,21 @@ const CourseDetail: React.FC = () => {
                 ))}
               </ul>
             </section>
+
+            {/* 重點整理（AEO） */}
+            <KeyPoints points={keyPointList} />
+
+            {/* 常見問題（AEO；同一份資料餵 SEOHead 產 FAQPage JSON-LD） */}
+            <FaqSection items={faqList} />
+
+            {/* 相關文章 —— 沒有 SSR 候選池，元件自己抓 /api/articles?limit=50 */}
+            <RelatedArticles
+              relatedIds={course.related_article_ids}
+              keywords={course.course_keywords}
+              category={course.course_category}
+              max={3}
+              heading={t.answerBlocks.relatedArticlesTitle}
+            />
 
             {/* Reviews */}
             <section className="bg-white/2 border border-white/5 rounded-lg p-6 sm:p-10">

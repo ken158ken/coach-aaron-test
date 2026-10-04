@@ -378,7 +378,7 @@ router.get(
   "/google/connect",
   authenticateToken,
   requireCoachOrAdmin,
-  (req: Request, res: Response): void => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       // 把 coach_id + timestamp 包進 state（CSRF + 綁定目標）
       const payload = {
@@ -395,7 +395,8 @@ router.get(
         maxAge: 10 * 60 * 1000,
         path: "/",
       });
-      const url = buildCoachConsentUrl(state);
+      // buildCoachConsentUrl 改為 async（googleapis 動態 import 以降低冷啟動）
+      const url = await buildCoachConsentUrl(state);
       res.redirect(url);
     } catch (err) {
       console.error("Google connect redirect error:", err);

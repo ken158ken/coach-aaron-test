@@ -52,6 +52,7 @@ const ENTRIES: TourEntry[] = [
     load: () => import("./pages/adminGoogleCalendar.tour"),
   },
   { pattern: "/admin/notes", load: () => import("./pages/adminNotes.tour") },
+  { pattern: "/admin/traffic", load: () => import("./pages/adminTraffic.tour") },
 
   // ── 管理後台（獨立全頁編輯器） ────────────────────────
   {

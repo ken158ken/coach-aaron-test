@@ -16,7 +16,8 @@
  *            testimonials, certifications, podcast, gallery, homePopup
  *   公開頁   aboutPage, appInstall, homeSeo, contactExtra, authExtra,
  *            coursesExtra, courseDetailExtra, videosExtra, lessonsPage,
- *            lessonDetail, articlesExtra, articleDetailExtra
+ *            lessonDetail, articlesExtra, articleDetailExtra, articleTopic
+ *   AEO     answerBlocks
  *
  * 註：DB 內容（course_title / article_content / popup_title…）不放這裡，
  *     一律由 hooks/useLocalize.ts 的 loc() 依語言讀 *_en 欄位並 fallback 中文。
@@ -417,6 +418,60 @@ export interface PublicExtraTranslations {
     loadFailed: string;
     /** 留言者沒有暱稱時的預設稱呼 */
     defaultUser: string;
+  };
+  /**
+   * AEO/GEO 答案塊（快速回答／重點整理／常見問題／延伸閱讀）與文末課程 CTA。
+   * 區塊內容本身來自 DB（answer_summary / key_points / faq），這裡只放標題文案。
+   */
+  answerBlocks: {
+    quickAnswerLabel: string;
+    keyPointsTitle: string;
+    faqTitle: string;
+    /** 文章頁文末「延伸閱讀」 */
+    relatedTitle: string;
+    /** 課程頁的「相關文章」 */
+    relatedArticlesTitle: string;
+    /** 文末課程 CTA 卡的小標 */
+    courseCtaLabel: string;
+    /** 文末課程 CTA 的按鈕文字 */
+    courseCtaButton: string;
+    /** 文章 meta 列「更新於 2026-10-04」 */
+    updatedAt: string;
+  };
+  /**
+   * 文章分類 slug → 顯示名稱。
+   *
+   * ⚠️ DB 的 `article_category` 存的是**英文 slug**（sales / mindset /
+   * retention），`article_category_en` 目前全為 null，所以分類標籤不能走
+   * `loc()`，一律經由 `useLocalize().catLabel()` 查這張表；查不到就顯示原值
+   * （舊測試文的分類是逗號分隔中文，照原樣顯示即可）。
+   * URL（/articles/topic/:category）與 API 的 `?category=` 一律用**原始 slug**。
+   */
+  categoryLabels: {
+    sales: string;
+    mindset: string;
+    retention: string;
+  };
+  /** 分類主題頁 /articles/topic/:category */
+  articleTopic: {
+    /** PageHeader 的英文小標 */
+    label: string;
+    /** H1 模板，含 {category} */
+    h1Template: string;
+    /** SEO title 模板，含 {category} */
+    seoTitleTemplate: string;
+    /** 分類導言模板，含 {category} */
+    introTemplate: string;
+    /** 「共 N 篇」模板，含 {count} */
+    countTemplate: string;
+    /** 這個分類沒有文章 */
+    empty: string;
+    /** 底部回列表連結 */
+    backToArticles: string;
+    /** 底部課程連結 */
+    toCourses: string;
+    /** 文章列表頁的主題頁連結列標籤 */
+    allTopics: string;
   };
   /** 法律頁（/privacy、/terms）與各處法律連結 */
   legal: {
@@ -957,6 +1012,33 @@ export const publicExtra: {
     notFound: "找不到文章",
     loadFailed: "載入文章失敗",
     defaultUser: "使用者",
+  },
+  answerBlocks: {
+    quickAnswerLabel: "快速回答",
+    keyPointsTitle: "重點整理",
+    faqTitle: "常見問題",
+    relatedTitle: "延伸閱讀",
+    relatedArticlesTitle: "相關文章",
+    courseCtaLabel: "延伸學習",
+    courseCtaButton: "查看課程",
+    updatedAt: "更新於",
+  },
+  categoryLabels: {
+    sales: "銷售心理學",
+    mindset: "教練心態",
+    retention: "續約經營",
+  },
+  articleTopic: {
+    label: "Topic",
+    h1Template: "{category}｜文章主題",
+    seoTitleTemplate: "{category} 文章主題",
+    introTemplate:
+      "這裡整理阿倫教官關於「{category}」的所有文章，從觀念到實戰做法一次看完，照著順序讀就能把這個主題補齊。",
+    countTemplate: "共 {count} 篇文章",
+    empty: "這個主題還沒有文章，先看看其他主題吧。",
+    backToArticles: "瀏覽所有文章",
+    toCourses: "查看課程",
+    allTopics: "主題頁：",
   },
   legal: {
     privacy: "隱私權政策",
@@ -1544,6 +1626,33 @@ export const publicExtra: {
     notFound: "Article not found",
     loadFailed: "Failed to load the article",
     defaultUser: "Member",
+  },
+  answerBlocks: {
+    quickAnswerLabel: "Quick answer",
+    keyPointsTitle: "Key takeaways",
+    faqTitle: "Frequently asked questions",
+    relatedTitle: "Further reading",
+    relatedArticlesTitle: "Related articles",
+    courseCtaLabel: "Go deeper",
+    courseCtaButton: "View the course",
+    updatedAt: "Updated",
+  },
+  categoryLabels: {
+    sales: "Sales Psychology",
+    mindset: "Coach Mindset",
+    retention: "Client Retention",
+  },
+  articleTopic: {
+    label: "Topic",
+    h1Template: "{category} | Article topic",
+    seoTitleTemplate: "{category} articles",
+    introTemplate:
+      "Every article Coach Aaron has written on \u201c{category}\u201d \u2014 from the core ideas to the field-tested playbook, in reading order.",
+    countTemplate: "{count} articles",
+    empty: "No articles in this topic yet \u2014 try another one.",
+    backToArticles: "Browse all articles",
+    toCourses: "Explore courses",
+    allTopics: "Topics:",
   },
   legal: {
     privacy: "Privacy Policy",

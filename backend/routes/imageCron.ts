@@ -27,6 +27,12 @@ import {
   parseStorageUrl,
 } from "../utils/imageUrl.js";
 import {
+  ARTICLE_AEO_FIELDS,
+  ARTICLE_LIST_COLUMNS,
+  ARTICLE_LIST_LEGACY_COLUMNS,
+} from "../utils/aeoFields.js";
+import { selectWithFallback } from "../utils/selectWithFallback.js";
+import {
   IMAGE_BUCKETS,
   MANAGED_IMAGE_BUCKETS,
   TEMP_PREFIX,
@@ -610,6 +616,46 @@ router.get("/smoke", async (req: Request, res: Response): Promise<void> => {
       .limit(1);
     if (error) fail(`read_${table}`, error.message);
     else checks[`read_${table}`] = "ok";
+  }
+
+  // 5. AEO 欄位 / 42703 容錯：GET /api/articles 的 select 必須永遠回得出
+  //    answer_summary 這組鍵（041 貼了 → 真值；還沒貼 → fallback 補 null）。
+  //    直接重跑同一組欄位白名單（不自己打 HTTP，省一次 function 呼叫與 CPU）。
+  try {
+    const { data, error, degraded } = await selectWithFallback<
+      Record<string, unknown>[]
+    >({
+      fullColumns: ARTICLE_LIST_COLUMNS,
+      legacyColumns: ARTICLE_LIST_LEGACY_COLUMNS,
+      nullFields: ARTICLE_AEO_FIELDS,
+      run: (columns) =>
+        supabaseAdmin
+          .from("articles")
+          .select(columns)
+          .is("deleted_at", null)
+          .limit(1) as unknown as PromiseLike<{
+          data: Record<string, unknown>[] | null;
+          error: { code?: string; message?: string } | null;
+        }>,
+    });
+
+    if (error) {
+      fail("articles_aeo_fields", error.message ?? "query failed");
+    } else {
+      const row = (data || [])[0];
+      const missing = row
+        ? ARTICLE_AEO_FIELDS.filter((f) => !(f in row))
+        : [];
+      if (missing.length > 0) {
+        fail("articles_aeo_fields", `缺少鍵：${missing.join(", ")}`);
+      } else {
+        checks.articles_aeo_fields = degraded
+          ? "ok (fallback：041 migration 尚未執行，新欄位回 null)"
+          : "ok";
+      }
+    }
+  } catch (err) {
+    fail("articles_aeo_fields", (err as Error)?.message ?? "unknown");
   }
 
   // 失敗時寄警報信給教練/站主（best-effort；Vercel cron 的失敗不會有人看 log）

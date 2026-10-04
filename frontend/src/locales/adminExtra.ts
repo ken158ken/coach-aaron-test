@@ -1696,6 +1696,108 @@ const zhTW = {
       transferFailed: "轉移失敗",
     },
   },
+
+  /**
+   * AEO 答案區（文章編輯器／課程編輯器共用的摺疊區塊）。
+   *
+   * 刻意做成**獨立頂層 namespace**而不是塞進
+   * `adminArticleEditorPage` / `adminCourseEditorPage`：兩支編輯器的欄位
+   * 一模一樣（只差「對應課程」是文章專屬），共用字典兩邊的 JSX 才能逐字
+   * 相同，日後改一處不會只改到一半。
+   */
+  aeoEditor: {
+    blockTitle: "AEO 答案區（搜尋與 AI 引用用）",
+    blockHint:
+      "這裡填的內容會變成頁面上的「快速回答／重點整理／常見問題」三個區塊，常見問題同時輸出成 FAQ 結構化資料給 Google 與 AI 問答引擎引用。訣竅：用一句話直接回答讀者的問題，別鋪陳。",
+    toggleAria: "展開或收合 AEO 答案區",
+    /** 插值 `{n}` = 已填寫的欄位數（0 時不顯示這顆標籤） */
+    filledBadge: "已填 {n} 項",
+    zhLabel: "中文",
+    enLabel: "English",
+    summaryLabel: "快速回答",
+    summaryHint: "300 字以內，直接回答「這篇在講什麼／該怎麼做」。",
+    summaryPlaceholder: "例：想瘦肚子，先把每天的熱量缺口控制在…",
+    summaryPlaceholderEn: "e.g. To lose belly fat, start by…",
+    /** 插值 `{n}` = 目前字數、`{max}` = 上限 */
+    counter: "{n}/{max}",
+    keyPointsLabel: "重點整理",
+    keyPointsHint: "最多 12 條、每條 200 字以內，前台會以項目清單呈現。",
+    keyPointPlaceholder: "一條一個重點",
+    addKeyPoint: "＋ 新增一條",
+    keyPointsEmpty: "還沒有重點，按下方按鈕新增。",
+    faqLabel: "常見問題",
+    faqHint:
+      "最多 10 題；問題 200 字、回答 1000 字以內。這裡只吃純文字（HTML 標籤會被當字面顯示）。",
+    addFaq: "＋ 新增一題",
+    faqEmpty: "還沒有問答，按下方按鈕新增第一題。",
+    /** 插值 `{n}` = 第幾題 */
+    faqItem: "第 {n} 題",
+    faqQuestion: "問題",
+    faqAnswer: "回答",
+    faqQuestionPlaceholder: "讀者會怎麼問？",
+    faqAnswerPlaceholder: "一兩句話講完，別賣關子。",
+    limitReached: "已達數量上限",
+    moveUp: "上移",
+    moveDown: "下移",
+    remove: "移除",
+    relatedArticlesLabel: "相關文章",
+    relatedArticlesHint: "最多 6 篇；留空則由前台依分類與關鍵字自動推薦。",
+    pickArticles: "＋ 選擇文章",
+    closePicker: "收起清單",
+    searchArticles: "搜尋文章標題…",
+    noArticleMatch: "沒有符合的文章。",
+    noArticlesSelected: "尚未指定，前台會自動推薦。",
+    relatedCourseLabel: "對應課程",
+    relatedCourseHint: "文末行動呼籲會連到這門課；不指定就不顯示。",
+    relatedCourseNone: "不指定",
+    loadingOptions: "載入清單中…",
+    optionsFailed: "清單載入失敗；收合再展開這個區塊可重試。",
+  },
+
+  /** 流量來源頁（/admin/traffic） */
+  adminTraffic: {
+    navLabel: "流量來源",
+    pageTitle: "流量來源",
+    pageSubtitle:
+      "訪客從哪裡來、看了哪幾頁。含 AI 問答引擎（ChatGPT、Perplexity…）帶來的流量。",
+    /** 插值 `{n}` = 天數 */
+    rangeDays: "{n} 天",
+    refresh: "重新整理",
+    loading: "載入中…",
+    loadFailed: "流量資料載入失敗。",
+    empty: "尚無資料（traffic_events 表尚未建立或尚無瀏覽）。",
+    /** 插值 `{n}` = 天數 */
+    totalLabel: "{n} 天總瀏覽",
+    totalHint: "每一次頁面瀏覽記一筆，不去重訪客。",
+    /** 插值 `{n}` = 天數 */
+    dailyAverage: "平均每天 {n} 次",
+    sourceHeading: "來源分類",
+    sourceClass: {
+      ai: "AI 問答",
+      search: "搜尋引擎",
+      social: "社群",
+      direct: "直接進入",
+      other: "其他",
+    },
+    sourceClassHint: {
+      ai: "ChatGPT／Perplexity／Copilot 等",
+      search: "Google／Bing／Yahoo 等",
+      social: "Facebook／IG／LINE／Threads 等",
+      direct: "書籤、手打網址或沒有 referrer",
+      other: "其他可辨識的外部網站",
+    },
+    referrerHeading: "來源網站 Top 10",
+    pathHeading: "熱門頁面 Top 10",
+    dailyHeading: "每日瀏覽",
+    colReferrer: "來源網域",
+    colPath: "路徑",
+    colDay: "日期",
+    colCount: "次數",
+    colShare: "佔比",
+    noReferrer: "（無來源）",
+    /** 插值 `{n}` = 次數、`{day}` = 日期（長條圖的 title 提示） */
+    dailyTooltip: "{day}：{n} 次",
+  },
 };
 
 /**
@@ -3256,6 +3358,98 @@ const en: AdminExtraTranslations = {
       transferred: "“{name}” now belongs to {client}",
       transferFailed: "Hand-over failed",
     },
+  },
+
+  aeoEditor: {
+    blockTitle: "Answer block (for search and AI citations)",
+    blockHint:
+      "What you write here becomes the “Quick answer / Key points / FAQ” sections on the page, and the FAQ is also emitted as structured data for Google and AI answer engines to quote. The trick: answer the reader's question in one sentence, no build-up.",
+    toggleAria: "Expand or collapse the answer block",
+    filledBadge: "{n} filled",
+    zhLabel: "Chinese",
+    enLabel: "English",
+    summaryLabel: "Quick answer",
+    summaryHint:
+      "Up to 300 characters answering “what is this about / how do I do it” head-on.",
+    summaryPlaceholder: "e.g. 想瘦肚子，先把每天的熱量缺口控制在…",
+    summaryPlaceholderEn: "e.g. To lose belly fat, start by…",
+    counter: "{n}/{max}",
+    keyPointsLabel: "Key points",
+    keyPointsHint:
+      "Up to 12 points, 200 characters each; shown as a bullet list on the page.",
+    keyPointPlaceholder: "One point per line",
+    addKeyPoint: "+ Add a point",
+    keyPointsEmpty: "No points yet — use the button below to add one.",
+    faqLabel: "FAQ",
+    faqHint:
+      "Up to 10 questions; 200 characters for the question, 1000 for the answer. Plain text only (HTML tags show up literally).",
+    addFaq: "+ Add a question",
+    faqEmpty: "No questions yet — use the button below to add the first one.",
+    faqItem: "Question {n}",
+    faqQuestion: "Question",
+    faqAnswer: "Answer",
+    faqQuestionPlaceholder: "How would a reader phrase it?",
+    faqAnswerPlaceholder: "One or two sentences. Don't tease.",
+    limitReached: "Limit reached",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    remove: "Remove",
+    relatedArticlesLabel: "Related articles",
+    relatedArticlesHint:
+      "Up to 6. Leave it empty and the public site suggests articles by category and keywords.",
+    pickArticles: "+ Pick articles",
+    closePicker: "Hide list",
+    searchArticles: "Search article titles…",
+    noArticleMatch: "No matching article.",
+    noArticlesSelected: "None set — the public site will suggest its own.",
+    relatedCourseLabel: "Matching course",
+    relatedCourseHint:
+      "The call to action at the end of the article links to this course; leave it unset and nothing is shown.",
+    relatedCourseNone: "Not set",
+    loadingOptions: "Loading the list…",
+    optionsFailed:
+      "The list failed to load; collapse and expand this block to retry.",
+  },
+
+  adminTraffic: {
+    navLabel: "Traffic sources",
+    pageTitle: "Traffic sources",
+    pageSubtitle:
+      "Where visitors come from and which pages they read — including traffic sent by AI answer engines (ChatGPT, Perplexity…).",
+    rangeDays: "{n} days",
+    refresh: "Refresh",
+    loading: "Loading…",
+    loadFailed: "Traffic data failed to load.",
+    empty:
+      "No data yet (the traffic_events table does not exist yet, or nothing has been viewed).",
+    totalLabel: "Views in {n} days",
+    totalHint: "One row per page view; visitors are not de-duplicated.",
+    dailyAverage: "{n} per day on average",
+    sourceHeading: "By source",
+    sourceClass: {
+      ai: "AI answers",
+      search: "Search engines",
+      social: "Social",
+      direct: "Direct",
+      other: "Other",
+    },
+    sourceClassHint: {
+      ai: "ChatGPT / Perplexity / Copilot and friends",
+      search: "Google / Bing / Yahoo and friends",
+      social: "Facebook / IG / LINE / Threads and friends",
+      direct: "Bookmarks, typed addresses or no referrer",
+      other: "Any other identifiable external site",
+    },
+    referrerHeading: "Top 10 referrers",
+    pathHeading: "Top 10 pages",
+    dailyHeading: "Views per day",
+    colReferrer: "Referring host",
+    colPath: "Path",
+    colDay: "Date",
+    colCount: "Views",
+    colShare: "Share",
+    noReferrer: "(no referrer)",
+    dailyTooltip: "{day}: {n} views",
   },
 };
 

@@ -31,4 +31,57 @@ Disallow: /app-shell.html
 # API 端點
 Disallow: /api/
 
+
+# ─────────────────────────────────────────────────────────────
+# AI 搜尋/回答引擎爬蟲：刻意允許（GEO 流量來源）
+#
+# 這些 user-agent 分兩類，但本站一律放行：
+#   (1) 訓練語料爬蟲（GPTBot、ClaudeBot、Google-Extended、
+#       Applebot-Extended、cohere-ai、meta-externalagent）
+#   (2) 即時檢索/引用爬蟲（OAI-SearchBot、ChatGPT-User、
+#       Claude-SearchBot、PerplexityBot、Perplexity-User、DuckAssistBot）
+#
+# 為什麼不封：本站的內容策略把「生成式搜尋被引用」當成主要曝光來源之一
+# （AEO/GEO）。封掉 (1) 會讓模型根本不認識「阿倫教官」這個實體，
+# 封掉 (2) 則是直接放棄 ChatGPT / Perplexity 的回答附帶連結所帶來的流量。
+# 內容本來就公開可讀（SSR 的 HTML 與 /llms.txt 一樣的資訊），沒有額外外洩風險。
+#
+# Disallow 清單與上面 `User-agent: *` 區塊「必須保持一致」：
+# 後台與登入後頁面對 AI 爬蟲同樣沒有價值，只會浪費抓取預算、產生空殼薄內容。
+# 新增 Disallow 路徑時，兩個區塊都要加。
+#
+# LLM 友善索引：/llms.txt（精簡）與 /llms-full.txt（含每篇摘要、重點、常見問答）
+# 由 api/llms.js 動態產生，是給模型讀的正門入口。
+# ─────────────────────────────────────────────────────────────
+
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bingbot
+User-agent: DuckAssistBot
+User-agent: cohere-ai
+User-agent: meta-externalagent
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /member
+Disallow: /dashboard
+Disallow: /checkout
+Disallow: /booking
+Disallow: /my-bookings
+Disallow: /notifications
+Disallow: /chat
+Disallow: /coach
+Disallow: /notes
+Disallow: /app-shell.html
+Disallow: /api/
+
 Sitemap: http://localhost:5173/sitemap.xml

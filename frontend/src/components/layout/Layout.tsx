@@ -9,8 +9,12 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import PageTransition from "./PageTransition";
 import { HelpTourButton } from "@/tours";
+import { usePageviewBeacon } from "@/hooks/usePageviewBeacon";
 
 const Layout: React.FC = (): JSX.Element => {
+  // 公開頁瀏覽量 beacon（登入專屬路由與自動化流量會自己跳過，見 hook 註解）
+  usePageviewBeacon();
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* 全頁靜態背景 */}

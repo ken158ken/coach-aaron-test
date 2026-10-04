@@ -28,6 +28,9 @@ import { useRichTextEditor } from "@/hooks/useRichTextEditor";
 import { articleService } from "@/services/content/article.service";
 import ArticlePreviewModal from "@/components/admin/ArticlePreviewModal";
 import { imageUrlError } from "@/lib/imageUrl";
+// AEO 答案區的「相關文章／對應課程」候選清單直接打 admin 列表端點
+import { get } from "@/services/api";
+import type { FaqItem } from "@/types";
 // 這頁是獨立全頁路由（不在 AdminLayout 底下），所以自己掛一顆「?」導覽鈕
 import { HelpTourButton } from "@/tours";
 
@@ -85,6 +88,109 @@ interface ArticleData {
   status: "draft" | "published";
 }
 
+/**
+ * AEO 答案區（migration 041 的欄位）在編輯器內的表單形狀。
+ *
+ * 刻意與 `ArticleData` 分開存：`ArticleData` 會整包寫進 localStorage 草稿、
+ * 也會餵給 ArticlePreviewModal，混進來就得連動改那兩處。AEO 欄位只在
+ * 「發布」時送後端，草稿不帶（頁面重新整理會回到資料庫的值）。
+ */
+interface AeoData {
+  answerSummary: string;
+  answerSummaryEn: string;
+  keyPoints: string[];
+  keyPointsEn: string[];
+  faq: FaqItem[];
+  faqEn: FaqItem[];
+  relatedArticleIds: number[];
+  /** 文末 CTA 指向的課程（課程編輯器沒有這一欄） */
+  relatedCourseId: number | null;
+}
+
+/** 相關文章／課程下拉的選項 */
+interface AeoOption {
+  id: number;
+  title: string;
+}
+
+/**
+ * 上限（與後端驗證同值）。
+ * 後端超過會回 400，這裡先在 UI 擋住：輸入框的 maxLength + 新增鈕 disabled，
+ * 所以業主不會先打完一大段才被退。
+ */
+const AEO_LIMITS = {
+  summary: 300,
+  keyPoints: 12,
+  keyPointLength: 200,
+  faq: 10,
+  faqQuestion: 200,
+  faqAnswer: 1000,
+  relatedArticles: 6,
+} as const;
+
+const EMPTY_AEO: AeoData = {
+  answerSummary: "",
+  answerSummaryEn: "",
+  keyPoints: [],
+  keyPointsEn: [],
+  faq: [],
+  faqEn: [],
+  relatedArticleIds: [],
+  relatedCourseId: null,
+};
+
+/** 小圖示鈕（上移／下移）樣式；`hover:bg-luxe-gold/10` 在 index.css 白名單內 */
+const AEO_ICON_BTN =
+  "w-6 h-6 flex items-center justify-center rounded text-xs text-luxe-muted hover:text-luxe-gold hover:bg-luxe-gold/10 disabled:opacity-30 transition-colors";
+/** 移除鈕（紅色） */
+const AEO_REMOVE_BTN =
+  "w-6 h-6 flex items-center justify-center rounded text-xs text-luxe-muted hover:text-red-400 transition-colors";
+
+/** DB 的 jsonb 可能是 null／不是陣列，一律轉成乾淨的字串陣列 */
+const toStringList = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((v): v is string => typeof v === "string")
+    : [];
+
+/** DB 的 faq jsonb → FaqItem[]（缺欄位補空字串，不讓 undefined 進受控輸入框） */
+const toFaqList = (value: unknown): FaqItem[] =>
+  Array.isArray(value)
+    ? value
+        .filter(
+          (v): v is Record<string, unknown> => !!v && typeof v === "object",
+        )
+        .map((v) => ({
+          question: typeof v.question === "string" ? v.question : "",
+          answer: typeof v.answer === "string" ? v.answer : "",
+        }))
+    : [];
+
+/** DB 的 related_article_ids → number[] */
+const toIdList = (value: unknown): number[] =>
+  Array.isArray(value)
+    ? value.map((v) => Number(v)).filter((n) => Number.isInteger(n) && n > 0)
+    : [];
+
+/** 送出前清理：去頭尾空白、丟掉空白條目（整串空就送 `[]`） */
+const cleanStringList = (list: string[]): string[] =>
+  list.map((s) => s.trim()).filter(Boolean);
+
+/** 送出前清理 FAQ：問或答任一為空的題目直接丟掉 */
+const cleanFaqList = (list: FaqItem[]): FaqItem[] =>
+  list
+    .map((f) => ({ question: f.question.trim(), answer: f.answer.trim() }))
+    .filter((f) => f.question && f.answer);
+
+/**
+ * 從 axios 錯誤挖出後端的 `error` 字串。
+ *
+ * migration 041 還沒貼時，含 AEO 欄位的寫入會回 503「請先執行 migration 041」——
+ * 這種訊息要原文顯示給業主，不能被通用的「發布失敗」蓋掉。
+ */
+const apiErrorMessage = (err: unknown): string =>
+  (err as { response?: { data?: { error?: string } } })?.response?.data
+    ?.error ?? "";
+
 /** 分類資料結構 */
 interface Category {
   id: string;
@@ -128,6 +234,8 @@ const ArticleEditor: React.FC = () => {
   const { t } = useLanguage();
   /** 本頁字典（縮短取用路徑） */
   const tx = t.adminArticleEditorPage;
+  /** AEO 答案區字典（與課程編輯器共用，所以是獨立 namespace） */
+  const ta = t.aeoEditor;
 
   // 客戶端掛載狀態 (防止 SSR 水合問題)
   const [mounted, setMounted] = useState(false);
@@ -150,6 +258,20 @@ const ArticleEditor: React.FC = () => {
   const [tagInput, setTagInput] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // ── AEO 答案區 ────────────────────────────────────────
+  const [aeo, setAeo] = useState<AeoData>(EMPTY_AEO);
+  const [aeoOpen, setAeoOpen] = useState(false);
+  /** 相關文章／對應課程的候選清單：展開區塊時才抓，不拖慢進頁 */
+  const [aeoArticles, setAeoArticles] = useState<AeoOption[]>([]);
+  const [aeoCourses, setAeoCourses] = useState<AeoOption[]>([]);
+  const [aeoOptionsState, setAeoOptionsState] = useState<
+    "idle" | "loading" | "ready" | "failed"
+  >("idle");
+  const [articlePickerOpen, setArticlePickerOpen] = useState(false);
+  const [articleQuery, setArticleQuery] = useState("");
+  /** 候選清單抓過了沒（見下方 effect 的註解，不能用 state 當守衛） */
+  const aeoOptionsRequested = useRef(false);
 
   // 分類管理
   /** 預設分類（名稱依語言取字典） */
@@ -355,6 +477,32 @@ const ArticleEditor: React.FC = () => {
 
         setArticle(mapped);
 
+        // AEO 答案區（null 一律轉成空字串／空陣列，受控輸入框不吃 undefined）
+        const loadedAeo: AeoData = {
+          answerSummary: data.answer_summary ?? "",
+          answerSummaryEn: data.answer_summary_en ?? "",
+          keyPoints: toStringList(data.key_points),
+          keyPointsEn: toStringList(data.key_points_en),
+          faq: toFaqList(data.faq),
+          faqEn: toFaqList(data.faq_en),
+          relatedArticleIds: toIdList(data.related_article_ids),
+          relatedCourseId: data.related_course_id ?? null,
+        };
+        setAeo(loadedAeo);
+        // 已經填過就直接展開，業主不用每次先按一下才看到自己寫的東西
+        setAeoOpen(
+          Boolean(
+            loadedAeo.answerSummary ||
+              loadedAeo.answerSummaryEn ||
+              loadedAeo.keyPoints.length ||
+              loadedAeo.keyPointsEn.length ||
+              loadedAeo.faq.length ||
+              loadedAeo.faqEn.length ||
+              loadedAeo.relatedArticleIds.length ||
+              loadedAeo.relatedCourseId,
+          ),
+        );
+
         // 設定 Tiptap 編輯器內容
         if (mapped.content) {
           editor.commands.setContent(mapped.content);
@@ -435,6 +583,403 @@ const ArticleEditor: React.FC = () => {
     }));
     setHasChanges(true);
   }, []);
+
+  // ── AEO 答案區的編輯動作 ──────────────────────────────
+  /** 改單一欄位（順便標記未儲存） */
+  const patchAeo = useCallback((patch: Partial<AeoData>) => {
+    setAeo((prev) => ({ ...prev, ...patch }));
+    setHasChanges(true);
+  }, []);
+
+  type KeyPointField = "keyPoints" | "keyPointsEn";
+  type FaqField = "faq" | "faqEn";
+
+  const updateKeyPoint = useCallback(
+    (field: KeyPointField, index: number, value: string) => {
+      setAeo((prev) => {
+        const next = [...prev[field]];
+        next[index] = value.slice(0, AEO_LIMITS.keyPointLength);
+        return { ...prev, [field]: next };
+      });
+      setHasChanges(true);
+    },
+    [],
+  );
+
+  const addKeyPoint = useCallback((field: KeyPointField) => {
+    setAeo((prev) =>
+      prev[field].length >= AEO_LIMITS.keyPoints
+        ? prev
+        : { ...prev, [field]: [...prev[field], ""] },
+    );
+    setHasChanges(true);
+  }, []);
+
+  const removeKeyPoint = useCallback((field: KeyPointField, index: number) => {
+    setAeo((prev) => ({
+      ...prev,
+      [field]: prev[field].filter((_, i) => i !== index),
+    }));
+    setHasChanges(true);
+  }, []);
+
+  /** 上／下移一格（`dir` 為 -1 或 1；越界直接不動） */
+  const moveKeyPoint = useCallback(
+    (field: KeyPointField, index: number, dir: -1 | 1) => {
+      setAeo((prev) => {
+        const target = index + dir;
+        if (target < 0 || target >= prev[field].length) return prev;
+        const next = [...prev[field]];
+        [next[index], next[target]] = [next[target], next[index]];
+        return { ...prev, [field]: next };
+      });
+      setHasChanges(true);
+    },
+    [],
+  );
+
+  const updateFaq = useCallback(
+    (field: FaqField, index: number, key: keyof FaqItem, value: string) => {
+      const max =
+        key === "question" ? AEO_LIMITS.faqQuestion : AEO_LIMITS.faqAnswer;
+      setAeo((prev) => {
+        const next = [...prev[field]];
+        next[index] = { ...next[index], [key]: value.slice(0, max) };
+        return { ...prev, [field]: next };
+      });
+      setHasChanges(true);
+    },
+    [],
+  );
+
+  const addFaq = useCallback((field: FaqField) => {
+    setAeo((prev) =>
+      prev[field].length >= AEO_LIMITS.faq
+        ? prev
+        : { ...prev, [field]: [...prev[field], { question: "", answer: "" }] },
+    );
+    setHasChanges(true);
+  }, []);
+
+  const removeFaq = useCallback((field: FaqField, index: number) => {
+    setAeo((prev) => ({
+      ...prev,
+      [field]: prev[field].filter((_, i) => i !== index),
+    }));
+    setHasChanges(true);
+  }, []);
+
+  const moveFaq = useCallback(
+    (field: FaqField, index: number, dir: -1 | 1) => {
+      setAeo((prev) => {
+        const target = index + dir;
+        if (target < 0 || target >= prev[field].length) return prev;
+        const next = [...prev[field]];
+        [next[index], next[target]] = [next[target], next[index]];
+        return { ...prev, [field]: next };
+      });
+      setHasChanges(true);
+    },
+    [],
+  );
+
+  const addRelatedArticle = useCallback((articleId: number) => {
+    setAeo((prev) =>
+      prev.relatedArticleIds.includes(articleId) ||
+      prev.relatedArticleIds.length >= AEO_LIMITS.relatedArticles
+        ? prev
+        : {
+            ...prev,
+            relatedArticleIds: [...prev.relatedArticleIds, articleId],
+          },
+    );
+    setHasChanges(true);
+  }, []);
+
+  const removeRelatedArticle = useCallback((articleId: number) => {
+    setAeo((prev) => ({
+      ...prev,
+      relatedArticleIds: prev.relatedArticleIds.filter(
+        (rid) => rid !== articleId,
+      ),
+    }));
+    setHasChanges(true);
+  }, []);
+
+  /** 展開／收合；收合時把「清單載入失敗」歸零，下次展開會重新抓 */
+  const toggleAeo = useCallback(() => {
+    if (aeoOpen && aeoOptionsState === "failed") setAeoOptionsState("idle");
+    setAeoOpen(!aeoOpen);
+  }, [aeoOpen, aeoOptionsState]);
+
+  /** 元件還活著嗎（非同步回來後才 setState） */
+  const aeoAlive = useRef(true);
+  useEffect(
+    () => () => {
+      aeoAlive.current = false;
+    },
+    [],
+  );
+
+  /** 編輯中的這篇不該出現在自己的「相關文章」裡 */
+  const currentArticleId = isNew ? null : Number(id);
+
+  /**
+   * 展開 AEO 區塊時載入候選清單（只抓一次）。
+   *
+   * 用 ref 記「抓過了沒」而不是看 `aeoOptionsState`：把 state 放進相依陣列，
+   * effect 內的 `setAeoOptionsState("loading")` 會立刻讓自己重跑、cleanup 先
+   * 把前一輪標成 cancelled，結果清單永遠停在「載入中」（已實測踩到）。
+   */
+  useEffect(() => {
+    if (!aeoOpen || aeoOptionsRequested.current) return;
+    aeoOptionsRequested.current = true;
+    setAeoOptionsState("loading");
+    (async () => {
+      try {
+        const [articlesRes, coursesRes] = await Promise.all([
+          articleService.getAllAdmin({ limit: 200 }),
+          get<{ course_id: number; course_title: string }[]>(
+            "/api/courses/admin/all",
+          ),
+        ]);
+        if (!aeoAlive.current) return;
+        setAeoArticles(
+          (articlesRes.articles || []).map((a) => ({
+            id: a.article_id,
+            title: a.article_title || `#${a.article_id}`,
+          })),
+        );
+        setAeoCourses(
+          (Array.isArray(coursesRes) ? coursesRes : []).map((c) => ({
+            id: c.course_id,
+            title: c.course_title || `#${c.course_id}`,
+          })),
+        );
+        setAeoOptionsState("ready");
+      } catch (error) {
+        if (!aeoAlive.current) return;
+        // 失敗要讓它能重試：收合再展開會重新抓一次
+        aeoOptionsRequested.current = false;
+        logger.error("載入 AEO 候選清單失敗:", error);
+        setAeoOptionsState("failed");
+      }
+    })();
+  }, [aeoOpen]);
+
+  /** 可選的文章（排除自己、排除已選、套搜尋字） */
+  const articleOptions = useMemo(() => {
+    const q = articleQuery.trim().toLowerCase();
+    return aeoArticles
+      .filter((o) => o.id !== currentArticleId)
+      .filter((o) => !aeo.relatedArticleIds.includes(o.id))
+      .filter((o) => (q ? o.title.toLowerCase().includes(q) : true))
+      .slice(0, 50);
+  }, [aeoArticles, articleQuery, aeo.relatedArticleIds, currentArticleId]);
+
+  /** 已選文章的 chips（清單還沒載到時先顯示 `#id`，不要整排空白） */
+  const selectedArticles = useMemo<AeoOption[]>(
+    () =>
+      aeo.relatedArticleIds.map((rid) => ({
+        id: rid,
+        title: aeoArticles.find((a) => a.id === rid)?.title ?? `#${rid}`,
+      })),
+    [aeo.relatedArticleIds, aeoArticles],
+  );
+
+  /** 課程下拉：已存的課程若不在清單內（已下架等）也要留著，否則一存就被清空 */
+  const courseOptions = useMemo<AeoOption[]>(() => {
+    const list = [...aeoCourses];
+    if (
+      aeo.relatedCourseId &&
+      !list.some((c) => c.id === aeo.relatedCourseId)
+    ) {
+      list.unshift({ id: aeo.relatedCourseId, title: `#${aeo.relatedCourseId}` });
+    }
+    return list;
+  }, [aeoCourses, aeo.relatedCourseId]);
+
+  /** 摺疊標頭上的「已填 n 項」 */
+  const aeoFilledCount = useMemo(() => {
+    let n = 0;
+    if (aeo.answerSummary.trim()) n += 1;
+    if (aeo.answerSummaryEn.trim()) n += 1;
+    if (cleanStringList(aeo.keyPoints).length) n += 1;
+    if (cleanStringList(aeo.keyPointsEn).length) n += 1;
+    if (cleanFaqList(aeo.faq).length) n += 1;
+    if (cleanFaqList(aeo.faqEn).length) n += 1;
+    if (aeo.relatedArticleIds.length) n += 1;
+    if (aeo.relatedCourseId) n += 1;
+    return n;
+  }, [aeo]);
+
+  /**
+   * 重點整理清單（中／英共用一份 JSX，差別只有欄位名與小標）。
+   * 不抽成獨立元件：它用到本頁一串 callback 與字典，抽出去要傳 8 個 prop，
+   * 而且課程編輯器那邊是同一份複製（兩頁刻意保持逐字相同，好對照）。
+   */
+  const renderKeyPointList = (field: KeyPointField, heading: string) => {
+    const list = aeo[field];
+    const atLimit = list.length >= AEO_LIMITS.keyPoints;
+    return (
+      <div className="rounded-lg border border-luxe-gold/15 bg-luxe-bg p-3">
+        <p className="text-xs font-medium text-luxe-gold mb-2">{heading}</p>
+        {list.length === 0 && (
+          <p className="text-xs text-luxe-muted mb-2">{ta.keyPointsEmpty}</p>
+        )}
+        <ul className="space-y-2">
+          {list.map((item, index) => (
+            <li key={index} className="flex items-start gap-1.5">
+              <span className="w-5 shrink-0 pt-2 text-xs text-luxe-muted text-right">
+                {index + 1}.
+              </span>
+              <input
+                type="text"
+                value={item}
+                maxLength={AEO_LIMITS.keyPointLength}
+                onChange={(e) => updateKeyPoint(field, index, e.target.value)}
+                placeholder={ta.keyPointPlaceholder}
+                className="flex-1 min-w-0 px-2.5 py-1.5 bg-luxe-surface border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm"
+              />
+              <div className="flex items-center gap-0.5 pt-1">
+                <button
+                  type="button"
+                  title={ta.moveUp}
+                  aria-label={ta.moveUp}
+                  disabled={index === 0}
+                  onClick={() => moveKeyPoint(field, index, -1)}
+                  className={AEO_ICON_BTN}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  title={ta.moveDown}
+                  aria-label={ta.moveDown}
+                  disabled={index === list.length - 1}
+                  onClick={() => moveKeyPoint(field, index, 1)}
+                  className={AEO_ICON_BTN}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  title={ta.remove}
+                  aria-label={ta.remove}
+                  onClick={() => removeKeyPoint(field, index)}
+                  className={AEO_REMOVE_BTN}
+                >
+                  ✕
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => addKeyPoint(field)}
+          disabled={atLimit}
+          className="mt-2 text-xs px-2.5 py-1.5 rounded-lg bg-luxe-gold/10 text-luxe-gold hover:bg-luxe-gold/20 disabled:opacity-40 transition-colors"
+        >
+          {atLimit ? ta.limitReached : ta.addKeyPoint}
+        </button>
+      </div>
+    );
+  };
+
+  /** 常見問題 repeater（中／英共用，結構同上） */
+  const renderFaqList = (field: FaqField, heading: string) => {
+    const list = aeo[field];
+    const atLimit = list.length >= AEO_LIMITS.faq;
+    return (
+      <div className="rounded-lg border border-luxe-gold/15 bg-luxe-bg p-3">
+        <p className="text-xs font-medium text-luxe-gold mb-2">{heading}</p>
+        {list.length === 0 && (
+          <p className="text-xs text-luxe-muted mb-2">{ta.faqEmpty}</p>
+        )}
+        <div className="space-y-3">
+          {list.map((item, index) => (
+            <div
+              key={index}
+              className="rounded-lg border border-luxe-gold/10 bg-luxe-surface p-2.5"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-luxe-muted">
+                  {ta.faqItem.replace("{n}", String(index + 1))}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    title={ta.moveUp}
+                    aria-label={ta.moveUp}
+                    disabled={index === 0}
+                    onClick={() => moveFaq(field, index, -1)}
+                    className={AEO_ICON_BTN}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    title={ta.moveDown}
+                    aria-label={ta.moveDown}
+                    disabled={index === list.length - 1}
+                    onClick={() => moveFaq(field, index, 1)}
+                    className={AEO_ICON_BTN}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    title={ta.remove}
+                    aria-label={ta.remove}
+                    onClick={() => removeFaq(field, index)}
+                    className={AEO_REMOVE_BTN}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={item.question}
+                maxLength={AEO_LIMITS.faqQuestion}
+                onChange={(e) =>
+                  updateFaq(field, index, "question", e.target.value)
+                }
+                placeholder={ta.faqQuestionPlaceholder}
+                aria-label={ta.faqQuestion}
+                className="w-full px-2.5 py-1.5 mb-1.5 bg-luxe-bg border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm font-medium"
+              />
+              <textarea
+                value={item.answer}
+                maxLength={AEO_LIMITS.faqAnswer}
+                rows={3}
+                onChange={(e) =>
+                  updateFaq(field, index, "answer", e.target.value)
+                }
+                placeholder={ta.faqAnswerPlaceholder}
+                aria-label={ta.faqAnswer}
+                className="w-full px-2.5 py-1.5 bg-luxe-bg border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm resize-y"
+              />
+              <p className="text-right text-[11px] text-luxe-muted mt-0.5">
+                {ta.counter
+                  .replace("{n}", String(item.answer.length))
+                  .replace("{max}", String(AEO_LIMITS.faqAnswer))}
+              </p>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => addFaq(field)}
+          disabled={atLimit}
+          className="mt-2 text-xs px-2.5 py-1.5 rounded-lg bg-luxe-gold/10 text-luxe-gold hover:bg-luxe-gold/20 disabled:opacity-40 transition-colors"
+        >
+          {atLimit ? ta.limitReached : ta.addFaq}
+        </button>
+      </div>
+    );
+  };
 
   /** 設定圖片欄位（封面 / Banner），值由 ImageInput 提供 */
   const setImageField = useCallback(
@@ -672,6 +1217,20 @@ const ArticleEditor: React.FC = () => {
         category: article.category,
         status: "published",
         isFeatured: false,
+        /*
+         * AEO 答案區（migration 041）。欄位名與 types/content.ts 的 Article
+         * 同名（snake_case），後端 POST/PUT 直接吃。
+         * 空字串送 null、空陣列送 []（別送 undefined，否則後端的
+         * `!== undefined` 判斷會略過，舊值永遠清不掉）。
+         */
+        answer_summary: aeo.answerSummary.trim() || null,
+        answer_summary_en: aeo.answerSummaryEn.trim() || null,
+        key_points: cleanStringList(aeo.keyPoints),
+        key_points_en: cleanStringList(aeo.keyPointsEn),
+        faq: cleanFaqList(aeo.faq),
+        faq_en: cleanFaqList(aeo.faqEn),
+        related_article_ids: aeo.relatedArticleIds,
+        related_course_id: aeo.relatedCourseId,
       };
 
       logger.info("發布文章:", payload);
@@ -698,13 +1257,18 @@ const ArticleEditor: React.FC = () => {
       logger.error("發布失敗:", error);
       await dialog.alert({
         title: tx.toast.publishFailedTitle,
-        message: tx.toast.publishFailedMessage,
+        /*
+         * 後端的原文訊息優先：migration 041 還沒貼時 AEO 欄位會回
+         * 503「請先執行 migration 041」，那句話必須完整給業主看見，
+         * 不能被通用的「發布失敗，請稍後再試」蓋掉。
+         */
+        message: apiErrorMessage(error) || tx.toast.publishFailedMessage,
         type: "error",
       });
     } finally {
       setIsSaving(false);
     }
-  }, [article, generateSlug, isNew, id, navigate, dialog, tx]);
+  }, [article, aeo, generateSlug, isNew, id, navigate, dialog, tx]);
 
   /** 新增分類 */
   const handleAddCategory = useCallback(() => {
@@ -922,6 +1486,264 @@ const ArticleEditor: React.FC = () => {
                 onInsertLink={handleInsertLink}
               />
             </ImageUploadTargetProvider>
+
+            {/* ───── AEO 答案區（搜尋與 AI 引用用）─────
+                放在內文下方而不是右側欄：欄位多且需要寬度（FAQ 的問答、
+                相關文章 chips），塞進 w-80 的側欄會擠成一條。 */}
+            <section
+              data-tour="aeo-block"
+              className="bg-luxe-surface border border-luxe-gold/20 rounded-xl overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={toggleAeo}
+                aria-expanded={aeoOpen}
+                aria-label={ta.toggleAria}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-luxe-gold/5 transition-colors"
+              >
+                <span className="text-sm font-medium text-luxe-gold">
+                  🔎 {ta.blockTitle}
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  {aeoFilledCount > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-luxe-gold/15 text-luxe-gold">
+                      {ta.filledBadge.replace("{n}", String(aeoFilledCount))}
+                    </span>
+                  )}
+                  <span className="text-xs text-luxe-muted">
+                    {aeoOpen ? "▲" : "▼"}
+                  </span>
+                </span>
+              </button>
+
+              {aeoOpen && (
+                <div className="px-4 pb-5 pt-4 space-y-6 border-t border-luxe-gold/10">
+                  <p className="text-xs text-luxe-muted leading-relaxed">
+                    {ta.blockHint}
+                  </p>
+
+                  {/* 快速回答（中／英） */}
+                  <div>
+                    <p className="text-sm font-medium text-luxe-text">
+                      {ta.summaryLabel}
+                    </p>
+                    <p className="text-xs text-luxe-muted mb-2">
+                      {ta.summaryHint}
+                    </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-luxe-gold">{ta.zhLabel}</span>
+                          <span className="text-luxe-muted">
+                            {ta.counter
+                              .replace(
+                                "{n}",
+                                String(aeo.answerSummary.length),
+                              )
+                              .replace("{max}", String(AEO_LIMITS.summary))}
+                          </span>
+                        </div>
+                        <textarea
+                          value={aeo.answerSummary}
+                          maxLength={AEO_LIMITS.summary}
+                          rows={4}
+                          onChange={(e) =>
+                            patchAeo({ answerSummary: e.target.value })
+                          }
+                          placeholder={ta.summaryPlaceholder}
+                          data-tour="aeo-summary"
+                          className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm resize-y"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-luxe-gold">{ta.enLabel}</span>
+                          <span className="text-luxe-muted">
+                            {ta.counter
+                              .replace(
+                                "{n}",
+                                String(aeo.answerSummaryEn.length),
+                              )
+                              .replace("{max}", String(AEO_LIMITS.summary))}
+                          </span>
+                        </div>
+                        <textarea
+                          value={aeo.answerSummaryEn}
+                          maxLength={AEO_LIMITS.summary}
+                          rows={4}
+                          onChange={(e) =>
+                            patchAeo({ answerSummaryEn: e.target.value })
+                          }
+                          placeholder={ta.summaryPlaceholderEn}
+                          className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm resize-y"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 重點整理（中／英） */}
+                  <div>
+                    <p className="text-sm font-medium text-luxe-text">
+                      {ta.keyPointsLabel}
+                    </p>
+                    <p className="text-xs text-luxe-muted mb-2">
+                      {ta.keyPointsHint}
+                    </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {renderKeyPointList("keyPoints", ta.zhLabel)}
+                      {renderKeyPointList("keyPointsEn", ta.enLabel)}
+                    </div>
+                  </div>
+
+                  {/* 常見問題（中／英） */}
+                  <div data-tour="aeo-faq">
+                    <p className="text-sm font-medium text-luxe-text">
+                      {ta.faqLabel}
+                    </p>
+                    <p className="text-xs text-luxe-muted mb-2">{ta.faqHint}</p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {renderFaqList("faq", ta.zhLabel)}
+                      {renderFaqList("faqEn", ta.enLabel)}
+                    </div>
+                  </div>
+
+                  {/* 相關文章 + 對應課程 */}
+                  <div
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+                    data-tour="aeo-related"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-luxe-text">
+                        {ta.relatedArticlesLabel}
+                      </p>
+                      <p className="text-xs text-luxe-muted mb-2">
+                        {ta.relatedArticlesHint}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {selectedArticles.length === 0 && (
+                          <span className="text-xs text-luxe-muted">
+                            {ta.noArticlesSelected}
+                          </span>
+                        )}
+                        {selectedArticles.map((opt) => (
+                          <span
+                            key={opt.id}
+                            className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 bg-luxe-gold/10 text-luxe-gold text-xs rounded"
+                          >
+                            <span className="truncate max-w-[14rem]">
+                              {opt.title}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label={ta.remove}
+                              title={ta.remove}
+                              onClick={() => removeRelatedArticle(opt.id)}
+                              className="hover:text-red-400"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setArticlePickerOpen((p) => !p)}
+                        disabled={
+                          !articlePickerOpen &&
+                          aeo.relatedArticleIds.length >=
+                            AEO_LIMITS.relatedArticles
+                        }
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-luxe-gold/10 text-luxe-gold hover:bg-luxe-gold/20 disabled:opacity-40 transition-colors"
+                      >
+                        {articlePickerOpen
+                          ? ta.closePicker
+                          : aeo.relatedArticleIds.length >=
+                              AEO_LIMITS.relatedArticles
+                            ? ta.limitReached
+                            : ta.pickArticles}
+                      </button>
+
+                      {articlePickerOpen && (
+                        <div className="mt-2 rounded-lg border border-luxe-gold/20 bg-luxe-bg p-2">
+                          <input
+                            type="search"
+                            value={articleQuery}
+                            onChange={(e) => setArticleQuery(e.target.value)}
+                            placeholder={ta.searchArticles}
+                            className="w-full px-2.5 py-1.5 bg-luxe-surface border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm"
+                          />
+                          <div className="mt-2 max-h-44 overflow-y-auto space-y-1">
+                            {aeoOptionsState === "loading" && (
+                              <p className="text-xs text-luxe-muted px-2 py-1">
+                                {ta.loadingOptions}
+                              </p>
+                            )}
+                            {aeoOptionsState === "failed" && (
+                              <p className="text-xs text-red-400 px-2 py-1">
+                                {ta.optionsFailed}
+                              </p>
+                            )}
+                            {aeoOptionsState === "ready" &&
+                              articleOptions.length === 0 && (
+                                <p className="text-xs text-luxe-muted px-2 py-1">
+                                  {ta.noArticleMatch}
+                                </p>
+                              )}
+                            {articleOptions.map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => addRelatedArticle(opt.id)}
+                                className="w-full text-left px-2 py-1.5 rounded text-sm text-luxe-text hover:bg-luxe-gold/10 hover:text-luxe-gold truncate transition-colors"
+                              >
+                                {opt.title}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-luxe-text">
+                        {ta.relatedCourseLabel}
+                      </p>
+                      <p className="text-xs text-luxe-muted mb-2">
+                        {ta.relatedCourseHint}
+                      </p>
+                      <select
+                        value={aeo.relatedCourseId ?? ""}
+                        onChange={(e) =>
+                          patchAeo({
+                            relatedCourseId: e.target.value
+                              ? Number(e.target.value)
+                              : null,
+                          })
+                        }
+                        className="w-full px-3 py-2 bg-luxe-bg border border-luxe-gold/20 rounded-lg focus:border-luxe-gold outline-none text-sm cursor-pointer [&>option]:bg-luxe-surface [&>option]:text-luxe-text"
+                      >
+                        <option value="">{ta.relatedCourseNone}</option>
+                        {courseOptions.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.title}
+                          </option>
+                        ))}
+                      </select>
+                      {aeoOptionsState === "loading" && (
+                        <p className="text-xs text-luxe-muted mt-1">
+                          {ta.loadingOptions}
+                        </p>
+                      )}
+                      {aeoOptionsState === "failed" && (
+                        <p className="text-xs text-red-400 mt-1">
+                          {ta.optionsFailed}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
           </div>
         </div>
 
