@@ -2,6 +2,23 @@
 
 > 🏋️ 專業健身教練官方網站 - 使用 React + TypeScript + Three.js + GSAP 打造的沉浸式視覺體驗
 
+## 🆕 最近更新（2026-10-06）— SEO / AEO / GEO 批次
+
+- **Googlebot 用約 12,140px 高的視窗渲染（手機）、9,307px（桌機）**：它不捲動，靠超高螢幕一次觸發所有懶加載。
+  首頁 Hero 用 `min-h-screen` 置中，H1 被推到 y≈5,844，GSC「測試實際版本」截圖只剩導覽列、控制台零錯誤。
+  修法：Hero 改 `min-h-[min(100vh,1200px)]`（一般裝置外觀不變）。**規則：首屏置中容器不要用無上限的 100vh。**
+  重現法：Playwright 視窗 412×12000 截最上面 1500px。
+- **爬蟲停用動畫**（`utils/crawler.ts`）：Google 渲染器不捲動也不觸發 IntersectionObserver，AOS 一 init 就把
+  `[data-aos]` 區塊設成 opacity:0 永遠不淡入。已知爬蟲 UA（刻意不含 Lighthouse）停用 AOS、GSAP 進場與 H1 換字。
+- **safeStorage**（`utils/safeStorage.ts`）：storage 被拒（SecurityError）時原本整站炸進 ErrorBoundary；前台 19 處改走它。
+- **SSR 空殼不進快取**：主實體預抓逾時時回 `Cache-Control: no-store`，爬蟲不會拿到被快取的無本文頁。
+- **AEO/GEO 基礎建設**：`/llms.txt` `/llms-full.txt`、robots 明示允許 AI 爬蟲、Person/Article/Course/FAQPage JSON-LD 強化、
+  migration 041 答案塊欄位（快速回答／重點／FAQ／相關文章／對應課程）+ 後台「AEO 答案區」+ 前台區塊、
+  `/articles/topic/:category` 主題頁與延伸閱讀、`POST /api/track/pageview` 來源量測 + `/admin/traffic`、IndexNow。
+- **效能**：字型自架、modulepreload 降優先權、gsap/date-fns/supabase 離開首載、主題啟動腳本消除深→淺整頁重繪、關鍵 CSS 內嵌、
+  後端 googleapis/exceljs 動態 import 與 date-fns 子路徑化（冷啟動 −1.3s）。PSI 行動 59 → 76、桌機 90 → 91。
+- **索引**：軟 404 修正（不存在的文章/課程回真 404）、sitemap 補 /about 與主題頁、GSC/Bing 已提交 sitemap。
+
 ## 🆕 最近更新（2026-04-24）
 
 - **教練諮詢預約系統**：全新上線，支援 Google Calendar 雙向同步。
