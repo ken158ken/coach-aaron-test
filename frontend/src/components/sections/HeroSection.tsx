@@ -19,6 +19,7 @@ import { contentService } from '@/services/site/content.service';
 import { getDefaultTemplate } from '@/utils/contentTemplates';
 import { getInitialData } from '@/ssr/initialData';
 import { dataKeys } from '@/ssr/routeData';
+import { isCrawler } from '@/utils/crawler';
 
 /** SSR 預抓的 site_content map（首頁路由才有；server / client 讀到同一份） */
 const readSSRContent = (): Record<string, string> => {
@@ -87,7 +88,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   useEffect(() => setFlipMounted(true), []);
 
   useEffect(() => {
-    if (words.length <= 1) return;
+    // 爬蟲不換字：H1 關鍵詞固定在第一組，渲染器截圖也不會卡在換字中途（utils/crawler.ts）
+    if (words.length <= 1 || isCrawler()) return;
     const timer = setInterval(
       () => setWordIndex((i) => (i + 1) % words.length),
       2500
@@ -240,6 +242,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
   //    因此下面用 `elapsed` 把 delay 扣掉已經過去的載入時間，讓整條時間軸
   //    盡量貼回原本的節奏（載太久就直接 delay 0，等於淡化成瞬間就位）。
   useEffect(() => {
+    // 爬蟲／搜尋渲染器：不跑進場動畫，直接維持 SSR 的最終可見狀態（utils/crawler.ts）
+    if (isCrawler()) return;
     let cancelled = false;
     let ctx: GsapContext | null = null;
     const startedAt =

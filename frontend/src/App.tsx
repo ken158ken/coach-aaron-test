@@ -101,6 +101,7 @@ import SmoothScroll from "@/components/layout/SmoothScroll";
 import PageBlade from "@/components/layout/PageBlade";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import AOS from "aos";
+import { shouldDisableScrollAnimations } from "@/utils/crawler";
 import "aos/dist/aos.css";
 
 /**
@@ -148,7 +149,10 @@ function App(): JSX.Element {
       easing: "ease-out-quart",
       once: true,
       offset: 60,
-      // disable: false — 全平台啟用，由 Lenis 驅動更新
+      // 爬蟲／無 IntersectionObserver 的環境：停用（AOS 會移除 data-aos 屬性與
+      // aos-* class，所有區塊直接以最終狀態可見）。真人瀏覽器照常由 Lenis 驅動更新。
+      // 原因見 utils/crawler.ts：Google 渲染器不捲動，整區會卡在 opacity:0。
+      disable: shouldDisableScrollAnimations,
     });
     // 延遲 refresh：確保 Lenis 初始化 + 首屏 DOM 完成後重新計算所有 data-aos 元素位置
     const t = setTimeout(() => AOS.refresh(), 500);

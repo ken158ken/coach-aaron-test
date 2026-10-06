@@ -5,6 +5,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { loadGsap } from "@/lib/gsapLoader";
+import { isCrawler } from "@/utils/crawler";
 import type { GsapContext } from "@/lib/gsapLoader";
 
 interface PageHeaderProps {
@@ -33,7 +34,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
+    // 爬蟲：不跑進場動畫，標題維持可見（utils/crawler.ts）
+    if (!ref.current || isCrawler()) return;
     let cancelled = false;
     let ctx: GsapContext | null = null;
 
