@@ -298,7 +298,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ className = '' }) => {
     <section
       ref={containerRef}
       onMouseMove={handleSpotlightMove}
-      className={`studio-hero relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden ${className}`}
+      // 高度用 min(100vh, 1200px) 而非 min-h-screen：Google 渲染器以約 12000px 高的視窗渲染，
+      // 100vh 會把置中的標題推到 y≈5800，GSC 截圖只剩導覽列（2026-10-06 實測）。
+      // 一般裝置視窗 < 1200px，外觀不變。
+      className={`studio-hero relative min-h-[min(100vh,1200px)] flex flex-col items-center justify-center text-center px-4 overflow-hidden ${className}`}
     >
       {/* Studio 攝影棚背景：外層 wrapper 負責滾動視差（CSS variable），內層 bgRef 負責滑鼠視差（GSAP） */}
       <div
