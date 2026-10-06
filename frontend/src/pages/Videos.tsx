@@ -12,6 +12,7 @@ import { videoService } from "@/services";
 import { useLanguage } from "@/context/LanguageContext";
 import type { Video } from "@/types";
 import AOS from "aos";
+import { safeSession } from "@/utils/safeStorage";
 
 const PAGE_SIZE = 10;
 const STORAGE_KEY_SCROLL = "videos_scroll_y";
@@ -36,7 +37,7 @@ const Videos: React.FC = () => {
       PAGE_SIZE,
       typeof sessionStorage === "undefined"
         ? 0
-        : parseInt(sessionStorage.getItem(STORAGE_KEY_COUNT) || "0", 10),
+        : parseInt(safeSession.getItem(STORAGE_KEY_COUNT) || "0", 10),
     )
   );
 
@@ -70,7 +71,7 @@ const Videos: React.FC = () => {
   useEffect(() => {
     if (loading || videos.length === 0 || restoredRef.current) return;
     restoredRef.current = true;
-    const savedY = sessionStorage.getItem(STORAGE_KEY_SCROLL);
+    const savedY = safeSession.getItem(STORAGE_KEY_SCROLL);
     if (savedY) {
       const y = parseInt(savedY, 10);
       requestAnimationFrame(() => {
@@ -89,7 +90,7 @@ const Videos: React.FC = () => {
       if (!ticking) {
         ticking = true;
         requestAnimationFrame(() => {
-          sessionStorage.setItem(STORAGE_KEY_SCROLL, String(window.scrollY));
+          safeSession.setItem(STORAGE_KEY_SCROLL, String(window.scrollY));
           setShowTop(window.scrollY > 600);
           ticking = false;
         });
@@ -101,7 +102,7 @@ const Videos: React.FC = () => {
 
   // Persist loaded count for scroll restore
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY_COUNT, String(videos.length));
+    safeSession.setItem(STORAGE_KEY_COUNT, String(videos.length));
   }, [videos.length]);
 
   // Load more

@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { safeLocal } from "@/utils/safeStorage";
 
 /**
  * ErrorBoundary 掛在 LanguageProvider 之外（entry-client 最外層），
@@ -13,7 +14,7 @@ import React from "react";
 function errBoundaryText(): { title: string; unknown: string; reload: string } {
   let en = false;
   try {
-    en = localStorage.getItem("app_language") === "en";
+    en = safeLocal.getItem("app_language") === "en";
   } catch {
     /* localStorage 不可用時維持中文 */
   }

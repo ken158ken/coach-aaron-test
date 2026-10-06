@@ -15,6 +15,7 @@ import React, {
 import { publicExtra, type PublicExtraTranslations } from "@/locales/publicExtra";
 import { memberExtra, type MemberExtraTranslations } from "@/locales/memberExtra";
 import { adminExtra, type AdminExtraTranslations } from "@/locales/adminExtra";
+import { safeLocal } from "@/utils/safeStorage";
 
 export type Language = "zh-TW" | "en";
 
@@ -948,7 +949,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
   // ✅ hydration 完成後才從 localStorage 讀取使用者偏好
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = safeLocal.getItem(STORAGE_KEY);
     if (saved === "en" || saved === "zh-TW") {
       setLanguageState(saved);
     }
@@ -960,7 +961,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, lang);
+      safeLocal.setItem(STORAGE_KEY, lang);
     }
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("lang", lang);

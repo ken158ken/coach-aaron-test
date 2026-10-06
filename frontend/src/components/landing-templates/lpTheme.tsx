@@ -21,6 +21,7 @@ import React, { useCallback, useContext, useMemo, useState, useEffect } from "re
 import ThemeContext from "../../context/ThemeContext";
 import type { LpPublicProject } from "../../services/site/landing.service";
 import LogoMark from "../brand/LogoMark";
+import { safeLocal } from "@/utils/safeStorage";
 
 export type LpMode = "light" | "dark";
 
@@ -226,7 +227,7 @@ export function useLpTheme(): { mode: LpMode; setMode: (m: LpMode) => void; togg
   useEffect(() => {
     if (ctx) return; // 有 Provider 時以 Provider 為準
     try {
-      const saved = localStorage.getItem(LP_MODE_KEY);
+      const saved = safeLocal.getItem(LP_MODE_KEY);
       if (saved === "light" || saved === "dark") setLocal(saved);
     } catch {
       /* localStorage 不可用（隱私模式）時維持預設 */
@@ -243,7 +244,7 @@ export function useLpTheme(): { mode: LpMode; setMode: (m: LpMode) => void; togg
       }
       setLocal(m);
       try {
-        localStorage.setItem(LP_MODE_KEY, m);
+        safeLocal.setItem(LP_MODE_KEY, m);
       } catch {
         /* 忽略寫入失敗 */
       }

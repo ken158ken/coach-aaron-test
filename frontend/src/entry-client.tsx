@@ -12,6 +12,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { initAuth } from "./lib/auth-init";
 import { registerServiceWorker } from "./lib/registerSW";
 import "./index.css";
+import { safeSession } from "@/utils/safeStorage";
 
 // React Router v7 future flags 消除警告
 const routerFutureFlags = {
@@ -81,14 +82,14 @@ async function bootstrap() {
 // 讓下一次真正的部署替換仍可觸發一次 reload）。
 const PRELOAD_RELOAD_KEY = "__preload_error_reloaded__";
 window.addEventListener("vite:preloadError", (event) => {
-  if (sessionStorage.getItem(PRELOAD_RELOAD_KEY)) return; // 重整過仍失敗 → 交給 ErrorBoundary
-  sessionStorage.setItem(PRELOAD_RELOAD_KEY, "1");
+  if (safeSession.getItem(PRELOAD_RELOAD_KEY)) return; // 重整過仍失敗 → 交給 ErrorBoundary
+  safeSession.setItem(PRELOAD_RELOAD_KEY, "1");
   event.preventDefault();
   window.location.reload();
 });
 
 bootstrap().then(() => {
-  sessionStorage.removeItem(PRELOAD_RELOAD_KEY);
+  safeSession.removeItem(PRELOAD_RELOAD_KEY);
 });
 
 // PWA service worker — 註冊在 React 渲染後（不擋首次渲染）

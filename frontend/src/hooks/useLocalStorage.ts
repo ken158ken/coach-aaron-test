@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { safeLocal } from "@/utils/safeStorage";
 
 /**
  * useLocalStorage - 管理 localStorage 資料
@@ -23,7 +24,7 @@ export function useLocalStorage<T>(
     }
 
     try {
-      const item = window.localStorage.getItem(key);
+      const item = safeLocal.getItem(key);
       return item ? (JSON.parse(item) as T) : initialValue;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
@@ -42,7 +43,7 @@ export function useLocalStorage<T>(
         setStoredValue(valueToStore);
 
         if (typeof window !== "undefined") {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          safeLocal.setItem(key, JSON.stringify(valueToStore));
         }
       } catch (error) {
         console.warn(`Error setting localStorage key "${key}":`, error);
@@ -56,7 +57,7 @@ export function useLocalStorage<T>(
     try {
       setStoredValue(initialValue);
       if (typeof window !== "undefined") {
-        window.localStorage.removeItem(key);
+        safeLocal.removeItem(key);
       }
     } catch (error) {
       console.warn(`Error removing localStorage key "${key}":`, error);

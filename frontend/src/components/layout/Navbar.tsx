@@ -14,6 +14,7 @@ import { GlobalSearch, SearchButton } from "@/components/ui/GlobalSearch";
 import UnreadBadge from "@/components/chat/UnreadBadge";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { LogoMark } from "@/components/brand";
+import { safeLocal } from "@/utils/safeStorage";
 
 interface NavLink {
   name: string;
@@ -133,7 +134,7 @@ const Navbar: React.FC = (): JSX.Element => {
   // 讀取「是否曾開過頭像選單」旗標（SSR 安全，僅客戶端）
   useEffect(() => {
     try {
-      if (localStorage.getItem("aaron_navbar_avatar_seen") === "1") {
+      if (safeLocal.getItem("aaron_navbar_avatar_seen") === "1") {
         setAvatarSeen(true);
       }
     } catch {
@@ -146,7 +147,7 @@ const Navbar: React.FC = (): JSX.Element => {
     setAvatarSeen((prev) => {
       if (!prev) {
         try {
-          localStorage.setItem("aaron_navbar_avatar_seen", "1");
+          safeLocal.setItem("aaron_navbar_avatar_seen", "1");
         } catch {
           /* 忽略寫入失敗 */
         }

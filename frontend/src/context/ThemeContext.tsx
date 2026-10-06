@@ -10,6 +10,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { safeLocal } from "@/utils/safeStorage";
 
 /** 色彩模式 */
 export type ColorMode = "light" | "dark";
@@ -50,7 +51,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setColorModeState(bootstrapped);
       return;
     }
-    const saved = localStorage.getItem(COLOR_MODE_KEY);
+    const saved = safeLocal.getItem(COLOR_MODE_KEY);
     if (saved === "light" || saved === "dark") {
       setColorModeState(saved);
     } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
@@ -61,7 +62,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const setColorMode = useCallback((mode: ColorMode) => {
     setColorModeState(mode);
     if (typeof window !== "undefined") {
-      localStorage.setItem(COLOR_MODE_KEY, mode);
+      safeLocal.setItem(COLOR_MODE_KEY, mode);
     }
   }, []);
 
