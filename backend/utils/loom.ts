@@ -110,7 +110,12 @@ export function parseTranscript(raw: string): TranscriptEntry[] {
     const end =
       Number(m[5]) * 3600 + Number(m[6]) * 60 + Number(m[7]) +
       Number(m[8]) / Math.pow(10, m[8].length);
-    const text = textLines.join(" ").replace(/\s+/g, " ").trim();
+    // 剝掉 VTT 的語者/樣式標籤（Loom 會輸出 <v 0>…</v>、<c>…</c>），再壓空白
+    const text = textLines
+      .join(" ")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (!text) continue;
 
     entries.push({ start, end, text });
@@ -176,7 +181,14 @@ export async function fetchLoomTranscript(
 ): Promise<TranscriptEntry[] | null> {
   if (!loomId) return null;
 
-  // 已知的幾個試錯端點（依優先序）
+  // 1) 2026-10 起的正規做法：公開影片的分享頁 HTML 內含一條「簽名過的」字幕網址
+  //    `captions_source_url`（cdn.loom.com/mediametadata/captions/<id>-1.vtt?Policy=…&Signature=…），
+  //    直接下載即可。舊的 /api/captions 與 /sessions/captions 端點已分別 404 / 403（MissingKey），
+  //    留在下方只作備援。簽名網址有效期短，所以每次重抓都要重新解析分享頁，不可快取。
+  const fromSharePage = await fetchTranscriptViaSharePage(loomId);
+  if (fromSharePage && fromSharePage.length > 0) return fromSharePage;
+
+  // 2) 備援：已知的幾個試錯端點（依優先序）
   const candidates = [
     `https://www.loom.com/api/captions/${loomId}/transcript.vtt`,
     `https://cdn.loom.com/sessions/captions/${loomId}.vtt`,
@@ -198,4 +210,41 @@ export async function fetchLoomTranscript(
     }
   }
   return null;
+}
+
+/**
+ * 從 Loom 分享頁解析簽名字幕網址並下載 VTT（公開影片才有）
+ *
+ * 分享頁把 JSON 內嵌在 HTML，網址中的 `&` 以 `\u0026`、`/` 以 `\/` 跳脫，要還原。
+ * VTT 內容可能帶 `<v 0>…</v>` 語者標籤，parseTranscript 會剝掉。
+ */
+async function fetchTranscriptViaSharePage(
+  loomId: string,
+): Promise<TranscriptEntry[] | null> {
+  try {
+    const page = await fetch(`https://www.loom.com/share/${loomId}`, {
+      headers: {
+        // Loom 對無 UA 的請求會回精簡頁，拿不到內嵌 JSON
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        Accept: "text/html",
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!page.ok) return null;
+    const html = await page.text();
+    const m = html.match(/"captions_source_url":"([^"]+)"/);
+    if (!m) return null;
+    const url = m[1].replace(/\\u0026/g, "&").replace(/\\\//g, "/");
+    if (!/^https:\/\/cdn\.loom\.com\//.test(url)) return null;
+    const res = await fetch(url, {
+      headers: { Accept: "text/vtt, text/plain, */*" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const parsed = parseTranscript(await res.text());
+    return parsed.length > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
 }
